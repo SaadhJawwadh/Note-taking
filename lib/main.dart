@@ -7,7 +7,12 @@ import 'package:dynamic_color/dynamic_color.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const NoteApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => SettingsProvider(),
+      child: const NoteApp(),
+    ),
+  );
 }
 
 class NoteApp extends StatelessWidget {
@@ -15,20 +20,17 @@ class NoteApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => SettingsProvider(),
-      child: DynamicColorBuilder(
-        builder: (lightDynamic, darkDynamic) {
-          return MaterialApp(
-            title: 'Note Book',
-            debugShowCheckedModeBanner: false,
-            theme: AppTheme.createTheme(lightDynamic, Brightness.light),
-            darkTheme: AppTheme.createTheme(darkDynamic, Brightness.dark),
-            themeMode: Provider.of<SettingsProvider>(context).themeMode,
-            home: const HomeScreen(),
-          );
-        },
-      ),
+    return DynamicColorBuilder(
+      builder: (lightDynamic, darkDynamic) {
+        return MaterialApp(
+          title: 'Note Book',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.createTheme(lightDynamic, Brightness.light),
+          darkTheme: AppTheme.createTheme(darkDynamic, Brightness.dark),
+          themeMode: Provider.of<SettingsProvider>(context).themeMode,
+          home: const HomeScreen(),
+        );
+      },
     );
   }
 }

@@ -158,7 +158,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                             ? Border.all(
                                 color: Theme.of(context).colorScheme.primary,
                                 width: 3)
-                            : Border.all(color: Colors.grey.withOpacity(0.3)),
+                            : Border.all(
+                                color: Colors.grey.withValues(alpha: 0.3)),
                       ),
                       child: color == c
                           ? Icon(Icons.check,
@@ -266,7 +267,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () async {
               await saveNote();
-              if (mounted) Navigator.of(context).pop();
+              if (!context.mounted) return;
+              Navigator.of(context).pop();
             },
           ),
           title: Text(
@@ -343,7 +345,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                       label: Text(tag),
                                       backgroundColor: Theme.of(context)
                                           .colorScheme
-                                          .surfaceContainerHigh,
+                                          .surfaceContainerHigh
+                                          .withValues(alpha: 0.1),
                                     ))
                                 .toList(),
                           ),

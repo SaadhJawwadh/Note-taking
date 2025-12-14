@@ -101,7 +101,7 @@ class AppTheme {
         hintStyle: GoogleFonts.inter(color: scheme.onSurfaceVariant),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        labelTextStyle: MaterialStateProperty.all(
+        labelTextStyle: WidgetStateProperty.all(
           GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500),
         ),
       ),

@@ -143,12 +143,36 @@ class _HomeScreenState extends State<HomeScreen> {
                 ? const Center(child: CircularProgressIndicator())
                 : filteredNotes.isEmpty
                     ? Center(
-                        child: Text(
-                          'No notes here',
-                          style:
-                              Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.note_alt_outlined,
+                                size: 64,
+                                color: AppTheme.textSecondary
+                                    .withValues(alpha: 0.5)),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No notes here yet',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyLarge
+                                  ?.copyWith(
                                     color: AppTheme.textSecondary,
+                                    fontWeight: FontWeight.bold,
                                   ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Tap + to create one',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: AppTheme.textSecondary
+                                        .withValues(alpha: 0.7),
+                                  ),
+                            ),
+                          ],
                         ),
                       )
                     : Padding(
@@ -272,7 +296,7 @@ class NoteCard extends StatelessWidget {
                             color: Theme.of(context)
                                 .colorScheme
                                 .secondaryContainer
-                                .withOpacity(0.5),
+                                .withValues(alpha: 0.5),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -341,6 +365,7 @@ extension _Actions on _HomeScreenState {
                 onTap: () async {
                   await DatabaseHelper.instance.updateNote(note.copyWith(
                       isPinned: !note.isPinned, dateModified: DateTime.now()));
+                  if (!context.mounted) return;
                   Navigator.pop(context);
                   refreshNotes();
                 },
@@ -352,6 +377,7 @@ extension _Actions on _HomeScreenState {
                 onTap: () async {
                   await DatabaseHelper.instance
                       .archiveNote(note.id, !note.isArchived);
+                  if (!context.mounted) return;
                   Navigator.pop(context);
                   refreshNotes();
                 },
@@ -373,6 +399,7 @@ extension _Actions on _HomeScreenState {
                   } else {
                     await DatabaseHelper.instance.restoreNote(note.id);
                   }
+                  if (!context.mounted) return;
                   Navigator.pop(context);
                   refreshNotes();
                 },
@@ -384,6 +411,7 @@ extension _Actions on _HomeScreenState {
                       style: TextStyle(color: Colors.red)),
                   onTap: () async {
                     await DatabaseHelper.instance.hardDeleteNote(note.id);
+                    if (!context.mounted) return;
                     Navigator.pop(context);
                     refreshNotes();
                   },
