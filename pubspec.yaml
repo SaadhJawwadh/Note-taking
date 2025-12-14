@@ -1,0 +1,52 @@
+name: note_taking_app
+description: A fully local offline-first note taking application.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  provider: ^6.1.1
+
+  # Local Storage
+  sqflite: ^2.3.0
+  path: ^1.8.3
+
+  # UI & Design
+  google_fonts: ^6.1.0
+  flutter_staggered_grid_view: ^0.7.0
+  cupertino_icons: ^1.0.6
+  image_picker: ^1.0.7
+  path_provider: ^2.1.1
+
+  # Utilities
+  intl: ^0.19.0
+  uuid: ^4.2.1
+  flutter_markdown: ^0.7.7+1
+  shared_preferences: ^2.5.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+  flutter_launcher_icons: "^0.13.1"
+
+flutter_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/app_icon.png"
+  min_sdk_android: 21 # android min sdk min:16, default 21
+  web:
+    generate: true
+    image_path: "assets/app_icon.png"
+    background_color: "#18181b"
+    theme_color: "#18181b"
+
+
+flutter:
+  uses-material-design: true
