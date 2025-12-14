@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:intl/intl.dart';
 import '../data/database_helper.dart';
@@ -111,16 +112,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 final isSelected = category == selectedCategory;
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
+                  child: FilterChip(
                     label: Text(category),
                     selected: isSelected,
                     onSelected: (selected) {
                       if (selected) onCategorySelected(category);
                     },
-                    backgroundColor: const Color(0xFF2C2C30),
-                    selectedColor: AppTheme.primaryPurple,
+                    backgroundColor:
+                        Theme.of(context).colorScheme.surfaceContainer,
+                    selectedColor:
+                        Theme.of(context).colorScheme.primaryContainer,
                     labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : Colors.grey,
+                      color: isSelected
+                          ? Theme.of(context).colorScheme.onPrimaryContainer
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
                       fontWeight:
                           isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
@@ -196,7 +201,11 @@ class NoteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = Color(note.color);
+    // If color is default dark, use surface container, else use note color
+    final isDefaultColor = note.color == 0xFF252529;
+    final bgColor = isDefaultColor
+        ? Theme.of(context).colorScheme.surfaceContainer
+        : Color(note.color);
 
     return GestureDetector(
       onTap: onTap,
@@ -204,10 +213,11 @@ class NoteCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: bgColor == const Color(0xFF252529)
-              ? const Color(0xFF2C2C30)
-              : bgColor,
+          color: bgColor,
           borderRadius: BorderRadius.circular(20),
+          border: isDefaultColor
+              ? Border.all(color: Theme.of(context).colorScheme.outlineVariant)
+              : null,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -218,17 +228,17 @@ class NoteCard extends StatelessWidget {
               style: Theme.of(context)
                   .textTheme
                   .headlineSmall
-                  ?.copyWith(fontSize: 18),
+                  ?.copyWith(fontSize: 18, fontWeight: FontWeight.bold),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
             if (note.imagePath != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.file(
                   File(note.imagePath!),
-                  height: 100,
+                  height: 120,
                   width: double.infinity,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) =>
@@ -237,21 +247,55 @@ class NoteCard extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 8),
-            Text(
-              note.content,
-              style: Theme.of(context).textTheme.bodyMedium,
-              maxLines: 6,
-              overflow: TextOverflow.ellipsis,
-            ),
+            if (note.content.isNotEmpty)
+              MarkdownBody(
+                data: note.content.length > 100
+                    ? '${note.content.substring(0, 100)}...'
+                    : note.content,
+                styleSheet: MarkdownStyleSheet(
+                  p: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ),
+            if (note.tags.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 4,
+                runSpacing: 4,
+                children: note.tags
+                    .take(3)
+                    .map((tag) => Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .secondaryContainer
+                                .withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            tag,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSecondaryContainer,
+                            ),
+                          ),
+                        ))
+                    .toList(),
+              ),
+            ],
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   DateFormat.MMMd().format(note.dateModified),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.textSecondary.withOpacity(0.6),
-                        fontSize: 12,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.outline,
                       ),
                 ),
                 if (note.category != 'All Notes')
@@ -259,12 +303,12 @@ class NoteCard extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.white10,
+                      color: Theme.of(context).colorScheme.surfaceContainerHigh,
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
                       note.category,
-                      style: const TextStyle(fontSize: 10, color: Colors.grey),
+                      style: Theme.of(context).textTheme.labelSmall,
                     ),
                   )
               ],

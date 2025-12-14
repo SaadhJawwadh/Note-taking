@@ -20,7 +20,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -39,6 +39,7 @@ class DatabaseHelper {
         isArchived INTEGER NOT NULL DEFAULT 0,
         imagePath TEXT,
         category TEXT,
+        tags TEXT,
         deletedAt TEXT
       )
     ''');
@@ -49,6 +50,9 @@ class DatabaseHelper {
       await db.execute(
           'ALTER TABLE notes ADD COLUMN isArchived INTEGER NOT NULL DEFAULT 0');
       await db.execute('ALTER TABLE notes ADD COLUMN deletedAt TEXT');
+    }
+    if (oldVersion < 3) {
+      await db.execute('ALTER TABLE notes ADD COLUMN tags TEXT');
     }
   }
 
@@ -73,6 +77,7 @@ class DatabaseHelper {
         'isArchived',
         'imagePath',
         'category',
+        'tags',
         'deletedAt'
       ],
       where: 'id = ?',

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class Note {
   final String id;
   String title;
@@ -8,7 +10,8 @@ class Note {
   bool isPinned;
   bool isArchived;
   String? imagePath;
-  String category; // New field
+  String category;
+  List<String> tags; // New field
   DateTime? deletedAt;
 
   Note({
@@ -22,6 +25,7 @@ class Note {
     this.isArchived = false,
     this.imagePath,
     this.category = 'All Notes',
+    this.tags = const [], // Default empty list
     this.deletedAt,
   });
 
@@ -37,11 +41,22 @@ class Note {
       'isArchived': isArchived ? 1 : 0,
       'imagePath': imagePath,
       'category': category,
+      'tags': jsonEncode(tags), // Store as JSON string
       'deletedAt': deletedAt?.toIso8601String(),
     };
   }
 
   factory Note.fromMap(Map<String, dynamic> map) {
+    List<String> parsedTags = [];
+    if (map['tags'] != null) {
+      try {
+        parsedTags = List<String>.from(jsonDecode(map['tags']));
+      } catch (e) {
+        // Fallback for empty or invalid JSON
+        parsedTags = [];
+      }
+    }
+
     return Note(
       id: map['id'],
       title: map['title'],
@@ -53,7 +68,9 @@ class Note {
       isArchived: (map['isArchived'] ?? 0) == 1,
       imagePath: map['imagePath'],
       category: map['category'] ?? 'All Notes',
-      deletedAt: map['deletedAt'] != null ? DateTime.parse(map['deletedAt']) : null,
+      tags: parsedTags,
+      deletedAt:
+          map['deletedAt'] != null ? DateTime.parse(map['deletedAt']) : null,
     );
   }
 
@@ -66,6 +83,7 @@ class Note {
     bool? isArchived,
     String? imagePath,
     String? category,
+    List<String>? tags,
     DateTime? deletedAt,
   }) {
     return Note(
@@ -79,6 +97,7 @@ class Note {
       isArchived: isArchived ?? this.isArchived,
       imagePath: imagePath ?? this.imagePath,
       category: category ?? this.category,
+      tags: tags ?? this.tags,
       deletedAt: deletedAt ?? this.deletedAt,
     );
   }

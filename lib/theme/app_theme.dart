@@ -12,73 +12,98 @@ class AppTheme {
   static const Color textSecondary = Color(0xFF8E8E93);
   static const Color errorRed = Color(0xFFFF453A);
 
-  static ThemeData get darkTheme {
+  static ThemeData createTheme(
+      ColorScheme? dynamicColorScheme, Brightness brightness) {
+    ColorScheme scheme;
+
+    if (dynamicColorScheme != null) {
+      scheme = dynamicColorScheme;
+    } else {
+      // Fallback Schemes
+      if (brightness == Brightness.dark) {
+        scheme = const ColorScheme.dark(
+          primary: primaryPurple,
+          secondary: accentPink,
+          surface: darkSurface,
+          error: errorRed,
+        );
+      } else {
+        scheme = ColorScheme.fromSeed(
+          seedColor: primaryPurple,
+          brightness: Brightness.light,
+        );
+      }
+    }
+
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.dark,
-      scaffoldBackgroundColor: darkBackground,
-      colorScheme: const ColorScheme.dark(
-        primary: primaryPurple,
-        secondary: accentPink,
-        surface: darkSurface,
-        error: errorRed,
-      ),
+      brightness: brightness,
+      colorScheme: scheme,
+      scaffoldBackgroundColor: scheme.surface,
       textTheme: TextTheme(
         displayLarge: GoogleFonts.outfit(
-          color: textPrimary,
+          color: scheme.onSurface,
           fontSize: 32,
           fontWeight: FontWeight.bold,
         ),
         headlineSmall: GoogleFonts.outfit(
-          color: textPrimary,
+          color: scheme.onSurface,
           fontSize: 24,
           fontWeight: FontWeight.w600,
         ),
         titleMedium: GoogleFonts.inter(
-          color: textPrimary,
+          color: scheme.onSurface,
           fontSize: 18,
           fontWeight: FontWeight.w500,
         ),
         bodyLarge: GoogleFonts.inter(
-          color: textPrimary,
+          color: scheme.onSurface,
           fontSize: 16,
           height: 1.5,
         ),
         bodyMedium: GoogleFonts.inter(
-          color: textSecondary,
+          color: scheme.onSurfaceVariant,
           fontSize: 14,
         ),
       ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: darkBackground,
+      appBarTheme: AppBarTheme(
+        backgroundColor: scheme.surface,
         elevation: 0,
         centerTitle: true,
         titleTextStyle: TextStyle(
-          color: textPrimary,
+          color: scheme.onSurface,
           fontSize: 18,
           fontWeight: FontWeight.bold,
         ),
+        iconTheme: IconThemeData(color: scheme.onSurface),
       ),
       cardTheme: CardThemeData(
-        color: darkSurface,
+        color: scheme.surfaceContainerHigh,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
       ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: primaryPurple,
-        foregroundColor: Colors.white,
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: scheme.primaryContainer,
+        foregroundColor: scheme.onPrimaryContainer,
         elevation: 4,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16)), // M3 FAB
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: darkSurface,
+        fillColor: scheme.surfaceContainerHighest,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
-        hintStyle: GoogleFonts.inter(color: textSecondary),
+        hintStyle: GoogleFonts.inter(color: scheme.onSurfaceVariant),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        labelTextStyle: MaterialStateProperty.all(
+          GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500),
+        ),
       ),
     );
   }

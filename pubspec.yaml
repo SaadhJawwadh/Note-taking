@@ -29,6 +29,7 @@ dependencies:
   uuid: ^4.2.1
   flutter_markdown: ^0.7.7+1
   shared_preferences: ^2.5.4
+  dynamic_color: ^1.8.1
 
 dev_dependencies:
   flutter_test:

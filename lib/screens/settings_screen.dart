@@ -5,7 +5,6 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import '../data/database_helper.dart';
-import '../theme/app_theme.dart';
 
 import 'package:provider/provider.dart';
 import '../data/settings_provider.dart';
@@ -16,20 +15,25 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.surface,
         appBar: AppBar(
           title: const Text('Settings'),
+          centerTitle: true,
+          backgroundColor: Colors.transparent,
           actions: [
             Padding(
               padding: const EdgeInsets.only(right: 16),
               child: TextButton(
                 onPressed: () => Navigator.pop(context),
                 style: TextButton.styleFrom(
-                  backgroundColor: const Color(0xFF3A3A3C),
+                  backgroundColor:
+                      Theme.of(context).colorScheme.surfaceContainerHighest,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20)),
                 ),
-                child:
-                    const Text('Done', style: TextStyle(color: Colors.white)),
+                child: Text('Done',
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface)),
               ),
             ),
           ],
@@ -39,28 +43,18 @@ class SettingsScreen extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             children: [
               _buildSectionHeader(context, 'APPEARANCE'),
-              _buildSettingsContainer([
+              _buildSettingsContainer(context, [
                 _buildListTile(
                   context,
-                  icon: Icons.palette,
+                  icon: Icons.palette_outlined,
                   title: 'Theme',
-                  subtitle: 'Dark Noir',
+                  subtitle: _getThemeLabel(settings.themeMode),
+                  onTap: () => _showThemePicker(context, settings),
                 ),
-                const Divider(height: 1, indent: 56),
-                _buildListTile(
-                  context,
-                  icon: Icons.grid_view,
-                  title: 'App Icon',
-                  trailing: Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: Colors.orange,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                  ),
-                ),
-                const Divider(height: 1, indent: 56),
+                Divider(
+                    height: 1,
+                    indent: 56,
+                    color: Theme.of(context).colorScheme.outlineVariant),
                 _buildListTile(
                   context,
                   icon: Icons.text_fields,
@@ -70,42 +64,8 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ]),
               const SizedBox(height: 24),
-              _buildSectionHeader(context, 'PREFERENCES'),
-              _buildSettingsContainer([
-                _buildListTile(
-                  context,
-                  icon: Icons.notifications,
-                  title: 'Notifications',
-                  showArrow: true,
-                ),
-                const Divider(height: 1, indent: 56),
-                _buildListTile(
-                  context,
-                  icon: Icons.volume_up,
-                  title: 'In-App Sounds',
-                  trailing: CupertinoSwitch(
-                      value: settings.enableSounds,
-                      onChanged: (v) => settings.setSounds(v),
-                      activeTrackColor: AppTheme.primaryPurple),
-                ),
-              ]),
-              const SizedBox(height: 24),
-              _buildSectionHeader(context, 'SECURITY'),
-              _buildSettingsContainer([
-                _buildListTile(
-                  context,
-                  icon: Icons.face,
-                  title: 'Face ID Lock',
-                  subtitle: 'Require for access',
-                  trailing: CupertinoSwitch(
-                      value: settings.enableFaceId,
-                      onChanged: (v) => settings.setFaceId(v),
-                      activeTrackColor: AppTheme.primaryPurple),
-                ),
-              ]),
-              const SizedBox(height: 24),
               _buildSectionHeader(context, 'DATA'),
-              _buildSettingsContainer([
+              _buildSettingsContainer(context, [
                 _buildListTile(
                   context,
                   icon: Icons.download_outlined,
@@ -116,7 +76,10 @@ class SettingsScreen extends StatelessWidget {
                     await _exportBackup(context);
                   },
                 ),
-                const Divider(height: 1, indent: 56),
+                Divider(
+                    height: 1,
+                    indent: 56,
+                    color: Theme.of(context).colorScheme.outlineVariant),
                 _buildListTile(
                   context,
                   icon: Icons.upload_outlined,
@@ -130,15 +93,19 @@ class SettingsScreen extends StatelessWidget {
               ]),
               const SizedBox(height: 24),
               _buildSectionHeader(context, 'SUPPORT'),
-              _buildSettingsContainer([
+              _buildSettingsContainer(context, [
                 _buildListTile(
                   context,
                   icon: Icons.help_outline,
                   title: 'Help Center',
-                  trailing: const Icon(Icons.open_in_new,
-                      size: 20, color: Colors.grey),
+                  trailing: Icon(Icons.open_in_new,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
-                const Divider(height: 1, indent: 56),
+                Divider(
+                    height: 1,
+                    indent: 56,
+                    color: Theme.of(context).colorScheme.outlineVariant),
                 _buildListTile(
                   context,
                   icon: Icons.chat_bubble_outline,
@@ -151,19 +118,83 @@ class SettingsScreen extends StatelessWidget {
         }));
   }
 
+  String _getThemeLabel(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.light:
+        return 'Light';
+      case ThemeMode.dark:
+        return 'Dark';
+      case ThemeMode.system:
+        return 'System Default';
+    }
+  }
+
+  void _showThemePicker(BuildContext context, SettingsProvider settings) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+          title: Text('Choose Theme',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<ThemeMode>(
+                title: Text('System Default',
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface)),
+                value: ThemeMode.system,
+                groupValue: settings.themeMode,
+                onChanged: (value) {
+                  settings.setThemeMode(value!);
+                  Navigator.pop(context);
+                },
+              ),
+              RadioListTile<ThemeMode>(
+                title: Text('Light',
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface)),
+                value: ThemeMode.light,
+                groupValue: settings.themeMode,
+                onChanged: (value) {
+                  settings.setThemeMode(value!);
+                  Navigator.pop(context);
+                },
+              ),
+              RadioListTile<ThemeMode>(
+                title: Text('Dark',
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface)),
+                value: ThemeMode.dark,
+                groupValue: settings.themeMode,
+                onChanged: (value) {
+                  settings.setThemeMode(value!);
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _showTextSizePicker(BuildContext context, SettingsProvider settings) {
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: AppTheme.darkSurface,
-          title: const Text('Text Size', style: TextStyle(color: Colors.white)),
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+          title: Text('Text Size',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               RadioListTile<double>(
-                title:
-                    const Text('Small', style: TextStyle(color: Colors.white)),
+                title: Text('Small',
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface)),
                 value: 14.0,
                 groupValue: settings.textSize,
                 onChanged: (value) {
@@ -172,11 +203,11 @@ class SettingsScreen extends StatelessWidget {
                     Navigator.pop(context);
                   }
                 },
-                activeColor: AppTheme.primaryPurple,
               ),
               RadioListTile<double>(
-                title:
-                    const Text('Medium', style: TextStyle(color: Colors.white)),
+                title: Text('Medium',
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface)),
                 value: 16.0,
                 groupValue: settings.textSize,
                 onChanged: (value) {
@@ -185,11 +216,11 @@ class SettingsScreen extends StatelessWidget {
                     Navigator.pop(context);
                   }
                 },
-                activeColor: AppTheme.primaryPurple,
               ),
               RadioListTile<double>(
-                title:
-                    const Text('Large', style: TextStyle(color: Colors.white)),
+                title: Text('Large',
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface)),
                 value: 20.0,
                 groupValue: settings.textSize,
                 onChanged: (value) {
@@ -198,7 +229,6 @@ class SettingsScreen extends StatelessWidget {
                     Navigator.pop(context);
                   }
                 },
-                activeColor: AppTheme.primaryPurple,
               ),
             ],
           ),
@@ -213,17 +243,17 @@ class SettingsScreen extends StatelessWidget {
       child: Text(
         title,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: AppTheme.textSecondary,
+              color: Theme.of(context).colorScheme.primary,
               fontWeight: FontWeight.bold,
             ),
       ),
     );
   }
 
-  Widget _buildSettingsContainer(List<Widget> children) {
+  Widget _buildSettingsContainer(BuildContext context, List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.darkSurface,
+        color: Theme.of(context).colorScheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(children: children),
@@ -240,15 +270,20 @@ class SettingsScreen extends StatelessWidget {
     VoidCallback? onTap,
   }) {
     return ListTile(
-      leading: Icon(icon, color: Colors.grey),
-      title: Text(title, style: const TextStyle(color: Colors.white)),
+      leading:
+          Icon(icon, color: Theme.of(context).colorScheme.onSurfaceVariant),
+      title: Text(title,
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
       subtitle: subtitle != null
-          ? Text(subtitle, style: const TextStyle(color: Colors.grey))
+          ? Text(subtitle,
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant))
           : null,
       trailing: trailing ??
           (showArrow
-              ? const Icon(Icons.arrow_forward_ios,
-                  size: 16, color: Colors.grey)
+              ? Icon(Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant)
               : null),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       onTap: onTap,
