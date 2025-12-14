@@ -254,13 +254,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   @override
   Widget build(BuildContext context) {
     return Consumer<SettingsProvider>(builder: (context, settings, child) {
-      // Use logic to determine background color suitable for brightness
-      Color backgroundColor = Color(color);
-      // If color is very dark but theme is light, we might want to invert or adjust,
-      // but for now we trust the user selection or default.
-
       return Scaffold(
-        backgroundColor: backgroundColor,
         appBar: AppBar(
           backgroundColor: Colors.transparent, // Transparent for M3
           leading: IconButton(

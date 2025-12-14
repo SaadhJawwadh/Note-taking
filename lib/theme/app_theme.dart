@@ -41,27 +41,27 @@ class AppTheme {
       colorScheme: scheme,
       scaffoldBackgroundColor: scheme.surface,
       textTheme: TextTheme(
-        displayLarge: GoogleFonts.outfit(
+        displayLarge: GoogleFonts.rubik(
           color: scheme.onSurface,
           fontSize: 32,
           fontWeight: FontWeight.bold,
         ),
-        headlineSmall: GoogleFonts.outfit(
+        headlineSmall: GoogleFonts.rubik(
           color: scheme.onSurface,
           fontSize: 24,
           fontWeight: FontWeight.w600,
         ),
-        titleMedium: GoogleFonts.inter(
+        titleMedium: GoogleFonts.rubik(
           color: scheme.onSurface,
           fontSize: 18,
           fontWeight: FontWeight.w500,
         ),
-        bodyLarge: GoogleFonts.inter(
+        bodyLarge: GoogleFonts.rubik(
           color: scheme.onSurface,
           fontSize: 16,
           height: 1.5,
         ),
-        bodyMedium: GoogleFonts.inter(
+        bodyMedium: GoogleFonts.rubik(
           color: scheme.onSurfaceVariant,
           fontSize: 14,
         ),
@@ -70,7 +70,7 @@ class AppTheme {
         backgroundColor: scheme.surface,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: TextStyle(
+        titleTextStyle: GoogleFonts.rubik(
           color: scheme.onSurface,
           fontSize: 18,
           fontWeight: FontWeight.bold,
@@ -98,11 +98,11 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
-        hintStyle: GoogleFonts.inter(color: scheme.onSurfaceVariant),
+        hintStyle: GoogleFonts.rubik(color: scheme.onSurfaceVariant),
       ),
       navigationBarTheme: NavigationBarThemeData(
         labelTextStyle: WidgetStateProperty.all(
-          GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500),
+          GoogleFonts.rubik(fontSize: 12, fontWeight: FontWeight.w500),
         ),
       ),
     );
