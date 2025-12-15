@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'note_model.dart';
+import 'dart:convert';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -179,5 +180,54 @@ class DatabaseHelper {
         whereArgs: [category],
         orderBy: 'dateModified DESC');
     return result.map((json) => Note.fromMap(json)).toList();
+  }
+
+  Future<List<String>> getAllTags() async {
+    final db = await instance.database;
+    final result = await db.query(
+      'notes',
+      columns: ['tags'],
+      where: 'deletedAt IS NULL',
+    );
+
+    final Set<String> allTags = {};
+    for (var row in result) {
+      if (row['tags'] != null) {
+        try {
+          final List<dynamic> tags = jsonDecode(row['tags'] as String);
+          allTags.addAll(tags.map((e) => e.toString()));
+        } catch (e) {
+          // Ignore invalid JSON
+        }
+      }
+    }
+    return allTags.toList()..sort();
+  }
+
+  Future<void> renameTag(String oldTag, String newTag) async {
+    final notes = await readAllNotes();
+    for (var note in notes) {
+      if (note.tags.contains(oldTag)) {
+        final updatedTags = List<String>.from(note.tags);
+        final index = updatedTags.indexOf(oldTag);
+        if (index != -1) {
+          updatedTags[index] = newTag;
+          // Sort tags to keep them organized
+          updatedTags.sort();
+          await updateNote(note.copyWith(tags: updatedTags));
+        }
+      }
+    }
+  }
+
+  Future<void> deleteTag(String tag) async {
+    final notes = await readAllNotes();
+    for (var note in notes) {
+      if (note.tags.contains(tag)) {
+        final updatedTags = List<String>.from(note.tags);
+        updatedTags.remove(tag);
+        await updateNote(note.copyWith(tags: updatedTags));
+      }
+    }
   }
 }

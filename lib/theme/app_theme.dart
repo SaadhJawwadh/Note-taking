@@ -12,8 +12,8 @@ class AppTheme {
   static const Color textSecondary = Color(0xFF8E8E93);
   static const Color errorRed = Color(0xFFFF453A);
 
-  static ThemeData createTheme(
-      ColorScheme? dynamicColorScheme, Brightness brightness) {
+  static ThemeData createTheme(ColorScheme? dynamicColorScheme,
+      Brightness brightness, String fontFamily) {
     ColorScheme scheme;
 
     if (dynamicColorScheme != null) {
@@ -35,44 +35,35 @@ class AppTheme {
       }
     }
 
+    TextTheme getTextTheme(String font) {
+      switch (font) {
+        case 'Comic Neue':
+          return GoogleFonts.comicNeueTextTheme();
+        case 'Sans Serif':
+          return GoogleFonts.notoSansTextTheme(); // Clean Sans Serif or System
+        case 'Rubik':
+        default:
+          return GoogleFonts.rubikTextTheme();
+      }
+    }
+
+    final baseTextTheme = getTextTheme(fontFamily);
+    final textTheme = baseTextTheme.apply(
+      bodyColor: scheme.onSurface,
+      displayColor: scheme.onSurface,
+    );
+
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
       colorScheme: scheme,
       scaffoldBackgroundColor: scheme.surface,
-      textTheme: TextTheme(
-        displayLarge: GoogleFonts.rubik(
-          color: scheme.onSurface,
-          fontSize: 32,
-          fontWeight: FontWeight.bold,
-        ),
-        headlineSmall: GoogleFonts.rubik(
-          color: scheme.onSurface,
-          fontSize: 24,
-          fontWeight: FontWeight.w600,
-        ),
-        titleMedium: GoogleFonts.rubik(
-          color: scheme.onSurface,
-          fontSize: 18,
-          fontWeight: FontWeight.w500,
-        ),
-        bodyLarge: GoogleFonts.rubik(
-          color: scheme.onSurface,
-          fontSize: 16,
-          height: 1.5,
-        ),
-        bodyMedium: GoogleFonts.rubik(
-          color: scheme.onSurfaceVariant,
-          fontSize: 14,
-        ),
-      ),
+      textTheme: textTheme,
       appBarTheme: AppBarTheme(
         backgroundColor: scheme.surface,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.rubik(
-          color: scheme.onSurface,
-          fontSize: 18,
+        titleTextStyle: textTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.bold,
         ),
         iconTheme: IconThemeData(color: scheme.onSurface),
@@ -98,11 +89,12 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
-        hintStyle: GoogleFonts.rubik(color: scheme.onSurfaceVariant),
+        hintStyle:
+            textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
       ),
       navigationBarTheme: NavigationBarThemeData(
         labelTextStyle: WidgetStateProperty.all(
-          GoogleFonts.rubik(fontSize: 12, fontWeight: FontWeight.w500),
+          textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w500),
         ),
       ),
     );

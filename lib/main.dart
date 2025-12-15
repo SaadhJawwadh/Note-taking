@@ -22,12 +22,15 @@ class NoteApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return DynamicColorBuilder(
       builder: (lightDynamic, darkDynamic) {
+        final settings = Provider.of<SettingsProvider>(context);
         return MaterialApp(
           title: 'Note Book',
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.createTheme(lightDynamic, Brightness.light),
-          darkTheme: AppTheme.createTheme(darkDynamic, Brightness.dark),
-          themeMode: Provider.of<SettingsProvider>(context).themeMode,
+          theme: AppTheme.createTheme(
+              lightDynamic, Brightness.light, settings.fontFamily),
+          darkTheme: AppTheme.createTheme(
+              darkDynamic, Brightness.dark, settings.fontFamily),
+          themeMode: settings.themeMode,
           home: const HomeScreen(),
         );
       },

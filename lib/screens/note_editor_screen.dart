@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'dart:io';
+import 'dart:async';
 import '../data/database_helper.dart';
 import '../data/note_model.dart';
 import 'package:uuid/uuid.dart';
@@ -28,15 +29,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   String? imagePath;
   String category = 'All Notes';
   List<String> tags = [];
-  bool _isPreview = false;
-
-  final List<String> categories = [
-    'All Notes',
-    'Journal',
-    'Work',
-    'Personal',
-    'Ideas'
-  ];
+  bool _isPreview = true; // Default to preview
+  List<String> _allTags = [];
+  Timer? _debounce;
+  final UndoHistoryController _undoController = UndoHistoryController();
 
   final List<int> noteColors = [
     0xFF252529, // Default Dark
@@ -59,12 +55,31 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     imagePath = widget.note?.imagePath;
     category = widget.note?.category ?? 'All Notes';
     tags = List.from(widget.note?.tags ?? []);
+    _loadTags();
+
+    // Auto-save listeners
+    _titleController.addListener(_onContentChanged);
+    _contentController.addListener(_onContentChanged);
+  }
+
+  Future<void> _loadTags() async {
+    final t = await DatabaseHelper.instance.getAllTags();
+    if (mounted) setState(() => _allTags = t);
+  }
+
+  void _onContentChanged() {
+    if (_debounce?.isActive ?? false) _debounce?.cancel();
+    _debounce = Timer(const Duration(seconds: 2), () {
+      saveNote();
+    });
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _titleController.dispose();
     _contentController.dispose();
+    _undoController.dispose();
     super.dispose();
   }
 
@@ -82,45 +97,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         imagePath = localImage.path;
       });
     }
-  }
-
-  void _showCategoryPicker() {
-    showModalBottomSheet(
-      context: context,
-      useSafeArea: true,
-      showDragHandle: true,
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Select Category',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                alignment: WrapAlignment.center,
-                children: categories.where((c) => c != 'All Notes').map((c) {
-                  return FilterChip(
-                    label: Text(c),
-                    selected: category == c,
-                    onSelected: (selected) {
-                      setState(() => category = c);
-                      Navigator.pop(context);
-                    },
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 24),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   void _showColorPicker() {
@@ -143,28 +119,33 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                 spacing: 16,
                 runSpacing: 16,
                 children: noteColors.map((c) {
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() => color = c);
-                      Navigator.pop(context);
-                    },
-                    child: Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: Color(c),
-                        shape: BoxShape.circle,
-                        border: color == c
-                            ? Border.all(
-                                color: Theme.of(context).colorScheme.primary,
-                                width: 3)
-                            : Border.all(
-                                color: Colors.grey.withValues(alpha: 0.3)),
+                  return Semantics(
+                    button: true,
+                    label: 'Color option ${noteColors.indexOf(c) + 1}',
+                    selected: color == c,
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() => color = c);
+                        Navigator.pop(context);
+                      },
+                      child: Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: Color(c),
+                          shape: BoxShape.circle,
+                          border: color == c
+                              ? Border.all(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  width: 3)
+                              : Border.all(
+                                  color: Colors.grey.withValues(alpha: 0.3)),
+                        ),
+                        child: color == c
+                            ? Icon(Icons.check,
+                                color: Theme.of(context).colorScheme.primary)
+                            : null,
                       ),
-                      child: color == c
-                          ? Icon(Icons.check,
-                              color: Theme.of(context).colorScheme.primary)
-                          : null,
                     ),
                   );
                 }).toList(),
@@ -177,39 +158,95 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     );
   }
 
-  void _addTag() {
-    final controller = TextEditingController();
-    showDialog(
+  void _showTagPicker() {
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Tag'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: 'Enter tag name',
-            border: OutlineInputBorder(),
-          ),
-          autofocus: true,
-          textCapitalization: TextCapitalization.sentences,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (controller.text.isNotEmpty) {
-                setState(() {
-                  tags.add(controller.text.trim());
-                });
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Add'),
-          ),
-        ],
-      ),
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (context) {
+        String newTag = '';
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+                left: 16,
+                right: 16,
+                top: 8,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Manage Tags',
+                      style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(height: 16),
+                  TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Create new tag',
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.add),
+                        onPressed: () {
+                          if (newTag.isNotEmpty) {
+                            setState(() {
+                              if (!tags.contains(newTag)) tags.add(newTag);
+                              if (!_allTags.contains(newTag)) {
+                                _allTags.add(newTag);
+                              }
+                            });
+                            setModalState(() => newTag = '');
+                            Navigator.pop(
+                                context); // Close for now, or keep open?
+                            _showTagPicker(); // Reopen to refresh or just keep state?
+                            // Simpler: Just refresh local state
+                          }
+                        },
+                      ),
+                    ),
+                    onChanged: (v) => newTag = v.trim(),
+                    onSubmitted: (v) {
+                      if (v.isNotEmpty) {
+                        setState(() {
+                          final t = v.trim();
+                          if (!tags.contains(t)) tags.add(t);
+                          if (!_allTags.contains(t)) _allTags.add(t);
+                        });
+                        Navigator.pop(context);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  if (_allTags.isNotEmpty) ...[
+                    const Text('Select Tags'),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: _allTags.map((t) {
+                        final isSelected = tags.contains(t);
+                        return FilterChip(
+                          label: Text(t),
+                          selected: isSelected,
+                          onSelected: (sel) {
+                            setState(() {
+                              if (sel) {
+                                tags.add(t);
+                              } else {
+                                tags.remove(t);
+                              }
+                            });
+                            setModalState(() {});
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ]
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -256,49 +293,52 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     return Consumer<SettingsProvider>(builder: (context, settings, child) {
       return Scaffold(
         appBar: AppBar(
-          backgroundColor: Colors.transparent, // Transparent for M3
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () async {
-              await saveNote();
-              if (!context.mounted) return;
-              Navigator.of(context).pop();
+            tooltip: 'Back',
+            onPressed: () {
+              saveNote();
+              Navigator.pop(context);
             },
-          ),
-          title: Text(
-            category,
-            style: Theme.of(context).textTheme.titleSmall,
           ),
           actions: [
             IconButton(
-              icon: Icon(_isPreview ? Icons.edit : Icons.visibility),
-              onPressed: () => setState(() => _isPreview = !_isPreview),
+              icon: Icon(
+                  _isPreview ? Icons.edit_outlined : Icons.visibility_outlined),
               tooltip: _isPreview ? 'Edit' : 'Preview',
+              onPressed: () => setState(() => _isPreview = !_isPreview),
             ),
             IconButton(
               icon: const Icon(Icons.palette_outlined),
+              tooltip: 'Change color',
               onPressed: _showColorPicker,
-              tooltip: 'Color',
-            ),
-            IconButton(
-              icon: const Icon(Icons.category_outlined),
-              onPressed: _showCategoryPicker,
-              tooltip: 'Category',
             ),
             IconButton(
               icon: const Icon(Icons.image_outlined),
+              tooltip: 'Add image',
               onPressed: _pickImage,
-              tooltip: 'Image',
             ),
             IconButton(
               icon: Icon(isPinned ? Icons.push_pin : Icons.push_pin_outlined),
-              color: isPinned ? Theme.of(context).colorScheme.primary : null,
-              onPressed: () => setState(() => isPinned = !isPinned),
+              tooltip: isPinned ? 'Unpin' : 'Pin',
+              onPressed: () {
+                setState(() => isPinned = !isPinned);
+                saveNote();
+              },
             ),
             IconButton(
-              icon: const Icon(Icons.archive_outlined),
-              color: isArchived ? Theme.of(context).colorScheme.primary : null,
-              onPressed: () => setState(() => isArchived = !isArchived),
+              icon: const Icon(Icons.label_outlined), // Tag icon
+              tooltip: 'Manage Tags',
+              onPressed: _showTagPicker,
+            ),
+            IconButton(
+              icon: Icon(isArchived ? Icons.archive : Icons.archive_outlined),
+              tooltip: isArchived ? 'Unarchive' : 'Archive',
+              onPressed: () {
+                setState(() => isArchived = !isArchived);
+                saveNote();
+                Navigator.pop(context);
+              },
             ),
           ],
         ),
@@ -307,55 +347,87 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
             Expanded(
               child: _isPreview
                   ? SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 16),
+                      padding: const EdgeInsets.all(20),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (imagePath != null) ...[
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
-                              child: Image.file(
-                                File(imagePath!),
-                                height: 250,
-                                width: double.infinity,
-                                fit: BoxFit.cover,
+                            Semantics(
+                              label: 'Attached image',
+                              child: Stack(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Image.file(
+                                      File(imagePath!),
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 20),
                           ],
                           Text(
-                            _titleController.text,
+                            _titleController.text.isEmpty
+                                ? 'Untitled'
+                                : _titleController.text,
                             style: Theme.of(context)
                                 .textTheme
-                                .displayLarge
-                                ?.copyWith(fontSize: 34),
+                                .displaySmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
+                                ),
                           ),
-                          const SizedBox(height: 16),
-                          Wrap(
-                            spacing: 8,
-                            children: tags
-                                .map((tag) => Chip(
-                                      label: Text(tag),
-                                      backgroundColor: Theme.of(context)
-                                          .colorScheme
-                                          .surfaceContainerHigh
-                                          .withValues(alpha: 0.1),
-                                    ))
-                                .toList(),
-                          ),
+                          const SizedBox(height: 8),
+                          if (tags.isNotEmpty)
+                            Wrap(
+                              spacing: 8,
+                              children: tags
+                                  .map((tag) => Chip(
+                                        label: Text(tag),
+                                        backgroundColor: Theme.of(context)
+                                            .colorScheme
+                                            .surfaceContainerHigh,
+                                        labelStyle:
+                                            const TextStyle(fontSize: 12),
+                                      ))
+                                  .toList(),
+                            ),
                           const SizedBox(height: 16),
                           MarkdownBody(
                             data: _contentController.text,
+                            selectable: true,
                             styleSheet: MarkdownStyleSheet(
                               p: Theme.of(context)
                                   .textTheme
                                   .bodyLarge
-                                  ?.copyWith(fontSize: settings.textSize),
-                              // Styles will inherit from Theme
+                                  ?.copyWith(
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
+                                  ),
+                              h1: Theme.of(context)
+                                  .textTheme
+                                  .headlineMedium
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                              h2: Theme.of(context)
+                                  .textTheme
+                                  .headlineSmall
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                              blockquote: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant),
+                              code: TextStyle(
+                                  backgroundColor: Theme.of(context)
+                                      .colorScheme
+                                      .surfaceContainerHighest,
+                                  fontFamily: 'monospace'),
                             ),
                           ),
-                          const SizedBox(height: 100),
                         ],
                       ),
                     )
@@ -364,33 +436,52 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                       child: ListView(
                         children: [
                           // Tags Row
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: [
-                                ...tags.map((tag) => Padding(
-                                      padding: const EdgeInsets.only(right: 8),
-                                      child: InputChip(
-                                        label: Text(tag),
-                                        onDeleted: () {
-                                          setState(() {
-                                            tags.remove(tag);
-                                          });
-                                        },
-                                        backgroundColor: Theme.of(context)
-                                            .colorScheme
-                                            .surfaceContainerHigh,
-                                      ),
-                                    )),
-                                ActionChip(
-                                  avatar: const Icon(Icons.add, size: 18),
-                                  label: const Text('Add Tag'),
-                                  onPressed: _addTag,
-                                ),
-                              ],
-                            ),
+                          // SingleChildScrollView( // Removed SingleChildScrollView here
+                          // scrollDirection: Axis.horizontal,
+                          // child:
+                          Row(
+                            children: [
+                              ...tags.map((tag) => Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: InputChip(
+                                      label: Text(tag),
+                                      onDeleted: () {
+                                        setState(() {
+                                          tags.remove(tag);
+                                        });
+                                      },
+                                      backgroundColor: Theme.of(context)
+                                          .colorScheme
+                                          .surfaceContainerHigh,
+                                    ),
+                                  )),
+                              ActionChip(
+                                avatar: const Icon(Icons.add, size: 18),
+                                label: const Text('Add Tag'),
+                                onPressed: _showTagPicker,
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 16),
+                          // ),
+                          const SizedBox(height: 20),
+                          TextField(
+                            controller: _titleController,
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                            decoration: const InputDecoration(
+                              hintText: 'Title',
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              fillColor: Colors.transparent,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                            maxLines:
+                                null, // Keep maxLines null for multiline title
+                          ),
+                          const SizedBox(height: 10),
                           if (imagePath != null) ...[
                             Stack(
                               children: [
@@ -398,57 +489,56 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                   borderRadius: BorderRadius.circular(16),
                                   child: Image.file(
                                     File(imagePath!),
-                                    height: 250,
+                                    height:
+                                        250, // Keep original height for consistency in edit mode
                                     width: double.infinity,
                                     fit: BoxFit.cover,
+                                    semanticLabel:
+                                        'Attached note image', // Keep original semanticLabel
                                   ),
                                 ),
                                 Positioned(
-                                    right: 8,
-                                    top: 8,
-                                    child: IconButton.filled(
-                                      icon: const Icon(Icons.close),
-                                      onPressed: () =>
-                                          setState(() => imagePath = null),
-                                    )),
+                                  top: 8,
+                                  right: 8,
+                                  child: IconButton(
+                                    icon: const Icon(Icons.close),
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: Colors.black54,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    tooltip: 'Remove image',
+                                    onPressed: () {
+                                      setState(() => imagePath = null);
+                                    },
+                                  ),
+                                ),
                               ],
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 20),
                           ],
                           TextField(
-                            controller: _titleController,
-                            style: Theme.of(context)
-                                .textTheme
-                                .displayLarge
-                                ?.copyWith(fontSize: 34),
-                            decoration: const InputDecoration(
-                              hintText: 'Title',
-                              border: InputBorder.none,
-                              focusedBorder: InputBorder.none,
-                              enabledBorder: InputBorder.none,
-                              contentPadding: EdgeInsets.zero,
-                              filled: false,
-                            ),
-                            maxLines: null,
-                          ),
-                          const SizedBox(height: 16),
-                          TextField(
                             controller: _contentController,
+                            undoController:
+                                _undoController, // Keep undoController here
+                            maxLines: null,
                             style: Theme.of(context)
                                 .textTheme
                                 .bodyLarge
-                                ?.copyWith(fontSize: settings.textSize),
+                                ?.copyWith(
+                                    fontSize: settings
+                                        .textSize), // Keep textSize from settings
                             decoration: const InputDecoration(
                               hintText: 'Start typing...',
                               border: InputBorder.none,
-                              focusedBorder: InputBorder.none,
                               enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              fillColor: Colors.transparent,
                               contentPadding: EdgeInsets.zero,
-                              filled: false,
                             ),
-                            maxLines: null,
                           ),
-                          const SizedBox(height: 300),
+                          const SizedBox(
+                              height:
+                                  300), // Keep original padding for consistency
                         ],
                       ),
                     ),
@@ -473,24 +563,52 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              _toolbarButton(context, Icons.format_bold,
+              ValueListenableBuilder<UndoHistoryValue>(
+                valueListenable: _undoController,
+                builder: (context, value, child) {
+                  return Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.undo),
+                        onPressed: value.canUndo ? _undoController.undo : null,
+                        color: value.canUndo
+                            ? Theme.of(context).colorScheme.primary
+                            : Colors.grey,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.redo),
+                        onPressed: value.canRedo ? _undoController.redo : null,
+                        color: value.canRedo
+                            ? Theme.of(context).colorScheme.primary
+                            : Colors.grey,
+                      ),
+                      Container(
+                          height: 24,
+                          width: 1,
+                          color: Colors.grey.withValues(alpha: 0.3),
+                          margin: const EdgeInsets.symmetric(horizontal: 8)),
+                    ],
+                  );
+                },
+              ),
+              _toolbarButton(context, Icons.format_bold, 'Bold',
                   () => _insertMarkdown('**', '**')),
-              _toolbarButton(context, Icons.format_italic,
+              _toolbarButton(context, Icons.format_italic, 'Italic',
                   () => _insertMarkdown('_', '_')),
-              _toolbarButton(
-                  context, Icons.title, () => _insertMarkdown('# ', '')),
+              _toolbarButton(context, Icons.title, 'Heading',
+                  () => _insertMarkdown('# ', '')),
               _toolbarButton(context, Icons.format_strikethrough,
-                  () => _insertMarkdown('~~', '~~')),
-              _toolbarButton(context, Icons.format_list_bulleted,
+                  'Strikethrough', () => _insertMarkdown('~~', '~~')),
+              _toolbarButton(context, Icons.format_list_bulleted, 'Bullet List',
                   () => _insertMarkdown('* ', '')),
-              _toolbarButton(context, Icons.check_box_outlined,
+              _toolbarButton(context, Icons.check_box_outlined, 'Checkbox',
                   () => _insertMarkdown('- [ ] ', '')),
               _toolbarButton(
-                  context, Icons.code, () => _insertMarkdown('`', '`')),
-              _toolbarButton(context, Icons.data_array,
+                  context, Icons.code, 'Code', () => _insertMarkdown('`', '`')),
+              _toolbarButton(context, Icons.data_array, 'Code Block',
                   () => _insertMarkdown('```\n', '\n```')),
-              _toolbarButton(
-                  context, Icons.format_quote, () => _insertMarkdown('> ', '')),
+              _toolbarButton(context, Icons.format_quote, 'Quote',
+                  () => _insertMarkdown('> ', '')),
             ],
           ),
         ),
@@ -498,11 +616,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     );
   }
 
-  Widget _toolbarButton(
-      BuildContext context, IconData icon, VoidCallback onPressed) {
+  Widget _toolbarButton(BuildContext context, IconData icon, String tooltip,
+      VoidCallback onPressed) {
     return IconButton(
       icon: Icon(icon, color: Theme.of(context).colorScheme.onSurfaceVariant),
       onPressed: onPressed,
+      tooltip: tooltip,
     );
   }
 

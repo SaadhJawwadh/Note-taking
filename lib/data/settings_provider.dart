@@ -18,9 +18,13 @@ class SettingsProvider extends ChangeNotifier {
     _loadSettings();
   }
 
+  String _fontFamily = 'Rubik';
+  String get fontFamily => _fontFamily;
+
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     _textSize = prefs.getDouble('textSize') ?? 16.0;
+    _fontFamily = prefs.getString('fontFamily') ?? 'Rubik';
 
     final themeIndex = prefs.getInt('themeMode') ?? 0;
     _themeMode = _getThemeModeFromInt(themeIndex);
@@ -32,6 +36,13 @@ class SettingsProvider extends ChangeNotifier {
     _textSize = size;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble('textSize', size);
+    notifyListeners();
+  }
+
+  Future<void> setFontFamily(String font) async {
+    _fontFamily = font;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('fontFamily', font);
     notifyListeners();
   }
 
