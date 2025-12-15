@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import '../data/settings_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'manage_tags_screen.dart';
+import '../theme/app_theme.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -17,136 +18,188 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        appBar: AppBar(
-          title: const Text('Settings'),
-          centerTitle: true,
-          backgroundColor: Colors.transparent,
-          actions: [
-            Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: TextButton(
-                onPressed: () => Navigator.pop(context),
-                style: TextButton.styleFrom(
-                  backgroundColor:
-                      Theme.of(context).colorScheme.surfaceContainerHighest,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20)),
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      body: Consumer<SettingsProvider>(builder: (context, settings, child) {
+        return CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              backgroundColor: Colors.transparent,
+              floating: true,
+              snap: true,
+              toolbarHeight: 84,
+              automaticallyImplyLeading: false,
+              title: Container(
+                margin: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                height: 64,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainer,
+                  borderRadius: BorderRadius.circular(32),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                child: Text('Done',
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface)),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Settings',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.all(16),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  _buildSectionHeader(context, 'APPEARANCE'),
+                  _buildSettingsContainer(context, [
+                    _buildListTile(
+                      context,
+                      icon: Icons.palette_outlined,
+                      title: 'Theme',
+                      subtitle: _getThemeLabel(settings.themeMode),
+                      onTap: () => _showThemePicker(context, settings),
+                    ),
+                    Divider(
+                        height: 1,
+                        indent: 56,
+                        color: Theme.of(context).colorScheme.outlineVariant),
+                    _buildListTile(
+                      context,
+                      icon: Icons.text_fields,
+                      title: 'Text Size',
+                      subtitle: settings.textSizeLabel,
+                      onTap: () => _showTextSizePicker(context, settings),
+                    ),
+                    Divider(
+                        height: 1,
+                        indent: 56,
+                        color: Theme.of(context).colorScheme.outlineVariant),
+                    _buildListTile(
+                      context,
+                      icon: Icons.font_download_outlined,
+                      title: 'App Font',
+                      subtitle: settings.fontFamily,
+                      onTap: () => _showFontPicker(context, settings),
+                    ),
+                    Divider(
+                        height: 1,
+                        indent: 56,
+                        color: Theme.of(context).colorScheme.outlineVariant),
+                    _buildListTile(
+                      context,
+                      icon: Icons.format_paint_outlined,
+                      title: 'Default Note Color',
+                      trailing: Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: settings.defaultNoteColor == 0
+                              ? Theme.of(context).colorScheme.surface
+                              : Color(settings.defaultNoteColor),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                        ),
+                        child: settings.defaultNoteColor == 0
+                            ? Icon(Icons.auto_awesome,
+                                size: 12,
+                                color: Theme.of(context).colorScheme.onSurface)
+                            : null,
+                      ),
+                      onTap: () => _showDefaultColorPicker(context, settings),
+                    ),
+                  ]),
+                  const SizedBox(height: 24),
+                  _buildSectionHeader(context, 'CONTENT'),
+                  _buildSettingsContainer(context, [
+                    _buildListTile(
+                      context,
+                      icon: Icons.label_outlined,
+                      title: 'Manage Tags',
+                      subtitle: 'Rename or delete tags',
+                      showArrow: true,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const ManageTagsScreen()),
+                        );
+                      },
+                    ),
+                  ]),
+                  const SizedBox(height: 24),
+                  _buildSectionHeader(context, 'DATA'),
+                  _buildSettingsContainer(context, [
+                    _buildListTile(
+                      context,
+                      icon: Icons.download_outlined,
+                      title: 'Export Backup',
+                      subtitle: 'Save notes to a local JSON file',
+                      showArrow: true,
+                      onTap: () async {
+                        await _exportBackup(context);
+                      },
+                    ),
+                    Divider(
+                        height: 1,
+                        indent: 56,
+                        color: Theme.of(context).colorScheme.outlineVariant),
+                    _buildListTile(
+                      context,
+                      icon: Icons.upload_outlined,
+                      title: 'Import Backup',
+                      subtitle: 'Restore from local JSON file',
+                      showArrow: true,
+                      onTap: () async {
+                        await _importBackup(context);
+                      },
+                    ),
+                  ]),
+                  const SizedBox(height: 24),
+                  _buildSectionHeader(context, 'SUPPORT'),
+                  _buildSettingsContainer(context, [
+                    _buildListTile(
+                      context,
+                      icon: Icons.help_outline,
+                      title: 'Help Center',
+                      trailing: Icon(Icons.open_in_new,
+                          size: 20,
+                          color:
+                              Theme.of(context).colorScheme.onSurfaceVariant),
+                    ),
+                    Divider(
+                        height: 1,
+                        indent: 56,
+                        color: Theme.of(context).colorScheme.outlineVariant),
+                    _buildListTile(
+                      context,
+                      icon: Icons.chat_bubble_outline,
+                      title: 'Send Feedback',
+                    ),
+                  ]),
+                  const SizedBox(height: 24),
+                ]),
               ),
             ),
           ],
-        ),
-        body: Consumer<SettingsProvider>(builder: (context, settings, child) {
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _buildSectionHeader(context, 'APPEARANCE'),
-              _buildSettingsContainer(context, [
-                _buildListTile(
-                  context,
-                  icon: Icons.palette_outlined,
-                  title: 'Theme',
-                  subtitle: _getThemeLabel(settings.themeMode),
-                  onTap: () => _showThemePicker(context, settings),
-                ),
-                Divider(
-                    height: 1,
-                    indent: 56,
-                    color: Theme.of(context).colorScheme.outlineVariant),
-                _buildListTile(
-                  context,
-                  icon: Icons.text_fields,
-                  title: 'Text Size',
-                  subtitle: settings.textSizeLabel,
-                  onTap: () => _showTextSizePicker(context, settings),
-                ),
-                Divider(
-                    height: 1,
-                    indent: 56,
-                    color: Theme.of(context).colorScheme.outlineVariant),
-                _buildListTile(
-                  context,
-                  icon: Icons.font_download_outlined,
-                  title: 'App Font',
-                  subtitle: settings.fontFamily,
-                  onTap: () => _showFontPicker(context, settings),
-                ),
-              ]),
-              const SizedBox(height: 24),
-              _buildSectionHeader(context, 'CONTENT'),
-              _buildSettingsContainer(context, [
-                _buildListTile(
-                  context,
-                  icon: Icons.label_outlined,
-                  title: 'Manage Categories',
-                  subtitle: 'Rename or delete tags',
-                  showArrow: true,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const ManageTagsScreen()),
-                    );
-                  },
-                ),
-              ]),
-              const SizedBox(height: 24),
-              _buildSectionHeader(context, 'DATA'),
-              _buildSettingsContainer(context, [
-                _buildListTile(
-                  context,
-                  icon: Icons.download_outlined,
-                  title: 'Export Backup',
-                  subtitle: 'Save notes to a local JSON file',
-                  showArrow: true,
-                  onTap: () async {
-                    await _exportBackup(context);
-                  },
-                ),
-                Divider(
-                    height: 1,
-                    indent: 56,
-                    color: Theme.of(context).colorScheme.outlineVariant),
-                _buildListTile(
-                  context,
-                  icon: Icons.upload_outlined,
-                  title: 'Import Backup',
-                  subtitle: 'Restore from local JSON file',
-                  showArrow: true,
-                  onTap: () async {
-                    await _importBackup(context);
-                  },
-                ),
-              ]),
-              const SizedBox(height: 24),
-              _buildSectionHeader(context, 'SUPPORT'),
-              _buildSettingsContainer(context, [
-                _buildListTile(
-                  context,
-                  icon: Icons.help_outline,
-                  title: 'Help Center',
-                  trailing: Icon(Icons.open_in_new,
-                      size: 20,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant),
-                ),
-                Divider(
-                    height: 1,
-                    indent: 56,
-                    color: Theme.of(context).colorScheme.outlineVariant),
-                _buildListTile(
-                  context,
-                  icon: Icons.chat_bubble_outline,
-                  title: 'Send Feedback',
-                ),
-              ]),
-              const SizedBox(height: 24),
-            ],
-          );
-        }));
+        );
+      }),
+    );
   }
 
   String _getThemeLabel(ThemeMode mode) {
@@ -411,6 +464,74 @@ class SettingsScreen extends StatelessWidget {
                     Navigator.pop(context);
                   }
                 },
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showDefaultColorPicker(
+      BuildContext context, SettingsProvider settings) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+          title: Text('Default Note Color',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+          content: Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            alignment: WrapAlignment.center,
+            children: AppTheme.noteColors.map((c) {
+              final bool isSystem = c.toARGB32() == 0;
+              final bool isSelected = settings.defaultNoteColor == c.toARGB32();
+
+              return Tooltip(
+                message: isSystem ? 'System Default' : 'Color',
+                child: GestureDetector(
+                  onTap: () {
+                    settings.setDefaultNoteColor(c.toARGB32());
+                    Navigator.pop(context);
+                  },
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                        color: isSystem
+                            ? Theme.of(context).colorScheme.surface
+                            : c,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isSelected
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.outlineVariant,
+                          width: isSelected ? 3 : 1,
+                        ),
+                        boxShadow: [
+                          if (isSelected)
+                            BoxShadow(
+                              color: (isSystem ? Colors.black : c)
+                                  .withValues(alpha: 0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            )
+                        ]),
+                    child: isSystem
+                        ? Icon(Icons.auto_awesome,
+                            size: 20,
+                            color: Theme.of(context).colorScheme.onSurface)
+                        : (isSelected
+                            ? Icon(Icons.check,
+                                size: 24,
+                                color: c.computeLuminance() > 0.5
+                                    ? Colors.black
+                                    : Colors.white)
+                            : null),
+                  ),
+                ),
               );
             }).toList(),
           ),

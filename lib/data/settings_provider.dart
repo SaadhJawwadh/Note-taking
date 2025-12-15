@@ -21,10 +21,18 @@ class SettingsProvider extends ChangeNotifier {
   String _fontFamily = 'Rubik';
   String get fontFamily => _fontFamily;
 
+  bool _isGridView = true;
+  bool get isGridView => _isGridView;
+
+  int _defaultNoteColor = 0; // 0 = System Default
+  int get defaultNoteColor => _defaultNoteColor;
+
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     _textSize = prefs.getDouble('textSize') ?? 16.0;
     _fontFamily = prefs.getString('fontFamily') ?? 'Rubik';
+    _isGridView = prefs.getBool('isGridView') ?? true;
+    _defaultNoteColor = prefs.getInt('defaultNoteColor') ?? 0;
 
     final themeIndex = prefs.getInt('themeMode') ?? 0;
     _themeMode = _getThemeModeFromInt(themeIndex);
@@ -43,6 +51,20 @@ class SettingsProvider extends ChangeNotifier {
     _fontFamily = font;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('fontFamily', font);
+    notifyListeners();
+  }
+
+  Future<void> setIsGridView(bool isGrid) async {
+    _isGridView = isGrid;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isGridView', isGrid);
+    notifyListeners();
+  }
+
+  Future<void> setDefaultNoteColor(int color) async {
+    _defaultNoteColor = color;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('defaultNoteColor', color);
     notifyListeners();
   }
 

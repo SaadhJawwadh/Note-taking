@@ -12,6 +12,17 @@ class AppTheme {
   static const Color textSecondary = Color(0xFF8E8E93);
   static const Color errorRed = Color(0xFFFF453A);
 
+  // Note Color Seeds (Material Standard Colors)
+  // 5 Colors + System Default
+  static const List<Color> noteColors = [
+    Color(0x00000000), // System Default
+    Color(0xFFE57373), // Red (Warm) - Red-300
+    Color(0xFFFFB74D), // Orange (Energy) - Orange-300
+    Color(0xFF81C784), // Green (Nature) - Green-300
+    Color(0xFF64B5F6), // Blue (Calm) - Blue-300
+    Color(0xFF9575CD), // Purple (Creative) - DeepPurple-300
+  ];
+
   static ThemeData createTheme(ColorScheme? dynamicColorScheme,
       Brightness brightness, String fontFamily) {
     ColorScheme scheme;

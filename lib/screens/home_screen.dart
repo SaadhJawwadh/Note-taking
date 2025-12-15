@@ -9,6 +9,8 @@ import 'note_editor_screen.dart';
 import 'settings_screen.dart';
 import 'search_delegate.dart';
 import 'dart:io';
+import 'package:provider/provider.dart';
+import '../data/settings_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -76,152 +78,220 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            tooltip: 'Search notes',
-            onPressed: () {
-              showSearch(context: context, delegate: NoteSearchDelegate());
-            },
-          ),
-          IconButton(
-            icon: const CircleAvatar(
-              backgroundColor: Color(0xFF3A3A3C),
-              child: Icon(Icons.person, color: Colors.white),
-            ),
-            tooltip: 'Open settings',
-            onPressed: () {
-              Navigator.of(context)
-                  .push(
-                    MaterialPageRoute(
-                        builder: (context) => const SettingsScreen()),
-                  )
-                  .then((_) => refreshNotes()); // Refresh on return
-            },
-          )
-        ],
-      ),
-      body: Column(
-        children: [
-          // Tag Selector
-          Container(
-            height: 50,
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: allTags.length,
-              itemBuilder: (context, index) {
-                final tag = allTags[index];
-                final isSelected = tag == selectedTag;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: FilterChip(
-                    label: Text(tag),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      if (selected) onTagSelected(tag);
-                    },
-                    backgroundColor:
-                        Theme.of(context).colorScheme.surfaceContainer,
-                    selectedColor:
-                        Theme.of(context).colorScheme.primaryContainer,
-                    labelStyle: TextStyle(
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.onPrimaryContainer
-                          : Theme.of(context).colorScheme.onSurfaceVariant,
-                      fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.normal,
+    return Consumer<SettingsProvider>(builder: (context, settings, child) {
+      return Scaffold(
+        body: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              backgroundColor: Colors.transparent,
+              floating: true,
+              snap: true,
+              toolbarHeight: 84, // Taller to accommodate the float and shadow
+              titleSpacing: 16,
+              automaticallyImplyLeading: false, // Home doesn't need back
+              title: Container(
+                margin: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                height: 64,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainer,
+                  borderRadius: BorderRadius.circular(32),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
                     ),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20)),
-                    side: BorderSide.none,
-                    showCheckmark: false,
-                  ),
-                );
-              },
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    const SizedBox(width: 16),
+                    Text(
+                      'Notes',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: Icon(settings.isGridView
+                          ? Icons.view_agenda_outlined
+                          : Icons.grid_view_outlined),
+                      tooltip: settings.isGridView ? 'List view' : 'Grid view',
+                      onPressed: () {
+                        settings.setIsGridView(!settings.isGridView);
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.search),
+                      tooltip: 'Search notes',
+                      onPressed: () {
+                        showSearch(
+                            context: context, delegate: NoteSearchDelegate());
+                      },
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: IconButton(
+                        icon: const Icon(Icons.settings_outlined),
+                        tooltip: 'Settings',
+                        onPressed: () {
+                          Navigator.of(context)
+                              .push(
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        const SettingsScreen()),
+                              )
+                              .then((_) => refreshNotes());
+                        },
+                      ),
+                    )
+                  ],
+                ),
+              ),
             ),
-          ),
-          Expanded(
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : filteredNotes.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.note_alt_outlined,
-                                size: 64,
-                                color: AppTheme.textSecondary
-                                    .withValues(alpha: 0.5)),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No notes here yet',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyLarge
-                                  ?.copyWith(
-                                    color: AppTheme.textSecondary,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Tap + to create one',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    color: AppTheme.textSecondary
-                                        .withValues(alpha: 0.7),
-                                  ),
-                            ),
-                          ],
+            // Tag Selector
+            SliverToBoxAdapter(
+              child: Container(
+                height: 50,
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: allTags.length,
+                  itemBuilder: (context, index) {
+                    final tag = allTags[index];
+                    final isSelected = tag == selectedTag;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        label: Text(tag),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          if (selected) onTagSelected(tag);
+                        },
+                        backgroundColor:
+                            Theme.of(context).colorScheme.surfaceContainer,
+                        selectedColor:
+                            Theme.of(context).colorScheme.primaryContainer,
+                        labelStyle: TextStyle(
+                          color: isSelected
+                              ? Theme.of(context).colorScheme.onPrimaryContainer
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
                         ),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20)),
+                        side: BorderSide.none,
+                        showCheckmark: false,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            // Content
+            if (isLoading)
+              const SliverFillRemaining(
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (filteredNotes.isEmpty)
+              SliverFillRemaining(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.note_alt_outlined,
+                          size: 64,
+                          color: AppTheme.textSecondary.withValues(alpha: 0.5)),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No notes here yet',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: AppTheme.textSecondary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tap + to create one',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color:
+                                  AppTheme.textSecondary.withValues(alpha: 0.7),
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(
+                    16, 0, 16, 80), // Bottom padding for FAB
+                sliver: settings.isGridView
+                    ? SliverMasonryGrid.count(
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 12,
+                        crossAxisSpacing: 12,
+                        childCount: filteredNotes.length,
+                        itemBuilder: (context, index) {
+                          return NoteCard(
+                              note: filteredNotes[index],
+                              onTap: () async {
+                                await Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => NoteEditorScreen(
+                                        note: filteredNotes[index]),
+                                  ),
+                                );
+                                refreshNotes();
+                              },
+                              onLongPress: () =>
+                                  _showNoteActions(filteredNotes[index]));
+                        },
                       )
-                    : Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        child: MasonryGridView.count(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 12,
-                          crossAxisSpacing: 12,
-                          itemCount: filteredNotes.length,
-                          itemBuilder: (context, index) {
-                            return NoteCard(
-                                note: filteredNotes[index],
-                                onTap: () async {
-                                  await Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => NoteEditorScreen(
-                                          note: filteredNotes[index]),
-                                    ),
-                                  );
-                                  refreshNotes();
-                                },
-                                onLongPress: () =>
-                                    _showNoteActions(filteredNotes[index]));
+                    : SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: NoteCard(
+                                  note: filteredNotes[index],
+                                  onTap: () async {
+                                    await Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => NoteEditorScreen(
+                                            note: filteredNotes[index]),
+                                      ),
+                                    );
+                                    refreshNotes();
+                                  },
+                                  onLongPress: () =>
+                                      _showNoteActions(filteredNotes[index])),
+                            );
                           },
+                          childCount: filteredNotes.length,
                         ),
                       ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        tooltip: 'Create new note',
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        child: Icon(Icons.add,
-            size: 28, color: Theme.of(context).colorScheme.onPrimary),
-        onPressed: () async {
-          await Navigator.of(context).push(
-            MaterialPageRoute(builder: (context) => const NoteEditorScreen()),
-          );
-          refreshNotes();
-        },
-      ),
-    );
+              ),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton(
+          tooltip: 'Create new note',
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          child: Icon(Icons.add,
+              size: 28, color: Theme.of(context).colorScheme.onPrimary),
+          onPressed: () async {
+            await Navigator.of(context).push(
+              MaterialPageRoute(builder: (context) => const NoteEditorScreen()),
+            );
+            refreshNotes();
+          },
+        ),
+      );
+    });
   }
 }
 
@@ -235,11 +305,24 @@ class NoteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // If color is default dark, use surface container, else use note color
-    final isDefaultColor = note.color == 0xFF252529;
-    final bgColor = isDefaultColor
-        ? Theme.of(context).colorScheme.surfaceContainer
-        : Color(note.color);
+    // Dynamic Material You logic
+    final isSystemDefault = note.color == 0;
+    final theme = Theme.of(context);
+
+    Color backgroundColor;
+    Color borderColor;
+
+    if (isSystemDefault) {
+      backgroundColor = theme.colorScheme.surfaceContainer;
+      borderColor = theme.colorScheme.outlineVariant;
+    } else {
+      final scheme = ColorScheme.fromSeed(
+        seedColor: Color(note.color),
+        brightness: theme.brightness,
+      );
+      backgroundColor = scheme.surfaceContainerHigh;
+      borderColor = scheme.outline; // Use outline color for visibility
+    }
 
     return Semantics(
         label:
@@ -251,12 +334,12 @@ class NoteCard extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: bgColor,
+              color: backgroundColor,
               borderRadius: BorderRadius.circular(20),
-              border: isDefaultColor
-                  ? Border.all(
-                      color: Theme.of(context).colorScheme.outlineVariant)
-                  : null,
+              border: Border.all(
+                color: borderColor.withValues(alpha: 0.6), // Subtle but visible
+                width: 1,
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
