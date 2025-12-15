@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.3.0] - 2025-12-15
+
+### Major Update
+- **Feature Release**: Official release of the Unified Design Language and Advanced Formatting features.
+- Includes all changes from v1.2.3.
+
 ## [1.2.3] - 2025-12-15
 
 ### Modified
