@@ -1,14 +1,18 @@
 # Changelog
 
+## [1.3.2] - 2025-12-17
+
+### 🚀 Enhancements
+- **Editor Toolbar**: Redesigned the formatting toolbar as a floating **"Pill"** that adapts to keyboard visibility.
+- **Settings**: Simplifed the "About" section to display the version number directly.
+
+### 🛠️ Fixes & Cleanup
+- **Security**: Reverted Biometric App Lock feature for better stability.
+- **Dependencies**: Removed unused `local_auth` and related code.
+- **UI**: Fixed bottom padding and layout issues in the Note Editor.
+
 ## [1.3.1] - 2025-12-17
 
-### Refinement & Fixes
-- **Security**: Removed biometric app lock (reverted).
-- **Note Editor**:
-    - **Fixed Bottom Bar**: Usage of standard bottom toolbar that respects keyboard layout.
-    - **Pill Style Toolbars**: Enhanced visual consistency with new floating pill toolbar design.
-- **Settings**: Removed "Check for Updates" button (now shows static version).
-- **Cleanup**: Removed unused dependencies (`local_auth`).
 
 ## [1.3.0] - 2025-12-15
 
