@@ -6,3 +6,10 @@ linter:
     prefer_const_declarations: true
     avoid_print: true
     use_key_in_widget_constructors: true
+    always_declare_return_types: true
+    cancel_subscriptions: true
+    close_sinks: true
+    prefer_final_fields: true
+    unawaited_futures: true
+    use_super_parameters: true
+    curly_braces_in_flow_control_structures: true

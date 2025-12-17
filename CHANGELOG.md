@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.4.0] - 2025-12-18
+
+### ✨ New Features
+- **Material 3 Animations**: Integrated expressive transitions including `OpenContainer` for note cards, staggered list entrances, and fluid FAB morphing.
+- **Enhanced Preview**: Note Editor preview now supports selectable text, clickable links, and proper rendering of local images.
+
+### ⚡ Improvements
+- **Accessibility**: Comprehensive audit ensuring proper semantic labels and hit targets across the app.
+- **Code Quality**: Resolved all lint issues and redundant code for a cleaner codebase.
+- **Preview Alignment**: Fixed alignment issues in the Note Editor preview mode.
+
 ## [1.3.2] - 2025-12-17
 
 ### 🚀 Enhancements

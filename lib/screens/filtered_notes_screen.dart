@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 import '../data/database_helper.dart';
 import '../data/note_model.dart';
 import '../data/settings_provider.dart';
-import '../theme/app_theme.dart';
+import 'package:animations/animations.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+
 import 'home_screen.dart'; // For NoteCard and actions (if reuse needed, for now we might duplicate actions or move them)
 import 'note_editor_screen.dart';
 
@@ -53,25 +55,37 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
     // Re-implementing action logic similar to HomeScreen but specific to context
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.darkSurface, // Assuming dark or use theme
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) {
+        final onSurface = Theme.of(context).colorScheme.onSurface;
+        final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
+
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 32,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
               if (widget.filterType == FilterType.archived) ...[
                 ListTile(
                   leading:
-                      const Icon(Icons.archive_outlined, color: Colors.grey),
-                  title: const Text('Unarchive',
-                      style: TextStyle(color: Colors.white)),
+                      Icon(Icons.archive_outlined, color: onSurfaceVariant),
+                  title: Text('Unarchive', style: TextStyle(color: onSurface)),
                   onTap: () async {
                     await DatabaseHelper.instance.archiveNote(note.id, false);
                     if (!context.mounted) return;
                     Navigator.pop(context);
-                    refreshNotes();
+                    await refreshNotes();
                   },
                 ),
                 ListTile(
@@ -83,20 +97,19 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
                     await DatabaseHelper.instance.deleteNote(note.id);
                     if (!context.mounted) return;
                     Navigator.pop(context);
-                    refreshNotes();
+                    await refreshNotes();
                   },
                 ),
               ] else ...[
                 // Trash actions
                 ListTile(
-                  leading: const Icon(Icons.restore, color: Colors.white),
-                  title: const Text('Restore',
-                      style: TextStyle(color: Colors.white)),
+                  leading: Icon(Icons.restore, color: onSurfaceVariant),
+                  title: Text('Restore', style: TextStyle(color: onSurface)),
                   onTap: () async {
                     await DatabaseHelper.instance.restoreNote(note.id);
                     if (!context.mounted) return;
                     Navigator.pop(context);
-                    refreshNotes();
+                    await refreshNotes();
                   },
                 ),
                 ListTile(
@@ -107,7 +120,7 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
                     await DatabaseHelper.instance.hardDeleteNote(note.id);
                     if (!context.mounted) return;
                     Navigator.pop(context);
-                    refreshNotes();
+                    await refreshNotes();
                   },
                 ),
               ],
@@ -163,58 +176,98 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
                   )
                 : Padding(
                     padding: const EdgeInsets.all(16.0),
-                    child: settings.isGridView
-                        ? MasonryGridView.count(
-                            crossAxisCount: 2,
-                            mainAxisSpacing: 12,
-                            crossAxisSpacing: 12,
-                            itemCount: displayedNotes.length,
-                            itemBuilder: (context, index) {
-                              return NoteCard(
-                                note: displayedNotes[index],
-                                tagColors: _tagColors,
-                                onTap: () async {
-                                  // For now, allow viewing editor.
-                                  // If trash, maybe read-only?
-                                  // Existing app allows edit of trash? Standard behavior usually requires restore to edit.
-                                  // Let's assume standard behavior: if Archived, can edit. If Trash, maybe warn or readonly.
-                                  // For simplicity matching current user state, let's open editor.
-                                  await Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => NoteEditorScreen(
-                                          note: displayedNotes[index]),
-                                    ),
-                                  );
-                                  refreshNotes();
-                                },
-                                onLongPress: () =>
-                                    _showNoteActions(displayedNotes[index]),
-                              );
-                            },
-                          )
-                        : ListView.builder(
-                            itemCount: displayedNotes.length,
-                            itemBuilder: (context, index) {
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 12.0),
-                                child: NoteCard(
-                                  note: displayedNotes[index],
-                                  tagColors: _tagColors,
-                                  onTap: () async {
-                                    await Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (context) => NoteEditorScreen(
-                                            note: displayedNotes[index]),
+                    child: AnimationLimiter(
+                      child: settings.isGridView
+                          ? MasonryGridView.count(
+                              crossAxisCount: 2,
+                              mainAxisSpacing: 12,
+                              crossAxisSpacing: 12,
+                              itemCount: displayedNotes.length,
+                              itemBuilder: (context, index) {
+                                final note = displayedNotes[index];
+                                return AnimationConfiguration.staggeredGrid(
+                                  position: index,
+                                  duration: const Duration(milliseconds: 375),
+                                  columnCount: 2,
+                                  child: ScaleAnimation(
+                                    child: FadeInAnimation(
+                                      child: OpenContainer<bool>(
+                                        transitionType:
+                                            ContainerTransitionType.fade,
+                                        openBuilder: (context, _) =>
+                                            NoteEditorScreen(note: note),
+                                        closedElevation: 0,
+                                        closedColor: Colors.transparent,
+                                        closedShape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(20)),
+                                        onClosed: (returned) async {
+                                          if (returned == true) {
+                                            await refreshNotes();
+                                          }
+                                        },
+                                        closedBuilder:
+                                            (context, openContainer) {
+                                          return NoteCard(
+                                            note: note,
+                                            onTap: openContainer,
+                                            tagColors: _tagColors,
+                                            onLongPress: () =>
+                                                _showNoteActions(note),
+                                          );
+                                        },
                                       ),
-                                    );
-                                    refreshNotes();
-                                  },
-                                  onLongPress: () =>
-                                      _showNoteActions(displayedNotes[index]),
-                                ),
-                              );
-                            },
-                          ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            )
+                          : ListView.builder(
+                              itemCount: displayedNotes.length,
+                              itemBuilder: (context, index) {
+                                final note = displayedNotes[index];
+                                return AnimationConfiguration.staggeredList(
+                                  position: index,
+                                  duration: const Duration(milliseconds: 375),
+                                  child: SlideAnimation(
+                                    verticalOffset: 50.0,
+                                    child: FadeInAnimation(
+                                      child: Padding(
+                                        padding:
+                                            const EdgeInsets.only(bottom: 12.0),
+                                        child: OpenContainer<bool>(
+                                          transitionType:
+                                              ContainerTransitionType.fade,
+                                          openBuilder: (context, _) =>
+                                              NoteEditorScreen(note: note),
+                                          closedElevation: 0,
+                                          closedColor: Colors.transparent,
+                                          closedShape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(20)),
+                                          onClosed: (returned) async {
+                                            if (returned == true) {
+                                              await refreshNotes();
+                                            }
+                                          },
+                                          closedBuilder:
+                                              (context, openContainer) {
+                                            return NoteCard(
+                                              note: note,
+                                              onTap: openContainer,
+                                              tagColors: _tagColors,
+                                              onLongPress: () =>
+                                                  _showNoteActions(note),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
                   ),
       );
     });

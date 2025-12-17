@@ -59,16 +59,20 @@ class NoteSearchDelegate extends SearchDelegate {
             crossAxisSpacing: 12,
             itemCount: notes.length,
             itemBuilder: (context, index) {
-              return NoteCard(
-                note: notes[index],
-                onTap: () {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            NoteEditorScreen(note: notes[index]),
-                      ));
-                },
+              return Semantics(
+                label: 'Search result: ${notes[index].title}',
+                button: true,
+                child: NoteCard(
+                  note: notes[index],
+                  onTap: () {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              NoteEditorScreen(note: notes[index]),
+                        ));
+                  },
+                ),
               );
             },
           ),

@@ -1,5 +1,6 @@
 // ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 import 'dart:convert';
 import 'dart:io';
@@ -12,9 +13,9 @@ import '../data/settings_provider.dart';
 
 import 'package:google_fonts/google_fonts.dart';
 import 'manage_tags_screen.dart';
-import 'filtered_notes_screen.dart';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -67,144 +68,116 @@ class SettingsScreen extends StatelessWidget {
               ),
               SliverPadding(
                 padding: const EdgeInsets.all(16),
-                sliver: SliverList(
-                  delegate: SliverChildListDelegate([
-                    _buildSectionHeader(context, 'APPEARANCE'),
-                    _buildSettingsContainer(context, [
-                      _buildListTile(
-                        context,
-                        icon: Icons.palette_outlined,
-                        title: 'Theme',
-                        subtitle: _getThemeLabel(settings.themeMode),
-                        onTap: () => _showThemePicker(context, settings),
-                      ),
-                      Divider(
-                        height: 1,
-                        indent: 56,
-                        color: Theme.of(context).colorScheme.outlineVariant,
-                      ),
-                      _buildListTile(
-                        context,
-                        icon: Icons.text_fields,
-                        title: 'Text Size',
-                        subtitle: settings.textSizeLabel,
-                        onTap: () => _showTextSizePicker(context, settings),
-                      ),
-                      Divider(
-                        height: 1,
-                        indent: 56,
-                        color: Theme.of(context).colorScheme.outlineVariant,
-                      ),
-                      _buildListTile(
-                        context,
-                        icon: Icons.font_download_outlined,
-                        title: 'App Font',
-                        subtitle: settings.fontFamily,
-                        onTap: () => _showFontPicker(context, settings),
-                      ),
-                    ]),
-                    const SizedBox(height: 24),
-                    _buildSectionHeader(context, 'CONTENT'),
-                    _buildSettingsContainer(context, [
-                      _buildListTile(
-                        context,
-                        icon: Icons.label_outlined,
-                        title: 'Manage Tags',
-                        subtitle: 'Rename or delete tags',
-                        showArrow: true,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const ManageTagsScreen(),
+                sliver: AnimationLimiter(
+                  child: SliverList(
+                    delegate: SliverChildListDelegate(
+                      AnimationConfiguration.toStaggeredList(
+                        duration: const Duration(milliseconds: 375),
+                        childAnimationBuilder: (widget) => SlideAnimation(
+                          horizontalOffset: 50.0,
+                          child: FadeInAnimation(child: widget),
+                        ),
+                        children: [
+                          _buildSectionHeader(context, 'APPEARANCE'),
+                          _buildSettingsContainer(context, [
+                            _buildListTile(
+                              context,
+                              icon: Icons.palette_outlined,
+                              title: 'Theme',
+                              subtitle: _getThemeLabel(settings.themeMode),
+                              onTap: () => _showThemePicker(context, settings),
                             ),
-                          );
-                        },
-                      ),
-                    ]),
-                    const SizedBox(height: 24),
-                    _buildSectionHeader(context, 'Folders'),
-                    _buildSettingsContainer(context, [
-                      _buildListTile(
-                        context,
-                        icon: Icons.archive_outlined,
-                        title: 'Archived Notes',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const FilteredNotesScreen(
-                                filterType: FilterType.archived,
-                              ),
+                            Divider(
+                              height: 1,
+                              indent: 56,
+                              color:
+                                  Theme.of(context).colorScheme.outlineVariant,
                             ),
-                          );
-                        },
-                      ),
-                      Divider(
-                        height: 1,
-                        indent: 56,
-                        color: Theme.of(context).colorScheme.outlineVariant,
-                      ),
-                      _buildListTile(
-                        context,
-                        icon: Icons.delete_outline,
-                        title: 'Trash',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const FilteredNotesScreen(
-                                filterType: FilterType.trash,
-                              ),
+                            _buildListTile(
+                              context,
+                              icon: Icons.text_fields,
+                              title: 'Text Size',
+                              subtitle: settings.textSizeLabel,
+                              onTap: () =>
+                                  _showTextSizePicker(context, settings),
                             ),
-                          );
-                        },
+                            Divider(
+                              height: 1,
+                              indent: 56,
+                              color:
+                                  Theme.of(context).colorScheme.outlineVariant,
+                            ),
+                            _buildListTile(
+                              context,
+                              icon: Icons.font_download_outlined,
+                              title: 'App Font',
+                              subtitle: settings.fontFamily,
+                              onTap: () => _showFontPicker(context, settings),
+                            ),
+                          ]),
+                          const SizedBox(height: 24),
+                          _buildSectionHeader(context, 'CONTENT'),
+                          _buildSettingsContainer(context, [
+                            _buildListTile(
+                              context,
+                              icon: Icons.label_outline,
+                              title: 'Manage Tags',
+                              subtitle: 'Rename or delete tags',
+                              showArrow: true,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const ManageTagsScreen(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ]),
+                          const SizedBox(height: 24),
+                          _buildSectionHeader(context, 'DATA & SYNC'),
+                          _buildSettingsContainer(context, [
+                            _buildListTile(
+                              context,
+                              icon: Icons.download_outlined,
+                              title: 'Export Backup',
+                              subtitle: 'Save notes to a JSON file',
+                              showArrow: true,
+                              onTap: () => _exportBackup(context),
+                            ),
+                            Divider(
+                              height: 1,
+                              indent: 56,
+                              color:
+                                  Theme.of(context).colorScheme.outlineVariant,
+                            ),
+                            _buildListTile(
+                              context,
+                              icon: Icons.upload_outlined,
+                              title: 'Import Backup',
+                              subtitle: 'Restore from a JSON file',
+                              showArrow: true,
+                              onTap: () => _importBackup(context),
+                            ),
+                          ]),
+                          const SizedBox(height: 24),
+                          _buildSectionHeader(context, 'ABOUT'),
+                          _buildSettingsContainer(context, [
+                            _buildListTile(
+                              context,
+                              icon: Icons.info_outline,
+                              title: 'Version',
+                              subtitle: '1.4.0',
+                              onTap: () => _launchUrl(
+                                  'https://github.com/SaadhJawwadh/Note-taking/releases'),
+                            ),
+                          ]),
+                          const SizedBox(height: 24),
+                        ],
                       ),
-                    ]),
-                    const SizedBox(height: 24),
-                    const SizedBox(height: 24),
-                    _buildSectionHeader(context, 'Data'),
-                    _buildSettingsContainer(context, [
-                      _buildListTile(
-                        context,
-                        icon: Icons.download_outlined,
-                        title: 'Export Backup',
-                        subtitle: 'Save notes to a JSON file',
-                        showArrow: true,
-                        onTap: () async {
-                          await _exportBackup(context);
-                        },
-                      ),
-                      Divider(
-                        height: 1,
-                        indent: 56,
-                        color: Theme.of(context).colorScheme.outlineVariant,
-                      ),
-                      _buildListTile(
-                        context,
-                        icon: Icons.upload_outlined,
-                        title: 'Import Backup',
-                        subtitle: 'Restore from a JSON file',
-                        showArrow: true,
-                        onTap: () async {
-                          await _importBackup(context);
-                        },
-                      ),
-                    ]),
-                    const SizedBox(height: 24),
-                    _buildSectionHeader(context, 'ABOUT'),
-                    _buildSettingsContainer(context, [
-                      _buildListTile(
-                        context,
-                        icon: Icons.info_outline,
-                        title: 'Version',
-                        subtitle:
-                            '1.3.1', // Dynamic version would be better but static for now is fine or use package_info
-                        // Using static for now as requested "show current build number"
-                      ),
-                    ]),
-                    const SizedBox(height: 24),
-                  ]),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -484,7 +457,13 @@ class SettingsScreen extends StatelessWidget {
   }
 
   void _showFontPicker(BuildContext context, SettingsProvider settings) {
-    final fonts = ['Rubik', 'Nunito', 'Quicksand', 'Varela Round'];
+    final fonts = [
+      'Rubik',
+      'Nunito',
+      'Quicksand',
+      'Varela Round',
+      'Comic Neue'
+    ];
 
     showDialog(
       context: context,
@@ -520,5 +499,12 @@ class SettingsScreen extends StatelessWidget {
         );
       },
     );
+  }
+
+  Future<void> _launchUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      throw Exception('Could not launch $url');
+    }
   }
 }

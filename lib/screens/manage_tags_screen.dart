@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/database_helper.dart';
 import '../theme/app_theme.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 class ManageTagsScreen extends StatefulWidget {
   const ManageTagsScreen({super.key});
@@ -108,7 +109,7 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
                   }
                   if (!context.mounted) return;
                   Navigator.pop(context);
-                  _loadTags();
+                  await _loadTags();
                 }
               },
               child: const Text('Save'),
@@ -142,7 +143,7 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
 
     if (confirmed == true) {
       await DatabaseHelper.instance.deleteTag(tag);
-      _loadTags();
+      await _loadTags();
     }
   }
 
@@ -150,7 +151,7 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Manage Categories'),
+        title: const Text('Manage Tags'),
         centerTitle: true,
       ),
       body: _isLoading
@@ -164,39 +165,64 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
                         ),
                   ),
                 )
-              : ListView.separated(
-                  itemCount: _tags.length,
-                  separatorBuilder: (context, index) =>
-                      const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final tag = _tags[index];
-                    final tagColorValue = _tagColors[tag];
-                    final tagColor = tagColorValue != null && tagColorValue != 0
-                        ? Color(tagColorValue)
-                        : null;
+              : AnimationLimiter(
+                  child: ListView.separated(
+                    itemCount: _tags.length,
+                    separatorBuilder: (context, index) =>
+                        const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final tag = _tags[index];
+                      final tagColorValue = _tagColors[tag];
+                      final tagColor =
+                          tagColorValue != null && tagColorValue != 0
+                              ? Color(tagColorValue)
+                              : null;
 
-                    return ListTile(
-                      leading: Icon(Icons.label,
-                          color: tagColor ??
-                              Theme.of(context).colorScheme.onSurfaceVariant),
-                      title: Text(tag),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit_outlined),
-                            tooltip: 'Edit',
-                            onPressed: () => _editTag(tag),
+                      return AnimationConfiguration.staggeredList(
+                        position: index,
+                        duration: const Duration(milliseconds: 375),
+                        child: SlideAnimation(
+                          verticalOffset: 50.0,
+                          child: FadeInAnimation(
+                            child: Semantics(
+                              label: 'Tag: $tag',
+                              child: ListTile(
+                                leading: Icon(Icons.label,
+                                    color: tagColor ??
+                                        Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant),
+                                title: Text(tag),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Semantics(
+                                      label: 'Edit tag $tag',
+                                      button: true,
+                                      child: IconButton(
+                                        icon: const Icon(Icons.edit_outlined),
+                                        tooltip: 'Edit',
+                                        onPressed: () => _editTag(tag),
+                                      ),
+                                    ),
+                                    Semantics(
+                                      label: 'Delete tag $tag',
+                                      button: true,
+                                      child: IconButton(
+                                        icon: const Icon(Icons.delete_outline),
+                                        tooltip: 'Delete',
+                                        onPressed: () => _deleteTag(tag),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline),
-                            tooltip: 'Delete',
-                            onPressed: () => _deleteTag(tag),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+                        ),
+                      );
+                    },
+                  ),
                 ),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -30,7 +31,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   bool isArchived = false;
   int color = 0; // 0 = System Default
   String? imagePath;
-  String category = 'All Notes';
   List<String> tags = [];
   bool _isPreview = true; // Default to preview
   List<String> _allTags = [];
@@ -40,6 +40,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   late DateTime _dateCreated;
 
   Map<String, int> _tagColors = {}; // Cache for tag colors
+
+  DateTime? _lastTapTime;
+  int _tapCount = 0;
 
   @override
   void initState() {
@@ -59,7 +62,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     color = widget.note?.color ?? 0;
 
     imagePath = widget.note?.imagePath;
-    category = widget.note?.category ?? 'All Notes';
     tags = List.from(widget.note?.tags ?? []);
     _loadTags();
 
@@ -109,7 +111,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       setState(() {
         imagePath = savedImage.path;
       });
-      saveNote();
+      await saveNote();
     }
   }
 
@@ -334,7 +336,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       isArchived: isArchived,
       color: color,
       imagePath: imagePath,
-      category: category,
+      category: widget.note?.category ?? 'All Notes',
       tags: tags,
     );
 
@@ -372,6 +374,22 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     color = newColor;
   }
 
+  void _handleTripleTap() {
+    final now = DateTime.now();
+    if (_lastTapTime == null ||
+        now.difference(_lastTapTime!) > const Duration(milliseconds: 300)) {
+      _tapCount = 1;
+    } else {
+      _tapCount++;
+    }
+    _lastTapTime = now;
+
+    if (_tapCount == 3) {
+      _togglePreview();
+      _tapCount = 0;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<SettingsProvider>(builder: (context, settings, child) {
@@ -383,18 +401,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       Color onBackground;
 
       if (isSystemDefault) {
-        backgroundColor =
-            theme.colorScheme.surface; // Default System Background
+        backgroundColor = theme.colorScheme.surface;
         onBackground = theme.colorScheme.onSurface;
       } else {
-        // Generate Scheme from Seed
         final scheme = ColorScheme.fromSeed(
           seedColor: Color(color),
           brightness: theme.brightness,
         );
-        // Use surfaceContainer for a distinct but integrated feel, or surface.
-        // Material 3 Colored/Tinted surfaces often use surfaceContainerHigh or similar.
-        // Let's use surfaceContainer for a nice tint.
         backgroundColor = scheme.surfaceContainerHigh;
         onBackground = scheme.onSurface;
       }
@@ -409,7 +422,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           children: [
             Expanded(
               child: GestureDetector(
-                onDoubleTap: _togglePreview, // Double tap to toggle mode
+                onTap: _handleTripleTap, // Double tap to toggle mode
                 child: Stack(
                   children: [
                     // Main Content
@@ -635,59 +648,144 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                     ),
                                   ),
                                 const SizedBox(height: 8),
-                                if (_isPreview)
-                                  MarkdownBody(
-                                    data: _contentController.text,
-                                    styleSheet: MarkdownStyleSheet(
-                                      p: TextStyle(
-                                          fontSize: settings.textSize,
-                                          height: 1.5,
-                                          color: textColor),
-                                      h1: TextStyle(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                          color: textColor),
-                                      h2: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                          color: textColor),
-                                      blockquote: TextStyle(
-                                          color:
-                                              textColor.withValues(alpha: 0.8),
-                                          fontStyle: FontStyle.italic),
-                                      code: TextStyle(
-                                          backgroundColor: Colors.black
-                                              .withValues(alpha: 0.2),
-                                          fontFamily: 'monospace',
-                                          color: textColor),
-                                      checkbox: TextStyle(color: textColor),
-                                    ),
-                                  )
-                                else
-                                  Column(
-                                    children: [
-                                      TextField(
-                                        controller: _contentController,
-                                        undoController: _undoController,
-                                        style: TextStyle(
-                                          fontSize: settings.textSize,
-                                          height: 1.5,
-                                          color: textColor,
+                                AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 300),
+                                  layoutBuilder:
+                                      (currentChild, previousChildren) {
+                                    return Stack(
+                                      alignment: Alignment.topLeft,
+                                      children: <Widget>[
+                                        ...previousChildren,
+                                        if (currentChild != null) currentChild,
+                                      ],
+                                    );
+                                  },
+                                  child: _isPreview
+                                      ? SelectionArea(
+                                          child: MarkdownBody(
+                                            key: const ValueKey('preview'),
+                                            data: _contentController.text,
+                                            selectable:
+                                                false, // Using SelectionArea for better control
+                                            softLineBreak: true,
+                                            onTapLink: (text, href, title) {
+                                              if (href != null) {
+                                                _launchUrl(href);
+                                              }
+                                            },
+                                            // ignore: deprecated_member_use
+                                            imageBuilder: (uri, title, alt) {
+                                              // Handle local file paths
+                                              if (uri.scheme == 'file' ||
+                                                  !uri.hasScheme) {
+                                                final pathStr = uri.path;
+                                                return ClipRRect(
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                  child: Image.file(
+                                                    File(pathStr),
+                                                    errorBuilder: (context,
+                                                            error,
+                                                            stackTrace) =>
+                                                        const Icon(
+                                                            Icons.broken_image),
+                                                  ),
+                                                );
+                                              }
+                                              return const SizedBox.shrink();
+                                            },
+                                            styleSheet: MarkdownStyleSheet(
+                                              p: TextStyle(
+                                                  fontSize: settings.textSize,
+                                                  height: 1.5,
+                                                  color: textColor),
+                                              h1: TextStyle(
+                                                  fontSize: 24,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: textColor),
+                                              h2: TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: textColor),
+                                              blockquote: TextStyle(
+                                                color: textColor.withValues(
+                                                    alpha: 0.9),
+                                                fontStyle: FontStyle.italic,
+                                              ),
+                                              blockquoteDecoration:
+                                                  BoxDecoration(
+                                                color: isSystemDefault
+                                                    ? theme.colorScheme
+                                                        .surfaceContainerHighest
+                                                    : ColorScheme.fromSeed(
+                                                            seedColor:
+                                                                Color(color),
+                                                            brightness: theme
+                                                                .brightness)
+                                                        .surfaceContainerHighest
+                                                        .withValues(alpha: 0.5),
+                                                border: Border(
+                                                  left: BorderSide(
+                                                    color: isSystemDefault
+                                                        ? theme
+                                                            .colorScheme.primary
+                                                        : ColorScheme.fromSeed(
+                                                                seedColor:
+                                                                    Color(
+                                                                        color),
+                                                                brightness: theme
+                                                                    .brightness)
+                                                            .primary,
+                                                    width: 4,
+                                                  ),
+                                                ),
+                                                borderRadius:
+                                                    const BorderRadius.only(
+                                                  topRight: Radius.circular(8),
+                                                  bottomRight:
+                                                      Radius.circular(8),
+                                                ),
+                                              ),
+                                              blockquotePadding:
+                                                  const EdgeInsets.all(12),
+                                              code: TextStyle(
+                                                  backgroundColor: Colors.black
+                                                      .withValues(alpha: 0.2),
+                                                  fontFamily: 'monospace',
+                                                  color: textColor),
+                                              checkbox:
+                                                  TextStyle(color: textColor),
+                                            ),
+                                          ),
+                                        )
+                                      : Column(
+                                          key: const ValueKey('edit'),
+                                          children: [
+                                            TextField(
+                                              controller: _contentController,
+                                              undoController: _undoController,
+                                              style: theme.textTheme.bodyLarge
+                                                  ?.copyWith(
+                                                fontSize: settings.textSize,
+                                                height: 1.5,
+                                                color: textColor,
+                                              ),
+                                              decoration: InputDecoration(
+                                                hintText: 'Start typing...',
+                                                border: InputBorder.none,
+                                                filled: false,
+                                                hintStyle:
+                                                    TextStyle(color: hintColor),
+                                              ),
+                                              maxLines: null,
+                                              keyboardType:
+                                                  TextInputType.multiline,
+                                            ),
+                                            // Space for bottom toolbars
+                                            const SizedBox(height: 20),
+                                          ],
                                         ),
-                                        decoration: InputDecoration(
-                                          hintText: 'Start typing...',
-                                          border: InputBorder.none,
-                                          filled: false,
-                                          hintStyle:
-                                              TextStyle(color: hintColor),
-                                        ),
-                                        maxLines: null,
-                                        keyboardType: TextInputType.multiline,
-                                      ),
-                                      // Space for bottom toolbars
-                                      const SizedBox(height: 20),
-                                    ],
-                                  ),
+                                ),
                                 const SizedBox(
                                     height: 20), // Basic Bottom padding
                               ]),
@@ -701,100 +799,142 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
               ),
             ),
             // Floating Toolbar (Pill Style)
-            if (!_isPreview)
-              SafeArea(
-                top: false,
-                child: Container(
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: isSystemDefault
-                        ? theme.colorScheme.surfaceContainerHighest
-                        : ColorScheme.fromSeed(
-                                seedColor: Color(color),
-                                brightness: theme.brightness)
-                            .surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(32),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: _isPreview
+                  ? const SizedBox.shrink()
+                  : SafeArea(
+                      key: const ValueKey('toolbar'),
+                      top: false,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: isSystemDefault
+                              ? theme.colorScheme.surfaceContainerHighest
+                              : ColorScheme.fromSeed(
+                                      seedColor: Color(color),
+                                      brightness: theme.brightness)
+                                  .surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(32),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          children: [
+                            Semantics(
+                              label: 'Bold',
+                              button: true,
+                              child: IconButton(
+                                icon: const Icon(Icons.format_bold),
+                                tooltip: 'Bold',
+                                color: textColor,
+                                onPressed: () => _applyFormat('**', '**'),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Semantics(
+                              label: 'Italic',
+                              button: true,
+                              child: IconButton(
+                                icon: const Icon(Icons.format_italic),
+                                tooltip: 'Italic',
+                                color: textColor,
+                                onPressed: () => _applyFormat('_', '_'),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Semantics(
+                              label: 'Heading',
+                              button: true,
+                              child: IconButton(
+                                icon: const Icon(Icons.title),
+                                tooltip: 'Heading',
+                                color: textColor,
+                                onPressed: () => _applyFormat('# ', ''),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Semantics(
+                              label: 'Strikethrough',
+                              button: true,
+                              child: IconButton(
+                                icon: const Icon(Icons.strikethrough_s),
+                                tooltip: 'Strikethrough',
+                                color: textColor,
+                                onPressed: () => _applyFormat('~~', '~~'),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Semantics(
+                              label: 'Code',
+                              button: true,
+                              child: IconButton(
+                                icon: const Icon(Icons.code),
+                                tooltip: 'Code',
+                                color: textColor,
+                                onPressed: () => _applyFormat('`', '`'),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Semantics(
+                              label: 'Quote',
+                              button: true,
+                              child: IconButton(
+                                icon: const Icon(Icons.format_quote),
+                                tooltip: 'Quote',
+                                color: textColor,
+                                onPressed: () => _applyFormat('> ', ''),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Semantics(
+                              label: 'List',
+                              button: true,
+                              child: IconButton(
+                                icon: const Icon(Icons.format_list_bulleted),
+                                tooltip: 'List',
+                                color: textColor,
+                                onPressed: () => _applyFormat('- ', ''),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Semantics(
+                              label: 'Checkbox',
+                              button: true,
+                              child: IconButton(
+                                icon: const Icon(Icons.check_box_outlined),
+                                tooltip: 'Checkbox',
+                                color: textColor,
+                                onPressed: () => _applyFormat('- [ ] ', ''),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Semantics(
+                              label: 'Add Image',
+                              button: true,
+                              child: IconButton(
+                                icon: const Icon(
+                                    Icons.add_photo_alternate_outlined),
+                                tooltip: 'Cover',
+                                color: textColor,
+                                onPressed: _pickImage,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.format_bold),
-                        tooltip: 'Bold',
-                        color: textColor,
-                        onPressed: () => _applyFormat('**', '**'),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.format_italic),
-                        tooltip: 'Italic',
-                        color: textColor,
-                        onPressed: () => _applyFormat('_', '_'),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.title),
-                        tooltip: 'Heading',
-                        color: textColor,
-                        onPressed: () => _applyFormat('# ', ''),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.strikethrough_s),
-                        tooltip: 'Strikethrough',
-                        color: textColor,
-                        onPressed: () => _applyFormat('~~', '~~'),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.code),
-                        tooltip: 'Code',
-                        color: textColor,
-                        onPressed: () => _applyFormat('`', '`'),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.format_quote),
-                        tooltip: 'Quote',
-                        color: textColor,
-                        onPressed: () => _applyFormat('> ', ''),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.format_list_bulleted),
-                        tooltip: 'List',
-                        color: textColor,
-                        onPressed: () => _applyFormat('- ', ''),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.check_box_outlined),
-                        tooltip: 'Checkbox',
-                        color: textColor,
-                        onPressed: () => _applyFormat('- [ ] ', ''),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.add_photo_alternate_outlined),
-                        tooltip: 'Cover',
-                        color: textColor,
-                        onPressed: _pickImage,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+                    ),
+            ),
           ],
         ),
       );
@@ -823,6 +963,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         text: newText,
         selection: TextSelection.collapsed(offset: newText.length),
       );
+    }
+  }
+
+  Future<void> _launchUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      throw Exception('Could not launch $url');
     }
   }
 }

@@ -28,7 +28,7 @@ class SettingsProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _textSize = prefs.getDouble('textSize') ?? 16.0;
     _fontFamily =
-        prefs.getString('fontFamily') ?? 'Nunito'; // Default to modern font
+        prefs.getString('fontFamily') ?? 'Rubik'; // Default to Rubik font
     _isGridView = prefs.getBool('isGridView') ?? true;
 
     final themeIndex = prefs.getInt('themeMode') ?? 0;

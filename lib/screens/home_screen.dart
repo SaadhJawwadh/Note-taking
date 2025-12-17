@@ -11,6 +11,8 @@ import 'search_delegate.dart';
 import 'dart:io';
 import 'package:provider/provider.dart';
 import '../data/settings_provider.dart';
+import 'package:animations/animations.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -237,102 +239,196 @@ class _HomeScreenState extends State<HomeScreen> {
               const SliverFillRemaining(
                 child: Center(child: CircularProgressIndicator()),
               )
-            else if (filteredNotes.isEmpty)
-              SliverFillRemaining(
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.note_alt_outlined,
-                          size: 64,
-                          color: AppTheme.textSecondary.withValues(alpha: 0.5)),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No notes here yet',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: AppTheme.textSecondary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Tap + to create one',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color:
-                                  AppTheme.textSecondary.withValues(alpha: 0.7),
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-              )
             else
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(
-                    16, 0, 16, 80), // Bottom padding for FAB
-                sliver: settings.isGridView
-                    ? SliverMasonryGrid.count(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childCount: filteredNotes.length,
-                        itemBuilder: (context, index) {
-                          return NoteCard(
-                              note: filteredNotes[index],
-                              onTap: () async {
-                                await Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) => NoteEditorScreen(
-                                        note: filteredNotes[index]),
-                                  ),
-                                );
-                                refreshNotes();
-                              },
-                              tagColors: _tagColors,
-                              onLongPress: () =>
-                                  _showNoteActions(filteredNotes[index]));
-                        },
-                      )
-                    : SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: NoteCard(
-                                  note: filteredNotes[index],
-                                  onTap: () async {
-                                    await Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (context) => NoteEditorScreen(
-                                            note: filteredNotes[index]),
+              SliverFillRemaining(
+                hasScrollBody: true,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: filteredNotes.isEmpty
+                      ? Center(
+                          key: const ValueKey('empty'),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.note_alt_outlined,
+                                  size: 64,
+                                  color: AppTheme.textSecondary
+                                      .withValues(alpha: 0.5)),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No notes here yet',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyLarge
+                                    ?.copyWith(
+                                      color: AppTheme.textSecondary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Tap + to create one',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: AppTheme.textSecondary
+                                          .withValues(alpha: 0.7),
+                                    ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : CustomScrollView(
+                          key: const ValueKey('list'),
+                          slivers: [
+                            SliverPadding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+                              sliver: AnimationLimiter(
+                                child: settings.isGridView
+                                    ? SliverMasonryGrid.count(
+                                        crossAxisCount: 2,
+                                        mainAxisSpacing: 12,
+                                        crossAxisSpacing: 12,
+                                        childCount: filteredNotes.length,
+                                        itemBuilder: (context, index) {
+                                          final note = filteredNotes[index];
+                                          return AnimationConfiguration
+                                              .staggeredGrid(
+                                            position: index,
+                                            duration: const Duration(
+                                                milliseconds: 375),
+                                            columnCount: 2,
+                                            child: ScaleAnimation(
+                                              child: FadeInAnimation(
+                                                child: OpenContainer<bool>(
+                                                  transitionType:
+                                                      ContainerTransitionType
+                                                          .fade,
+                                                  openBuilder: (context, _) =>
+                                                      NoteEditorScreen(
+                                                          note: note),
+                                                  closedElevation: 0,
+                                                  closedColor:
+                                                      Colors.transparent,
+                                                  closedShape:
+                                                      RoundedRectangleBorder(
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(
+                                                                      20)),
+                                                  onClosed: (returned) async {
+                                                    if (returned == true) {
+                                                      await refreshNotes();
+                                                    }
+                                                  },
+                                                  closedBuilder:
+                                                      (context, openContainer) {
+                                                    return NoteCard(
+                                                      note: note,
+                                                      onTap: openContainer,
+                                                      tagColors: _tagColors,
+                                                      onLongPress: () =>
+                                                          _showNoteActions(
+                                                              note),
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      )
+                                    : SliverList(
+                                        delegate: SliverChildBuilderDelegate(
+                                          (context, index) {
+                                            final note = filteredNotes[index];
+                                            return AnimationConfiguration
+                                                .staggeredList(
+                                              position: index,
+                                              duration: const Duration(
+                                                  milliseconds: 375),
+                                              child: SlideAnimation(
+                                                verticalOffset: 50.0,
+                                                child: FadeInAnimation(
+                                                  child: Padding(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                            bottom: 12),
+                                                    child: OpenContainer<bool>(
+                                                      transitionType:
+                                                          ContainerTransitionType
+                                                              .fade,
+                                                      openBuilder:
+                                                          (context, _) =>
+                                                              NoteEditorScreen(
+                                                                  note: note),
+                                                      closedElevation: 0,
+                                                      closedColor:
+                                                          Colors.transparent,
+                                                      closedShape:
+                                                          RoundedRectangleBorder(
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          20)),
+                                                      onClosed:
+                                                          (returned) async {
+                                                        if (returned == true) {
+                                                          await refreshNotes();
+                                                        }
+                                                      },
+                                                      closedBuilder: (context,
+                                                          openContainer) {
+                                                        return NoteCard(
+                                                          note: note,
+                                                          onTap: openContainer,
+                                                          tagColors: _tagColors,
+                                                          onLongPress: () =>
+                                                              _showNoteActions(
+                                                                  note),
+                                                        );
+                                                      },
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                          childCount: filteredNotes.length,
+                                        ),
                                       ),
-                                    );
-                                    refreshNotes();
-                                  },
-                                  tagColors: _tagColors,
-                                  onLongPress: () =>
-                                      _showNoteActions(filteredNotes[index])),
-                            );
-                          },
-                          childCount: filteredNotes.length,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
+                ),
               ),
           ],
         ),
-        floatingActionButton: FloatingActionButton(
-          tooltip: 'Create new note',
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          shape: RoundedRectangleBorder(
-              borderRadius:
-                  BorderRadius.circular(18)), // Squircle/Rounded shape
-          child: Icon(Icons.add,
-              size: 28, color: Theme.of(context).colorScheme.onPrimary),
-          onPressed: () async {
-            await Navigator.of(context).push(
-              MaterialPageRoute(builder: (context) => const NoteEditorScreen()),
+        floatingActionButton: OpenContainer(
+          transitionType: ContainerTransitionType.fade,
+          openBuilder: (context, _) => const NoteEditorScreen(),
+          closedElevation: 6.0,
+          closedShape: const StadiumBorder(),
+          closedColor: Theme.of(context).colorScheme.primary,
+          onClosed: (returned) async {
+            if (returned == true) await refreshNotes();
+          },
+          closedBuilder: (context, openContainer) {
+            return SizedBox(
+              height: 56,
+              child: FloatingActionButton.extended(
+                label: const Text('New Note'),
+                icon: const Icon(Icons.add),
+                tooltip: 'Create new note',
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                elevation: 0,
+                shape: const StadiumBorder(),
+                onPressed: openContainer,
+              ),
             );
-            refreshNotes();
           },
         ),
       );
@@ -425,10 +521,44 @@ class NoteCard extends StatelessWidget {
                         ? '${note.content.substring(0, 100)}...'
                         : note.content,
                     styleSheet: MarkdownStyleSheet(
-                      p: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
+                      p: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      blockquote: TextStyle(
+                        color:
+                            theme.colorScheme.onSurface.withValues(alpha: 0.9),
+                        fontStyle: FontStyle.italic,
+                      ),
+                      blockquoteDecoration: BoxDecoration(
+                        color: isSystemDefault
+                            ? theme.colorScheme.surfaceContainerHighest
+                            : ColorScheme.fromSeed(
+                                    seedColor: Color(note.color),
+                                    brightness: theme.brightness)
+                                .surfaceContainerHighest
+                                .withValues(alpha: 0.5),
+                        border: Border(
+                          left: BorderSide(
+                            color: isSystemDefault
+                                ? theme.colorScheme.primary
+                                : ColorScheme.fromSeed(
+                                        seedColor: Color(note.color),
+                                        brightness: theme.brightness)
+                                    .primary,
+                            width: 3,
                           ),
+                        ),
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(8),
+                          bottomRight: Radius.circular(8),
+                        ),
+                      ),
+                      blockquotePadding: const EdgeInsets.all(8),
+                      code: TextStyle(
+                        backgroundColor: Colors.black.withValues(alpha: 0.1),
+                        fontFamily: 'monospace',
+                        color: theme.colorScheme.onSurface,
+                      ),
                     ),
                   ),
                 if (note.tags.isNotEmpty) ...[
@@ -496,38 +626,51 @@ extension _Actions on _HomeScreenState {
   void _showNoteActions(Note note) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.darkSurface,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) {
+        final onSurface = Theme.of(context).colorScheme.onSurface;
+        final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
+
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 32,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
               ListTile(
                 leading: Icon(
                     note.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-                    color: Colors.grey),
+                    color: onSurfaceVariant),
                 title: Text(note.isPinned ? 'Unpin' : 'Pin',
-                    style: const TextStyle(color: Colors.white)),
+                    style: TextStyle(color: onSurface)),
                 onTap: () async {
                   await DatabaseHelper.instance.updateNote(note.copyWith(
                       isPinned: !note.isPinned, dateModified: DateTime.now()));
                   if (!context.mounted) return;
                   Navigator.pop(context);
-                  refreshNotes();
+                  await refreshNotes();
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.archive_outlined, color: Colors.grey),
+                leading: Icon(Icons.archive_outlined, color: onSurfaceVariant),
                 title: Text(note.isArchived ? 'Unarchive' : 'Archive',
-                    style: const TextStyle(color: Colors.white)),
+                    style: TextStyle(color: onSurface)),
                 onTap: () async {
                   await DatabaseHelper.instance
                       .archiveNote(note.id, !note.isArchived);
                   if (!context.mounted) return;
                   Navigator.pop(context);
-                  refreshNotes();
+                  await refreshNotes();
                 },
               ),
               ListTile(
@@ -540,7 +683,7 @@ extension _Actions on _HomeScreenState {
                     style: TextStyle(
                         color: note.deletedAt == null
                             ? Colors.redAccent
-                            : Colors.white)),
+                            : onSurface)),
                 onTap: () async {
                   if (note.deletedAt == null) {
                     await DatabaseHelper.instance.deleteNote(note.id);
@@ -549,7 +692,7 @@ extension _Actions on _HomeScreenState {
                   }
                   if (!context.mounted) return;
                   Navigator.pop(context);
-                  refreshNotes();
+                  await refreshNotes();
                 },
               ),
               if (note.deletedAt != null)
@@ -561,7 +704,7 @@ extension _Actions on _HomeScreenState {
                     await DatabaseHelper.instance.hardDeleteNote(note.id);
                     if (!context.mounted) return;
                     Navigator.pop(context);
-                    refreshNotes();
+                    await refreshNotes();
                   },
                 ),
               const SizedBox(height: 8),
