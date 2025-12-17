@@ -321,10 +321,24 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   }
 
   Future saveNote() async {
-    final title = _titleController.text;
-    final content = _contentController.text;
+    final title = _titleController.text.trim();
+    final content = _contentController.text.trim();
 
-    if (title.isEmpty && content.isEmpty && imagePath == null) return;
+    // Check if the note is essentially empty
+    final isEmpty =
+        title.isEmpty && content.isEmpty && imagePath == null && tags.isEmpty;
+
+    // Check if we should update an existing note or create a new one
+    final exists = widget.note != null || isNoteSaved;
+
+    if (isEmpty) {
+      if (exists) {
+        // If it exists but is now empty, delete it (trash it)
+        await DatabaseHelper.instance.deleteNote(_noteId);
+        // Note: We don't verify if it was actually in DB, but safe to call delete
+      }
+      return;
+    }
 
     final note = Note(
       id: _noteId,
@@ -340,13 +354,11 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       tags: tags,
     );
 
-    // Always update since we ensure ID exists
-    final exists = widget.note != null || isNoteSaved;
     if (exists) {
       await DatabaseHelper.instance.updateNote(note);
     } else {
       await DatabaseHelper.instance.createNote(note);
-      isNoteSaved = true; // Mark as saved so subsequent saves allow update
+      isNoteSaved = true; // Mark as saved
     }
   }
 
