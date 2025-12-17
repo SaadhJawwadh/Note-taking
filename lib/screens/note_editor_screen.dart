@@ -467,6 +467,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                     onPressed: () async {
                                       try {
                                         await saveNote();
+                                      } catch (e) {
+                                        debugPrint('Error saving note: $e');
                                       } finally {
                                         if (context.mounted) {
                                           Navigator.pop(context, true);
