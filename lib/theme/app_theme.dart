@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   // Premium Colors
@@ -46,35 +45,21 @@ class AppTheme {
       }
     }
 
-    TextTheme getTextTheme(String font) {
-      switch (font) {
-        case 'Comic Neue':
-          return GoogleFonts.comicNeueTextTheme();
-        case 'Nunito':
-          return GoogleFonts.nunitoTextTheme();
-        case 'Quicksand':
-          return GoogleFonts.quicksandTextTheme();
-        case 'Varela Round':
-          return GoogleFonts.varelaRoundTextTheme();
-        case 'Rubik':
-        default:
-          return GoogleFonts.rubikTextTheme();
-      }
-    }
-
-    final baseTextTheme = getTextTheme(fontFamily);
-    final textTheme = baseTextTheme.apply(
-      bodyColor: scheme.onSurface,
-      displayColor: scheme.onSurface,
-    );
+    final textTheme =
+        (brightness == Brightness.dark ? ThemeData.dark() : ThemeData.light())
+            .textTheme
+            .apply(
+              fontFamily: 'Rubik',
+              bodyColor: scheme.onSurface,
+              displayColor: scheme.onSurface,
+            );
 
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
       colorScheme: scheme,
-      fontFamily: baseTextTheme.bodyLarge?.fontFamily,
+      fontFamily: 'Rubik',
       scaffoldBackgroundColor: scheme.surface,
-      textTheme: textTheme,
       appBarTheme: AppBarTheme(
         backgroundColor: scheme.surface,
         elevation: 0,

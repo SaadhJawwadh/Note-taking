@@ -73,13 +73,22 @@ class _HomeScreenState extends State<HomeScreen> {
               note.deletedAt == null)
           .toList();
     }
-    // Sort by modification date desc
-    filteredNotes.sort((a, b) => b.dateModified.compareTo(a.dateModified));
+    // Sort by Pinned DESC (pinned=1, unpinned=0) then Modification Date DESC
+    filteredNotes.sort((a, b) {
+      if (a.isPinned != b.isPinned) {
+        return a.isPinned ? -1 : 1; // Pinned first
+      }
+      return b.dateModified.compareTo(a.dateModified);
+    });
   }
 
   void onTagSelected(String tag) {
     setState(() {
-      selectedTag = tag;
+      if (selectedTag == tag) {
+        selectedTag = 'All Notes';
+      } else {
+        selectedTag = tag;
+      }
       filterNotes();
     });
   }

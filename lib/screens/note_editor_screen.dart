@@ -377,7 +377,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   void _handleTripleTap() {
     final now = DateTime.now();
     if (_lastTapTime == null ||
-        now.difference(_lastTapTime!) > const Duration(milliseconds: 300)) {
+        now.difference(_lastTapTime!) > const Duration(milliseconds: 500)) {
       _tapCount = 1;
     } else {
       _tapCount++;
@@ -422,6 +422,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           children: [
             Expanded(
               child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
                 onTap: _handleTripleTap, // Double tap to toggle mode
                 child: Stack(
                   children: [
@@ -466,7 +467,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                     onPressed: () async {
                                       await saveNote();
                                       if (context.mounted) {
-                                        Navigator.pop(context);
+                                        Navigator.pop(context, true);
                                       }
                                     },
                                   ),
@@ -476,17 +477,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                     tooltip: 'Tags',
                                     color: textColor,
                                     onPressed: _showTagPicker,
-                                  ),
-                                  IconButton(
-                                    icon: Icon(isPinned
-                                        ? Icons.push_pin
-                                        : Icons.push_pin_outlined),
-                                    tooltip: isPinned ? 'Unpin' : 'Pin',
-                                    color: textColor,
-                                    onPressed: () {
-                                      setState(() => isPinned = !isPinned);
-                                      saveNote();
-                                    },
                                   ),
                                   ValueListenableBuilder<UndoHistoryValue>(
                                     valueListenable: _undoController,

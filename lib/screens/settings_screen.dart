@@ -11,7 +11,6 @@ import '../data/database_helper.dart';
 import 'package:provider/provider.dart';
 import '../data/settings_provider.dart';
 
-import 'package:google_fonts/google_fonts.dart';
 import 'manage_tags_screen.dart';
 
 import 'package:file_picker/file_picker.dart';
@@ -100,19 +99,6 @@ class SettingsScreen extends StatelessWidget {
                               subtitle: settings.textSizeLabel,
                               onTap: () =>
                                   _showTextSizePicker(context, settings),
-                            ),
-                            Divider(
-                              height: 1,
-                              indent: 56,
-                              color:
-                                  Theme.of(context).colorScheme.outlineVariant,
-                            ),
-                            _buildListTile(
-                              context,
-                              icon: Icons.font_download_outlined,
-                              title: 'App Font',
-                              subtitle: settings.fontFamily,
-                              onTap: () => _showFontPicker(context, settings),
                             ),
                           ]),
                           const SizedBox(height: 24),
@@ -454,51 +440,6 @@ class SettingsScreen extends StatelessWidget {
         context,
       ).showSnackBar(SnackBar(content: Text('Import failed: $e')));
     }
-  }
-
-  void _showFontPicker(BuildContext context, SettingsProvider settings) {
-    final fonts = [
-      'Rubik',
-      'Nunito',
-      'Quicksand',
-      'Varela Round',
-      'Comic Neue'
-    ];
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
-          title: Text(
-            'App Font',
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: fonts.map((font) {
-              return RadioListTile<String>(
-                title: Text(
-                  font,
-                  style: TextStyle(
-                    fontFamily: GoogleFonts.getFont(font).fontFamily,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                value: font,
-                groupValue: settings.fontFamily,
-                onChanged: (value) {
-                  if (value != null) {
-                    settings.setFontFamily(value);
-                    Navigator.pop(context);
-                  }
-                },
-              );
-            }).toList(),
-          ),
-        );
-      },
-    );
   }
 
   Future<void> _launchUrl(String url) async {
