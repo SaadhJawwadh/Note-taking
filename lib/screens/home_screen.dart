@@ -415,7 +415,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
           ],
         ),
-        floatingActionButton: OpenContainer(
+        floatingActionButton: OpenContainer<bool>(
           transitionType: ContainerTransitionType.fade,
           openBuilder: (context, _) => const NoteEditorScreen(),
           closedElevation: 6.0,
