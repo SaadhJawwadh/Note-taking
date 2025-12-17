@@ -2,11 +2,13 @@
 
 ## [1.3.1] - 2025-12-17
 
-### New Features
-- **App Lock**: Added biometric authentication (Fingerprint/FaceID) support. enable in Settings > Security.
-- **Smart Editor**: New notes open in Edit mode, existing notes in Preview mode.
-- **Fonts**: Added Modern fonts (Nunito, Quicksand, Varela Round). Removed Serif.
-- **UI Cleanup**: Moved Archive & Trash to Settings. Refined FAB shape.
+### Refinement & Fixes
+- **Security**: Removed biometric app lock (reverted).
+- **Note Editor**:
+    - **Fixed Bottom Bar**: Usage of standard bottom toolbar that respects keyboard layout.
+    - **Pill Style Toolbars**: Enhanced visual consistency with new floating pill toolbar design.
+- **Settings**: Removed "Check for Updates" button (now shows static version).
+- **Cleanup**: Removed unused dependencies (`local_auth`).
 
 ## [1.3.0] - 2025-12-15
 

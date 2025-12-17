@@ -403,380 +403,399 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       final textColor = onBackground;
       final hintColor = onBackground.withValues(alpha: 0.6);
 
-      final bottomPadding = MediaQuery.of(context).viewInsets.bottom + 16;
-
       return Scaffold(
         backgroundColor: backgroundColor,
-        body: GestureDetector(
-          onDoubleTap: _togglePreview, // Double tap to toggle mode
-          child: Stack(
-            children: [
-              // Main Content
-              SafeArea(
-                bottom: false,
-                child: CustomScrollView(
-                  slivers: [
-                    SliverAppBar(
-                      backgroundColor: Colors.transparent,
-                      elevation: 0,
-                      scrolledUnderElevation: 0,
-                      floating: true,
-                      snap: true,
-                      automaticallyImplyLeading: false,
-                      toolbarHeight: 64,
-                      title: Container(
-                        margin: const EdgeInsets.only(top: 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        decoration: BoxDecoration(
-                          color: isSystemDefault
-                              ? theme.colorScheme.surfaceContainerHighest
-                              : ColorScheme.fromSeed(
-                                      seedColor: Color(color),
-                                      brightness: theme.brightness)
-                                  .surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(32),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.arrow_back),
-                              color: textColor,
-                              onPressed: () async {
-                                await saveNote();
-                                if (context.mounted) Navigator.pop(context);
-                              },
-                            ),
-                            const Spacer(),
-                            IconButton(
-                              icon: const Icon(Icons.label_outline),
-                              tooltip: 'Tags',
-                              color: textColor,
-                              onPressed: _showTagPicker,
-                            ),
-                            IconButton(
-                              icon: Icon(isPinned
-                                  ? Icons.push_pin
-                                  : Icons.push_pin_outlined),
-                              tooltip: isPinned ? 'Unpin' : 'Pin',
-                              color: textColor,
-                              onPressed: () {
-                                setState(() => isPinned = !isPinned);
-                                saveNote();
-                              },
-                            ),
-                            ValueListenableBuilder<UndoHistoryValue>(
-                              valueListenable: _undoController,
-                              builder: (context, value, child) {
-                                return Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.undo),
-                                      color: value.canUndo
-                                          ? textColor
-                                          : textColor.withValues(alpha: 0.3),
-                                      onPressed: value.canUndo
-                                          ? _undoController.undo
-                                          : null,
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.redo),
-                                      color: value.canRedo
-                                          ? textColor
-                                          : textColor.withValues(alpha: 0.3),
-                                      onPressed: value.canRedo
-                                          ? _undoController.redo
-                                          : null,
-                                    ),
-                                  ],
-                                );
-                              },
-                            ),
-                            IconButton(
-                              icon: Icon(_isPreview
-                                  ? Icons.edit_outlined
-                                  : Icons.check),
-                              tooltip: _isPreview ? 'Edit' : 'Save & View',
-                              color: textColor,
-                              onPressed: _togglePreview,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      sliver: SliverList(
-                        delegate: SliverChildListDelegate([
-                          TextField(
-                            controller: _titleController,
-                            readOnly: _isPreview,
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: textColor,
-                            ),
-                            decoration: InputDecoration(
-                              hintText: 'Title',
-                              border: InputBorder.none,
-                              filled: false,
-                              hintStyle: TextStyle(color: hintColor),
-                            ),
-                            maxLines: null,
-                          ),
-                          const SizedBox(height: 8),
-                          if (imagePath != null)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 16),
-                              child: Stack(
-                                children: [
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: Image.file(
-                                      File(imagePath!),
-                                      width: double.infinity,
-                                      fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (context, error, stackTrace) =>
-                                              Container(
-                                        height: 200,
-                                        color: Colors.grey[300],
-                                        child: const Center(
-                                            child: Icon(Icons.broken_image,
-                                                size: 50, color: Colors.grey)),
-                                      ),
-                                    ),
+        body: Column(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onDoubleTap: _togglePreview, // Double tap to toggle mode
+                child: Stack(
+                  children: [
+                    // Main Content
+                    SafeArea(
+                      bottom: false,
+                      child: CustomScrollView(
+                        slivers: [
+                          SliverAppBar(
+                            backgroundColor: Colors.transparent,
+                            elevation: 0,
+                            scrolledUnderElevation: 0,
+                            floating: true,
+                            snap: true,
+                            automaticallyImplyLeading: false,
+                            toolbarHeight: 64,
+                            title: Container(
+                              margin: const EdgeInsets.only(top: 8),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 4),
+                              decoration: BoxDecoration(
+                                color: isSystemDefault
+                                    ? theme.colorScheme.surfaceContainerHighest
+                                    : ColorScheme.fromSeed(
+                                            seedColor: Color(color),
+                                            brightness: theme.brightness)
+                                        .surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(32),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.1),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
                                   ),
-                                  if (!_isPreview)
-                                    Positioned(
-                                      right: 8,
-                                      top: 8,
-                                      child: IconButton(
-                                        icon: const Icon(Icons.delete,
-                                            color: Colors.white),
-                                        style: IconButton.styleFrom(
-                                            backgroundColor: Colors.black
-                                                .withValues(alpha: 0.5)),
-                                        onPressed: () {
-                                          setState(() => imagePath = null);
-                                          saveNote();
-                                        },
-                                      ),
-                                    ),
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.arrow_back),
+                                    color: textColor,
+                                    onPressed: () async {
+                                      await saveNote();
+                                      if (context.mounted) {
+                                        Navigator.pop(context);
+                                      }
+                                    },
+                                  ),
+                                  const Spacer(),
+                                  IconButton(
+                                    icon: const Icon(Icons.label_outline),
+                                    tooltip: 'Tags',
+                                    color: textColor,
+                                    onPressed: _showTagPicker,
+                                  ),
+                                  IconButton(
+                                    icon: Icon(isPinned
+                                        ? Icons.push_pin
+                                        : Icons.push_pin_outlined),
+                                    tooltip: isPinned ? 'Unpin' : 'Pin',
+                                    color: textColor,
+                                    onPressed: () {
+                                      setState(() => isPinned = !isPinned);
+                                      saveNote();
+                                    },
+                                  ),
+                                  ValueListenableBuilder<UndoHistoryValue>(
+                                    valueListenable: _undoController,
+                                    builder: (context, value, child) {
+                                      return Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            icon: const Icon(Icons.undo),
+                                            color: value.canUndo
+                                                ? textColor
+                                                : textColor.withValues(
+                                                    alpha: 0.3),
+                                            onPressed: value.canUndo
+                                                ? _undoController.undo
+                                                : null,
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(Icons.redo),
+                                            color: value.canRedo
+                                                ? textColor
+                                                : textColor.withValues(
+                                                    alpha: 0.3),
+                                            onPressed: value.canRedo
+                                                ? _undoController.redo
+                                                : null,
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                  IconButton(
+                                    icon: Icon(_isPreview
+                                        ? Icons.edit_outlined
+                                        : Icons.check),
+                                    tooltip:
+                                        _isPreview ? 'Edit' : 'Save & View',
+                                    color: textColor,
+                                    onPressed: _togglePreview,
+                                  ),
                                 ],
                               ),
                             ),
-                          if (tags.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: Wrap(
-                                spacing: 8,
-                                children: tags.map((tag) {
-                                  final tagColorValue = _tagColors[tag];
-                                  final tagColor = tagColorValue != null &&
-                                          tagColorValue != 0
-                                      ? Color(tagColorValue)
-                                      : null;
-
-                                  Color? chipBgColor;
-                                  Color? chipLabelColor;
-
-                                  if (tagColor != null) {
-                                    final scheme = ColorScheme.fromSeed(
-                                      seedColor: tagColor,
-                                      brightness: Theme.of(context).brightness,
-                                    );
-                                    chipBgColor = scheme.primaryContainer;
-                                    chipLabelColor = scheme.onPrimaryContainer;
-                                  }
-
-                                  return Chip(
-                                    label: Text(tag,
-                                        style:
-                                            TextStyle(color: chipLabelColor)),
-                                    backgroundColor: chipBgColor,
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(20)),
-                                    side: BorderSide.none,
-                                    onDeleted: _isPreview
-                                        ? null
-                                        : () {
-                                            setState(() {
-                                              tags.remove(tag);
-                                              _updateColorFromTags();
-                                            });
-                                            saveNote();
-                                          },
-                                    deleteIconColor: chipLabelColor,
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                          const SizedBox(height: 8),
-                          if (_isPreview)
-                            MarkdownBody(
-                              data: _contentController.text,
-                              styleSheet: MarkdownStyleSheet(
-                                p: TextStyle(
-                                    fontSize: settings.textSize,
-                                    height: 1.5,
-                                    color: textColor),
-                                h1: TextStyle(
+                          ),
+                          SliverPadding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            sliver: SliverList(
+                              delegate: SliverChildListDelegate([
+                                TextField(
+                                  controller: _titleController,
+                                  readOnly: _isPreview,
+                                  style: TextStyle(
                                     fontSize: 24,
                                     fontWeight: FontWeight.bold,
-                                    color: textColor),
-                                h2: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: textColor),
-                                blockquote: TextStyle(
-                                    color: textColor.withValues(alpha: 0.8),
-                                    fontStyle: FontStyle.italic),
-                                code: TextStyle(
-                                    backgroundColor:
-                                        Colors.black.withValues(alpha: 0.2),
-                                    fontFamily: 'monospace',
-                                    color: textColor),
-                                checkbox: TextStyle(color: textColor),
-                              ),
-                            )
-                          else
-                            Column(
-                              children: [
-                                TextField(
-                                  controller: _contentController,
-                                  undoController: _undoController,
-                                  style: TextStyle(
-                                    fontSize: settings.textSize,
-                                    height: 1.5,
                                     color: textColor,
                                   ),
                                   decoration: InputDecoration(
-                                    hintText: 'Start typing...',
+                                    hintText: 'Title',
                                     border: InputBorder.none,
                                     filled: false,
                                     hintStyle: TextStyle(color: hintColor),
                                   ),
                                   maxLines: null,
-                                  keyboardType: TextInputType.multiline,
                                 ),
-                                // Toolbar space
-                                const SizedBox(height: 60),
-                              ],
+                                const SizedBox(height: 8),
+                                if (imagePath != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 16),
+                                    child: Stack(
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          child: Image.file(
+                                            File(imagePath!),
+                                            width: double.infinity,
+                                            fit: BoxFit.cover,
+                                            errorBuilder:
+                                                (context, error, stackTrace) =>
+                                                    Container(
+                                              height: 200,
+                                              color: Colors.grey[300],
+                                              child: const Center(
+                                                  child: Icon(
+                                                      Icons.broken_image,
+                                                      size: 50,
+                                                      color: Colors.grey)),
+                                            ),
+                                          ),
+                                        ),
+                                        if (!_isPreview)
+                                          Positioned(
+                                            right: 8,
+                                            top: 8,
+                                            child: IconButton(
+                                              icon: const Icon(Icons.delete,
+                                                  color: Colors.white),
+                                              style: IconButton.styleFrom(
+                                                  backgroundColor: Colors.black
+                                                      .withValues(alpha: 0.5)),
+                                              onPressed: () {
+                                                setState(
+                                                    () => imagePath = null);
+                                                saveNote();
+                                              },
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                if (tags.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: Wrap(
+                                      spacing: 8,
+                                      children: tags.map((tag) {
+                                        final tagColorValue = _tagColors[tag];
+                                        final tagColor =
+                                            tagColorValue != null &&
+                                                    tagColorValue != 0
+                                                ? Color(tagColorValue)
+                                                : null;
+
+                                        Color? chipBgColor;
+                                        Color? chipLabelColor;
+
+                                        if (tagColor != null) {
+                                          final scheme = ColorScheme.fromSeed(
+                                            seedColor: tagColor,
+                                            brightness:
+                                                Theme.of(context).brightness,
+                                          );
+                                          chipBgColor = scheme.primaryContainer;
+                                          chipLabelColor =
+                                              scheme.onPrimaryContainer;
+                                        }
+
+                                        return Chip(
+                                          label: Text(tag,
+                                              style: TextStyle(
+                                                  color: chipLabelColor)),
+                                          backgroundColor: chipBgColor,
+                                          shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(20)),
+                                          side: BorderSide.none,
+                                          onDeleted: _isPreview
+                                              ? null
+                                              : () {
+                                                  setState(() {
+                                                    tags.remove(tag);
+                                                    _updateColorFromTags();
+                                                  });
+                                                  saveNote();
+                                                },
+                                          deleteIconColor: chipLabelColor,
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
+                                const SizedBox(height: 8),
+                                if (_isPreview)
+                                  MarkdownBody(
+                                    data: _contentController.text,
+                                    styleSheet: MarkdownStyleSheet(
+                                      p: TextStyle(
+                                          fontSize: settings.textSize,
+                                          height: 1.5,
+                                          color: textColor),
+                                      h1: TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: textColor),
+                                      h2: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: textColor),
+                                      blockquote: TextStyle(
+                                          color:
+                                              textColor.withValues(alpha: 0.8),
+                                          fontStyle: FontStyle.italic),
+                                      code: TextStyle(
+                                          backgroundColor: Colors.black
+                                              .withValues(alpha: 0.2),
+                                          fontFamily: 'monospace',
+                                          color: textColor),
+                                      checkbox: TextStyle(color: textColor),
+                                    ),
+                                  )
+                                else
+                                  Column(
+                                    children: [
+                                      TextField(
+                                        controller: _contentController,
+                                        undoController: _undoController,
+                                        style: TextStyle(
+                                          fontSize: settings.textSize,
+                                          height: 1.5,
+                                          color: textColor,
+                                        ),
+                                        decoration: InputDecoration(
+                                          hintText: 'Start typing...',
+                                          border: InputBorder.none,
+                                          filled: false,
+                                          hintStyle:
+                                              TextStyle(color: hintColor),
+                                        ),
+                                        maxLines: null,
+                                        keyboardType: TextInputType.multiline,
+                                      ),
+                                      // Space for bottom toolbars
+                                      const SizedBox(height: 20),
+                                    ],
+                                  ),
+                                const SizedBox(
+                                    height: 20), // Basic Bottom padding
+                              ]),
                             ),
-                          const SizedBox(height: 80), // Bottom padding
-                        ]),
+                          ),
+                        ],
                       ),
                     ),
-                    // Bottom padding provided by SizedBox in list
                   ],
                 ),
               ),
-              // Floating Bottom Toolbar
-              if (MediaQuery.of(context).viewInsets.bottom > 0 || !_isPreview)
-                Positioned(
-                  left: 16,
-                  right: 16,
-                  bottom: bottomPadding,
-                  child: Container(
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: isSystemDefault
-                          ? theme.colorScheme.surfaceContainerHighest
-                          : ColorScheme.fromSeed(
-                                  seedColor: Color(color),
-                                  brightness: theme.brightness)
-                              .surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(32),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.format_bold),
-                          tooltip: 'Bold',
-                          color: textColor,
-                          onPressed: () => _applyFormat('**', '**'),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.format_italic),
-                          tooltip: 'Italic',
-                          color: textColor,
-                          onPressed: () => _applyFormat('_', '_'),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.title),
-                          tooltip: 'Heading',
-                          color: textColor,
-                          onPressed: () => _applyFormat('# ', ''),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.strikethrough_s),
-                          tooltip: 'Strikethrough',
-                          color: textColor,
-                          onPressed: () => _applyFormat('~~', '~~'),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.code),
-                          tooltip: 'Code',
-                          color: textColor,
-                          onPressed: () => _applyFormat('`', '`'),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.format_quote),
-                          tooltip: 'Quote',
-                          color: textColor,
-                          onPressed: () => _applyFormat('> ', ''),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.format_list_bulleted),
-                          tooltip: 'List',
-                          color: textColor,
-                          onPressed: () => _applyFormat('- ', ''),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.check_box_outlined),
-                          tooltip: 'Checkbox',
-                          color: textColor,
-                          onPressed: () => _applyFormat('- [ ] ', ''),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.add_photo_alternate_outlined),
-                          tooltip: 'Cover',
-                          color: textColor,
-                          onPressed: _pickImage,
-                        ),
-                      ],
-                    ),
+            ),
+            // Floating Toolbar (Pill Style)
+            if (!_isPreview)
+              SafeArea(
+                top: false,
+                child: Container(
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: isSystemDefault
+                        ? theme.colorScheme.surfaceContainerHighest
+                        : ColorScheme.fromSeed(
+                                seedColor: Color(color),
+                                brightness: theme.brightness)
+                            .surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(32),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.format_bold),
+                        tooltip: 'Bold',
+                        color: textColor,
+                        onPressed: () => _applyFormat('**', '**'),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.format_italic),
+                        tooltip: 'Italic',
+                        color: textColor,
+                        onPressed: () => _applyFormat('_', '_'),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.title),
+                        tooltip: 'Heading',
+                        color: textColor,
+                        onPressed: () => _applyFormat('# ', ''),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.strikethrough_s),
+                        tooltip: 'Strikethrough',
+                        color: textColor,
+                        onPressed: () => _applyFormat('~~', '~~'),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.code),
+                        tooltip: 'Code',
+                        color: textColor,
+                        onPressed: () => _applyFormat('`', '`'),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.format_quote),
+                        tooltip: 'Quote',
+                        color: textColor,
+                        onPressed: () => _applyFormat('> ', ''),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.format_list_bulleted),
+                        tooltip: 'List',
+                        color: textColor,
+                        onPressed: () => _applyFormat('- ', ''),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.check_box_outlined),
+                        tooltip: 'Checkbox',
+                        color: textColor,
+                        onPressed: () => _applyFormat('- [ ] ', ''),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.add_photo_alternate_outlined),
+                        tooltip: 'Cover',
+                        color: textColor,
+                        onPressed: _pickImage,
+                      ),
+                    ],
                   ),
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
       );
     });

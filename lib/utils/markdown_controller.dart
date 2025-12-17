@@ -78,12 +78,13 @@ class MarkdownFormattingController extends TextEditingController {
 
         if (RegExp(r'^#{1,6}\s').hasMatch(match)) {
           double sizeScale = 1.0;
-          if (match.startsWith('# '))
+          if (match.startsWith('# ')) {
             sizeScale = 1.5;
-          else if (match.startsWith('## '))
+          } else if (match.startsWith('## ')) {
             sizeScale = 1.3;
-          else
+          } else {
             sizeScale = 1.1;
+          }
 
           activeStyle = activeStyle!.merge(TextStyle(
               fontWeight: FontWeight.bold,

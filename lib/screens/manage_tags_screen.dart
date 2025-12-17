@@ -76,7 +76,7 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
                         ),
                       ),
                       child: isSystem
-                          ? Icon(Icons.auto_awesome, size: 16)
+                          ? const Icon(Icons.auto_awesome, size: 16)
                           : (isSelected
                               ? Icon(Icons.check,
                                   size: 16,

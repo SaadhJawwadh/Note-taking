@@ -20,9 +20,6 @@ class SettingsProvider extends ChangeNotifier {
   bool _isGridView = true;
   bool get isGridView => _isGridView;
 
-  bool _isAppLockEnabled = false;
-  bool get isAppLockEnabled => _isAppLockEnabled;
-
   SettingsProvider() {
     _loadSettings();
   }
@@ -33,7 +30,6 @@ class SettingsProvider extends ChangeNotifier {
     _fontFamily =
         prefs.getString('fontFamily') ?? 'Nunito'; // Default to modern font
     _isGridView = prefs.getBool('isGridView') ?? true;
-    _isAppLockEnabled = prefs.getBool('isAppLockEnabled') ?? false;
 
     final themeIndex = prefs.getInt('themeMode') ?? 0;
     _themeMode = _getThemeModeFromInt(themeIndex);
@@ -59,13 +55,6 @@ class SettingsProvider extends ChangeNotifier {
     _isGridView = isGrid;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isGridView', isGrid);
-    notifyListeners();
-  }
-
-  Future<void> setIsAppLockEnabled(bool value) async {
-    _isAppLockEnabled = value;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isAppLockEnabled', value);
     notifyListeners();
   }
 
