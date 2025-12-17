@@ -32,16 +32,22 @@ class _HomeScreenState extends State<HomeScreen> {
     refreshNotes();
   }
 
+  Map<String, int> _tagColors = {};
+
   Future refreshNotes() async {
     setState(() => isLoading = true);
     notes = await DatabaseHelper.instance.readAllNotes();
     final tags = await DatabaseHelper.instance.getAllTags();
-    allTags = ['All Notes', 'Archived', 'Trash', ...tags];
+    final colors = await DatabaseHelper.instance.getAllTagColors();
+    allTags = ['All Notes', ...tags];
 
     // If selected tag no longer exists (e.g. deleted), revert to All Notes
     if (!allTags.contains(selectedTag)) {
       selectedTag = 'All Notes';
     }
+
+    // Refresh local colors map
+    _tagColors = colors;
 
     filterNotes();
     setState(() => isLoading = false);
@@ -94,7 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 height: 64,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainer,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(32),
                   boxShadow: [
                     BoxShadow(
@@ -163,6 +169,44 @@ class _HomeScreenState extends State<HomeScreen> {
                   itemBuilder: (context, index) {
                     final tag = allTags[index];
                     final isSelected = tag == selectedTag;
+                    final tagColorValue = _tagColors[tag];
+
+                    Color? chipBg;
+                    Color? chipFg;
+
+                    if (tagColorValue != null && tagColorValue != 0) {
+                      final scheme = ColorScheme.fromSeed(
+                          seedColor: Color(tagColorValue),
+                          brightness: Theme.of(context).brightness);
+                      chipBg = isSelected
+                          ? scheme.inversePrimary
+                          : scheme
+                              .primaryContainer; // Inverse primary for selected state distinction
+                      chipFg = isSelected
+                          ? scheme.onInverseSurface
+                          : scheme.onPrimaryContainer;
+
+                      if (isSelected) {
+                        // Boost selected state to be more visible / different if needed,
+                        // typically primaryContainer vs primary usage.
+                        // Request said "light mode follow light color", so primaryContainer (pastel) is good for default.
+                        // For selected, we might want a bit more pop.
+                        chipBg = scheme.primary;
+                        chipFg = scheme.onPrimary;
+                      }
+                    }
+
+                    // Fallbacks
+                    chipBg ??= Theme.of(context).colorScheme.surfaceContainer;
+                    chipFg ??= isSelected
+                        ? Theme.of(context).colorScheme.onPrimaryContainer
+                        : Theme.of(context).colorScheme.onSurfaceVariant;
+                    if (isSelected &&
+                        chipBg ==
+                            Theme.of(context).colorScheme.surfaceContainer) {
+                      chipBg = Theme.of(context).colorScheme.primaryContainer;
+                    }
+
                     return Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: FilterChip(
@@ -171,14 +215,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         onSelected: (selected) {
                           if (selected) onTagSelected(tag);
                         },
-                        backgroundColor:
-                            Theme.of(context).colorScheme.surfaceContainer,
-                        selectedColor:
-                            Theme.of(context).colorScheme.primaryContainer,
+                        backgroundColor: chipBg,
+                        selectedColor: chipBg, // Already handled logic
                         labelStyle: TextStyle(
-                          color: isSelected
-                              ? Theme.of(context).colorScheme.onPrimaryContainer
-                              : Theme.of(context).colorScheme.onSurfaceVariant,
+                          color: chipFg,
                           fontWeight:
                               isSelected ? FontWeight.bold : FontWeight.normal,
                         ),
@@ -248,6 +288,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 );
                                 refreshNotes();
                               },
+                              tagColors: _tagColors,
                               onLongPress: () =>
                                   _showNoteActions(filteredNotes[index]));
                         },
@@ -268,6 +309,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     );
                                     refreshNotes();
                                   },
+                                  tagColors: _tagColors,
                                   onLongPress: () =>
                                       _showNoteActions(filteredNotes[index])),
                             );
@@ -281,6 +323,9 @@ class _HomeScreenState extends State<HomeScreen> {
         floatingActionButton: FloatingActionButton(
           tooltip: 'Create new note',
           backgroundColor: Theme.of(context).colorScheme.primary,
+          shape: RoundedRectangleBorder(
+              borderRadius:
+                  BorderRadius.circular(18)), // Squircle/Rounded shape
           child: Icon(Icons.add,
               size: 28, color: Theme.of(context).colorScheme.onPrimary),
           onPressed: () async {
@@ -299,9 +344,14 @@ class NoteCard extends StatelessWidget {
   final Note note;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
+  final Map<String, int>? tagColors;
 
   const NoteCard(
-      {super.key, required this.note, required this.onTap, this.onLongPress});
+      {super.key,
+      required this.note,
+      required this.onTap,
+      this.onLongPress,
+      this.tagColors});
 
   @override
   Widget build(BuildContext context) {
@@ -386,29 +436,41 @@ class NoteCard extends StatelessWidget {
                   Wrap(
                     spacing: 4,
                     runSpacing: 4,
-                    children: note.tags
-                        .take(3)
-                        .map((tag) => Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .secondaryContainer
-                                    .withValues(alpha: 0.5),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                tag,
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSecondaryContainer,
-                                ),
-                              ),
-                            ))
-                        .toList(),
+                    children: note.tags.take(3).map((tag) {
+                      final colorVal = tagColors?[tag];
+                      Color? bg;
+                      Color? fg;
+                      if (colorVal != null && colorVal != 0) {
+                        final scheme = ColorScheme.fromSeed(
+                            seedColor: Color(colorVal),
+                            brightness: Theme.of(context).brightness);
+                        bg = scheme.primaryContainer;
+                        fg = scheme.onPrimaryContainer;
+                      }
+                      // Fallback
+                      bg ??= Theme.of(context)
+                          .colorScheme
+                          .secondaryContainer
+                          .withValues(alpha: 0.5);
+                      fg ??= Theme.of(context).colorScheme.onSecondaryContainer;
+
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: bg,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          tag,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: fg,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      );
+                    }).toList(),
                   ),
                 ],
                 const SizedBox(height: 12),

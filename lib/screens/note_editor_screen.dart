@@ -28,7 +28,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   late MarkdownFormattingController _contentController;
   bool isPinned = false;
   bool isArchived = false;
-  int color = 0xFF252529;
+  int color = 0; // 0 = System Default
   String? imagePath;
   String category = 'All Notes';
   List<String> tags = [];
@@ -38,26 +38,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   final UndoHistoryController _undoController = UndoHistoryController();
   late String _noteId;
   late DateTime _dateCreated;
-  bool _hasUserModifiedColor = false;
-  Map<String, int> _tagColors = {}; // Cache for tag colors
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (widget.note == null && !_hasUserModifiedColor) {
-      final settings = Provider.of<SettingsProvider>(context);
-      if (color != settings.defaultNoteColor) {
-        color = settings.defaultNoteColor;
-        // No setState needed effectively as build will use new color,
-        // but technically we should ensure it triggers update if called outside build cycle.
-        // However, didChangeDependencies is part of build cycle setup.
-      }
-    }
-  }
+  Map<String, int> _tagColors = {}; // Cache for tag colors
 
   @override
   void initState() {
     super.initState();
+    // Default: Preview if existing note, Edit if new note
+    _isPreview = widget.note != null;
+
     _noteId = widget.note?.id ?? const Uuid().v4();
     _dateCreated = widget.note?.dateCreated ?? DateTime.now();
     _titleController = TextEditingController(text: widget.note?.title ?? '');
@@ -65,8 +54,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         MarkdownFormattingController(text: widget.note?.content ?? '');
     isPinned = widget.note?.isPinned ?? false;
     isArchived = widget.note?.isArchived ?? false;
-    color = widget.note?.color ??
-        0xFF252529; // Init with fallback, updated in didChangeDependencies if new
+
+    // Initialize color (int)
+    color = widget.note?.color ?? 0;
+
     imagePath = widget.note?.imagePath;
     category = widget.note?.category ?? 'All Notes';
     tags = List.from(widget.note?.tags ?? []);
@@ -111,12 +102,14 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     if (pickedFile != null) {
       final appDir = await getApplicationDocumentsDirectory();
       final fileName = path.basename(pickedFile.path);
-      final localImage =
+      final savedImage =
           await File(pickedFile.path).copy('${appDir.path}/$fileName');
 
+      if (!mounted) return;
       setState(() {
-        imagePath = localImage.path;
+        imagePath = savedImage.path;
       });
+      saveNote();
     }
   }
 
@@ -128,6 +121,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       showDragHandle: true,
       builder: (context) {
         String newTag = '';
+        int newTagColor = 0; // Default color
+
         return StatefulBuilder(
           builder: (context, setModalState) {
             return Container(
@@ -149,35 +144,145 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                       hintText: 'Create new tag',
                       suffixIcon: IconButton(
                         icon: const Icon(Icons.add),
-                        onPressed: () {
+                        onPressed: () async {
                           if (newTag.isNotEmpty) {
+                            if (newTagColor != 0) {
+                              await DatabaseHelper.instance
+                                  .setTagColor(newTag, newTagColor);
+                            }
+                            // Refresh colors from DB to be safe/consistent, or just update local map
+                            // Updating local map is faster for UI responsiveness
+                            if (newTagColor != 0) {
+                              _tagColors[newTag] = newTagColor;
+                            }
+
                             setState(() {
-                              if (!tags.contains(newTag)) tags.add(newTag);
+                              if (!tags.contains(newTag)) {
+                                tags.add(newTag);
+                                _updateColorFromTags();
+                              }
                               if (!_allTags.contains(newTag)) {
                                 _allTags.add(newTag);
                               }
                             });
-                            setModalState(() => newTag = '');
-                            Navigator.pop(
-                                context); // Close for now, or keep open?
-                            _showTagPicker(); // Reopen to refresh or just keep state?
-                            // Simpler: Just refresh local state
+                            setModalState(() {
+                              newTag = '';
+                              newTagColor = 0;
+                            });
+                            // Close for now, or keep open?
+                            // Keeping open allows adding multiple, but we need to clear input (done above)
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                            }
                           }
                         },
                       ),
                     ),
                     onChanged: (v) => newTag = v.trim(),
-                    onSubmitted: (v) {
+                    onSubmitted: (v) async {
                       if (v.isNotEmpty) {
+                        final t = v.trim();
+                        if (newTagColor != 0) {
+                          await DatabaseHelper.instance
+                              .setTagColor(t, newTagColor);
+                          _tagColors[t] = newTagColor;
+                        }
+
                         setState(() {
-                          final t = v.trim();
-                          if (!tags.contains(t)) tags.add(t);
+                          if (!tags.contains(t)) {
+                            tags.add(t);
+                            _updateColorFromTags();
+                          }
                           if (!_allTags.contains(t)) _allTags.add(t);
                         });
-                        Navigator.pop(context);
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                        }
                       }
                     },
                   ),
+                  const SizedBox(height: 12),
+                  // Color Picker for New Tag
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      // Import AppTheme to use noteColors
+                      // We need to make sure AppTheme is imported. It is not currently imported in this file based on my view.
+                      // I will use hardcoded list here or add import. adding import is better but might need separate tool call.
+                      // Let's check imports. Main imports note_model, database_helper.
+                      // I'll add the color list locally here to avoid import issues if I can't switch context easily,
+                      // BUT better to just add import at top.
+                      // I will proceed with adding import in a separate call if needed, but for now I'll hardcode the colors to match AppTheme for simplicity in this replacement chunk,
+                      // or rely on context theme? No, `AppTheme.noteColors` is static.
+                      // Actually, looking at previous file view, AppTheme IS NOT imported in NoteEditorScreen.
+                      // I'll use the colors directly here.
+                      ...[
+                        const Color(0x00000000), // Default
+                        const Color(0xFFE57373),
+                        const Color(0xFFFFB74D),
+                        const Color(0xFF81C784),
+                        const Color(0xFF64B5F6),
+                        const Color(0xFF9575CD),
+                      ].map((c) {
+                        final bool isSystem =
+                            c.toARGB32() == 0; // Check value for 0x00000000
+                        final bool isSelected = newTagColor == c.toARGB32();
+                        return GestureDetector(
+                          onTap: () =>
+                              setModalState(() => newTagColor = c.toARGB32()),
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: isSystem
+                                  ? Theme.of(context).colorScheme.surface
+                                  : c,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isSelected
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Theme.of(context)
+                                        .colorScheme
+                                        .outlineVariant,
+                                width: isSelected ? 3 : 1,
+                              ),
+                            ),
+                            child: isSystem
+                                ? const Icon(Icons.auto_awesome, size: 16)
+                                : (isSelected
+                                    ? Icon(Icons.check,
+                                        size: 16,
+                                        color: c.computeLuminance() > 0.5
+                                            ? Colors.black
+                                            : Colors.white)
+                                    : null),
+                          ),
+                        );
+                      }).toList(),
+                    ],
+                  ),
+                  if (newTagColor != 0) ...[
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 48),
+                      child: Builder(builder: (context) {
+                        final scheme = ColorScheme.fromSeed(
+                            seedColor: Color(newTagColor),
+                            brightness: Theme.of(context).brightness);
+                        return Chip(
+                          label: Text('Sample Tag Appearance',
+                              style:
+                                  TextStyle(color: scheme.onPrimaryContainer)),
+                          backgroundColor: scheme.primaryContainer,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20)),
+                          side: BorderSide.none,
+                        );
+                      }),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   if (_allTags.isNotEmpty) ...[
                     const Text('Select Tags'),
@@ -196,6 +301,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                               } else {
                                 tags.remove(t);
                               }
+                              _updateColorFromTags();
                             });
                             setModalState(() {});
                           },
@@ -249,6 +355,21 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       _isPreview = !_isPreview;
     });
     if (_isPreview) saveNote();
+  }
+
+  void _updateColorFromTags() {
+    int newColor = 0; // Default
+    // Find the last tag that has a color assigned
+    for (final tag in tags.reversed) {
+      final c = _tagColors[tag];
+      if (c != null && c != 0) {
+        newColor = c;
+        break;
+      }
+    }
+
+    // If no specific color found, revert to 0 (system default)
+    color = newColor;
   }
 
   @override
@@ -308,7 +429,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         decoration: BoxDecoration(
                           color: isSystemDefault
-                              ? theme.colorScheme.surfaceContainer
+                              ? theme.colorScheme.surfaceContainerHighest
                               : ColorScheme.fromSeed(
                                       seedColor: Color(color),
                                       brightness: theme.brightness)
@@ -422,6 +543,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                       File(imagePath!),
                                       width: double.infinity,
                                       fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (context, error, stackTrace) =>
+                                              Container(
+                                        height: 200,
+                                        color: Colors.grey[300],
+                                        child: const Center(
+                                            child: Icon(Icons.broken_image,
+                                                size: 50, color: Colors.grey)),
+                                      ),
                                     ),
                                   ),
                                   if (!_isPreview)
@@ -450,29 +580,42 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                 spacing: 8,
                                 children: tags.map((tag) {
                                   final tagColorValue = _tagColors[tag];
-                                  final tagColor = tagColorValue != null
+                                  final tagColor = tagColorValue != null &&
+                                          tagColorValue != 0
                                       ? Color(tagColorValue)
                                       : null;
-                                  // Check luminance for text color if colored
-                                  final tagTextColor = tagColor != null
-                                      ? (tagColor.computeLuminance() > 0.5
-                                          ? Colors.black
-                                          : Colors.white)
-                                      : null;
+
+                                  Color? chipBgColor;
+                                  Color? chipLabelColor;
+
+                                  if (tagColor != null) {
+                                    final scheme = ColorScheme.fromSeed(
+                                      seedColor: tagColor,
+                                      brightness: Theme.of(context).brightness,
+                                    );
+                                    chipBgColor = scheme.primaryContainer;
+                                    chipLabelColor = scheme.onPrimaryContainer;
+                                  }
 
                                   return Chip(
                                     label: Text(tag,
-                                        style: TextStyle(color: tagTextColor)),
-                                    backgroundColor: tagColor,
+                                        style:
+                                            TextStyle(color: chipLabelColor)),
+                                    backgroundColor: chipBgColor,
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(20)),
+                                    side: BorderSide.none,
                                     onDeleted: _isPreview
                                         ? null
                                         : () {
                                             setState(() {
                                               tags.remove(tag);
+                                              _updateColorFromTags();
                                             });
                                             saveNote();
                                           },
-                                    deleteIconColor: tagTextColor,
+                                    deleteIconColor: chipLabelColor,
                                   );
                                 }).toList(),
                               ),
@@ -547,7 +690,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                     height: 64,
                     decoration: BoxDecoration(
                       color: isSystemDefault
-                          ? theme.colorScheme.surfaceContainer
+                          ? theme.colorScheme.surfaceContainerHighest
                           : ColorScheme.fromSeed(
                                   seedColor: Color(color),
                                   brightness: theme.brightness)

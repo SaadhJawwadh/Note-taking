@@ -14,25 +14,26 @@ class SettingsProvider extends ChangeNotifier {
     return 'Medium';
   }
 
-  SettingsProvider() {
-    _loadSettings();
-  }
-
   String _fontFamily = 'Rubik';
   String get fontFamily => _fontFamily;
 
   bool _isGridView = true;
   bool get isGridView => _isGridView;
 
-  int _defaultNoteColor = 0; // 0 = System Default
-  int get defaultNoteColor => _defaultNoteColor;
+  bool _isAppLockEnabled = false;
+  bool get isAppLockEnabled => _isAppLockEnabled;
+
+  SettingsProvider() {
+    _loadSettings();
+  }
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     _textSize = prefs.getDouble('textSize') ?? 16.0;
-    _fontFamily = prefs.getString('fontFamily') ?? 'Rubik';
+    _fontFamily =
+        prefs.getString('fontFamily') ?? 'Nunito'; // Default to modern font
     _isGridView = prefs.getBool('isGridView') ?? true;
-    _defaultNoteColor = prefs.getInt('defaultNoteColor') ?? 0;
+    _isAppLockEnabled = prefs.getBool('isAppLockEnabled') ?? false;
 
     final themeIndex = prefs.getInt('themeMode') ?? 0;
     _themeMode = _getThemeModeFromInt(themeIndex);
@@ -61,10 +62,10 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setDefaultNoteColor(int color) async {
-    _defaultNoteColor = color;
+  Future<void> setIsAppLockEnabled(bool value) async {
+    _isAppLockEnabled = value;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('defaultNoteColor', color);
+    await prefs.setBool('isAppLockEnabled', value);
     notifyListeners();
   }
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.1] - 2025-12-17
+
+### New Features
+- **App Lock**: Added biometric authentication (Fingerprint/FaceID) support. enable in Settings > Security.
+- **Smart Editor**: New notes open in Edit mode, existing notes in Preview mode.
+- **Fonts**: Added Modern fonts (Nunito, Quicksand, Varela Round). Removed Serif.
+- **UI Cleanup**: Moved Archive & Trash to Settings. Refined FAB shape.
+
 ## [1.3.0] - 2025-12-15
 
 ### Major Update

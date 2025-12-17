@@ -106,6 +106,7 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
                     await DatabaseHelper.instance
                         .setTagColor(newName, selectedColor);
                   }
+                  if (!context.mounted) return;
                   Navigator.pop(context);
                   _loadTags();
                 }

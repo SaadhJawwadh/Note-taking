@@ -1,5 +1,7 @@
 // ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
+
 import 'dart:convert';
 import 'dart:io';
 
@@ -8,9 +10,11 @@ import '../data/database_helper.dart';
 
 import 'package:provider/provider.dart';
 import '../data/settings_provider.dart';
+
 import 'package:google_fonts/google_fonts.dart';
 import 'manage_tags_screen.dart';
-import '../theme/app_theme.dart';
+import 'filtered_notes_screen.dart';
+
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
@@ -99,34 +103,6 @@ class SettingsScreen extends StatelessWidget {
                       subtitle: settings.fontFamily,
                       onTap: () => _showFontPicker(context, settings),
                     ),
-                    Divider(
-                        height: 1,
-                        indent: 56,
-                        color: Theme.of(context).colorScheme.outlineVariant),
-                    _buildListTile(
-                      context,
-                      icon: Icons.format_paint_outlined,
-                      title: 'Default Note Color',
-                      trailing: Container(
-                        width: 24,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: settings.defaultNoteColor == 0
-                              ? Theme.of(context).colorScheme.surface
-                              : Color(settings.defaultNoteColor),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Theme.of(context).colorScheme.outline,
-                          ),
-                        ),
-                        child: settings.defaultNoteColor == 0
-                            ? Icon(Icons.auto_awesome,
-                                size: 12,
-                                color: Theme.of(context).colorScheme.onSurface)
-                            : null,
-                      ),
-                      onTap: () => _showDefaultColorPicker(context, settings),
-                    ),
                   ]),
                   const SizedBox(height: 24),
                   _buildSectionHeader(context, 'CONTENT'),
@@ -147,7 +123,82 @@ class SettingsScreen extends StatelessWidget {
                     ),
                   ]),
                   const SizedBox(height: 24),
-                  _buildSectionHeader(context, 'DATA'),
+                  _buildSectionHeader(context, 'Folders'),
+                  _buildSettingsContainer(context, [
+                    _buildListTile(
+                      context,
+                      icon: Icons.archive_outlined,
+                      title: 'Archived Notes',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const FilteredNotesScreen(
+                                filterType: FilterType.archived),
+                          ),
+                        );
+                      },
+                    ),
+                    Divider(
+                        height: 1,
+                        indent: 56,
+                        color: Theme.of(context).colorScheme.outlineVariant),
+                    _buildListTile(
+                      context,
+                      icon: Icons.delete_outline,
+                      title: 'Trash',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const FilteredNotesScreen(
+                                filterType: FilterType.trash),
+                          ),
+                        );
+                      },
+                    ),
+                  ]),
+                  const SizedBox(height: 24),
+                  const SizedBox(height: 24),
+                  _buildSectionHeader(context, 'Security'),
+                  _buildSettingsContainer(context, [
+                    SwitchListTile(
+                      secondary: const Icon(Icons.fingerprint),
+                      title: const Text('App Lock'),
+                      subtitle:
+                          const Text('Require authentication to access notes'),
+                      value: settings.isAppLockEnabled,
+                      activeColor: Theme.of(context).colorScheme.primary,
+                      onChanged: (value) async {
+                        if (value) {
+                          // Verify biometric support first
+                          final canAuth = await AuthService.hasBiometrics();
+                          if (!canAuth) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text(
+                                          'Biometrics not available on this device')));
+                            }
+                            return;
+                          }
+                          // Authenticate to enable
+                          final success = await AuthService.authenticate();
+                          if (success) {
+                            settings.setIsAppLockEnabled(true);
+                          }
+                        } else {
+                          // Authenticate to disable (optional security measure)
+                          final success = await AuthService.authenticate();
+                          if (success) {
+                            settings.setIsAppLockEnabled(false);
+                          }
+                        }
+                      },
+                    ),
+                  ]),
+                  const SizedBox(height: 24),
+                  _buildSectionHeader(context, 'Data'),
                   _buildSettingsContainer(context, [
                     _buildListTile(
                       context,
@@ -416,7 +467,7 @@ class SettingsScreen extends StatelessWidget {
         allowedExtensions: ['json'],
       );
 
-      if (result != null) {
+      if (result != null && result.files.single.path != null) {
         final file = File(result.files.single.path!);
         final content = await file.readAsString();
         final List<dynamic> data = jsonDecode(content);
@@ -443,8 +494,10 @@ class SettingsScreen extends StatelessWidget {
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version;
 
-      final response = await http.get(Uri.parse(
-          'https://api.github.com/repos/SaadhJawwadh/Note-taking/releases/latest'));
+      final response = await http
+          .get(Uri.parse(
+              'https://api.github.com/repos/SaadhJawwadh/Note-taking/releases/latest'))
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -457,7 +510,7 @@ class SettingsScreen extends StatelessWidget {
         bool isNewer = _isVersionNewer(currentVersion, latestVersion);
 
         if (isNewer) {
-          // ignore: use_build_context_synchronously
+          if (!context.mounted) return;
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
@@ -478,7 +531,7 @@ class SettingsScreen extends StatelessWidget {
             ),
           );
         } else {
-          // ignore: use_build_context_synchronously
+          if (!context.mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('You are using the latest version.')),
           );
@@ -488,9 +541,11 @@ class SettingsScreen extends StatelessWidget {
       }
     } catch (e) {
       // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Update check failed: $e')),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Update check failed: $e')),
+        );
+      }
     }
   }
 
@@ -508,7 +563,7 @@ class SettingsScreen extends StatelessWidget {
   }
 
   void _showFontPicker(BuildContext context, SettingsProvider settings) {
-    final fonts = ['Rubik', 'Comic Neue', 'Sans Serif'];
+    final fonts = ['Rubik', 'Nunito', 'Quicksand', 'Varela Round'];
 
     showDialog(
       context: context,
@@ -523,9 +578,7 @@ class SettingsScreen extends StatelessWidget {
               return RadioListTile<String>(
                 title: Text(font,
                     style: TextStyle(
-                        fontFamily: font == 'Sans Serif'
-                            ? null
-                            : GoogleFonts.getFont(font).fontFamily,
+                        fontFamily: GoogleFonts.getFont(font).fontFamily,
                         color: Theme.of(context).colorScheme.onSurface)),
                 value: font,
                 groupValue: settings.fontFamily,
@@ -535,74 +588,6 @@ class SettingsScreen extends StatelessWidget {
                     Navigator.pop(context);
                   }
                 },
-              );
-            }).toList(),
-          ),
-        );
-      },
-    );
-  }
-
-  void _showDefaultColorPicker(
-      BuildContext context, SettingsProvider settings) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
-          title: Text('Default Note Color',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-          content: Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            alignment: WrapAlignment.center,
-            children: AppTheme.noteColors.map((c) {
-              final bool isSystem = c.toARGB32() == 0;
-              final bool isSelected = settings.defaultNoteColor == c.toARGB32();
-
-              return Tooltip(
-                message: isSystem ? 'System Default' : 'Color',
-                child: GestureDetector(
-                  onTap: () {
-                    settings.setDefaultNoteColor(c.toARGB32());
-                    Navigator.pop(context);
-                  },
-                  child: Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                        color: isSystem
-                            ? Theme.of(context).colorScheme.surface
-                            : c,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isSelected
-                              ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.outlineVariant,
-                          width: isSelected ? 3 : 1,
-                        ),
-                        boxShadow: [
-                          if (isSelected)
-                            BoxShadow(
-                              color: (isSystem ? Colors.black : c)
-                                  .withValues(alpha: 0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            )
-                        ]),
-                    child: isSystem
-                        ? Icon(Icons.auto_awesome,
-                            size: 20,
-                            color: Theme.of(context).colorScheme.onSurface)
-                        : (isSelected
-                            ? Icon(Icons.check,
-                                size: 24,
-                                color: c.computeLuminance() > 0.5
-                                    ? Colors.black
-                                    : Colors.white)
-                            : null),
-                  ),
-                ),
               );
             }).toList(),
           ),

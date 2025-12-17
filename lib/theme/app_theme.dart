@@ -50,8 +50,12 @@ class AppTheme {
       switch (font) {
         case 'Comic Neue':
           return GoogleFonts.comicNeueTextTheme();
-        case 'Sans Serif':
-          return GoogleFonts.notoSansTextTheme(); // Clean Sans Serif or System
+        case 'Nunito':
+          return GoogleFonts.nunitoTextTheme();
+        case 'Quicksand':
+          return GoogleFonts.quicksandTextTheme();
+        case 'Varela Round':
+          return GoogleFonts.varelaRoundTextTheme();
         case 'Rubik':
         default:
           return GoogleFonts.rubikTextTheme();
