@@ -465,9 +465,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                     icon: const Icon(Icons.arrow_back),
                                     color: textColor,
                                     onPressed: () async {
-                                      await saveNote();
-                                      if (context.mounted) {
-                                        Navigator.pop(context, true);
+                                      try {
+                                        await saveNote();
+                                      } finally {
+                                        if (context.mounted) {
+                                          Navigator.pop(context, true);
+                                        }
                                       }
                                     },
                                   ),
