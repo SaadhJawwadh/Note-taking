@@ -11,7 +11,7 @@ import 'package:uuid/uuid.dart';
 import 'package:provider/provider.dart';
 
 import '../data/settings_provider.dart';
-import '../theme/app_theme.dart';
+
 import '../utils/markdown_controller.dart';
 
 class NoteEditorScreen extends StatefulWidget {
@@ -39,6 +39,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   late String _noteId;
   late DateTime _dateCreated;
   bool _hasUserModifiedColor = false;
+  Map<String, int> _tagColors = {}; // Cache for tag colors
 
   @override
   void didChangeDependencies() {
@@ -78,7 +79,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
   Future<void> _loadTags() async {
     final t = await DatabaseHelper.instance.getAllTags();
-    if (mounted) setState(() => _allTags = t);
+    final c = await DatabaseHelper.instance.getAllTagColors();
+    if (mounted) {
+      setState(() {
+        _allTags = t;
+        _tagColors = c;
+      });
+    }
   }
 
   void _onContentChanged() {
@@ -111,92 +118,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         imagePath = localImage.path;
       });
     }
-  }
-
-  void _showColorPicker() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return StatefulBuilder(builder: (context, setSheetState) {
-          return Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHigh,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Note Color',
-                    style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  alignment: WrapAlignment.center,
-                  children: AppTheme.noteColors.map((c) {
-                    final bool isSystem = c.toARGB32() == 0;
-                    final bool isSelected = color == c.toARGB32();
-
-                    return GestureDetector(
-                      onTap: () {
-                        // Update Parent
-                        setState(() {
-                          color = c.toARGB32();
-                          _hasUserModifiedColor = true;
-                        });
-                        // Update Sheet
-                        setSheetState(() {});
-                      },
-                      child: Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                            color: isSystem
-                                ? Theme.of(context).colorScheme.surface
-                                : c,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isSelected
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Theme.of(context)
-                                      .colorScheme
-                                      .outlineVariant,
-                              width: isSelected ? 3 : 1,
-                            ),
-                            boxShadow: [
-                              if (isSelected)
-                                BoxShadow(
-                                  color: (isSystem ? Colors.black : c)
-                                      .withValues(alpha: 0.3),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                )
-                            ]),
-                        child: isSystem
-                            ? Icon(Icons.auto_awesome,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.onSurface)
-                            : (isSelected
-                                ? Icon(Icons.check,
-                                    size: 24,
-                                    color: c.computeLuminance() > 0.5
-                                        ? Colors.black
-                                        : Colors.white)
-                                : null),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 24),
-              ],
-            ),
-          );
-        });
-      },
-    );
   }
 
   void _showTagPicker() {
@@ -323,6 +244,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
   bool isNoteSaved = false;
 
+  void _togglePreview() {
+    setState(() {
+      _isPreview = !_isPreview;
+    });
+    if (_isPreview) saveNote();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<SettingsProvider>(builder: (context, settings, child) {
@@ -354,272 +282,188 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       final textColor = onBackground;
       final hintColor = onBackground.withValues(alpha: 0.6);
 
+      final bottomPadding = MediaQuery.of(context).viewInsets.bottom + 16;
+
       return Scaffold(
         backgroundColor: backgroundColor,
-        bottomNavigationBar: SafeArea(
-          child: Container(
-            margin: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-            height: 64,
-            decoration: BoxDecoration(
-              color: isSystemDefault
-                  ? theme.colorScheme.surfaceContainer
-                  : ColorScheme.fromSeed(
-                          seedColor: Color(color), brightness: theme.brightness)
-                      .surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(32),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.palette_outlined),
-                  tooltip: 'Color',
-                  color: textColor,
-                  onPressed: _showColorPicker,
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.format_bold),
-                  tooltip: 'Bold',
-                  color: textColor,
-                  onPressed: () => _applyFormat('**', '**'),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.format_italic),
-                  tooltip: 'Italic',
-                  color: textColor,
-                  onPressed: () => _applyFormat('_', '_'),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.title),
-                  tooltip: 'Heading',
-                  color: textColor,
-                  onPressed: () => _applyFormat('# ', ''),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.strikethrough_s),
-                  tooltip: 'Strikethrough',
-                  color: textColor,
-                  onPressed: () => _applyFormat('~~', '~~'),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.code),
-                  tooltip: 'Code',
-                  color: textColor,
-                  onPressed: () => _applyFormat('`', '`'),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.format_quote),
-                  tooltip: 'Quote',
-                  color: textColor,
-                  onPressed: () => _applyFormat('> ', ''),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.format_list_bulleted),
-                  tooltip: 'List',
-                  color: textColor,
-                  onPressed: () => _applyFormat('- ', ''),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.check_box_outlined),
-                  tooltip: 'Checkbox',
-                  color: textColor,
-                  onPressed: () => _applyFormat('- [ ] ', ''),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.add_photo_alternate_outlined),
-                  tooltip: 'Cover',
-                  color: textColor,
-                  onPressed: _pickImage,
-                ),
-              ],
-            ),
-          ),
-        ),
-        body: SafeArea(
-          bottom: false,
-          child: CustomScrollView(
-            slivers: [
-              // ... Rest of UI using backgroundColor/textColor handles itself usually or uses inherited theme?
-              // We need to pass these colors to Sivers or ensure Theme override.
-              // Best way: Wrap Scaffold body in Theme?
-              // But existing code uses explicit colors in some places.
-              // We need to verify SliverAppBar and TextFields.
-              // SliverAppBar pill needs to contrast?
-              // Let's rely on calculating them here and using them.
-              SliverAppBar(
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                scrolledUnderElevation: 0,
-                floating: true,
-                snap: true,
-                automaticallyImplyLeading: false,
-                toolbarHeight: 64,
-                title: Container(
-                  margin: const EdgeInsets.only(top: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  decoration: BoxDecoration(
-                    color: isSystemDefault
-                        ? theme.colorScheme.surfaceContainer
-                        : ColorScheme.fromSeed(
-                                seedColor: Color(color),
-                                brightness: theme.brightness)
-                            .surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(32),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back),
-                        color: textColor,
-                        onPressed: () async {
-                          await saveNote();
-                          if (context.mounted) Navigator.pop(context);
-                        },
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.label_outline),
-                        tooltip: 'Tags',
-                        color: textColor,
-                        onPressed: _showTagPicker,
-                      ),
-                      IconButton(
-                        icon: Icon(isPinned
-                            ? Icons.push_pin
-                            : Icons.push_pin_outlined),
-                        tooltip: isPinned ? 'Unpin' : 'Pin',
-                        color: textColor,
-                        onPressed: () {
-                          setState(() => isPinned = !isPinned);
-                          saveNote();
-                        },
-                      ),
-                      ValueListenableBuilder<UndoHistoryValue>(
-                        valueListenable: _undoController,
-                        builder: (context, value, child) {
-                          return Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.undo),
-                                color: value.canUndo
-                                    ? textColor
-                                    : textColor.withValues(alpha: 0.3),
-                                onPressed:
-                                    value.canUndo ? _undoController.undo : null,
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.redo),
-                                color: value.canRedo
-                                    ? textColor
-                                    : textColor.withValues(alpha: 0.3),
-                                onPressed:
-                                    value.canRedo ? _undoController.redo : null,
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                      IconButton(
-                        icon: Icon(
-                            _isPreview ? Icons.edit_outlined : Icons.check),
-                        tooltip: _isPreview ? 'Edit' : 'Save & View',
-                        color: textColor,
-                        onPressed: () {
-                          setState(() => _isPreview = !_isPreview);
-                          if (_isPreview) saveNote();
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                sliver: SliverList(
-                  delegate: SliverChildListDelegate([
-                    TextField(
-                      controller: _titleController,
-                      readOnly: _isPreview,
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: textColor,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'Title',
-                        border: InputBorder.none,
-                        filled: false,
-                        hintStyle: TextStyle(color: hintColor),
-                      ),
-                      maxLines: null,
-                    ),
-                    const SizedBox(height: 8),
-                    if (imagePath != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: Stack(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.file(
-                                File(imagePath!),
-                                width: double.infinity,
-                                fit: BoxFit.cover,
-                              ),
+        body: GestureDetector(
+          onDoubleTap: _togglePreview, // Double tap to toggle mode
+          child: Stack(
+            children: [
+              // Main Content
+              SafeArea(
+                bottom: false,
+                child: CustomScrollView(
+                  slivers: [
+                    SliverAppBar(
+                      backgroundColor: Colors.transparent,
+                      elevation: 0,
+                      scrolledUnderElevation: 0,
+                      floating: true,
+                      snap: true,
+                      automaticallyImplyLeading: false,
+                      toolbarHeight: 64,
+                      title: Container(
+                        margin: const EdgeInsets.only(top: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: isSystemDefault
+                              ? theme.colorScheme.surfaceContainer
+                              : ColorScheme.fromSeed(
+                                      seedColor: Color(color),
+                                      brightness: theme.brightness)
+                                  .surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(32),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
                             ),
-                            if (!_isPreview)
-                              Positioned(
-                                right: 8,
-                                top: 8,
-                                child: IconButton(
-                                  icon: const Icon(Icons.delete,
-                                      color: Colors.white),
-                                  style: IconButton.styleFrom(
-                                      backgroundColor:
-                                          Colors.black.withValues(alpha: 0.5)),
-                                  onPressed: () {
-                                    setState(() => imagePath = null);
-                                    saveNote();
-                                  },
-                                ),
-                              ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.arrow_back),
+                              color: textColor,
+                              onPressed: () async {
+                                await saveNote();
+                                if (context.mounted) Navigator.pop(context);
+                              },
+                            ),
+                            const Spacer(),
+                            IconButton(
+                              icon: const Icon(Icons.label_outline),
+                              tooltip: 'Tags',
+                              color: textColor,
+                              onPressed: _showTagPicker,
+                            ),
+                            IconButton(
+                              icon: Icon(isPinned
+                                  ? Icons.push_pin
+                                  : Icons.push_pin_outlined),
+                              tooltip: isPinned ? 'Unpin' : 'Pin',
+                              color: textColor,
+                              onPressed: () {
+                                setState(() => isPinned = !isPinned);
+                                saveNote();
+                              },
+                            ),
+                            ValueListenableBuilder<UndoHistoryValue>(
+                              valueListenable: _undoController,
+                              builder: (context, value, child) {
+                                return Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.undo),
+                                      color: value.canUndo
+                                          ? textColor
+                                          : textColor.withValues(alpha: 0.3),
+                                      onPressed: value.canUndo
+                                          ? _undoController.undo
+                                          : null,
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.redo),
+                                      color: value.canRedo
+                                          ? textColor
+                                          : textColor.withValues(alpha: 0.3),
+                                      onPressed: value.canRedo
+                                          ? _undoController.redo
+                                          : null,
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                            IconButton(
+                              icon: Icon(_isPreview
+                                  ? Icons.edit_outlined
+                                  : Icons.check),
+                              tooltip: _isPreview ? 'Edit' : 'Save & View',
+                              color: textColor,
+                              onPressed: _togglePreview,
+                            ),
                           ],
                         ),
                       ),
-                    if (tags.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Wrap(
-                          spacing: 8,
-                          children: tags
-                              .map((tag) => Chip(
-                                    label: Text(tag),
+                    ),
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      sliver: SliverList(
+                        delegate: SliverChildListDelegate([
+                          TextField(
+                            controller: _titleController,
+                            readOnly: _isPreview,
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'Title',
+                              border: InputBorder.none,
+                              filled: false,
+                              hintStyle: TextStyle(color: hintColor),
+                            ),
+                            maxLines: null,
+                          ),
+                          const SizedBox(height: 8),
+                          if (imagePath != null)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: Stack(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Image.file(
+                                      File(imagePath!),
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                  if (!_isPreview)
+                                    Positioned(
+                                      right: 8,
+                                      top: 8,
+                                      child: IconButton(
+                                        icon: const Icon(Icons.delete,
+                                            color: Colors.white),
+                                        style: IconButton.styleFrom(
+                                            backgroundColor: Colors.black
+                                                .withValues(alpha: 0.5)),
+                                        onPressed: () {
+                                          setState(() => imagePath = null);
+                                          saveNote();
+                                        },
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          if (tags.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Wrap(
+                                spacing: 8,
+                                children: tags.map((tag) {
+                                  final tagColorValue = _tagColors[tag];
+                                  final tagColor = tagColorValue != null
+                                      ? Color(tagColorValue)
+                                      : null;
+                                  // Check luminance for text color if colored
+                                  final tagTextColor = tagColor != null
+                                      ? (tagColor.computeLuminance() > 0.5
+                                          ? Colors.black
+                                          : Colors.white)
+                                      : null;
+
+                                  return Chip(
+                                    label: Text(tag,
+                                        style: TextStyle(color: tagTextColor)),
+                                    backgroundColor: tagColor,
                                     onDeleted: _isPreview
                                         ? null
                                         : () {
@@ -628,66 +472,166 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                             });
                                             saveNote();
                                           },
-                                  ))
-                              .toList(),
-                        ),
-                      ),
-                    const SizedBox(height: 8),
-                    if (_isPreview)
-                      MarkdownBody(
-                        data: _contentController.text,
-                        styleSheet: MarkdownStyleSheet(
-                          p: TextStyle(
-                              fontSize: settings.textSize,
-                              height: 1.5,
-                              color: textColor),
-                          h1: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: textColor),
-                          h2: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: textColor),
-                          blockquote: TextStyle(
-                              color: textColor.withValues(alpha: 0.8),
-                              fontStyle: FontStyle.italic),
-                          code: TextStyle(
-                              backgroundColor:
-                                  Colors.black.withValues(alpha: 0.2),
-                              fontFamily: 'monospace',
-                              color: textColor),
-                          checkbox: TextStyle(color: textColor),
-                        ),
-                      )
-                    else
-                      Column(
-                        children: [
-                          TextField(
-                            controller: _contentController,
-                            undoController: _undoController,
-                            style: TextStyle(
-                              fontSize: settings.textSize,
-                              height: 1.5,
-                              color: textColor,
+                                    deleteIconColor: tagTextColor,
+                                  );
+                                }).toList(),
+                              ),
                             ),
-                            decoration: InputDecoration(
-                              hintText: 'Start typing...',
-                              border: InputBorder.none,
-                              filled: false,
-                              hintStyle: TextStyle(color: hintColor),
+                          const SizedBox(height: 8),
+                          if (_isPreview)
+                            MarkdownBody(
+                              data: _contentController.text,
+                              styleSheet: MarkdownStyleSheet(
+                                p: TextStyle(
+                                    fontSize: settings.textSize,
+                                    height: 1.5,
+                                    color: textColor),
+                                h1: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: textColor),
+                                h2: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: textColor),
+                                blockquote: TextStyle(
+                                    color: textColor.withValues(alpha: 0.8),
+                                    fontStyle: FontStyle.italic),
+                                code: TextStyle(
+                                    backgroundColor:
+                                        Colors.black.withValues(alpha: 0.2),
+                                    fontFamily: 'monospace',
+                                    color: textColor),
+                                checkbox: TextStyle(color: textColor),
+                              ),
+                            )
+                          else
+                            Column(
+                              children: [
+                                TextField(
+                                  controller: _contentController,
+                                  undoController: _undoController,
+                                  style: TextStyle(
+                                    fontSize: settings.textSize,
+                                    height: 1.5,
+                                    color: textColor,
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: 'Start typing...',
+                                    border: InputBorder.none,
+                                    filled: false,
+                                    hintStyle: TextStyle(color: hintColor),
+                                  ),
+                                  maxLines: null,
+                                  keyboardType: TextInputType.multiline,
+                                ),
+                                // Toolbar space
+                                const SizedBox(height: 60),
+                              ],
                             ),
-                            maxLines: null,
-                            keyboardType: TextInputType.multiline,
-                          ),
-                          // Toolbar space
-                          const SizedBox(height: 60),
-                        ],
+                          const SizedBox(height: 80), // Bottom padding
+                        ]),
                       ),
-                    const SizedBox(height: 80), // Bottom padding
-                  ]),
+                    ),
+                    // Bottom padding provided by SizedBox in list
+                  ],
                 ),
               ),
+              // Floating Bottom Toolbar
+              if (MediaQuery.of(context).viewInsets.bottom > 0 || !_isPreview)
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  bottom: bottomPadding,
+                  child: Container(
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: isSystemDefault
+                          ? theme.colorScheme.surfaceContainer
+                          : ColorScheme.fromSeed(
+                                  seedColor: Color(color),
+                                  brightness: theme.brightness)
+                              .surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(32),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.format_bold),
+                          tooltip: 'Bold',
+                          color: textColor,
+                          onPressed: () => _applyFormat('**', '**'),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.format_italic),
+                          tooltip: 'Italic',
+                          color: textColor,
+                          onPressed: () => _applyFormat('_', '_'),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.title),
+                          tooltip: 'Heading',
+                          color: textColor,
+                          onPressed: () => _applyFormat('# ', ''),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.strikethrough_s),
+                          tooltip: 'Strikethrough',
+                          color: textColor,
+                          onPressed: () => _applyFormat('~~', '~~'),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.code),
+                          tooltip: 'Code',
+                          color: textColor,
+                          onPressed: () => _applyFormat('`', '`'),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.format_quote),
+                          tooltip: 'Quote',
+                          color: textColor,
+                          onPressed: () => _applyFormat('> ', ''),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.format_list_bulleted),
+                          tooltip: 'List',
+                          color: textColor,
+                          onPressed: () => _applyFormat('- ', ''),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.check_box_outlined),
+                          tooltip: 'Checkbox',
+                          color: textColor,
+                          onPressed: () => _applyFormat('- [ ] ', ''),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.add_photo_alternate_outlined),
+                          tooltip: 'Cover',
+                          color: textColor,
+                          onPressed: _pickImage,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
             ],
           ),
         ),

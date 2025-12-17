@@ -21,7 +21,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -44,6 +44,13 @@ class DatabaseHelper {
         deletedAt TEXT
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE tags (
+        name TEXT PRIMARY KEY,
+        color INTEGER NOT NULL
+      )
+    ''');
   }
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -54,6 +61,14 @@ class DatabaseHelper {
     }
     if (oldVersion < 3) {
       await db.execute('ALTER TABLE notes ADD COLUMN tags TEXT');
+    }
+    if (oldVersion < 4) {
+      await db.execute('''
+        CREATE TABLE tags (
+          name TEXT PRIMARY KEY,
+          color INTEGER NOT NULL
+        )
+      ''');
     }
   }
 
@@ -204,7 +219,34 @@ class DatabaseHelper {
     return allTags.toList()..sort();
   }
 
+  Future<Map<String, int>> getAllTagColors() async {
+    final db = await instance.database;
+    final result = await db.query('tags');
+    return {for (var e in result) e['name'] as String: e['color'] as int};
+  }
+
+  Future<int?> getTagColor(String tagName) async {
+    final db = await instance.database;
+    final result = await db.query('tags',
+        columns: ['color'], where: 'name = ?', whereArgs: [tagName]);
+    if (result.isNotEmpty) {
+      return result.first['color'] as int;
+    }
+    return null;
+  }
+
+  Future<void> setTagColor(String tagName, int color) async {
+    final db = await instance.database;
+    await db.insert(
+      'tags',
+      {'name': tagName, 'color': color},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
   Future<void> renameTag(String oldTag, String newTag) async {
+    final db = await instance.database;
+    // Update notes
     final notes = await readAllNotes();
     for (var note in notes) {
       if (note.tags.contains(oldTag)) {
@@ -212,15 +254,23 @@ class DatabaseHelper {
         final index = updatedTags.indexOf(oldTag);
         if (index != -1) {
           updatedTags[index] = newTag;
-          // Sort tags to keep them organized
           updatedTags.sort();
           await updateNote(note.copyWith(tags: updatedTags));
         }
       }
     }
+
+    // Update color entry if exists
+    final color = await getTagColor(oldTag);
+    if (color != null) {
+      await setTagColor(newTag, color);
+      await db.delete('tags', where: 'name = ?', whereArgs: [oldTag]);
+    }
   }
 
   Future<void> deleteTag(String tag) async {
+    final db = await instance.database;
+    // Update notes
     final notes = await readAllNotes();
     for (var note in notes) {
       if (note.tags.contains(tag)) {
@@ -229,5 +279,7 @@ class DatabaseHelper {
         await updateNote(note.copyWith(tags: updatedTags));
       }
     }
+    // Delete color entry
+    await db.delete('tags', where: 'name = ?', whereArgs: [tag]);
   }
 }

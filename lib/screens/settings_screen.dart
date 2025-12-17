@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'dart:io';
-import 'package:path_provider/path_provider.dart';
+
 import 'package:sqflite/sqflite.dart';
 import '../data/database_helper.dart';
 
@@ -11,6 +11,10 @@ import '../data/settings_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'manage_tags_screen.dart';
 import '../theme/app_theme.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:http/http.dart' as http;
+import 'package:file_picker/file_picker.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -149,7 +153,7 @@ class SettingsScreen extends StatelessWidget {
                       context,
                       icon: Icons.download_outlined,
                       title: 'Export Backup',
-                      subtitle: 'Save notes to a local JSON file',
+                      subtitle: 'Save notes to a JSON file',
                       showArrow: true,
                       onTap: () async {
                         await _exportBackup(context);
@@ -163,7 +167,7 @@ class SettingsScreen extends StatelessWidget {
                       context,
                       icon: Icons.upload_outlined,
                       title: 'Import Backup',
-                      subtitle: 'Restore from local JSON file',
+                      subtitle: 'Restore from a JSON file',
                       showArrow: true,
                       onTap: () async {
                         await _importBackup(context);
@@ -171,16 +175,14 @@ class SettingsScreen extends StatelessWidget {
                     ),
                   ]),
                   const SizedBox(height: 24),
-                  _buildSectionHeader(context, 'SUPPORT'),
+                  _buildSectionHeader(context, 'ABOUT'),
                   _buildSettingsContainer(context, [
                     _buildListTile(
                       context,
-                      icon: Icons.help_outline,
-                      title: 'Help Center',
-                      trailing: Icon(Icons.open_in_new,
-                          size: 20,
-                          color:
-                              Theme.of(context).colorScheme.onSurfaceVariant),
+                      icon: Icons.update,
+                      title: 'Check for Updates',
+                      subtitle: 'Check GitHub for latest release',
+                      onTap: () => _checkForUpdates(context),
                     ),
                     Divider(
                         height: 1,
@@ -188,8 +190,17 @@ class SettingsScreen extends StatelessWidget {
                         color: Theme.of(context).colorScheme.outlineVariant),
                     _buildListTile(
                       context,
-                      icon: Icons.chat_bubble_outline,
-                      title: 'Send Feedback',
+                      icon: Icons.public, // Or code/github icon if available
+                      title: 'GitHub Releases',
+                      subtitle: 'View release history',
+                      trailing: Icon(Icons.open_in_new,
+                          size: 20,
+                          color:
+                              Theme.of(context).colorScheme.onSurfaceVariant),
+                      onTap: () {
+                        _launchUrl(
+                            'https://github.com/SaadhJawwadh/Note-taking/releases');
+                      },
                     ),
                   ]),
                   const SizedBox(height: 24),
@@ -379,14 +390,18 @@ class SettingsScreen extends StatelessWidget {
       final db = await DatabaseHelper.instance.database;
       final rows = await db.query('notes');
       final json = rows.map((e) => e).toList();
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File(
-          '${dir.path}/notes_backup_${DateTime.now().millisecondsSinceEpoch}.json');
-      await file
-          .writeAsString(const JsonEncoder.withIndent('  ').convert(json));
-      // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Backup saved to ${file.path}')));
+
+      String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
+
+      if (selectedDirectory != null) {
+        final file = File(
+            '$selectedDirectory/notes_backup_${DateTime.now().millisecondsSinceEpoch}.json');
+        await file
+            .writeAsString(const JsonEncoder.withIndent('  ').convert(json));
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Backup saved to ${file.path}')));
+      }
     } catch (e) {
       // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context)
@@ -396,43 +411,99 @@ class SettingsScreen extends StatelessWidget {
 
   Future<void> _importBackup(BuildContext context) async {
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      var file = File('${dir.path}/notes_backup.json');
-      if (!await file.exists()) {
-        // Try most recent backup file by pattern
-        final files = dir
-            .listSync()
-            .whereType<File>()
-            .where((f) =>
-                f.path.contains('notes_backup_') && f.path.endsWith('.json'))
-            .toList()
-          ..sort(
-              (a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
-        if (files.isEmpty) {
-          // ignore: use_build_context_synchronously
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('No backup file found in app documents folder')));
-          return;
-        }
-        file = files.first;
-      }
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+      );
 
-      final content = await file.readAsString();
-      final List<dynamic> data = jsonDecode(content);
-      final db = await DatabaseHelper.instance.database;
-      final batch = db.batch();
-      for (final row in data) {
-        batch.insert('notes', Map<String, Object?>.from(row),
-            conflictAlgorithm: ConflictAlgorithm.replace);
+      if (result != null) {
+        final file = File(result.files.single.path!);
+        final content = await file.readAsString();
+        final List<dynamic> data = jsonDecode(content);
+        final db = await DatabaseHelper.instance.database;
+        final batch = db.batch();
+        for (final row in data) {
+          batch.insert('notes', Map<String, Object?>.from(row),
+              conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+        await batch.commit(noResult: true);
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Imported ${data.length} notes from backup')));
       }
-      await batch.commit(noResult: true);
-      // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Imported ${data.length} notes from backup')));
     } catch (e) {
       // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Import failed: $e')));
+    }
+  }
+
+  Future<void> _checkForUpdates(BuildContext context) async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      final currentVersion = packageInfo.version;
+
+      final response = await http.get(Uri.parse(
+          'https://api.github.com/repos/SaadhJawwadh/Note-taking/releases/latest'));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final latestVersionTag = data['tag_name'].toString();
+        // Remove 'v' prefix if present
+        final latestVersion = latestVersionTag.startsWith('v')
+            ? latestVersionTag.substring(1)
+            : latestVersionTag;
+
+        bool isNewer = _isVersionNewer(currentVersion, latestVersion);
+
+        if (isNewer) {
+          // ignore: use_build_context_synchronously
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Update Available'),
+              content: Text('A new version $latestVersionTag is available.'),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel')),
+                FilledButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _launchUrl(data['html_url']);
+                  },
+                  child: const Text('Download'),
+                ),
+              ],
+            ),
+          );
+        } else {
+          // ignore: use_build_context_synchronously
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('You are using the latest version.')),
+          );
+        }
+      } else {
+        throw Exception('Failed to fetch release info');
+      }
+    } catch (e) {
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Update check failed: $e')),
+      );
+    }
+  }
+
+  bool _isVersionNewer(String current, String latest) {
+    // Simple comparison, might need semantic version parsing if complex
+    // Assuming version string like 1.0.0
+    return current != latest; // Very basic check
+  }
+
+  Future<void> _launchUrl(String url) async {
+    if (!await launchUrl(Uri.parse(url),
+        mode: LaunchMode.externalApplication)) {
+      throw Exception('Could not launch $url');
     }
   }
 

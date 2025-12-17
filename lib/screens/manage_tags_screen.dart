@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/database_helper.dart';
+import '../theme/app_theme.dart';
 
 class ManageTagsScreen extends StatefulWidget {
   const ManageTagsScreen({super.key});
@@ -10,6 +11,7 @@ class ManageTagsScreen extends StatefulWidget {
 
 class _ManageTagsScreenState extends State<ManageTagsScreen> {
   List<String> _tags = [];
+  Map<String, int> _tagColors = {};
   bool _isLoading = true;
 
   @override
@@ -21,40 +23,99 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
   Future<void> _loadTags() async {
     setState(() => _isLoading = true);
     final tags = await DatabaseHelper.instance.getAllTags();
+    final col = await DatabaseHelper.instance.getAllTagColors();
     setState(() {
       _tags = tags;
+      _tagColors = col;
       _isLoading = false;
     });
   }
 
-  Future<void> _renameTag(String oldTag) async {
-    final controller = TextEditingController(text: oldTag);
-    final newTag = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Rename Tag'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(labelText: 'Tag Name'),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('Rename'),
-          ),
-        ],
-      ),
-    );
+  Future<void> _editTag(String tag) async {
+    final controller = TextEditingController(text: tag);
+    int selectedColor = _tagColors[tag] ?? 0;
 
-    if (newTag != null && newTag.isNotEmpty && newTag != oldTag) {
-      await DatabaseHelper.instance.renameTag(oldTag, newTag);
-      _loadTags();
-    }
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(builder: (context, setState) {
+        return AlertDialog(
+          title: const Text('Edit Tag'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: controller,
+                decoration: const InputDecoration(labelText: 'Tag Name'),
+                autofocus: true,
+              ),
+              const SizedBox(height: 16),
+              const Text('Tag Color'),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                alignment: WrapAlignment.center,
+                children: AppTheme.noteColors.map((c) {
+                  final bool isSystem = c.toARGB32() == 0;
+                  final bool isSelected = selectedColor == c.toARGB32();
+                  return GestureDetector(
+                    onTap: () => setState(() => selectedColor = c.toARGB32()),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: isSystem
+                            ? Theme.of(context).colorScheme.surface
+                            : c,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isSelected
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.outlineVariant,
+                          width: isSelected ? 3 : 1,
+                        ),
+                      ),
+                      child: isSystem
+                          ? Icon(Icons.auto_awesome, size: 16)
+                          : (isSelected
+                              ? Icon(Icons.check,
+                                  size: 16,
+                                  color: c.computeLuminance() > 0.5
+                                      ? Colors.black
+                                      : Colors.white)
+                              : null),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final newName = controller.text.trim();
+                if (newName.isNotEmpty) {
+                  if (newName != tag) {
+                    await DatabaseHelper.instance.renameTag(tag, newName);
+                  }
+                  if (selectedColor != (_tagColors[tag] ?? 0)) {
+                    await DatabaseHelper.instance
+                        .setTagColor(newName, selectedColor);
+                  }
+                  Navigator.pop(context);
+                  _loadTags();
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      }),
+    );
   }
 
   Future<void> _deleteTag(String tag) async {
@@ -108,16 +169,23 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
                       const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final tag = _tags[index];
+                    final tagColorValue = _tagColors[tag];
+                    final tagColor = tagColorValue != null && tagColorValue != 0
+                        ? Color(tagColorValue)
+                        : null;
+
                     return ListTile(
-                      leading: const Icon(Icons.label_outlined),
+                      leading: Icon(Icons.label,
+                          color: tagColor ??
+                              Theme.of(context).colorScheme.onSurfaceVariant),
                       title: Text(tag),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
                             icon: const Icon(Icons.edit_outlined),
-                            tooltip: 'Rename',
-                            onPressed: () => _renameTag(tag),
+                            tooltip: 'Edit',
+                            onPressed: () => _editTag(tag),
                           ),
                           IconButton(
                             icon: const Icon(Icons.delete_outline),
