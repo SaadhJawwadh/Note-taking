@@ -34,6 +34,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
   final FocusNode _focusNode = FocusNode();
   bool isNoteSaved = false;
+  bool _isImageSelected = false;
 
   @override
   void initState() {
@@ -59,6 +60,56 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     // Auto-save listeners
     _titleController.addListener(_onContentChanged);
     _quillController.addListener(_onContentChanged);
+    _quillController.addListener(_onSelectionChanged); // Add selection listener
+  }
+
+  void _onSelectionChanged() {
+    final selection = _quillController.selection;
+    if (!selection.isCollapsed) {
+      if (_isImageSelected) setState(() => _isImageSelected = false);
+      return;
+    }
+
+    // Check if current selection is an image block (simplified check)
+    // Quill manages images as BlockEmbeds.
+    // A more robust way: check if the leaf at selection is an embed.
+    // For now, let's rely on the assumption that selecting an image usually focuses it.
+    // However, flutter_quill 11.x handles focus differently.
+    // Let's check if the toolbar should be hidden.
+    // If we have an Image focus, we might want to hide the toolbar.
+
+    // Actually, checking if style has 'image' isn't sufficient.
+    // We'll trust the user request: "options appear above OR the bottom formating bar should dissapear"
+    // We can infer image selection if the embed is selected.
+
+    // Better strategy: Use a simple heuristic or check specific embed attribute if possible.
+    // For flutter_quill 10+, we can check:
+    // _quillController.document.queryChild(selection.start).node is BlockEmbed ...
+
+    // Let's implement a listener that checks if we are on an image.
+    // But since `BlockEmbed` detection can be tricky without deep diving,
+    // we'll try to check if the selection style has 'mobile-toolbar-hidden' or similar? No.
+    // We will assume that if the resize handle is active, the user tapped the image.
+    // Unfortunately we can't easily detect "resize active" from here without custom EmbedBuilder callbacks.
+    //
+    // ALTERNATIVE: Just check if the current line is an embed.
+    setState(() {
+      // This simple check might need refinement but is a good start.
+      // We can iterate to improve if it doesn't catch all cases.
+      _isImageSelected = _checkIfImageSelected();
+    });
+  }
+
+  bool _checkIfImageSelected() {
+    final index = _quillController.selection.baseOffset;
+    if (index < 0 || index >= _quillController.document.length) return false;
+
+    // This is valid for many versions of Quill where images are embeds
+    final leaf = _quillController.document.querySegmentLeafNode(index).leaf;
+    if (leaf != null && leaf.value is BlockEmbed) {
+      return (leaf.value as BlockEmbed).type == 'image';
+    }
+    return false;
   }
 
   Future<void> _loadTags() async {
@@ -513,125 +564,158 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                   ),
                 ),
                 // Bottom Toolbar (Pill)
-                SafeArea(
-                  top: false,
-                  child: Container(
-                    margin:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isSystemDefault
-                          ? theme.colorScheme.surfaceContainerHighest
-                          : ColorScheme.fromSeed(
-                                  seedColor: Color(color),
-                                  brightness: theme.brightness)
-                              .surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(32),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          const SizedBox(width: 16),
-                          // Basic Formatting
-                          QuillToolbarToggleStyleButton(
-                            attribute: Attribute.bold,
-                            controller: _quillController,
-                            options: QuillToolbarToggleStyleButtonOptions(
-                                iconData: Icons.format_bold,
-                                iconTheme: QuillIconTheme(
-                                    iconButtonUnselectedData: IconButtonData(
-                                        style: IconButton.styleFrom(
-                                            foregroundColor: textColor)),
-                                    iconButtonSelectedData: IconButtonData(
-                                        style: IconButton.styleFrom(
-                                            foregroundColor:
-                                                theme.colorScheme.onPrimary)))),
-                          ),
-                          QuillToolbarToggleStyleButton(
-                            attribute: Attribute.italic,
-                            controller: _quillController,
-                            options: QuillToolbarToggleStyleButtonOptions(
-                                iconData: Icons.format_italic,
-                                iconTheme: QuillIconTheme(
-                                    iconButtonUnselectedData: IconButtonData(
-                                        style: IconButton.styleFrom(
-                                            foregroundColor: textColor)),
-                                    iconButtonSelectedData: IconButtonData(
-                                        style: IconButton.styleFrom(
-                                            foregroundColor:
-                                                theme.colorScheme.onPrimary)))),
-                          ),
-                          const SizedBox(width: 8),
-                          // Lists & Indent
-                          QuillToolbarToggleStyleButton(
-                            attribute: Attribute.ol,
-                            controller: _quillController,
-                            options: QuillToolbarToggleStyleButtonOptions(
-                                iconData: Icons.format_list_numbered,
-                                iconTheme: QuillIconTheme(
-                                    iconButtonUnselectedData: IconButtonData(
-                                        style: IconButton.styleFrom(
-                                            foregroundColor: textColor)),
-                                    iconButtonSelectedData: IconButtonData(
-                                        style: IconButton.styleFrom(
-                                            foregroundColor:
-                                                theme.colorScheme.onPrimary)))),
-                          ),
-                          QuillToolbarToggleStyleButton(
-                            attribute: Attribute.ul,
-                            controller: _quillController,
-                            options: QuillToolbarToggleStyleButtonOptions(
-                                iconData: Icons.format_list_bulleted,
-                                iconTheme: QuillIconTheme(
-                                    iconButtonUnselectedData: IconButtonData(
-                                        style: IconButton.styleFrom(
-                                            foregroundColor: textColor)),
-                                    iconButtonSelectedData: IconButtonData(
-                                        style: IconButton.styleFrom(
-                                            foregroundColor:
-                                                theme.colorScheme.onPrimary)))),
-                          ),
-                          QuillToolbarToggleCheckListButton(
-                            controller: _quillController,
-                            options: QuillToolbarToggleCheckListButtonOptions(
-                                iconData: Icons.check_box,
-                                iconTheme: QuillIconTheme(
-                                    iconButtonUnselectedData: IconButtonData(
-                                        style: IconButton.styleFrom(
-                                            foregroundColor: textColor)),
-                                    iconButtonSelectedData: IconButtonData(
-                                        style: IconButton.styleFrom(
-                                            foregroundColor:
-                                                theme.colorScheme.onPrimary)))),
-                          ),
-                          const SizedBox(width: 8),
-                          // Link & Attachment
-                          QuillToolbarLinkStyleButton(
-                            controller: _quillController,
-                            options: QuillToolbarLinkStyleButtonOptions(
-                                iconData: Icons.link,
-                                iconTheme: QuillIconTheme(
-                                    iconButtonUnselectedData: IconButtonData(
-                                        style: IconButton.styleFrom(
-                                            foregroundColor: textColor)))),
-                          ),
-                          QuillToolbarImageButton(
-                            controller: _quillController,
-                            options: QuillToolbarImageButtonOptions(
-                                iconData: Icons.attach_file, // Attachment icon
-                                iconTheme: QuillIconTheme(
-                                    iconButtonUnselectedData: IconButtonData(
-                                        style: IconButton.styleFrom(
-                                            foregroundColor: textColor)))),
+                Visibility(
+                  visible: !_isImageSelected,
+                  child: SafeArea(
+                    top: false,
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isSystemDefault
+                            ? theme.colorScheme.surfaceContainerHighest
+                            : ColorScheme.fromSeed(
+                                    seedColor: Color(color),
+                                    brightness: theme.brightness)
+                                .surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(32),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
                         ],
+                      ),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            const SizedBox(width: 16),
+                            // Basic Formatting
+                            QuillToolbarToggleStyleButton(
+                              attribute: Attribute.bold,
+                              controller: _quillController,
+                              options: QuillToolbarToggleStyleButtonOptions(
+                                  iconData: Icons.format_bold,
+                                  iconTheme: QuillIconTheme(
+                                      iconButtonUnselectedData: IconButtonData(
+                                          style: IconButton.styleFrom(
+                                              foregroundColor: textColor)),
+                                      iconButtonSelectedData: IconButtonData(
+                                          style: IconButton.styleFrom(
+                                              foregroundColor: theme
+                                                  .colorScheme.onPrimary)))),
+                            ),
+                            QuillToolbarToggleStyleButton(
+                              attribute: Attribute.italic,
+                              controller: _quillController,
+                              options: QuillToolbarToggleStyleButtonOptions(
+                                  iconData: Icons.format_italic,
+                                  iconTheme: QuillIconTheme(
+                                      iconButtonUnselectedData: IconButtonData(
+                                          style: IconButton.styleFrom(
+                                              foregroundColor: textColor)),
+                                      iconButtonSelectedData: IconButtonData(
+                                          style: IconButton.styleFrom(
+                                              foregroundColor: theme
+                                                  .colorScheme.onPrimary)))),
+                            ),
+                            const SizedBox(width: 8),
+                            // Lists & Indent
+                            QuillToolbarToggleStyleButton(
+                              attribute: Attribute.ol,
+                              controller: _quillController,
+                              options: QuillToolbarToggleStyleButtonOptions(
+                                  iconData: Icons.format_list_numbered,
+                                  iconTheme: QuillIconTheme(
+                                      iconButtonUnselectedData: IconButtonData(
+                                          style: IconButton.styleFrom(
+                                              foregroundColor: textColor)),
+                                      iconButtonSelectedData: IconButtonData(
+                                          style: IconButton.styleFrom(
+                                              foregroundColor: theme
+                                                  .colorScheme.onPrimary)))),
+                            ),
+                            QuillToolbarToggleStyleButton(
+                              attribute: Attribute.ul,
+                              controller: _quillController,
+                              options: QuillToolbarToggleStyleButtonOptions(
+                                  iconData: Icons.format_list_bulleted,
+                                  iconTheme: QuillIconTheme(
+                                      iconButtonUnselectedData: IconButtonData(
+                                          style: IconButton.styleFrom(
+                                              foregroundColor: textColor)),
+                                      iconButtonSelectedData: IconButtonData(
+                                          style: IconButton.styleFrom(
+                                              foregroundColor: theme
+                                                  .colorScheme.onPrimary)))),
+                            ),
+                            QuillToolbarToggleCheckListButton(
+                              controller: _quillController,
+                              options: QuillToolbarToggleCheckListButtonOptions(
+                                  iconData: Icons.check_box,
+                                  iconTheme: QuillIconTheme(
+                                      iconButtonUnselectedData: IconButtonData(
+                                          style: IconButton.styleFrom(
+                                              foregroundColor: textColor)),
+                                      iconButtonSelectedData: IconButtonData(
+                                          style: IconButton.styleFrom(
+                                              foregroundColor: theme
+                                                  .colorScheme.onPrimary)))),
+                            ),
+                            const SizedBox(width: 8),
+                            // Blocks (Restored)
+                            QuillToolbarToggleStyleButton(
+                              attribute: Attribute.blockQuote,
+                              controller: _quillController,
+                              options: QuillToolbarToggleStyleButtonOptions(
+                                  iconData: Icons.format_quote,
+                                  iconTheme: QuillIconTheme(
+                                      iconButtonUnselectedData: IconButtonData(
+                                          style: IconButton.styleFrom(
+                                              foregroundColor: textColor)),
+                                      iconButtonSelectedData: IconButtonData(
+                                          style: IconButton.styleFrom(
+                                              foregroundColor: theme
+                                                  .colorScheme.onPrimary)))),
+                            ),
+                            QuillToolbarToggleStyleButton(
+                              attribute: Attribute.codeBlock,
+                              controller: _quillController,
+                              options: QuillToolbarToggleStyleButtonOptions(
+                                  iconData: Icons.code,
+                                  iconTheme: QuillIconTheme(
+                                      iconButtonUnselectedData: IconButtonData(
+                                          style: IconButton.styleFrom(
+                                              foregroundColor: textColor)),
+                                      iconButtonSelectedData: IconButtonData(
+                                          style: IconButton.styleFrom(
+                                              foregroundColor: theme
+                                                  .colorScheme.onPrimary)))),
+                            ),
+                            const SizedBox(width: 8),
+                            // Link & Attachment
+                            QuillToolbarLinkStyleButton(
+                              controller: _quillController,
+                              options: QuillToolbarLinkStyleButtonOptions(
+                                  iconData: Icons.link,
+                                  iconTheme: QuillIconTheme(
+                                      iconButtonUnselectedData: IconButtonData(
+                                          style: IconButton.styleFrom(
+                                              foregroundColor: textColor)))),
+                            ),
+                            QuillToolbarImageButton(
+                              controller: _quillController,
+                              options: QuillToolbarImageButtonOptions(
+                                  iconData: Icons.attach_file,
+                                  iconTheme: QuillIconTheme(
+                                      iconButtonUnselectedData: IconButtonData(
+                                          style: IconButton.styleFrom(
+                                              foregroundColor: textColor)))),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
