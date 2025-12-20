@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.5.0] - 2025-12-21
+
+### ✨ New Features
+- **Expanded Tag Colors**: Added a comprehensive palette of 18 Material colors for tags, available in both the Note Editor and Manage Tags screen.
+- **Custom Image Picker**: Implemented a streamlined image attachment menu offering "Camera" and "Gallery" options, removing the unused "Link" feature.
+
+### ⚡ Improvements
+- **True Black Theme**: Refined Dark Mode to use a True Black (`#000000`) background for maximum contrast and battery efficiency on OLED screens.
+- **Toolbar Refinement**: Restored Block Quote and Code Block formatting buttons. Also implemented dynamic toolbar hiding when an image is resized to prevent obstruction.
+- **Code Visibility**: Improved code block styling to ensure readability in both light and dark themes.
+
 ## [1.4.0] - 2025-12-18
 
 ### ✨ New Features

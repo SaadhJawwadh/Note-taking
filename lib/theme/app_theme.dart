@@ -14,11 +14,24 @@ class AppTheme {
   // 5 Colors + System Default
   static const List<Color> noteColors = [
     Color(0x00000000), // System Default
-    Color(0xFFE57373), // Red (Warm) - Red-300
-    Color(0xFFFFB74D), // Orange (Energy) - Orange-300
-    Color(0xFF81C784), // Green (Nature) - Green-300
-    Color(0xFF64B5F6), // Blue (Calm) - Blue-300
-    Color(0xFF9575CD), // Purple (Creative) - DeepPurple-300
+    Colors.red,
+    Colors.pink,
+    Colors.purple,
+    Colors.deepPurple,
+    Colors.indigo,
+    Colors.blue,
+    Colors.lightBlue,
+    Colors.cyan,
+    Colors.teal,
+    Colors.green,
+    Colors.lightGreen,
+    Colors.lime,
+    Colors.yellow,
+    Colors.amber,
+    Colors.orange,
+    Colors.deepOrange,
+    Colors.brown,
+    Colors.blueGrey,
   ];
 
   static ThemeData createTheme(ColorScheme? dynamicColorScheme,

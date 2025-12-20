@@ -6,7 +6,7 @@ If you're looking for a minimal place to jot down thoughts, code snippets, or li
 
 ## Features
 
-- **🎨 Dynamic Colors**: Tags have colors, and your notes automatically adopt them. It looks super cool.
+- **🎨 Dynamic Colors**: Tags have distinct colors from a rich palette of 18 Material shades, and your notes automatically adopt them.
 - **🏷️ Smart Tagging**: Organize everything with color-coded tags.
 - **📝 Markdown Support**: Write in Markdown with a live preview. Bold, italic, lists, code blocks—it's all there.
 - **🔒 Fully Local**: Your data stays on your device. Always.

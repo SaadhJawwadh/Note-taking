@@ -8,6 +8,7 @@ import '../data/note_model.dart';
 import 'package:uuid/uuid.dart';
 import 'package:provider/provider.dart';
 import '../data/settings_provider.dart';
+import '../theme/app_theme.dart';
 import '../utils/rich_text_utils.dart';
 
 class NoteEditorScreen extends StatefulWidget {
@@ -214,14 +215,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                     runSpacing: 12,
                     alignment: WrapAlignment.center,
                     children: [
-                      ...[
-                        const Color(0x00000000),
-                        const Color(0xFFE57373),
-                        const Color(0xFFFFB74D),
-                        const Color(0xFF81C784),
-                        const Color(0xFF64B5F6),
-                        const Color(0xFF9575CD),
-                      ].map((c) {
+                      ...AppTheme.noteColors.map((c) {
                         final bool isSystem = c.toARGB32() == 0;
                         final bool isSelected = newTagColor == c.toARGB32();
                         return GestureDetector(
