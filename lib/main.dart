@@ -40,8 +40,8 @@ class NoteApp extends StatelessWidget {
           ),
           themeMode: settings.themeMode,
           home: const HomeScreen(),
-          locale: const Locale(
-              'en', 'US'), // Force a default locale to ensure delegates match
+          locale: const Locale('en',
+              'US'), // No changes needed based on grep, but good to be sure.
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,

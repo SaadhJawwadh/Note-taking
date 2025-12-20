@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 import '../data/settings_provider.dart';
 
 import 'manage_tags_screen.dart';
+import '../utils/app_constants.dart';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -154,9 +155,8 @@ class SettingsScreen extends StatelessWidget {
                               context,
                               icon: Icons.info_outline,
                               title: 'Version',
-                              subtitle: '1.4.0',
-                              onTap: () => _launchUrl(
-                                  'https://github.com/SaadhJawwadh/Note-taking/releases'),
+                              subtitle: AppConstants.appVersion,
+                              onTap: () => _launchUrl(AppConstants.releaseUrl),
                             ),
                           ]),
                           const SizedBox(height: 24),
