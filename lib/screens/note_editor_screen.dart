@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
 import 'dart:async';
 import '../data/database_helper.dart';
@@ -287,6 +288,66 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
               ),
             );
           },
+        );
+      },
+    );
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    final picker = ImagePicker();
+    try {
+      final pickedFile = await picker.pickImage(source: source);
+      if (pickedFile != null) {
+        final index = _quillController.selection.baseOffset;
+        final length = _quillController.selection.extentOffset - index;
+        _quillController.replaceText(
+            index, length, BlockEmbed.image(pickedFile.path), null);
+        if (mounted) {
+          Navigator.pop(context); // Close the modal
+        }
+      }
+    } catch (e) {
+      debugPrint('Error picking image: $e');
+      if (mounted) Navigator.pop(context); // Ensure modal closes on error
+    }
+  }
+
+  void _showImageOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        final textColor = Theme.of(context).colorScheme.onSurface;
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 32,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: Icon(Icons.photo_library, color: textColor),
+                title: Text('Gallery', style: TextStyle(color: textColor)),
+                onTap: () => _pickImage(ImageSource.gallery),
+              ),
+              ListTile(
+                leading: Icon(Icons.camera_alt, color: textColor),
+                title: Text('Camera', style: TextStyle(color: textColor)),
+                onTap: () => _pickImage(ImageSource.camera),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
         );
       },
     );
@@ -695,14 +756,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                                   .colorScheme.onPrimary)))),
                             ),
                             const SizedBox(width: 8),
-                            QuillToolbarImageButton(
-                              controller: _quillController,
-                              options: QuillToolbarImageButtonOptions(
-                                  iconData: Icons.attach_file,
-                                  iconTheme: QuillIconTheme(
-                                      iconButtonUnselectedData: IconButtonData(
-                                          style: IconButton.styleFrom(
-                                              foregroundColor: textColor)))),
+                            IconButton(
+                              icon: const Icon(Icons.attach_file),
+                              tooltip: 'Attach Image',
+                              onPressed: _showImageOptions,
+                              style: IconButton.styleFrom(
+                                foregroundColor: textColor,
+                              ),
                             ),
                           ],
                         ),
