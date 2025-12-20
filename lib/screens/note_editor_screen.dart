@@ -1,19 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as path;
-import 'dart:io';
+import 'package:flutter_quill/flutter_quill.dart';
+import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
 import 'dart:async';
 import '../data/database_helper.dart';
 import '../data/note_model.dart';
 import 'package:uuid/uuid.dart';
 import 'package:provider/provider.dart';
-
 import '../data/settings_provider.dart';
-
-import '../utils/markdown_controller.dart';
+import '../utils/rich_text_utils.dart';
 
 class NoteEditorScreen extends StatefulWidget {
   final Note? note;
@@ -26,48 +20,45 @@ class NoteEditorScreen extends StatefulWidget {
 
 class _NoteEditorScreenState extends State<NoteEditorScreen> {
   late TextEditingController _titleController;
-  late MarkdownFormattingController _contentController;
+  late QuillController _quillController;
   bool isPinned = false;
   bool isArchived = false;
   int color = 0; // 0 = System Default
-  String? imagePath;
   List<String> tags = [];
-  bool _isPreview = true; // Default to preview
   List<String> _allTags = [];
   Timer? _debounce;
-  final UndoHistoryController _undoController = UndoHistoryController();
   late String _noteId;
   late DateTime _dateCreated;
 
   Map<String, int> _tagColors = {}; // Cache for tag colors
 
-  DateTime? _lastTapTime;
-  int _tapCount = 0;
+  final FocusNode _focusNode = FocusNode();
+  bool isNoteSaved = false;
 
   @override
   void initState() {
     super.initState();
-    // Default: Preview if existing note, Edit if new note
-    _isPreview = widget.note != null;
-
     _noteId = widget.note?.id ?? const Uuid().v4();
     _dateCreated = widget.note?.dateCreated ?? DateTime.now();
     _titleController = TextEditingController(text: widget.note?.title ?? '');
-    _contentController =
-        MarkdownFormattingController(text: widget.note?.content ?? '');
+
+    // Convert Markdown to Delta for Quill
+    final initialContent = widget.note?.content ?? '';
+    final delta = RichTextUtils.markdownToDelta(initialContent);
+    _quillController = QuillController(
+      document: Document.fromDelta(delta),
+      selection: const TextSelection.collapsed(offset: 0),
+    );
+
     isPinned = widget.note?.isPinned ?? false;
     isArchived = widget.note?.isArchived ?? false;
-
-    // Initialize color (int)
     color = widget.note?.color ?? 0;
-
-    imagePath = widget.note?.imagePath;
     tags = List.from(widget.note?.tags ?? []);
     _loadTags();
 
     // Auto-save listeners
     _titleController.addListener(_onContentChanged);
-    _contentController.addListener(_onContentChanged);
+    _quillController.addListener(_onContentChanged);
   }
 
   Future<void> _loadTags() async {
@@ -92,27 +83,23 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   void dispose() {
     _debounce?.cancel();
     _titleController.dispose();
-    _contentController.dispose();
-    _undoController.dispose();
+    _quillController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
-    if (pickedFile != null) {
-      final appDir = await getApplicationDocumentsDirectory();
-      final fileName = path.basename(pickedFile.path);
-      final savedImage =
-          await File(pickedFile.path).copy('${appDir.path}/$fileName');
-
-      if (!mounted) return;
-      setState(() {
-        imagePath = savedImage.path;
-      });
-      await saveNote();
+  void _updateColorFromTags() {
+    int newColor = 0; // Default
+    for (final tag in tags.reversed) {
+      final c = _tagColors[tag];
+      if (c != null && c != 0) {
+        newColor = c;
+        break;
+      }
     }
+    setState(() {
+      color = newColor;
+    });
   }
 
   void _showTagPicker() {
@@ -122,8 +109,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       useSafeArea: true,
       showDragHandle: true,
       builder: (context) {
-        String newTag = '';
-        int newTagColor = 0; // Default color
+        String enteredTag = '';
+        int newTagColor = 0;
 
         return StatefulBuilder(
           builder: (context, setModalState) {
@@ -147,89 +134,43 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                       suffixIcon: IconButton(
                         icon: const Icon(Icons.add),
                         onPressed: () async {
-                          if (newTag.isNotEmpty) {
+                          if (enteredTag.isNotEmpty) {
                             if (newTagColor != 0) {
                               await DatabaseHelper.instance
-                                  .setTagColor(newTag, newTagColor);
+                                  .setTagColor(enteredTag, newTagColor);
+                              _tagColors[enteredTag] = newTagColor;
                             }
-                            // Refresh colors from DB to be safe/consistent, or just update local map
-                            // Updating local map is faster for UI responsiveness
-                            if (newTagColor != 0) {
-                              _tagColors[newTag] = newTagColor;
-                            }
-
                             setState(() {
-                              if (!tags.contains(newTag)) {
-                                tags.add(newTag);
+                              if (!tags.contains(enteredTag)) {
+                                tags.add(enteredTag);
                                 _updateColorFromTags();
                               }
-                              if (!_allTags.contains(newTag)) {
-                                _allTags.add(newTag);
+                              if (!_allTags.contains(enteredTag)) {
+                                _allTags.add(enteredTag);
                               }
                             });
-                            setModalState(() {
-                              newTag = '';
-                              newTagColor = 0;
-                            });
-                            // Close for now, or keep open?
-                            // Keeping open allows adding multiple, but we need to clear input (done above)
-                            if (context.mounted) {
-                              Navigator.pop(context);
-                            }
+                            if (context.mounted) Navigator.pop(context);
                           }
                         },
                       ),
                     ),
-                    onChanged: (v) => newTag = v.trim(),
-                    onSubmitted: (v) async {
-                      if (v.isNotEmpty) {
-                        final t = v.trim();
-                        if (newTagColor != 0) {
-                          await DatabaseHelper.instance
-                              .setTagColor(t, newTagColor);
-                          _tagColors[t] = newTagColor;
-                        }
-
-                        setState(() {
-                          if (!tags.contains(t)) {
-                            tags.add(t);
-                            _updateColorFromTags();
-                          }
-                          if (!_allTags.contains(t)) _allTags.add(t);
-                        });
-                        if (context.mounted) {
-                          Navigator.pop(context);
-                        }
-                      }
-                    },
+                    onChanged: (v) => enteredTag = v.trim(),
                   ),
                   const SizedBox(height: 12),
-                  // Color Picker for New Tag
                   Wrap(
                     spacing: 12,
                     runSpacing: 12,
                     alignment: WrapAlignment.center,
                     children: [
-                      // Import AppTheme to use noteColors
-                      // We need to make sure AppTheme is imported. It is not currently imported in this file based on my view.
-                      // I will use hardcoded list here or add import. adding import is better but might need separate tool call.
-                      // Let's check imports. Main imports note_model, database_helper.
-                      // I'll add the color list locally here to avoid import issues if I can't switch context easily,
-                      // BUT better to just add import at top.
-                      // I will proceed with adding import in a separate call if needed, but for now I'll hardcode the colors to match AppTheme for simplicity in this replacement chunk,
-                      // or rely on context theme? No, `AppTheme.noteColors` is static.
-                      // Actually, looking at previous file view, AppTheme IS NOT imported in NoteEditorScreen.
-                      // I'll use the colors directly here.
                       ...[
-                        const Color(0x00000000), // Default
+                        const Color(0x00000000),
                         const Color(0xFFE57373),
                         const Color(0xFFFFB74D),
                         const Color(0xFF81C784),
                         const Color(0xFF64B5F6),
                         const Color(0xFF9575CD),
                       ].map((c) {
-                        final bool isSystem =
-                            c.toARGB32() == 0; // Check value for 0x00000000
+                        final bool isSystem = c.toARGB32() == 0;
                         final bool isSelected = newTagColor == c.toARGB32();
                         return GestureDetector(
                           onTap: () =>
@@ -265,26 +206,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                       }).toList(),
                     ],
                   ),
-                  if (newTagColor != 0) ...[
-                    const SizedBox(height: 8),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 48),
-                      child: Builder(builder: (context) {
-                        final scheme = ColorScheme.fromSeed(
-                            seedColor: Color(newTagColor),
-                            brightness: Theme.of(context).brightness);
-                        return Chip(
-                          label: Text('Sample Tag Appearance',
-                              style:
-                                  TextStyle(color: scheme.onPrimaryContainer)),
-                          backgroundColor: scheme.primaryContainer,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20)),
-                          side: BorderSide.none,
-                        );
-                      }),
-                    ),
-                  ],
                   const SizedBox(height: 16),
                   if (_allTags.isNotEmpty) ...[
                     const Text('Select Tags'),
@@ -322,20 +243,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
   Future saveNote() async {
     final title = _titleController.text.trim();
-    final content = _contentController.text.trim();
+    final delta = _quillController.document.toDelta();
+    final content = RichTextUtils.deltaToMarkdown(delta).trim();
 
-    // Check if the note is essentially empty
-    final isEmpty =
-        title.isEmpty && content.isEmpty && imagePath == null && tags.isEmpty;
-
-    // Check if we should update an existing note or create a new one
+    final isEmpty = title.isEmpty && content.isEmpty && tags.isEmpty;
     final exists = widget.note != null || isNoteSaved;
 
     if (isEmpty) {
       if (exists) {
-        // If it exists but is now empty, delete it (trash it)
         await DatabaseHelper.instance.deleteNote(_noteId);
-        // Note: We don't verify if it was actually in DB, but safe to call delete
       }
       return;
     }
@@ -349,7 +265,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       isPinned: isPinned,
       isArchived: isArchived,
       color: color,
-      imagePath: imagePath,
+      imagePath: widget.note?.imagePath,
       category: widget.note?.category ?? 'All Notes',
       tags: tags,
     );
@@ -358,54 +274,39 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       await DatabaseHelper.instance.updateNote(note);
     } else {
       await DatabaseHelper.instance.createNote(note);
-      isNoteSaved = true; // Mark as saved
+      isNoteSaved = true;
     }
   }
 
-  bool isNoteSaved = false;
+  Future<void> _deleteNote() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Note?'),
+        content: const Text('This note will be moved to trash.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
 
-  void _togglePreview() {
-    setState(() {
-      _isPreview = !_isPreview;
-    });
-    if (_isPreview) saveNote();
-  }
-
-  void _updateColorFromTags() {
-    int newColor = 0; // Default
-    // Find the last tag that has a color assigned
-    for (final tag in tags.reversed) {
-      final c = _tagColors[tag];
-      if (c != null && c != 0) {
-        newColor = c;
-        break;
-      }
-    }
-
-    // If no specific color found, revert to 0 (system default)
-    color = newColor;
-  }
-
-  void _handleTripleTap() {
-    final now = DateTime.now();
-    if (_lastTapTime == null ||
-        now.difference(_lastTapTime!) > const Duration(milliseconds: 500)) {
-      _tapCount = 1;
-    } else {
-      _tapCount++;
-    }
-    _lastTapTime = now;
-
-    if (_tapCount == 3) {
-      _togglePreview();
-      _tapCount = 0;
+    if (confirmed == true) {
+      await DatabaseHelper.instance.deleteNote(_noteId);
+      if (mounted) Navigator.pop(context, true);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<SettingsProvider>(builder: (context, settings, child) {
-      // Dynamic Material You Logic
       final theme = Theme.of(context);
       final isSystemDefault = color == 0;
 
@@ -424,559 +325,322 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         onBackground = scheme.onSurface;
       }
 
-      // Ensure visibility of icons
       final textColor = onBackground;
       final hintColor = onBackground.withValues(alpha: 0.6);
 
-      return Scaffold(
-        backgroundColor: backgroundColor,
-        body: Column(
-          children: [
-            Expanded(
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onTap: _handleTripleTap, // Double tap to toggle mode
-                child: Stack(
-                  children: [
-                    // Main Content
-                    SafeArea(
-                      bottom: false,
-                      child: CustomScrollView(
-                        slivers: [
-                          SliverAppBar(
-                            backgroundColor: Colors.transparent,
-                            elevation: 0,
-                            scrolledUnderElevation: 0,
-                            floating: true,
-                            snap: true,
-                            automaticallyImplyLeading: false,
-                            toolbarHeight: 64,
-                            title: Container(
-                              margin: const EdgeInsets.only(top: 8),
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 4),
-                              decoration: BoxDecoration(
-                                color: isSystemDefault
-                                    ? theme.colorScheme.surfaceContainerHighest
-                                    : ColorScheme.fromSeed(
-                                            seedColor: Color(color),
-                                            brightness: theme.brightness)
-                                        .surfaceContainerHighest,
-                                borderRadius: BorderRadius.circular(32),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.1),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) async {
+          if (didPop) return;
+          try {
+            await saveNote();
+          } catch (e) {
+            debugPrint('Error saving note on pop: $e');
+          } finally {
+            if (context.mounted) Navigator.pop(context, true);
+          }
+        },
+        child: Scaffold(
+          backgroundColor: backgroundColor,
+          body: SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                // Top Bar
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: isSystemDefault
+                          ? theme.colorScheme.surfaceContainerHighest
+                          : ColorScheme.fromSeed(
+                                  seedColor: Color(color),
+                                  brightness: theme.brightness)
+                              .surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(32),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back),
+                          color: textColor,
+                          onPressed: () => Navigator.maybePop(context),
+                        ),
+                        Container(
+                          height: 32,
+                          width: 1,
+                          color: textColor.withValues(alpha: 0.2),
+                          margin: const EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                        QuillToolbarHistoryButton(
+                          isUndo: true,
+                          controller: _quillController,
+                          options: QuillToolbarHistoryButtonOptions(
+                              iconTheme: QuillIconTheme(
+                                  iconButtonUnselectedData: IconButtonData(
+                                      style: IconButton.styleFrom(
+                                          foregroundColor: textColor)))),
+                        ),
+                        QuillToolbarHistoryButton(
+                          isUndo: false,
+                          controller: _quillController,
+                          options: QuillToolbarHistoryButtonOptions(
+                              iconTheme: QuillIconTheme(
+                                  iconButtonUnselectedData: IconButtonData(
+                                      style: IconButton.styleFrom(
+                                          foregroundColor: textColor)))),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.label_outline),
+                          tooltip: 'Tags',
+                          color: textColor,
+                          onPressed: _showTagPicker,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline),
+                          tooltip: 'Delete',
+                          color: textColor,
+                          onPressed: _deleteNote,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.check),
+                          tooltip: 'Done',
+                          color: textColor,
+                          onPressed: () => Navigator.maybePop(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Editor Area
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TextField(
+                          controller: _titleController,
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineMedium
+                              ?.copyWith(
+                                color: textColor,
+                                fontWeight: FontWeight.bold,
                               ),
-                              child: Row(
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.arrow_back),
-                                    color: textColor,
-                                    onPressed: () async {
-                                      try {
-                                        await saveNote();
-                                      } catch (e) {
-                                        debugPrint('Error saving note: $e');
-                                      } finally {
-                                        if (context.mounted) {
-                                          Navigator.pop(context, true);
-                                        }
-                                      }
-                                    },
-                                  ),
-                                  const Spacer(),
-                                  IconButton(
-                                    icon: const Icon(Icons.label_outline),
-                                    tooltip: 'Tags',
-                                    color: textColor,
-                                    onPressed: _showTagPicker,
-                                  ),
-                                  ValueListenableBuilder<UndoHistoryValue>(
-                                    valueListenable: _undoController,
-                                    builder: (context, value, child) {
-                                      return Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.undo),
-                                            color: value.canUndo
-                                                ? textColor
-                                                : textColor.withValues(
-                                                    alpha: 0.3),
-                                            onPressed: value.canUndo
-                                                ? _undoController.undo
-                                                : null,
-                                          ),
-                                          IconButton(
-                                            icon: const Icon(Icons.redo),
-                                            color: value.canRedo
-                                                ? textColor
-                                                : textColor.withValues(
-                                                    alpha: 0.3),
-                                            onPressed: value.canRedo
-                                                ? _undoController.redo
-                                                : null,
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                                  IconButton(
-                                    icon: Icon(_isPreview
-                                        ? Icons.edit_outlined
-                                        : Icons.check),
-                                    tooltip:
-                                        _isPreview ? 'Edit' : 'Save & View',
-                                    color: textColor,
-                                    onPressed: _togglePreview,
-                                  ),
-                                ],
-                              ),
+                          decoration: InputDecoration(
+                            hintText: 'Title',
+                            filled: false,
+                            fillColor: Colors.transparent,
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                            hintStyle: Theme.of(context)
+                                .textTheme
+                                .headlineMedium
+                                ?.copyWith(
+                                  color: hintColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          maxLines: null,
+                        ),
+                        if (tags.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Wrap(
+                              spacing: 8,
+                              children: tags.map((tag) {
+                                final tagColorValue = _tagColors[tag];
+                                final tagColor =
+                                    tagColorValue != null && tagColorValue != 0
+                                        ? Color(tagColorValue)
+                                        : null;
+                                Color? chipBgColor;
+                                Color? chipLabelColor;
+                                if (tagColor != null) {
+                                  final scheme = ColorScheme.fromSeed(
+                                    seedColor: tagColor,
+                                    brightness: Theme.of(context).brightness,
+                                  );
+                                  chipBgColor = scheme.primaryContainer;
+                                  chipLabelColor = scheme.onPrimaryContainer;
+                                }
+                                return Chip(
+                                  label: Text(tag,
+                                      style: TextStyle(color: chipLabelColor)),
+                                  backgroundColor: chipBgColor,
+                                  shape: const StadiumBorder(),
+                                  side: BorderSide.none,
+                                  onDeleted: () {
+                                    setState(() {
+                                      tags.remove(tag);
+                                      _updateColorFromTags();
+                                    });
+                                    saveNote();
+                                  },
+                                  deleteIconColor: chipLabelColor,
+                                );
+                              }).toList(),
                             ),
                           ),
-                          SliverPadding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            sliver: SliverList(
-                              delegate: SliverChildListDelegate([
-                                TextField(
-                                  controller: _titleController,
-                                  readOnly: _isPreview,
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: textColor,
-                                  ),
-                                  decoration: InputDecoration(
-                                    hintText: 'Title',
-                                    border: InputBorder.none,
-                                    filled: false,
-                                    hintStyle: TextStyle(color: hintColor),
-                                  ),
-                                  maxLines: null,
-                                ),
-                                const SizedBox(height: 8),
-                                if (imagePath != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 16),
-                                    child: Stack(
-                                      children: [
-                                        ClipRRect(
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                          child: Image.file(
-                                            File(imagePath!),
-                                            width: double.infinity,
-                                            fit: BoxFit.cover,
-                                            errorBuilder:
-                                                (context, error, stackTrace) =>
-                                                    Container(
-                                              height: 200,
-                                              color: Colors.grey[300],
-                                              child: const Center(
-                                                  child: Icon(
-                                                      Icons.broken_image,
-                                                      size: 50,
-                                                      color: Colors.grey)),
-                                            ),
-                                          ),
-                                        ),
-                                        if (!_isPreview)
-                                          Positioned(
-                                            right: 8,
-                                            top: 8,
-                                            child: IconButton(
-                                              icon: const Icon(Icons.delete,
-                                                  color: Colors.white),
-                                              style: IconButton.styleFrom(
-                                                  backgroundColor: Colors.black
-                                                      .withValues(alpha: 0.5)),
-                                              onPressed: () {
-                                                setState(
-                                                    () => imagePath = null);
-                                                saveNote();
-                                              },
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                if (tags.isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 12),
-                                    child: Wrap(
-                                      spacing: 8,
-                                      children: tags.map((tag) {
-                                        final tagColorValue = _tagColors[tag];
-                                        final tagColor =
-                                            tagColorValue != null &&
-                                                    tagColorValue != 0
-                                                ? Color(tagColorValue)
-                                                : null;
-
-                                        Color? chipBgColor;
-                                        Color? chipLabelColor;
-
-                                        if (tagColor != null) {
-                                          final scheme = ColorScheme.fromSeed(
-                                            seedColor: tagColor,
-                                            brightness:
-                                                Theme.of(context).brightness,
-                                          );
-                                          chipBgColor = scheme.primaryContainer;
-                                          chipLabelColor =
-                                              scheme.onPrimaryContainer;
-                                        }
-
-                                        return Chip(
-                                          label: Text(tag,
-                                              style: TextStyle(
-                                                  color: chipLabelColor)),
-                                          backgroundColor: chipBgColor,
-                                          shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(20)),
-                                          side: BorderSide.none,
-                                          onDeleted: _isPreview
-                                              ? null
-                                              : () {
-                                                  setState(() {
-                                                    tags.remove(tag);
-                                                    _updateColorFromTags();
-                                                  });
-                                                  saveNote();
-                                                },
-                                          deleteIconColor: chipLabelColor,
-                                        );
-                                      }).toList(),
-                                    ),
-                                  ),
-                                const SizedBox(height: 8),
-                                AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 300),
-                                  layoutBuilder:
-                                      (currentChild, previousChildren) {
-                                    return Stack(
-                                      alignment: Alignment.topLeft,
-                                      children: <Widget>[
-                                        ...previousChildren,
-                                        if (currentChild != null) currentChild,
-                                      ],
-                                    );
-                                  },
-                                  child: _isPreview
-                                      ? SelectionArea(
-                                          child: MarkdownBody(
-                                            key: const ValueKey('preview'),
-                                            data: _contentController.text,
-                                            selectable:
-                                                false, // Using SelectionArea for better control
-                                            softLineBreak: true,
-                                            onTapLink: (text, href, title) {
-                                              if (href != null) {
-                                                _launchUrl(href);
-                                              }
-                                            },
-                                            // ignore: deprecated_member_use
-                                            imageBuilder: (uri, title, alt) {
-                                              // Handle local file paths
-                                              if (uri.scheme == 'file' ||
-                                                  !uri.hasScheme) {
-                                                final pathStr = uri.path;
-                                                return ClipRRect(
-                                                  borderRadius:
-                                                      BorderRadius.circular(12),
-                                                  child: Image.file(
-                                                    File(pathStr),
-                                                    errorBuilder: (context,
-                                                            error,
-                                                            stackTrace) =>
-                                                        const Icon(
-                                                            Icons.broken_image),
-                                                  ),
-                                                );
-                                              }
-                                              return const SizedBox.shrink();
-                                            },
-                                            styleSheet: MarkdownStyleSheet(
-                                              p: TextStyle(
-                                                  fontSize: settings.textSize,
-                                                  height: 1.5,
-                                                  color: textColor),
-                                              h1: TextStyle(
-                                                  fontSize: 24,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: textColor),
-                                              h2: TextStyle(
-                                                  fontSize: 20,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: textColor),
-                                              blockquote: TextStyle(
-                                                color: textColor.withValues(
-                                                    alpha: 0.9),
-                                                fontStyle: FontStyle.italic,
-                                              ),
-                                              blockquoteDecoration:
-                                                  BoxDecoration(
-                                                color: isSystemDefault
-                                                    ? theme.colorScheme
-                                                        .surfaceContainerHighest
-                                                    : ColorScheme.fromSeed(
-                                                            seedColor:
-                                                                Color(color),
-                                                            brightness: theme
-                                                                .brightness)
-                                                        .surfaceContainerHighest
-                                                        .withValues(alpha: 0.5),
-                                                border: Border(
-                                                  left: BorderSide(
-                                                    color: isSystemDefault
-                                                        ? theme
-                                                            .colorScheme.primary
-                                                        : ColorScheme.fromSeed(
-                                                                seedColor:
-                                                                    Color(
-                                                                        color),
-                                                                brightness: theme
-                                                                    .brightness)
-                                                            .primary,
-                                                    width: 4,
-                                                  ),
-                                                ),
-                                                borderRadius:
-                                                    const BorderRadius.only(
-                                                  topRight: Radius.circular(8),
-                                                  bottomRight:
-                                                      Radius.circular(8),
-                                                ),
-                                              ),
-                                              blockquotePadding:
-                                                  const EdgeInsets.all(12),
-                                              code: TextStyle(
-                                                  backgroundColor: Colors.black
-                                                      .withValues(alpha: 0.2),
-                                                  fontFamily: 'monospace',
-                                                  color: textColor),
-                                              checkbox:
-                                                  TextStyle(color: textColor),
-                                            ),
-                                          ),
-                                        )
-                                      : Column(
-                                          key: const ValueKey('edit'),
-                                          children: [
-                                            TextField(
-                                              controller: _contentController,
-                                              undoController: _undoController,
-                                              style: theme.textTheme.bodyLarge
-                                                  ?.copyWith(
-                                                fontSize: settings.textSize,
-                                                height: 1.5,
-                                                color: textColor,
-                                              ),
-                                              decoration: InputDecoration(
-                                                hintText: 'Start typing...',
-                                                border: InputBorder.none,
-                                                filled: false,
-                                                hintStyle:
-                                                    TextStyle(color: hintColor),
-                                              ),
-                                              maxLines: null,
-                                              keyboardType:
-                                                  TextInputType.multiline,
-                                            ),
-                                            // Space for bottom toolbars
-                                            const SizedBox(height: 20),
-                                          ],
-                                        ),
-                                ),
-                                const SizedBox(
-                                    height: 20), // Basic Bottom padding
-                              ]),
+                        Expanded(
+                          child: QuillEditor.basic(
+                            controller: _quillController,
+                            focusNode: _focusNode,
+                            config: QuillEditorConfig(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              autoFocus: false,
+                              expands: false,
+                              scrollable: true,
+                              placeholder: 'Start typing...',
+                              embedBuilders:
+                                  FlutterQuillEmbeds.editorBuilders(),
                             ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Bottom Toolbar (Pill)
+                SafeArea(
+                  top: false,
+                  child: Container(
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSystemDefault
+                          ? theme.colorScheme.surfaceContainerHighest
+                          : ColorScheme.fromSeed(
+                                  seedColor: Color(color),
+                                  brightness: theme.brightness)
+                              .surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(32),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 16),
+                          // Basic Formatting
+                          QuillToolbarToggleStyleButton(
+                            attribute: Attribute.bold,
+                            controller: _quillController,
+                            options: QuillToolbarToggleStyleButtonOptions(
+                                iconData: Icons.format_bold,
+                                iconTheme: QuillIconTheme(
+                                    iconButtonUnselectedData: IconButtonData(
+                                        style: IconButton.styleFrom(
+                                            foregroundColor: textColor)),
+                                    iconButtonSelectedData: IconButtonData(
+                                        style: IconButton.styleFrom(
+                                            foregroundColor:
+                                                theme.colorScheme.onPrimary)))),
+                          ),
+                          QuillToolbarToggleStyleButton(
+                            attribute: Attribute.italic,
+                            controller: _quillController,
+                            options: QuillToolbarToggleStyleButtonOptions(
+                                iconData: Icons.format_italic,
+                                iconTheme: QuillIconTheme(
+                                    iconButtonUnselectedData: IconButtonData(
+                                        style: IconButton.styleFrom(
+                                            foregroundColor: textColor)),
+                                    iconButtonSelectedData: IconButtonData(
+                                        style: IconButton.styleFrom(
+                                            foregroundColor:
+                                                theme.colorScheme.onPrimary)))),
+                          ),
+                          const SizedBox(width: 8),
+                          // Lists & Indent
+                          QuillToolbarToggleStyleButton(
+                            attribute: Attribute.ol,
+                            controller: _quillController,
+                            options: QuillToolbarToggleStyleButtonOptions(
+                                iconData: Icons.format_list_numbered,
+                                iconTheme: QuillIconTheme(
+                                    iconButtonUnselectedData: IconButtonData(
+                                        style: IconButton.styleFrom(
+                                            foregroundColor: textColor)),
+                                    iconButtonSelectedData: IconButtonData(
+                                        style: IconButton.styleFrom(
+                                            foregroundColor:
+                                                theme.colorScheme.onPrimary)))),
+                          ),
+                          QuillToolbarToggleStyleButton(
+                            attribute: Attribute.ul,
+                            controller: _quillController,
+                            options: QuillToolbarToggleStyleButtonOptions(
+                                iconData: Icons.format_list_bulleted,
+                                iconTheme: QuillIconTheme(
+                                    iconButtonUnselectedData: IconButtonData(
+                                        style: IconButton.styleFrom(
+                                            foregroundColor: textColor)),
+                                    iconButtonSelectedData: IconButtonData(
+                                        style: IconButton.styleFrom(
+                                            foregroundColor:
+                                                theme.colorScheme.onPrimary)))),
+                          ),
+                          QuillToolbarToggleCheckListButton(
+                            controller: _quillController,
+                            options: QuillToolbarToggleCheckListButtonOptions(
+                                iconData: Icons.check_box,
+                                iconTheme: QuillIconTheme(
+                                    iconButtonUnselectedData: IconButtonData(
+                                        style: IconButton.styleFrom(
+                                            foregroundColor: textColor)),
+                                    iconButtonSelectedData: IconButtonData(
+                                        style: IconButton.styleFrom(
+                                            foregroundColor:
+                                                theme.colorScheme.onPrimary)))),
+                          ),
+                          const SizedBox(width: 8),
+                          // Link & Attachment
+                          QuillToolbarLinkStyleButton(
+                            controller: _quillController,
+                            options: QuillToolbarLinkStyleButtonOptions(
+                                iconData: Icons.link,
+                                iconTheme: QuillIconTheme(
+                                    iconButtonUnselectedData: IconButtonData(
+                                        style: IconButton.styleFrom(
+                                            foregroundColor: textColor)))),
+                          ),
+                          QuillToolbarImageButton(
+                            controller: _quillController,
+                            options: QuillToolbarImageButtonOptions(
+                                iconData: Icons.attach_file, // Attachment icon
+                                iconTheme: QuillIconTheme(
+                                    iconButtonUnselectedData: IconButtonData(
+                                        style: IconButton.styleFrom(
+                                            foregroundColor: textColor)))),
                           ),
                         ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
-            // Floating Toolbar (Pill Style)
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: _isPreview
-                  ? const SizedBox.shrink()
-                  : SafeArea(
-                      key: const ValueKey('toolbar'),
-                      top: false,
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        height: 64,
-                        decoration: BoxDecoration(
-                          color: isSystemDefault
-                              ? theme.colorScheme.surfaceContainerHighest
-                              : ColorScheme.fromSeed(
-                                      seedColor: Color(color),
-                                      brightness: theme.brightness)
-                                  .surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(32),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: ListView(
-                          scrollDirection: Axis.horizontal,
-                          physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          children: [
-                            Semantics(
-                              label: 'Bold',
-                              button: true,
-                              child: IconButton(
-                                icon: const Icon(Icons.format_bold),
-                                tooltip: 'Bold',
-                                color: textColor,
-                                onPressed: () => _applyFormat('**', '**'),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Semantics(
-                              label: 'Italic',
-                              button: true,
-                              child: IconButton(
-                                icon: const Icon(Icons.format_italic),
-                                tooltip: 'Italic',
-                                color: textColor,
-                                onPressed: () => _applyFormat('_', '_'),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Semantics(
-                              label: 'Heading',
-                              button: true,
-                              child: IconButton(
-                                icon: const Icon(Icons.title),
-                                tooltip: 'Heading',
-                                color: textColor,
-                                onPressed: () => _applyFormat('# ', ''),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Semantics(
-                              label: 'Strikethrough',
-                              button: true,
-                              child: IconButton(
-                                icon: const Icon(Icons.strikethrough_s),
-                                tooltip: 'Strikethrough',
-                                color: textColor,
-                                onPressed: () => _applyFormat('~~', '~~'),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Semantics(
-                              label: 'Code',
-                              button: true,
-                              child: IconButton(
-                                icon: const Icon(Icons.code),
-                                tooltip: 'Code',
-                                color: textColor,
-                                onPressed: () => _applyFormat('`', '`'),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Semantics(
-                              label: 'Quote',
-                              button: true,
-                              child: IconButton(
-                                icon: const Icon(Icons.format_quote),
-                                tooltip: 'Quote',
-                                color: textColor,
-                                onPressed: () => _applyFormat('> ', ''),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Semantics(
-                              label: 'List',
-                              button: true,
-                              child: IconButton(
-                                icon: const Icon(Icons.format_list_bulleted),
-                                tooltip: 'List',
-                                color: textColor,
-                                onPressed: () => _applyFormat('- ', ''),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Semantics(
-                              label: 'Checkbox',
-                              button: true,
-                              child: IconButton(
-                                icon: const Icon(Icons.check_box_outlined),
-                                tooltip: 'Checkbox',
-                                color: textColor,
-                                onPressed: () => _applyFormat('- [ ] ', ''),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Semantics(
-                              label: 'Add Image',
-                              button: true,
-                              child: IconButton(
-                                icon: const Icon(
-                                    Icons.add_photo_alternate_outlined),
-                                tooltip: 'Cover',
-                                color: textColor,
-                                onPressed: _pickImage,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-            ),
-          ],
+          ),
         ),
       );
     });
-  }
-
-  void _applyFormat(String start, String end) {
-    final text = _contentController.text;
-    final selection = _contentController.selection;
-
-    if (selection.isValid) {
-      final newText = text.replaceRange(selection.start, selection.end,
-          '$start${selection.textInside(text)}$end');
-
-      _contentController.value = TextEditingValue(
-        text: newText,
-        selection: TextSelection.collapsed(
-            offset: selection.start +
-                start.length +
-                selection.textInside(text).length +
-                end.length),
-      );
-    } else {
-      final newText = '$text$start$end';
-      _contentController.value = TextEditingValue(
-        text: newText,
-        selection: TextSelection.collapsed(offset: newText.length),
-      );
-    }
-  }
-
-  Future<void> _launchUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      throw Exception('Could not launch $url');
-    }
   }
 }

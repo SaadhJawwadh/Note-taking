@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   // Premium Colors
-  static const Color darkBackground = Color(0xFF161618);
-  static const Color darkSurface =
-      Color(0xFF252529); // Slightly lighter for cards
+  static const Color darkBackground = Color(0xFF0A0A0B); // Deeper black
+  static const Color darkSurface = Color(0xFF1C1C1E); // Distinct surface color
   static const Color primaryPurple = Color(0xFF6B4EFF); // Modern Purple
   static const Color accentPink = Color(0xFFFF85C2); // Soft accent
   static const Color textPrimary = Color(0xFFF2F2F7);
@@ -34,15 +33,25 @@ class AppTheme {
         scheme = const ColorScheme.dark(
           primary: primaryPurple,
           secondary: accentPink,
-          surface: darkSurface,
+          surface: darkBackground, // Set absolute background
+          surfaceContainer: darkSurface, // High contrast surface
+          surfaceContainerHigh: Color(0xFF252529),
+          surfaceContainerHighest: Color(0xFF2C2C30),
+          onSurface: textPrimary,
+          onSurfaceVariant: textSecondary,
           error: errorRed,
         );
       } else {
         scheme = ColorScheme.fromSeed(
           seedColor: primaryPurple,
-          brightness: Brightness.light,
+          brightness: brightness,
         );
       }
+    }
+
+    // Override if tag color is present (handled in UI, but this helper supports main app theme)
+    if (dynamicColorScheme != null) {
+      scheme = dynamicColorScheme;
     }
 
     final textTheme =
@@ -80,8 +89,7 @@ class AppTheme {
         backgroundColor: scheme.primaryContainer,
         foregroundColor: scheme.onPrimaryContainer,
         elevation: 4,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16)), // M3 FAB
+        shape: const StadiumBorder(), // M3 Pill Style
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,

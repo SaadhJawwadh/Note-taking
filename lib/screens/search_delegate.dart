@@ -11,7 +11,7 @@ class NoteSearchDelegate extends SearchDelegate {
     final theme = Theme.of(context);
     return theme.copyWith(
       appBarTheme: theme.appBarTheme.copyWith(
-        backgroundColor: const Color(0xFF161618),
+        backgroundColor: theme.colorScheme.surfaceContainerHighest,
       ),
       inputDecorationTheme: const InputDecorationTheme(
         border: InputBorder.none,
@@ -39,13 +39,35 @@ class NoteSearchDelegate extends SearchDelegate {
 
   @override
   Widget buildResults(BuildContext context) {
-    return FutureBuilder<List<Note>>(
-      future: DatabaseHelper.instance.searchNotes(query),
+    if (query.trim().isEmpty) {
+      return const Center(child: Text("Type something to search"));
+    }
+    return _buildSearchResults(context);
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    if (query.trim().isEmpty) {
+      return const Center(child: Text("Search for notes..."));
+    }
+    return _buildSearchResults(context);
+  }
+
+  Widget _buildSearchResults(BuildContext context) {
+    return FutureBuilder<List<dynamic>>(
+      future: Future.wait([
+        DatabaseHelper.instance.searchNotes(query),
+        DatabaseHelper.instance.getAllTagColors(),
+      ]),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        final notes = snapshot.data!;
+        if (snapshot.hasError) {
+          return Center(child: Text("Error: ${snapshot.error}"));
+        }
+        final notes = snapshot.data?[0] as List<Note>? ?? [];
+        final tagColors = snapshot.data?[1] as Map<String, int>? ?? {};
 
         if (notes.isEmpty) {
           return const Center(child: Text("No results found"));
@@ -64,6 +86,7 @@ class NoteSearchDelegate extends SearchDelegate {
                 button: true,
                 child: NoteCard(
                   note: notes[index],
+                  tagColors: tagColors,
                   onTap: () {
                     Navigator.push(
                         context,
@@ -79,10 +102,5 @@ class NoteSearchDelegate extends SearchDelegate {
         );
       },
     );
-  }
-
-  @override
-  Widget buildSuggestions(BuildContext context) {
-    return Container(); // Optional suggestions
   }
 }

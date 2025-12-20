@@ -120,8 +120,9 @@ class DatabaseHelper {
     final db = await instance.database;
     final result = await db.query(
       'notes',
-      where: '(title LIKE ? OR content LIKE ?) AND deletedAt IS NULL',
-      whereArgs: ['%$keyword%', '%$keyword%'],
+      where:
+          '(title LIKE ? OR content LIKE ? OR tags LIKE ?) AND deletedAt IS NULL',
+      whereArgs: ['%$keyword%', '%$keyword%', '%$keyword%'],
       orderBy: 'dateModified DESC',
     );
     return result.map((json) => Note.fromMap(json)).toList();

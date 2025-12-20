@@ -191,17 +191,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           brightness: Theme.of(context).brightness);
                       chipBg = isSelected
                           ? scheme.inversePrimary
-                          : scheme
-                              .primaryContainer; // Inverse primary for selected state distinction
+                          : scheme.primaryContainer;
                       chipFg = isSelected
                           ? scheme.onInverseSurface
                           : scheme.onPrimaryContainer;
 
                       if (isSelected) {
-                        // Boost selected state to be more visible / different if needed,
-                        // typically primaryContainer vs primary usage.
-                        // Request said "light mode follow light color", so primaryContainer (pastel) is good for default.
-                        // For selected, we might want a bit more pop.
                         chipBg = scheme.primary;
                         chipFg = scheme.onPrimary;
                       }
@@ -227,14 +222,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           if (selected) onTagSelected(tag);
                         },
                         backgroundColor: chipBg,
-                        selectedColor: chipBg, // Already handled logic
+                        selectedColor: chipBg,
                         labelStyle: TextStyle(
                           color: chipFg,
                           fontWeight:
                               isSelected ? FontWeight.bold : FontWeight.normal,
                         ),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20)),
+                        shape: const StadiumBorder(),
                         side: BorderSide.none,
                         showCheckmark: false,
                       ),
@@ -248,168 +242,131 @@ class _HomeScreenState extends State<HomeScreen> {
               const SliverFillRemaining(
                 child: Center(child: CircularProgressIndicator()),
               )
-            else
+            else if (filteredNotes.isEmpty)
               SliverFillRemaining(
-                hasScrollBody: true,
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  child: filteredNotes.isEmpty
-                      ? Center(
-                          key: const ValueKey('empty'),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.note_alt_outlined,
-                                  size: 64,
-                                  color: AppTheme.textSecondary
-                                      .withValues(alpha: 0.5)),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No notes here yet',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyLarge
-                                    ?.copyWith(
-                                      color: AppTheme.textSecondary,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                hasScrollBody: false,
+                child: Center(
+                  key: const ValueKey('empty'),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.note_alt_outlined,
+                          size: 64,
+                          color: AppTheme.textSecondary.withValues(alpha: 0.5)),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No notes here yet',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: AppTheme.textSecondary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tap + to create one',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color:
+                                  AppTheme.textSecondary.withValues(alpha: 0.7),
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+                sliver: AnimationLimiter(
+                  child: settings.isGridView
+                      ? SliverMasonryGrid.count(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childCount: filteredNotes.length,
+                          itemBuilder: (context, index) {
+                            final note = filteredNotes[index];
+                            return AnimationConfiguration.staggeredGrid(
+                              position: index,
+                              duration: const Duration(milliseconds: 375),
+                              columnCount: 2,
+                              child: ScaleAnimation(
+                                child: FadeInAnimation(
+                                  child: OpenContainer<bool>(
+                                    transitionType:
+                                        ContainerTransitionType.fade,
+                                    openBuilder: (context, _) =>
+                                        NoteEditorScreen(note: note),
+                                    closedElevation: 0,
+                                    closedColor: Colors.transparent,
+                                    closedShape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(20)),
+                                    onClosed: (returned) async {
+                                      if (returned == true) {
+                                        await refreshNotes();
+                                      }
+                                    },
+                                    closedBuilder: (context, openContainer) {
+                                      return NoteCard(
+                                        note: note,
+                                        onTap: openContainer,
+                                        tagColors: _tagColors,
+                                        onLongPress: () =>
+                                            _showNoteActions(note),
+                                      );
+                                    },
+                                  ),
+                                ),
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Tap + to create one',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(
-                                      color: AppTheme.textSecondary
-                                          .withValues(alpha: 0.7),
-                                    ),
-                              ),
-                            ],
-                          ),
+                            );
+                          },
                         )
-                      : CustomScrollView(
-                          key: const ValueKey('list'),
-                          slivers: [
-                            SliverPadding(
-                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-                              sliver: AnimationLimiter(
-                                child: settings.isGridView
-                                    ? SliverMasonryGrid.count(
-                                        crossAxisCount: 2,
-                                        mainAxisSpacing: 12,
-                                        crossAxisSpacing: 12,
-                                        childCount: filteredNotes.length,
-                                        itemBuilder: (context, index) {
-                                          final note = filteredNotes[index];
-                                          return AnimationConfiguration
-                                              .staggeredGrid(
-                                            position: index,
-                                            duration: const Duration(
-                                                milliseconds: 375),
-                                            columnCount: 2,
-                                            child: ScaleAnimation(
-                                              child: FadeInAnimation(
-                                                child: OpenContainer<bool>(
-                                                  transitionType:
-                                                      ContainerTransitionType
-                                                          .fade,
-                                                  openBuilder: (context, _) =>
-                                                      NoteEditorScreen(
-                                                          note: note),
-                                                  closedElevation: 0,
-                                                  closedColor:
-                                                      Colors.transparent,
-                                                  closedShape:
-                                                      RoundedRectangleBorder(
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(
-                                                                      20)),
-                                                  onClosed: (returned) async {
-                                                    if (returned == true) {
-                                                      await refreshNotes();
-                                                    }
-                                                  },
-                                                  closedBuilder:
-                                                      (context, openContainer) {
-                                                    return NoteCard(
-                                                      note: note,
-                                                      onTap: openContainer,
-                                                      tagColors: _tagColors,
-                                                      onLongPress: () =>
-                                                          _showNoteActions(
-                                                              note),
-                                                    );
-                                                  },
-                                                ),
-                                              ),
-                                            ),
+                      : SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final note = filteredNotes[index];
+                              return AnimationConfiguration.staggeredList(
+                                position: index,
+                                duration: const Duration(milliseconds: 375),
+                                child: SlideAnimation(
+                                  verticalOffset: 50.0,
+                                  child: FadeInAnimation(
+                                    child: Padding(
+                                      padding:
+                                          const EdgeInsets.only(bottom: 12),
+                                      child: OpenContainer<bool>(
+                                        transitionType:
+                                            ContainerTransitionType.fade,
+                                        openBuilder: (context, _) =>
+                                            NoteEditorScreen(note: note),
+                                        closedElevation: 0,
+                                        closedColor: Colors.transparent,
+                                        closedShape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(20)),
+                                        onClosed: (returned) async {
+                                          if (returned == true) {
+                                            await refreshNotes();
+                                          }
+                                        },
+                                        closedBuilder:
+                                            (context, openContainer) {
+                                          return NoteCard(
+                                            note: note,
+                                            onTap: openContainer,
+                                            tagColors: _tagColors,
+                                            onLongPress: () =>
+                                                _showNoteActions(note),
                                           );
                                         },
-                                      )
-                                    : SliverList(
-                                        delegate: SliverChildBuilderDelegate(
-                                          (context, index) {
-                                            final note = filteredNotes[index];
-                                            return AnimationConfiguration
-                                                .staggeredList(
-                                              position: index,
-                                              duration: const Duration(
-                                                  milliseconds: 375),
-                                              child: SlideAnimation(
-                                                verticalOffset: 50.0,
-                                                child: FadeInAnimation(
-                                                  child: Padding(
-                                                    padding:
-                                                        const EdgeInsets.only(
-                                                            bottom: 12),
-                                                    child: OpenContainer<bool>(
-                                                      transitionType:
-                                                          ContainerTransitionType
-                                                              .fade,
-                                                      openBuilder:
-                                                          (context, _) =>
-                                                              NoteEditorScreen(
-                                                                  note: note),
-                                                      closedElevation: 0,
-                                                      closedColor:
-                                                          Colors.transparent,
-                                                      closedShape:
-                                                          RoundedRectangleBorder(
-                                                              borderRadius:
-                                                                  BorderRadius
-                                                                      .circular(
-                                                                          20)),
-                                                      onClosed:
-                                                          (returned) async {
-                                                        if (returned == true) {
-                                                          await refreshNotes();
-                                                        }
-                                                      },
-                                                      closedBuilder: (context,
-                                                          openContainer) {
-                                                        return NoteCard(
-                                                          note: note,
-                                                          onTap: openContainer,
-                                                          tagColors: _tagColors,
-                                                          onLongPress: () =>
-                                                              _showNoteActions(
-                                                                  note),
-                                                        );
-                                                      },
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                          childCount: filteredNotes.length,
-                                        ),
                                       ),
-                              ),
-                            ),
-                          ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                            childCount: filteredNotes.length,
+                          ),
                         ),
                 ),
               ),

@@ -379,8 +379,15 @@ class SettingsScreen extends StatelessWidget {
   Future<void> _exportBackup(BuildContext context) async {
     try {
       final db = await DatabaseHelper.instance.database;
-      final rows = await db.query('notes');
-      final json = rows.map((e) => e).toList();
+      final notes = await db.query('notes');
+      final tags = await db.query('tags');
+
+      final backupData = {
+        'notes': notes,
+        'tags': tags,
+        'version': 1,
+        'exportedAt': DateTime.now().toIso8601String(),
+      };
 
       String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
 
@@ -389,7 +396,7 @@ class SettingsScreen extends StatelessWidget {
           '$selectedDirectory/notes_backup_${DateTime.now().millisecondsSinceEpoch}.json',
         );
         await file.writeAsString(
-          const JsonEncoder.withIndent('  ').convert(json),
+          const JsonEncoder.withIndent('  ').convert(backupData),
         );
         // ignore: use_build_context_synchronously
         if (!context.mounted) return;
@@ -416,21 +423,56 @@ class SettingsScreen extends StatelessWidget {
       if (result != null && result.files.single.path != null) {
         final file = File(result.files.single.path!);
         final content = await file.readAsString();
-        final List<dynamic> data = jsonDecode(content);
+        final Map<String, dynamic> data = jsonDecode(content);
+
         final db = await DatabaseHelper.instance.database;
         final batch = db.batch();
-        for (final row in data) {
-          batch.insert(
-            'notes',
-            Map<String, Object?>.from(row),
-            conflictAlgorithm: ConflictAlgorithm.replace,
-          );
+
+        int notesCount = 0;
+        int tagsCount = 0;
+
+        // Handle new wrapper format
+        if (data.containsKey('notes')) {
+          final List<dynamic> notes = data['notes'];
+          notesCount = notes.length;
+          for (final row in notes) {
+            batch.insert(
+              'notes',
+              Map<String, Object?>.from(row),
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+          }
+        } else if (data is List) {
+          // Fallback for old format (just direct list of notes)
+          final List<dynamic> notes = data as List;
+          notesCount = notes.length;
+          for (final row in notes) {
+            batch.insert(
+              'notes',
+              Map<String, Object?>.from(row),
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+          }
         }
+
+        if (data.containsKey('tags')) {
+          final List<dynamic> tags = data['tags'];
+          tagsCount = tags.length;
+          for (final row in tags) {
+            batch.insert(
+              'tags',
+              Map<String, Object?>.from(row),
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+          }
+        }
+
         await batch.commit(noResult: true);
         // ignore: use_build_context_synchronously
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Imported ${data.length} notes from backup')),
+          SnackBar(
+              content: Text('Imported $notesCount notes and $tagsCount tags')),
         );
       }
     } catch (e) {
