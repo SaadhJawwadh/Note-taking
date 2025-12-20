@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   // Premium Colors
-  static const Color darkBackground = Color(0xFF0A0A0B); // Deeper black
-  static const Color darkSurface = Color(0xFF1C1C1E); // Distinct surface color
+  static const Color darkBackground = Color(0xFF000000); // True Black
+  static const Color darkSurface = Color(0xFF1E1E1E); // Distinct surface color
   static const Color primaryPurple = Color(0xFF6B4EFF); // Modern Purple
   static const Color accentPink = Color(0xFFFF85C2); // Soft accent
   static const Color textPrimary = Color(0xFFF2F2F7);

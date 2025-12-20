@@ -521,7 +521,8 @@ class NoteCard extends StatelessWidget {
                       ),
                       blockquotePadding: const EdgeInsets.all(8),
                       code: TextStyle(
-                        backgroundColor: Colors.black.withValues(alpha: 0.1),
+                        backgroundColor:
+                            theme.colorScheme.onSurface.withValues(alpha: 0.1),
                         fontFamily: 'monospace',
                         color: theme.colorScheme.onSurface,
                       ),

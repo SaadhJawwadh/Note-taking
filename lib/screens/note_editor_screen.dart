@@ -694,6 +694,16 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                               foregroundColor: theme
                                                   .colorScheme.onPrimary)))),
                             ),
+                            const SizedBox(width: 8),
+                            QuillToolbarImageButton(
+                              controller: _quillController,
+                              options: QuillToolbarImageButtonOptions(
+                                  iconData: Icons.attach_file,
+                                  iconTheme: QuillIconTheme(
+                                      iconButtonUnselectedData: IconButtonData(
+                                          style: IconButton.styleFrom(
+                                              foregroundColor: textColor)))),
+                            ),
                           ],
                         ),
                       ),
