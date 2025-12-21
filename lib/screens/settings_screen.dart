@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 import '../data/settings_provider.dart';
 
 import 'manage_tags_screen.dart';
+import 'filtered_notes_screen.dart';
 import '../utils/app_constants.dart';
 
 import 'package:file_picker/file_picker.dart';
@@ -117,6 +118,50 @@ class SettingsScreen extends StatelessWidget {
                                   MaterialPageRoute(
                                     builder: (context) =>
                                         const ManageTagsScreen(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ]),
+                          const SizedBox(height: 24),
+                          _buildSectionHeader(context, 'FOLDERS'),
+                          _buildSettingsContainer(context, [
+                            _buildListTile(
+                              context,
+                              icon: Icons.folder_open_outlined,
+                              title: 'Archive',
+                              subtitle: 'View archived notes',
+                              showArrow: true,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const FilteredNotesScreen(
+                                            filterType: FilterType.archived),
+                                  ),
+                                );
+                              },
+                            ),
+                            Divider(
+                              height: 1,
+                              indent: 56,
+                              color:
+                                  Theme.of(context).colorScheme.outlineVariant,
+                            ),
+                            _buildListTile(
+                              context,
+                              icon: Icons.delete_outline,
+                              title: 'Trash',
+                              subtitle: 'View deleted notes',
+                              showArrow: true,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const FilteredNotesScreen(
+                                            filterType: FilterType.trash),
                                   ),
                                 );
                               },

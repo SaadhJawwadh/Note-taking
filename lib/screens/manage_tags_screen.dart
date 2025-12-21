@@ -167,6 +167,7 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
                 )
               : AnimationLimiter(
                   child: ListView.separated(
+                    padding: const EdgeInsets.all(16),
                     itemCount: _tags.length,
                     separatorBuilder: (context, index) =>
                         const Divider(height: 1),

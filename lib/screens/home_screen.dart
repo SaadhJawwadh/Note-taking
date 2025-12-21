@@ -25,8 +25,8 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Note> notes = [];
   List<Note> filteredNotes = [];
   bool isLoading = true;
-  String selectedTag = 'All Notes';
-  List<String> allTags = ['All Notes'];
+  String selectedTag = 'All';
+  List<String> allTags = ['All'];
 
   @override
   void initState() {
@@ -41,11 +41,11 @@ class _HomeScreenState extends State<HomeScreen> {
     notes = await DatabaseHelper.instance.readAllNotes();
     final tags = await DatabaseHelper.instance.getAllTags();
     final colors = await DatabaseHelper.instance.getAllTagColors();
-    allTags = ['All Notes', ...tags];
+    allTags = ['All', ...tags];
 
     // If selected tag no longer exists (e.g. deleted), revert to All Notes
     if (!allTags.contains(selectedTag)) {
-      selectedTag = 'All Notes';
+      selectedTag = 'All';
     }
 
     // Refresh local colors map
@@ -56,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void filterNotes() {
-    if (selectedTag == 'All Notes') {
+    if (selectedTag == 'All') {
       filteredNotes =
           notes.where((n) => !n.isArchived && n.deletedAt == null).toList();
     } else if (selectedTag == 'Archived') {
@@ -85,12 +85,168 @@ class _HomeScreenState extends State<HomeScreen> {
   void onTagSelected(String tag) {
     setState(() {
       if (selectedTag == tag) {
-        selectedTag = 'All Notes';
+        selectedTag = 'All';
       } else {
         selectedTag = tag;
       }
       filterNotes();
     });
+  }
+
+  Future<void> _editTag(String tag) async {
+    final controller = TextEditingController(text: tag);
+    int selectedColor = _tagColors[tag] ?? 0;
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(builder: (context, setState) {
+        return AlertDialog(
+          title: const Text('Edit Tag'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: controller,
+                decoration: const InputDecoration(labelText: 'Tag Name'),
+                autofocus: true,
+              ),
+              const SizedBox(height: 16),
+              const Text('Tag Color'),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                alignment: WrapAlignment.center,
+                children: AppTheme.noteColors.map((c) {
+                  final bool isSystem = c.toARGB32() == 0;
+                  final bool isSelected = selectedColor == c.toARGB32();
+                  return GestureDetector(
+                    onTap: () => setState(() => selectedColor = c.toARGB32()),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: isSystem
+                            ? Theme.of(context).colorScheme.surface
+                            : c,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isSelected
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.outlineVariant,
+                          width: isSelected ? 3 : 1,
+                        ),
+                      ),
+                      child: isSystem
+                          ? const Icon(Icons.auto_awesome, size: 16)
+                          : (isSelected
+                              ? Icon(Icons.check,
+                                  size: 16,
+                                  color: c.computeLuminance() > 0.5
+                                      ? Colors.black
+                                      : Colors.white)
+                              : null),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final newName = controller.text.trim();
+                if (newName.isNotEmpty) {
+                  if (newName != tag) {
+                    await DatabaseHelper.instance.renameTag(tag, newName);
+                  }
+                  if (selectedColor != (_tagColors[tag] ?? 0)) {
+                    await DatabaseHelper.instance
+                        .setTagColor(newName, selectedColor);
+                  }
+                  if (!context.mounted) return;
+                  Navigator.pop(context);
+
+                  // Update selected tag if it was the one modified
+                  if (selectedTag == tag) {
+                    selectedTag = newName;
+                  }
+
+                  await refreshNotes();
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      }),
+    );
+  }
+
+  Future<void> _deleteTag(String tag) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Tag?'),
+        content: Text(
+            'Are you sure you want to delete "$tag"? This will remove the tag from all notes.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await DatabaseHelper.instance.deleteTag(tag);
+      if (selectedTag == tag) {
+        selectedTag = 'All';
+      }
+      await refreshNotes();
+    }
+  }
+
+  void _showTagOptions(String tag) {
+    if (tag == 'All') return; // Cannot edit/delete 'All Notes'
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('Edit Tag'),
+              onTap: () {
+                Navigator.pop(context);
+                _editTag(tag);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.red),
+              title:
+                  const Text('Delete Tag', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(context);
+                _deleteTag(tag);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -125,7 +281,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     const SizedBox(width: 16),
                     Text(
-                      'Notes',
+                      'Note book',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -184,53 +340,59 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     Color? chipBg;
                     Color? chipFg;
+                    BorderSide? chipSide;
 
-                    if (tagColorValue != null && tagColorValue != 0) {
-                      final scheme = ColorScheme.fromSeed(
-                          seedColor: Color(tagColorValue),
-                          brightness: Theme.of(context).brightness);
-                      chipBg = isSelected
-                          ? scheme.inversePrimary
-                          : scheme.primaryContainer;
-                      chipFg = isSelected
-                          ? scheme.onInverseSurface
-                          : scheme.onPrimaryContainer;
-
-                      if (isSelected) {
+                    if (isSelected) {
+                      if (tagColorValue != null && tagColorValue != 0) {
+                        final scheme = ColorScheme.fromSeed(
+                            seedColor: Color(tagColorValue),
+                            brightness: Theme.of(context).brightness);
                         chipBg = scheme.primary;
                         chipFg = scheme.onPrimary;
+                      } else {
+                        chipBg = Theme.of(context).colorScheme.primary;
+                        chipFg = Theme.of(context).colorScheme.onPrimary;
                       }
-                    }
-
-                    // Fallbacks
-                    chipBg ??= Theme.of(context).colorScheme.surfaceContainer;
-                    chipFg ??= isSelected
-                        ? Theme.of(context).colorScheme.onPrimaryContainer
-                        : Theme.of(context).colorScheme.onSurfaceVariant;
-                    if (isSelected &&
-                        chipBg ==
-                            Theme.of(context).colorScheme.surfaceContainer) {
-                      chipBg = Theme.of(context).colorScheme.primaryContainer;
+                      chipSide = BorderSide.none;
+                    } else {
+                      if (tagColorValue != null && tagColorValue != 0) {
+                        final scheme = ColorScheme.fromSeed(
+                            seedColor: Color(tagColorValue),
+                            brightness: Theme.of(context).brightness);
+                        chipBg = Colors.transparent;
+                        chipFg = scheme.primary;
+                        chipSide = BorderSide(color: scheme.primary);
+                      } else {
+                        chipBg = Colors.transparent;
+                        chipFg = Theme.of(context).colorScheme.onSurfaceVariant;
+                        chipSide = BorderSide(
+                          color: Theme.of(context).colorScheme.outline,
+                        );
+                      }
                     }
 
                     return Padding(
                       padding: const EdgeInsets.only(right: 8),
-                      child: FilterChip(
-                        label: Text(tag),
-                        selected: isSelected,
-                        onSelected: (selected) {
-                          if (selected) onTagSelected(tag);
-                        },
-                        backgroundColor: chipBg,
-                        selectedColor: chipBg,
-                        labelStyle: TextStyle(
-                          color: chipFg,
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.normal,
+                      child: GestureDetector(
+                        onLongPress: () => _showTagOptions(tag),
+                        child: FilterChip(
+                          label: Text(tag),
+                          selected: isSelected,
+                          onSelected: (selected) {
+                            if (selected) onTagSelected(tag);
+                          },
+                          backgroundColor: chipBg,
+                          selectedColor: chipBg,
+                          labelStyle: TextStyle(
+                            color: chipFg,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                          shape: const StadiumBorder(),
+                          side: chipSide,
+                          showCheckmark: false,
                         ),
-                        shape: const StadiumBorder(),
-                        side: BorderSide.none,
-                        showCheckmark: false,
                       ),
                     );
                   },
@@ -444,7 +606,7 @@ class NoteCard extends StatelessWidget {
           onTap: onTap,
           onLongPress: onLongPress,
           child: Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: backgroundColor,
               borderRadius: BorderRadius.circular(20),
@@ -453,136 +615,174 @@ class NoteCard extends StatelessWidget {
                 width: 1,
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  note.title.isEmpty ? 'Untitled' : note.title,
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineSmall
-                      ?.copyWith(fontSize: 18, fontWeight: FontWeight.bold),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (note.imagePath != null) ...[
-                  const SizedBox(height: 12),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.file(
-                      File(note.imagePath!),
-                      height: 120,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const SizedBox.shrink(),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 8),
-                if (note.content.isNotEmpty)
-                  MarkdownBody(
-                    data: note.content.length > 100
-                        ? '${note.content.substring(0, 100)}...'
-                        : note.content,
-                    styleSheet: MarkdownStyleSheet(
-                      p: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                      blockquote: TextStyle(
-                        color:
-                            theme.colorScheme.onSurface.withValues(alpha: 0.9),
-                        fontStyle: FontStyle.italic,
-                      ),
-                      blockquoteDecoration: BoxDecoration(
-                        color: isSystemDefault
-                            ? theme.colorScheme.surfaceContainerHighest
-                            : ColorScheme.fromSeed(
-                                    seedColor: Color(note.color),
-                                    brightness: theme.brightness)
-                                .surfaceContainerHighest
-                                .withValues(alpha: 0.5),
-                        border: Border(
-                          left: BorderSide(
-                            color: isSystemDefault
-                                ? theme.colorScheme.primary
-                                : ColorScheme.fromSeed(
-                                        seedColor: Color(note.color),
-                                        brightness: theme.brightness)
-                                    .primary,
-                            width: 3,
-                          ),
-                        ),
-                        borderRadius: const BorderRadius.only(
-                          topRight: Radius.circular(8),
-                          bottomRight: Radius.circular(8),
-                        ),
-                      ),
-                      blockquotePadding: const EdgeInsets.all(8),
-                      code: TextStyle(
-                        backgroundColor:
-                            theme.colorScheme.onSurface.withValues(alpha: 0.1),
-                        fontFamily: 'monospace',
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
-                if (note.tags.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 4,
-                    runSpacing: 4,
-                    children: note.tags.take(3).map((tag) {
-                      final colorVal = tagColors?[tag];
-                      Color? bg;
-                      Color? fg;
-                      if (colorVal != null && colorVal != 0) {
-                        final scheme = ColorScheme.fromSeed(
-                            seedColor: Color(colorVal),
-                            brightness: Theme.of(context).brightness);
-                        bg = scheme.primaryContainer;
-                        fg = scheme.onPrimaryContainer;
-                      }
-                      // Fallback
-                      bg ??= Theme.of(context)
-                          .colorScheme
-                          .secondaryContainer
-                          .withValues(alpha: 0.5);
-                      fg ??= Theme.of(context).colorScheme.onSecondaryContainer;
-
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: bg,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+            child: SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
                         child: Text(
-                          tag,
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: fg,
-                            fontWeight: FontWeight.w500,
+                          note.title.isEmpty ? 'Untitled' : note.title,
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineSmall
+                              ?.copyWith(
+                                  fontSize: 18, fontWeight: FontWeight.bold),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (note.isPinned)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: Icon(
+                            Icons.push_pin,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
-                      );
-                    }).toList(),
+                    ],
                   ),
-                ],
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      DateFormat.MMMd().format(note.dateModified),
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: Theme.of(context).colorScheme.outline,
-                          ),
+                  if (note.imagePath != null) ...[
+                    const SizedBox(height: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.file(
+                        File(note.imagePath!),
+                        height: 120,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        alignment: Alignment.topCenter,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const SizedBox.shrink(),
+                      ),
                     ),
                   ],
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  if (note.content.isNotEmpty)
+                    MarkdownBody(
+                      data: note.content.length > 100
+                          ? '${note.content.substring(0, 100)}...'
+                          : note.content,
+                      checkboxBuilder: (value) {
+                        return Icon(
+                          value
+                              ? Icons.check_box
+                              : Icons.check_box_outline_blank,
+                          size: 16,
+                          color: theme.colorScheme.primary,
+                        );
+                      },
+                      styleSheet: MarkdownStyleSheet(
+                        p: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        checkbox: TextStyle(
+                          color: theme.colorScheme.primary,
+                        ),
+                        blockquote: TextStyle(
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.9),
+                          fontStyle: FontStyle.italic,
+                        ),
+                        blockquoteDecoration: BoxDecoration(
+                          color: isSystemDefault
+                              ? theme.colorScheme.surfaceContainerHighest
+                              : ColorScheme.fromSeed(
+                                      seedColor: Color(note.color),
+                                      brightness: theme.brightness)
+                                  .surfaceContainerHighest
+                                  .withValues(alpha: 0.5),
+                          border: Border(
+                            left: BorderSide(
+                              color: isSystemDefault
+                                  ? theme.colorScheme.primary
+                                  : ColorScheme.fromSeed(
+                                          seedColor: Color(note.color),
+                                          brightness: theme.brightness)
+                                      .primary,
+                              width: 3,
+                            ),
+                          ),
+                          borderRadius: const BorderRadius.only(
+                            topRight: Radius.circular(8),
+                            bottomRight: Radius.circular(8),
+                          ),
+                        ),
+                        blockquotePadding: const EdgeInsets.all(8),
+                        code: TextStyle(
+                          backgroundColor: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.1),
+                          fontFamily: 'monospace',
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  if (note.tags.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
+                      children: note.tags.take(3).map((tag) {
+                        final colorVal = tagColors?[tag];
+                        Color bg;
+                        Color fg;
+
+                        if (colorVal != null && colorVal != 0) {
+                          final scheme = ColorScheme.fromSeed(
+                              seedColor: Color(colorVal),
+                              brightness: Theme.of(context).brightness);
+                          bg = scheme.primaryContainer;
+                          fg = scheme.onPrimaryContainer;
+                        } else {
+                          // Fallback
+                          bg = Theme.of(context)
+                              .colorScheme
+                              .secondaryContainer
+                              .withValues(alpha: 0.5);
+                          fg = Theme.of(context)
+                              .colorScheme
+                              .onSecondaryContainer;
+                        }
+
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: bg,
+                            borderRadius: BorderRadius.circular(12),
+                            // No border for filled style
+                          ),
+                          child: Text(
+                            tag,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: fg,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        DateFormat.MMMd().format(note.dateModified),
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ));
@@ -643,37 +843,37 @@ extension _Actions on _HomeScreenState {
               ListTile(
                 leading:
                     const Icon(Icons.delete_outline, color: Colors.redAccent),
-                title: Text(
-                    note.deletedAt == null
-                        ? 'Move to Trash'
-                        : 'Restore from Trash',
-                    style: TextStyle(
-                        color: note.deletedAt == null
-                            ? Colors.redAccent
-                            : onSurface)),
+                title: const Text('Delete',
+                    style: TextStyle(color: Colors.redAccent)),
                 onTap: () async {
-                  if (note.deletedAt == null) {
+                  Navigator.pop(context); // Close bottom sheet
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Delete Note?'),
+                      content:
+                          const Text('This note will be permanently deleted.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('Cancel'),
+                        ),
+                        FilledButton(
+                          style: FilledButton.styleFrom(
+                              backgroundColor: Colors.red),
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('Delete'),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirmed == true) {
                     await DatabaseHelper.instance.deleteNote(note.id);
-                  } else {
-                    await DatabaseHelper.instance.restoreNote(note.id);
+                    await refreshNotes();
                   }
-                  if (!context.mounted) return;
-                  Navigator.pop(context);
-                  await refreshNotes();
                 },
               ),
-              if (note.deletedAt != null)
-                ListTile(
-                  leading: const Icon(Icons.delete_forever, color: Colors.red),
-                  title: const Text('Delete Permanently',
-                      style: TextStyle(color: Colors.red)),
-                  onTap: () async {
-                    await DatabaseHelper.instance.hardDeleteNote(note.id);
-                    if (!context.mounted) return;
-                    Navigator.pop(context);
-                    await refreshNotes();
-                  },
-                ),
               const SizedBox(height: 8),
             ],
           ),

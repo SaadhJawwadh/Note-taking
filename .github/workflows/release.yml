@@ -1,19 +1,14 @@
-name: Build and Release APK
+name: Release
 
 on:
-  workflow_dispatch: # Allows manual triggering
-  release:
-    types: [published] # Runs when a release is published in GitHub UI
   push:
     tags:
-      - "v*" # Runs when a tag matching v* is pushed
+      - 'v*'
 
 jobs:
   build:
-    name: Build APK
+    name: Build & Release
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout code
@@ -29,32 +24,26 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          flutter-version: '3.19.0' # Or 'any' / specific version matching local
 
-      - name: Install dependencies
+      - name: Get Dependencies
         run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
 
       - name: Build APK
         run: flutter build apk --release
 
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release.apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+      # - name: Build AppBundle
+      #   run: flutter build appbundle --release
 
-      - name: Create Release and Upload APK
+      - name: Create Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: build/app/outputs/flutter-apk/app-release.apk
-          name: Release ${{ github.ref_name }}
-          # Use the tag name for the release body if not manually specified
-          body: |
-            Automated Release for ${{ github.ref_name }}
-
-            Build triggered by: ${{ github.event_name }}
-          draft: false
-          prerelease: false
-          fail_on_unmatched_files: true
+          files: |
+            build/app/outputs/flutter-apk/app-release.apk
+          body_path: CHANGELOG.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

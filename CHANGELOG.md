@@ -1,59 +1,17 @@
 # Changelog
 
-## [1.5.0] - 2025-12-21
+## [1.7.0] - 2025-12-22
 
-### ✨ New Features
-- **Expanded Tag Colors**: Added a comprehensive palette of 18 Material colors for tags, available in both the Note Editor and Manage Tags screen.
-- **Custom Image Picker**: Implemented a streamlined image attachment menu offering "Camera" and "Gallery" options, removing the unused "Link" feature.
-
-### ⚡ Improvements
-- **True Black Theme**: Refined Dark Mode to use a True Black (`#000000`) background for maximum contrast and battery efficiency on OLED screens.
-- **Toolbar Refinement**: Restored Block Quote and Code Block formatting buttons. Also implemented dynamic toolbar hiding when an image is resized to prevent obstruction.
-- **Code Visibility**: Improved code block styling to ensure readability in both light and dark themes.
-
-## [1.4.0] - 2025-12-18
-
-### ✨ New Features
-- **Material 3 Animations**: Integrated expressive transitions including `OpenContainer` for note cards, staggered list entrances, and fluid FAB morphing.
-- **Enhanced Preview**: Note Editor preview now supports selectable text, clickable links, and proper rendering of local images.
-
-### ⚡ Improvements
-- **Accessibility**: Comprehensive audit ensuring proper semantic labels and hit targets across the app.
-- **Code Quality**: Resolved all lint issues and redundant code for a cleaner codebase.
-- **Preview Alignment**: Fixed alignment issues in the Note Editor preview mode.
-
-## [1.3.2] - 2025-12-17
-
-### 🚀 Enhancements
-- **Editor Toolbar**: Redesigned the formatting toolbar as a floating **"Pill"** that adapts to keyboard visibility.
-- **Settings**: Simplifed the "About" section to display the version number directly.
-
-### 🛠️ Fixes & Cleanup
-- **Security**: Reverted Biometric App Lock feature for better stability.
-- **Dependencies**: Removed unused `local_auth` and related code.
-- **UI**: Fixed bottom padding and layout issues in the Note Editor.
-
-## [1.3.1] - 2025-12-17
-
-
-## [1.3.0] - 2025-12-15
-
-### Major Update
-- **Feature Release**: Official release of the Unified Design Language and Advanced Formatting features.
-- Includes all changes from v1.2.3.
-
-## [1.2.3] - 2025-12-15
-
-### Modified
-- **Unified Design Language**: Implemented a floating "Pill" design for AppBars across Home, Editor, and Settings screens.
-- **Formatting**: Added support for Headings (#), Strikethrough (~~), Code (`), and Blocks (>).
-- **Note Editor**: Added real-time syntax highlighting for Markdown. Moved "Tags" button to the top toolbar.
-- **Settings**: Renamed "Manage Categories" to "Manage Tags".
-
-### Removed
-- **Experimental**: Removed inline image insertion feature.
-
-## [1.2.2] - 2025-12-15
+### Added
+- **Monochrome Branding**: Updated home screen title to "Note book" to reflect the new brand identity.
+- **Adaptive Formatting**: Note Editor quote and code blocks now dynamically adapt their colors (text, background, border) to match the note's specific page color or system theme.
+- **Thumbnail View**: Home screen note cards now display images as compact 120px thumbnails with rounded corners, distinct from the full 200px preview in the editor.
 
 ### Changed
-- **Default Note Color**: Moved configuration from global Settings to the Note Editor. You can now specific "Set as Default" or "Reset to Default" directly from the color picker within a note.
+- **Editor Toolbar layout**: Standardized spacing in the bottom toolbar to providing a uniform, evenly distributed look for all formatting icons.
+- **Tag Filtering**: "All Notes" filter is now simply labeled "All" for a cleaner UI.
+- **Image Previews**: Unified image preview styling across the app (full width, rounded corners) while maintaining context-appropriate heights.
+
+### Fixed
+- **Layout Overflow**: Resolved a RenderFlex overflow issue in Home Screen note cards layout.
+- **Dark Mode Visibility**: Fixed visibility issues with quote formatting in dark mode.

@@ -128,6 +128,14 @@ class DatabaseHelper {
     return result.map((json) => Note.fromMap(json)).toList();
   }
 
+  Future<List<Note>> readArchivedNotes() async {
+    final db = await instance.database;
+    final result = await db.query('notes',
+        where: 'isArchived = 1 AND deletedAt IS NULL',
+        orderBy: 'dateModified DESC');
+    return result.map((json) => Note.fromMap(json)).toList();
+  }
+
   Future<int> updateNote(Note note) async {
     final db = await instance.database;
     return db.update(
@@ -140,10 +148,8 @@ class DatabaseHelper {
 
   Future<int> deleteNote(String id) async {
     final db = await instance.database;
-    // Soft delete: set deletedAt
-    return await db.update(
+    return await db.delete(
       'notes',
-      {'deletedAt': DateTime.now().toIso8601String()},
       where: 'id = ?',
       whereArgs: [id],
     );
@@ -157,36 +163,6 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [id],
     );
-  }
-
-  Future<int> restoreNote(String id) async {
-    final db = await instance.database;
-    return await db.update(
-      'notes',
-      {'deletedAt': null},
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
-
-  Future<int> hardDeleteNote(String id) async {
-    final db = await instance.database;
-    return await db.delete('notes', where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<List<Note>> readArchivedNotes() async {
-    final db = await instance.database;
-    final result = await db.query('notes',
-        where: 'isArchived = 1 AND deletedAt IS NULL',
-        orderBy: 'dateModified DESC');
-    return result.map((json) => Note.fromMap(json)).toList();
-  }
-
-  Future<List<Note>> readTrashedNotes() async {
-    final db = await instance.database;
-    final result = await db.query('notes',
-        where: 'deletedAt IS NOT NULL', orderBy: 'dateModified DESC');
-    return result.map((json) => Note.fromMap(json)).toList();
   }
 
   Future<List<Note>> readNotesByCategory(String category) async {
