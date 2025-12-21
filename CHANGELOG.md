@@ -2,16 +2,22 @@
 
 ## [1.7.0] - 2025-12-22
 
-### Added
-- **Monochrome Branding**: Updated home screen title to "Note book" to reflect the new brand identity.
-- **Adaptive Formatting**: Note Editor quote and code blocks now dynamically adapt their colors (text, background, border) to match the note's specific page color or system theme.
-- **Thumbnail View**: Home screen note cards now display images as compact 120px thumbnails with rounded corners, distinct from the full 200px preview in the editor.
+### ✨ New Features
+- **Rebranding**: App title updated to "Note book".
+- **Visuals**:
+  - **Adaptive Formatting**: Quote and Code blocks in the editor now adapt to the note's page color, ensuring perfect visibility in all themes (Dark/Light/Colored).
+  - **Home Screen Thumbnails**: Note card images are now displayed as compact, rounded thumbnails (120px height) for a cleaner grid layout.
+  - **Editor Previews**: Images in the editor use a fixed height (200px) and rounded corners to match the design language.
+  - **Uniform Toolbar**: Bottom formatting toolbar now has perfectly uniform spacing between icons.
+- **Tags**:
+  - Renamed "All Notes" filter to "All" for simplicity.
+  - Consistent "filled pill" style for tags on note cards.
 
-### Changed
-- **Editor Toolbar layout**: Standardized spacing in the bottom toolbar to providing a uniform, evenly distributed look for all formatting icons.
-- **Tag Filtering**: "All Notes" filter is now simply labeled "All" for a cleaner UI.
-- **Image Previews**: Unified image preview styling across the app (full width, rounded corners) while maintaining context-appropriate heights.
+### 🐛 Fixes
+- **Stability**: Fixed a `RenderFlex` overflow crash on the Home Screen note cards (157px height constraint issue resolved).
+- **Layout**: Fixed non-uniform padding in Manage Tags screen.
+- **Consistency**: Standardized image alignment across the app.
 
-### Fixed
-- **Layout Overflow**: Resolved a RenderFlex overflow issue in Home Screen note cards layout.
-- **Dark Mode Visibility**: Fixed visibility issues with quote formatting in dark mode.
+### 🧹 Maintenance
+- Removed unused legacy styling code.
+- Verified 0 analysis issues.

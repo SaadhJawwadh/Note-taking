@@ -6,15 +6,14 @@ If you're looking for a minimal place to jot down thoughts, code snippets, or li
 
 ## Features
 
-- **🎨 Deep Customization**: Notes adapt their entire color scheme (page, background, formatting) based on the tag color you choose.
-- **🏷️ Smart Tagging**: Organize with color-coded tags that influence the note's look.
-- **📝 Rich Editor**: WYSIWYG editor with adaptive code/quote styling and uniform toolbars.
-- **🖼️ Image Support**: Add images that appear as rounded thumbnails on the dashboard and fully immersive previews in the editor.
-- **📂 Organization**: Archive old notes or standard Trash bin (soft delete).
+- **🎨 Dynamic Colors**: Tags have distinct colors from a rich palette of 18 Material shades, and your notes automatically adopt them.
+- **🏷️ Smart Tagging**: Organize everything with color-coded tags.
+- **📝 WYSIWYG Editor**: Write with a rich text editor supporting adaptive quotes, code blocks, and **smart image previews**.
+- **📂 Organization**: Archive completed notes or move them to Trash (recoverable).
 - **🔒 Fully Local**: Your data stays on your device. Always.
 - **💾 Auto-Save**: Never lose a thought.
-- **🌓 Dark Mode**: Looks great at night. (And follows your system theme perfectly).
-- **📱 Floating Toolbar**: Formatting tools are always within reach but never in the way.
+- **🌓 Dark Mode**: Looks great at night, with formatting that adapts to your note's color.
+- **📱 Uniform Toolbar**: Formatting tools are neatly organized in a consistent bottom bar.
 - **📤 Import/Export**: Backup your notes to a JSON file and take them anywhere.
 
 ## How to Install
