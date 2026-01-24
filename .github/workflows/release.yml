@@ -41,4 +41,4 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: note-book-v${{ github.ref_name }}.apk
-          body_path: CHANGELOG.md
+          body_path: RELEASE_NOTES.md

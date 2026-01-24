@@ -120,32 +120,37 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: AppTheme.noteColors.map((c) {
                   final bool isSystem = c.toARGB32() == 0;
                   final bool isSelected = selectedColor == c.toARGB32();
-                  return GestureDetector(
-                    onTap: () => setState(() => selectedColor = c.toARGB32()),
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: isSystem
-                            ? Theme.of(context).colorScheme.surface
-                            : c,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isSelected
-                              ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.outlineVariant,
-                          width: isSelected ? 3 : 1,
+                  return Semantics(
+                    label: isSystem ? 'System Default Color' : 'Color option',
+                    selected: isSelected,
+                    button: true,
+                    child: GestureDetector(
+                      onTap: () => setState(() => selectedColor = c.toARGB32()),
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: isSystem
+                              ? Theme.of(context).colorScheme.surface
+                              : c,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isSelected
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(context).colorScheme.outlineVariant,
+                            width: isSelected ? 3 : 1,
+                          ),
                         ),
+                        child: isSystem
+                            ? const Icon(Icons.auto_awesome, size: 16)
+                            : (isSelected
+                                ? Icon(Icons.check,
+                                    size: 16,
+                                    color: c.computeLuminance() > 0.5
+                                        ? Colors.black
+                                        : Colors.white)
+                                : null),
                       ),
-                      child: isSystem
-                          ? const Icon(Icons.auto_awesome, size: 16)
-                          : (isSelected
-                              ? Icon(Icons.check,
-                                  size: 16,
-                                  color: c.computeLuminance() > 0.5
-                                      ? Colors.black
-                                      : Colors.white)
-                              : null),
                     ),
                   );
                 }).toList(),
@@ -621,32 +626,33 @@ class NoteCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          note.title.isEmpty ? 'Untitled' : note.title,
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineSmall
-                              ?.copyWith(
-                                  fontSize: 18, fontWeight: FontWeight.bold),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (note.isPinned)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 8),
-                          child: Icon(
-                            Icons.push_pin,
-                            size: 16,
-                            color: Theme.of(context).colorScheme.primary,
+                  if (note.title.isNotEmpty)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            note.title,
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineSmall
+                                ?.copyWith(
+                                    fontSize: 18, fontWeight: FontWeight.bold),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                    ],
-                  ),
+                        if (note.isPinned)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8),
+                            child: Icon(
+                              Icons.push_pin,
+                              size: 16,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                      ],
+                    ),
                   if (note.imagePath != null) ...[
                     const SizedBox(height: 12),
                     ClipRRect(

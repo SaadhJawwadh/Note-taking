@@ -2,6 +2,7 @@
     <application
         android:label="Note Book"
         android:name="${applicationName}"
+        android:allowBackup="true"
         android:icon="@mipmap/launcher_icon">
         <activity
             android:name=".MainActivity"
@@ -30,6 +31,7 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

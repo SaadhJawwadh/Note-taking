@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
+import 'package:package_info_plus/package_info_plus.dart';
+
 import 'dart:convert';
 import 'dart:io';
 
@@ -196,12 +198,23 @@ class SettingsScreen extends StatelessWidget {
                           const SizedBox(height: 24),
                           _buildSectionHeader(context, 'ABOUT'),
                           _buildSettingsContainer(context, [
-                            _buildListTile(
-                              context,
-                              icon: Icons.info_outline,
-                              title: 'Version',
-                              subtitle: AppConstants.appVersion,
-                              onTap: () => _launchUrl(AppConstants.releaseUrl),
+                            FutureBuilder<PackageInfo>(
+                              future: PackageInfo.fromPlatform(),
+                              builder: (context, snapshot) {
+                                String version = AppConstants.appVersion;
+                                if (snapshot.hasData) {
+                                  version =
+                                      '${snapshot.data!.version} (${snapshot.data!.buildNumber})';
+                                }
+                                return _buildListTile(
+                                  context,
+                                  icon: Icons.info_outline,
+                                  title: 'Version',
+                                  subtitle: version,
+                                  onTap: () =>
+                                      _launchUrl(AppConstants.releaseUrl),
+                                );
+                              },
                             ),
                           ]),
                           const SizedBox(height: 24),
