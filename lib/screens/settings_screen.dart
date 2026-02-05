@@ -211,19 +211,32 @@ class SettingsScreen extends StatelessWidget {
                           const SizedBox(height: 24),
                           _buildSectionHeader(context, 'ABOUT'),
                           _buildSettingsContainer(context, [
+                            _buildListTile(
+                              context,
+                              icon: Icons.code_outlined,
+                              title: 'GitHub Repository',
+                              subtitle: 'View source code on GitHub',
+                              onTap: () => _launchUrl(AppConstants.repoUrl),
+                            ),
+                            Divider(
+                              height: 1,
+                              indent: 56,
+                              color:
+                                  Theme.of(context).colorScheme.outlineVariant,
+                            ),
                             FutureBuilder<PackageInfo>(
                               future: PackageInfo.fromPlatform(),
                               builder: (context, snapshot) {
                                 String version = AppConstants.appVersion;
                                 if (snapshot.hasData) {
                                   version =
-                                      '${snapshot.data!.version} (${snapshot.data!.buildNumber})';
+                                      '${snapshot.data!.version}+${snapshot.data!.buildNumber}';
                                 }
                                 return _buildListTile(
                                   context,
                                   icon: Icons.info_outline,
                                   title: 'Version',
-                                  subtitle: version,
+                                  subtitle: 'v$version',
                                   onTap: () =>
                                       _launchUrl(AppConstants.releaseUrl),
                                 );
