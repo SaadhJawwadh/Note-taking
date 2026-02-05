@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -230,7 +231,7 @@ class SettingsScreen extends StatelessWidget {
                           _buildSettingsContainer(context, [
                             _buildListTile(
                               context,
-                              icon: Icons.code_rounded,
+                              icon: FontAwesomeIcons.github,
                               title: 'GitHub Repository',
                               subtitle: 'View source code & contribute',
                               trailing: Icon(
