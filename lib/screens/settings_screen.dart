@@ -92,6 +92,23 @@ class SettingsScreen extends StatelessWidget {
                               onChanged: (value) =>
                                   settings.setShowFinancialManager(value),
                             ),
+                            if (settings.showFinancialManager) ...[
+                              Divider(
+                                height: 1,
+                                indent: 56,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .outlineVariant,
+                              ),
+                              _buildListTile(
+                                context,
+                                icon: Icons.currency_exchange_outlined,
+                                title: 'Currency',
+                                subtitle: settings.currency,
+                                onTap: () =>
+                                    _showCurrencyPicker(context, settings),
+                              ),
+                            ]
                           ]),
                           const SizedBox(height: 24),
                           _buildSectionHeader(context, 'APPEARANCE'),
@@ -400,6 +417,38 @@ class SettingsScreen extends StatelessWidget {
                 },
               ),
             ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showCurrencyPicker(BuildContext context, SettingsProvider settings) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Select Currency'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: AppConstants.currencies.length,
+              itemBuilder: (context, index) {
+                final currency = AppConstants.currencies[index];
+                return RadioListTile<String>(
+                  title: Text(currency),
+                  value: currency,
+                  groupValue: settings.currency,
+                  onChanged: (value) {
+                    if (value != null) {
+                      settings.setCurrency(value);
+                      Navigator.pop(context);
+                    }
+                  },
+                );
+              },
+            ),
           ),
         );
       },

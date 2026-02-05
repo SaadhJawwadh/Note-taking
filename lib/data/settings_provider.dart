@@ -22,7 +22,10 @@ class SettingsProvider extends ChangeNotifier {
   bool get isGridView => _isGridView;
 
   bool _showFinancialManager = false;
-  bool get showFinancialManager => _showFinancialManager; // Feature toggle
+  bool get showFinancialManager => _showFinancialManager;
+
+  String _currency = 'LKR';
+  String get currency => _currency;
 
   SettingsProvider() {
     _loadSettings();
@@ -31,14 +34,21 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     _textSize = prefs.getDouble('textSize') ?? 16.0;
-    _fontFamily =
-        prefs.getString('fontFamily') ?? 'Rubik'; // Default to Rubik font
+    _fontFamily = prefs.getString('fontFamily') ?? 'Rubik';
     _isGridView = prefs.getBool('isGridView') ?? true;
     _showFinancialManager = prefs.getBool('showFinancialManager') ?? false;
+    _currency = prefs.getString('currency') ?? 'LKR';
 
     final themeIndex = prefs.getInt('themeMode') ?? 0;
     _themeMode = _getThemeModeFromInt(themeIndex);
 
+    notifyListeners();
+  }
+
+  Future<void> setCurrency(String curr) async {
+    _currency = curr;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('currency', curr);
     notifyListeners();
   }
 

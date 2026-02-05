@@ -1,25 +1,26 @@
-# Note Book v1.9.0 - Data Persistence Update 🛡️
+# Note Book v1.10.0 - Global Finance Update 🌍
 
-This release focuses on **Data Safety** and **Seamless Migration**. We've completely overhauled how your data is backed up and verified, ensuring you never lose your notes or financial records.
+In this release, we're taking the **Financial Manager** global! You can now customize how your finances are displayed with full multi-currency support.
 
 ## ✨ New Features
 
-### 🛡️ Enhanced Backup & Restore
-- **Unified Backup**: The "Export" feature now saves **everything**—your Notes, Tags, AND Financial Transactions—into a single safety FILE.
-- **Smart Restore**: New import logic is "id-collision safe". Restoring data will intelligently merge entries without overwriting existing ones, so your data stays safe even if you import multiple times.
-- **Google Auto Backup**: We've enabled and configured Android's standardized Auto Backup. When you switch phones, your notes database will now automatically travel with you (via Google Drive).
+### 🌍 Multi-Currency Selection
+- **Personalized Symbols**: Choose your preferred currency from Settings (LKR, USD, EUR, GBP, JPY, INR).
+- **Default Currency**: Set to **LKR** by default for our Sri Lankan users.
+- **Dynamic Updates**: Changing your currency in Settings instantly updates every screen in the app, from the Daily Dashboard to individual transactions.
 
-## 🚀 Migration Guide
-
-**For existing users:**
-1.  **Before Updating**: It is always recommended to go to *Settings > Export Data* to create a manual backup of your current v1.8 data.
-2.  **After Updating**: You don't need to do anything! Your data will persist.
-3.  **For Cross-Device**: Use the new Export feature to move your complete digital life (Notes + Finances) to a new device in seconds.
+### 💰 Smarter Financial Manager
+- **Contextual UI**: The amount entry field now shows your selected currency prefix, helping you enter data accurately.
+- **Improved Dashboards**: All summary cards (Income, Expense, Balance) now respect your global currency preference.
 
 ## 🛠 Technical Fixes
-- **Database Schema v2**: Updated internal schema to support robust transaction exporting.
-- **Conflict Resolution**: Added specific algorithms to strip auto-generated IDs during import to prevent data corruption.
-- **Version Sync**: Application versioning is now automated, removing potential UI inconsistencies.
+- **State Management**: Integrated `SettingsProvider` with the Financial Manager for real-time UI synchronization.
+- **UI Consistency**: Standardized currency formatting across the app.
+- **Code Optimization**: Unified asset management for currency symbols.
+
+## 🚀 Migration Guide
+- **Automatic**: Your existing financial data remains safe. The app will simply display your historical data using the new currency setting you choose.
+- **Persistence**: Your currency choice is saved locally and survives app restarts.
 
 ---
 

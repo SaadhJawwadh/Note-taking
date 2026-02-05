@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../data/settings_provider.dart';
 import '../data/database_helper.dart';
 import '../data/transaction_model.dart';
 import '../widgets/calculator_dialog.dart';
@@ -145,6 +147,8 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final settings = Provider.of<SettingsProvider>(context);
+    final currency = settings.currency;
 
     return Scaffold(
       appBar: AppBar(
@@ -204,7 +208,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                 color: _isExpense ? colorScheme.error : colorScheme.primary,
               ),
               decoration: InputDecoration(
-                prefixText: '\$ ', // Or user currency
+                prefixText: '$currency ',
                 labelText: 'Amount',
                 hintText: '0.00',
                 border: OutlineInputBorder(

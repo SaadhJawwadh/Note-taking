@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:animations/animations.dart';
+import 'package:provider/provider.dart';
+import '../data/settings_provider.dart';
 import '../data/database_helper.dart';
 import '../data/transaction_model.dart';
 import 'transaction_editor_screen.dart';
@@ -70,6 +72,8 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final settings = Provider.of<SettingsProvider>(context);
+    final currency = settings.currency;
 
     return Scaffold(
       body: CustomScrollView(
@@ -153,6 +157,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                             child: _SummaryItem(
                               label: 'Expenses',
                               amount: _dailyExpense,
+                              currency: currency,
                               color: colorScheme.error,
                               icon: Icons.arrow_outward,
                             ),
@@ -166,6 +171,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                             child: _SummaryItem(
                               label: 'Income',
                               amount: _dailyIncome,
+                              currency: currency,
                               color: colorScheme.primary, // Or green/tertiary
                               icon: Icons.south_west,
                             ),
@@ -269,7 +275,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                     ),
                                   ),
                                   Text(
-                                    '${transaction.isExpense ? '-' : '+'} \$${transaction.amount.toStringAsFixed(2)}',
+                                    '${transaction.isExpense ? '-' : '+'} $currency ${transaction.amount.toStringAsFixed(2)}',
                                     style: textTheme.titleMedium?.copyWith(
                                       color: transaction.isExpense
                                           ? colorScheme.error
@@ -315,12 +321,14 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
 class _SummaryItem extends StatelessWidget {
   final String label;
   final double amount;
+  final String currency;
   final Color color;
   final IconData icon;
 
   const _SummaryItem({
     required this.label,
     required this.amount,
+    required this.currency,
     required this.color,
     required this.icon,
   });
@@ -344,7 +352,7 @@ class _SummaryItem extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          '\$${amount.toStringAsFixed(2)}',
+          '$currency ${amount.toStringAsFixed(2)}',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 color: color,
                 fontWeight: FontWeight.bold,
