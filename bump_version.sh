@@ -15,7 +15,4 @@ fi
 # Update pubspec.yaml
 sed -i '' "s/version: .*/version: $NEW_VERSION+$BUILD_NUMBER/" pubspec.yaml
 
-# Update AppConstants
-sed -i '' "s/static const String appVersion = .*/static const String appVersion = '$NEW_VERSION';/" lib/utils/app_constants.dart
-
 echo "Updated to $NEW_VERSION+$BUILD_NUMBER"

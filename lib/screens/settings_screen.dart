@@ -234,7 +234,7 @@ class SettingsScreen extends StatelessWidget {
                             FutureBuilder<PackageInfo>(
                               future: PackageInfo.fromPlatform(),
                               builder: (context, snapshot) {
-                                String version = AppConstants.appVersion;
+                                String version = 'Loading...';
                                 if (snapshot.hasData) {
                                   version =
                                       '${snapshot.data!.version}+${snapshot.data!.buildNumber}';
@@ -243,7 +243,8 @@ class SettingsScreen extends StatelessWidget {
                                   context,
                                   icon: Icons.info_outline_rounded,
                                   title: 'Version',
-                                  subtitle: 'Current build: v$version',
+                                  subtitle:
+                                      snapshot.hasData ? 'v$version' : version,
                                   onTap: () =>
                                       _launchUrl(AppConstants.releaseUrl),
                                 );

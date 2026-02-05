@@ -50,6 +50,6 @@ To release a new version, use the provided helper script:
 ./bump_version.sh 1.8.0 1
 ```
 
-This will automatically update `pubspec.yaml` and `lib/utils/app_constants.dart` to keep the UI and build in sync. After that, commit your changes and push a new tag to GitHub to trigger the release workflow.
+This will automatically update `pubspec.yaml` to keep the build in sync. After that, commit your changes and push a new tag to GitHub to trigger the release workflow.
 
 That's it! Enjoy.
