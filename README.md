@@ -42,4 +42,14 @@ You need the [Flutter SDK](https://flutter.dev/docs/get-started/install) install
     flutter run
     ```
 
+### Releasing a New Version
+
+To release a new version, use the provided helper script:
+
+```bash
+./bump_version.sh 1.8.0 1
+```
+
+This will automatically update `pubspec.yaml` and `lib/utils/app_constants.dart` to keep the UI and build in sync. After that, commit your changes and push a new tag to GitHub to trigger the release workflow.
+
 That's it! Enjoy.

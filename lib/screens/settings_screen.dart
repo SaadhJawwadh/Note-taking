@@ -213,9 +213,16 @@ class SettingsScreen extends StatelessWidget {
                           _buildSettingsContainer(context, [
                             _buildListTile(
                               context,
-                              icon: Icons.code_outlined,
+                              icon: Icons.code_rounded,
                               title: 'GitHub Repository',
-                              subtitle: 'View source code on GitHub',
+                              subtitle: 'View source code & contribute',
+                              trailing: Icon(
+                                Icons.open_in_new_rounded,
+                                size: 18,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
                               onTap: () => _launchUrl(AppConstants.repoUrl),
                             ),
                             Divider(
@@ -234,9 +241,9 @@ class SettingsScreen extends StatelessWidget {
                                 }
                                 return _buildListTile(
                                   context,
-                                  icon: Icons.info_outline,
+                                  icon: Icons.info_outline_rounded,
                                   title: 'Version',
-                                  subtitle: 'v$version',
+                                  subtitle: 'Current build: v$version',
                                   onTap: () =>
                                       _launchUrl(AppConstants.releaseUrl),
                                 );
