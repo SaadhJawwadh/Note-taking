@@ -1,7 +1,7 @@
 name: note_taking_app
 description: A fully local offline-first note taking application.
 publish_to: 'none'
-version: 1.7.0+2
+version: 1.8.0+1
 
 environment:
   sdk: '>=3.2.0 <4.0.0'
@@ -41,6 +41,7 @@ dependencies:
   markdown_quill: ^4.3.0
   flutter_quill_extensions: ^11.0.0
   markdown: ^7.2.2
+  math_expressions: ^2.5.0
   flutter_localizations:
     sdk: flutter
 

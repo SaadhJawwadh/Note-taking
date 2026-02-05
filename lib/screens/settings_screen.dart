@@ -81,6 +81,19 @@ class SettingsScreen extends StatelessWidget {
                           child: FadeInAnimation(child: widget),
                         ),
                         children: [
+                          _buildSectionHeader(context, 'FEATURES'),
+                          _buildSettingsContainer(context, [
+                            _buildSwitchTile(
+                              context,
+                              icon: Icons.account_balance_wallet_outlined,
+                              title: 'Financial Manager',
+                              subtitle: 'Enable expense tracking',
+                              value: settings.showFinancialManager,
+                              onChanged: (value) =>
+                                  settings.setShowFinancialManager(value),
+                            ),
+                          ]),
+                          const SizedBox(height: 24),
                           _buildSectionHeader(context, 'APPEARANCE'),
                           _buildSettingsContainer(context, [
                             _buildListTile(
@@ -431,6 +444,38 @@ class SettingsScreen extends StatelessWidget {
               : null),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       onTap: onTap,
+    );
+  }
+
+  Widget _buildSwitchTile(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return SwitchListTile(
+      secondary: Icon(
+        icon,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+      title: Text(
+        title,
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+      ),
+      subtitle: subtitle != null
+          ? Text(
+              subtitle,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            )
+          : null,
+      value: value,
+      onChanged: onChanged,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      activeColor: Theme.of(context).colorScheme.primary,
     );
   }
 

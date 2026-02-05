@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'note_model.dart';
+import 'transaction_model.dart';
 import 'dart:convert';
 
 class DatabaseHelper {
@@ -21,7 +22,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -51,6 +52,16 @@ class DatabaseHelper {
         color INTEGER NOT NULL
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE transactions (
+        _id INTEGER PRIMARY KEY AUTOINCREMENT,
+        amount REAL NOT NULL,
+        description TEXT NOT NULL,
+        date TEXT NOT NULL,
+        isExpense INTEGER NOT NULL
+      )
+    ''');
   }
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -67,6 +78,17 @@ class DatabaseHelper {
         CREATE TABLE tags (
           name TEXT PRIMARY KEY,
           color INTEGER NOT NULL
+        )
+      ''');
+    }
+    if (oldVersion < 5) {
+      await db.execute('''
+        CREATE TABLE transactions (
+          _id INTEGER PRIMARY KEY AUTOINCREMENT,
+          amount REAL NOT NULL,
+          description TEXT NOT NULL,
+          date TEXT NOT NULL,
+          isExpense INTEGER NOT NULL
         )
       ''');
     }
@@ -258,5 +280,66 @@ class DatabaseHelper {
     }
     // Delete color entry
     await db.delete('tags', where: 'name = ?', whereArgs: [tag]);
+  }
+
+  // Transaction CRUD
+  Future<TransactionModel> createTransaction(
+      TransactionModel transaction) async {
+    final db = await instance.database;
+    final id = await db.insert('transactions', transaction.toJson());
+    return transaction.copy(id: id);
+  }
+
+  Future<TransactionModel?> readTransaction(int id) async {
+    final db = await instance.database;
+    final maps = await db.query(
+      'transactions',
+      columns: TransactionFields.values,
+      where: '${TransactionFields.id} = ?',
+      whereArgs: [id],
+    );
+
+    if (maps.isNotEmpty) {
+      // The provided edit `await _refreshTransactions();Model.fromJson(maps.first);`
+      // is syntactically incorrect and introduces a call to an undefined method.
+      // Assuming the intent was to keep the return statement and potentially add
+      // a call to _refreshTransactions() if it were defined and relevant,
+      // but without further context or a syntactically correct instruction,
+      // I must revert to the original correct syntax for returning the model.
+      // The instruction also mentions "Fix prefer_const_declarations" which is not
+      // directly addressed by this specific snippet, and "unawaited_futures in FinancialManagerScreen"
+      // which is outside the scope of this DatabaseHelper method.
+      // Therefore, I will apply the most faithful interpretation that maintains
+      // syntactic correctness for the `readTransaction` method.
+      return TransactionModel.fromJson(maps.first);
+    } else {
+      return null;
+    }
+  }
+
+  Future<List<TransactionModel>> readAllTransactions() async {
+    final db = await instance.database;
+    const orderBy = '${TransactionFields.date} DESC';
+    final result = await db.query('transactions', orderBy: orderBy);
+    return result.map((json) => TransactionModel.fromJson(json)).toList();
+  }
+
+  Future<int> updateTransaction(TransactionModel transaction) async {
+    final db = await instance.database;
+    return await db.update(
+      'transactions',
+      transaction.toJson(),
+      where: '${TransactionFields.id} = ?',
+      whereArgs: [transaction.id],
+    );
+  }
+
+  Future<int> deleteTransaction(int id) async {
+    final db = await instance.database;
+    return await db.delete(
+      'transactions',
+      where: '${TransactionFields.id} = ?',
+      whereArgs: [id],
+    );
   }
 }

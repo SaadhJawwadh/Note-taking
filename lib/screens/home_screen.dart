@@ -13,6 +13,7 @@ import 'package:provider/provider.dart';
 import '../data/settings_provider.dart';
 import 'package:animations/animations.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'financial_manager_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -27,6 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool isLoading = true;
   String selectedTag = 'All';
   List<String> allTags = ['All'];
+  int _currentIndex = 0;
 
   @override
   void initState() {
@@ -257,315 +259,349 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Consumer<SettingsProvider>(builder: (context, settings, child) {
+      // Return simple Notes View if feature disabled
+      if (!settings.showFinancialManager) {
+        return _buildNotesView(context, settings);
+      }
+
+      // Return Bottom Nav View if enabled
       return Scaffold(
-        body: CustomScrollView(
-          slivers: [
-            SliverAppBar(
-              backgroundColor: Colors.transparent,
-              floating: true,
-              snap: true,
-              toolbarHeight: 84, // Taller to accommodate the float and shadow
-              titleSpacing: 16,
-              automaticallyImplyLeading: false, // Home doesn't need back
-              title: Container(
-                margin: const EdgeInsets.only(top: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                height: 64,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(32),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+        body: PageTransitionSwitcher(
+          transitionBuilder: (child, primaryAnimation, secondaryAnimation) {
+            return FadeThroughTransition(
+              animation: primaryAnimation,
+              secondaryAnimation: secondaryAnimation,
+              child: child,
+            );
+          },
+          child: _currentIndex == 0
+              ? _buildNotesView(context, settings)
+              : const FinancialManagerScreen(),
+        ),
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: _currentIndex,
+          onDestinationSelected: (index) {
+            setState(() => _currentIndex = index);
+          },
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.note_alt_outlined),
+              selectedIcon: Icon(Icons.note_alt),
+              label: 'Notes',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.account_balance_wallet_outlined),
+              selectedIcon: Icon(Icons.account_balance_wallet),
+              label: 'Finances',
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _buildNotesView(BuildContext context, SettingsProvider settings) {
+    return Scaffold(
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            backgroundColor: Colors.transparent,
+            floating: true,
+            snap: true,
+            toolbarHeight: 84, // Taller to accommodate the float and shadow
+            titleSpacing: 16,
+            automaticallyImplyLeading: false, // Home doesn't need back
+            title: Container(
+              margin: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              height: 64,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(32),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  const SizedBox(width: 16),
+                  Text(
+                    'Note book',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: Icon(settings.isGridView
+                        ? Icons.view_agenda_outlined
+                        : Icons.grid_view_outlined),
+                    tooltip: settings.isGridView ? 'List view' : 'Grid view',
+                    onPressed: () {
+                      settings.setIsGridView(!settings.isGridView);
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.search),
+                    tooltip: 'Search notes',
+                    onPressed: () {
+                      showSearch(
+                          context: context, delegate: NoteSearchDelegate());
+                    },
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: IconButton(
+                      icon: const Icon(Icons.settings_outlined),
+                      tooltip: 'Settings',
+                      onPressed: () {
+                        Navigator.of(context)
+                            .push(
+                              MaterialPageRoute(
+                                  builder: (context) => const SettingsScreen()),
+                            )
+                            .then((_) => refreshNotes());
+                      },
                     ),
-                  ],
-                ),
-                child: Row(
+                  )
+                ],
+              ),
+            ),
+          ),
+          // Tag Selector
+          SliverToBoxAdapter(
+            child: Container(
+              height: 50,
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: allTags.length,
+                itemBuilder: (context, index) {
+                  final tag = allTags[index];
+                  final isSelected = tag == selectedTag;
+                  final tagColorValue = _tagColors[tag];
+
+                  Color? chipBg;
+                  Color? chipFg;
+                  BorderSide? chipSide;
+
+                  if (isSelected) {
+                    if (tagColorValue != null && tagColorValue != 0) {
+                      final scheme = ColorScheme.fromSeed(
+                          seedColor: Color(tagColorValue),
+                          brightness: Theme.of(context).brightness);
+                      chipBg = scheme.primary;
+                      chipFg = scheme.onPrimary;
+                    } else {
+                      chipBg = Theme.of(context).colorScheme.primary;
+                      chipFg = Theme.of(context).colorScheme.onPrimary;
+                    }
+                    chipSide = BorderSide.none;
+                  } else {
+                    if (tagColorValue != null && tagColorValue != 0) {
+                      final scheme = ColorScheme.fromSeed(
+                          seedColor: Color(tagColorValue),
+                          brightness: Theme.of(context).brightness);
+                      chipBg = Colors.transparent;
+                      chipFg = scheme.primary;
+                      chipSide = BorderSide(color: scheme.primary);
+                    } else {
+                      chipBg = Colors.transparent;
+                      chipFg = Theme.of(context).colorScheme.onSurfaceVariant;
+                      chipSide = BorderSide(
+                        color: Theme.of(context).colorScheme.outline,
+                      );
+                    }
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: GestureDetector(
+                      onLongPress: () => _showTagOptions(tag),
+                      child: FilterChip(
+                        label: Text(tag),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          if (selected) onTagSelected(tag);
+                        },
+                        backgroundColor: chipBg,
+                        selectedColor: chipBg,
+                        labelStyle: TextStyle(
+                          color: chipFg,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                        shape: const StadiumBorder(),
+                        side: chipSide,
+                        showCheckmark: false,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          // Content
+          if (isLoading)
+            const SliverFillRemaining(
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (filteredNotes.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                key: const ValueKey('empty'),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const SizedBox(width: 16),
+                    Icon(Icons.note_alt_outlined,
+                        size: 64,
+                        color: AppTheme.textSecondary.withValues(alpha: 0.5)),
+                    const SizedBox(height: 16),
                     Text(
-                      'Note book',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      'No notes here yet',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: AppTheme.textSecondary,
                             fontWeight: FontWeight.bold,
                           ),
                     ),
-                    const Spacer(),
-                    IconButton(
-                      icon: Icon(settings.isGridView
-                          ? Icons.view_agenda_outlined
-                          : Icons.grid_view_outlined),
-                      tooltip: settings.isGridView ? 'List view' : 'Grid view',
-                      onPressed: () {
-                        settings.setIsGridView(!settings.isGridView);
-                      },
+                    const SizedBox(height: 8),
+                    Text(
+                      'Tap + to create one',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color:
+                                AppTheme.textSecondary.withValues(alpha: 0.7),
+                          ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.search),
-                      tooltip: 'Search notes',
-                      onPressed: () {
-                        showSearch(
-                            context: context, delegate: NoteSearchDelegate());
-                      },
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(right: 4),
-                      child: IconButton(
-                        icon: const Icon(Icons.settings_outlined),
-                        tooltip: 'Settings',
-                        onPressed: () {
-                          Navigator.of(context)
-                              .push(
-                                MaterialPageRoute(
-                                    builder: (context) =>
-                                        const SettingsScreen()),
-                              )
-                              .then((_) => refreshNotes());
-                        },
-                      ),
-                    )
                   ],
                 ),
               ),
-            ),
-            // Tag Selector
-            SliverToBoxAdapter(
-              child: Container(
-                height: 50,
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: allTags.length,
-                  itemBuilder: (context, index) {
-                    final tag = allTags[index];
-                    final isSelected = tag == selectedTag;
-                    final tagColorValue = _tagColors[tag];
-
-                    Color? chipBg;
-                    Color? chipFg;
-                    BorderSide? chipSide;
-
-                    if (isSelected) {
-                      if (tagColorValue != null && tagColorValue != 0) {
-                        final scheme = ColorScheme.fromSeed(
-                            seedColor: Color(tagColorValue),
-                            brightness: Theme.of(context).brightness);
-                        chipBg = scheme.primary;
-                        chipFg = scheme.onPrimary;
-                      } else {
-                        chipBg = Theme.of(context).colorScheme.primary;
-                        chipFg = Theme.of(context).colorScheme.onPrimary;
-                      }
-                      chipSide = BorderSide.none;
-                    } else {
-                      if (tagColorValue != null && tagColorValue != 0) {
-                        final scheme = ColorScheme.fromSeed(
-                            seedColor: Color(tagColorValue),
-                            brightness: Theme.of(context).brightness);
-                        chipBg = Colors.transparent;
-                        chipFg = scheme.primary;
-                        chipSide = BorderSide(color: scheme.primary);
-                      } else {
-                        chipBg = Colors.transparent;
-                        chipFg = Theme.of(context).colorScheme.onSurfaceVariant;
-                        chipSide = BorderSide(
-                          color: Theme.of(context).colorScheme.outline,
-                        );
-                      }
-                    }
-
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: GestureDetector(
-                        onLongPress: () => _showTagOptions(tag),
-                        child: FilterChip(
-                          label: Text(tag),
-                          selected: isSelected,
-                          onSelected: (selected) {
-                            if (selected) onTagSelected(tag);
-                          },
-                          backgroundColor: chipBg,
-                          selectedColor: chipBg,
-                          labelStyle: TextStyle(
-                            color: chipFg,
-                            fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                          ),
-                          shape: const StadiumBorder(),
-                          side: chipSide,
-                          showCheckmark: false,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-            // Content
-            if (isLoading)
-              const SliverFillRemaining(
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (filteredNotes.isEmpty)
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(
-                  key: const ValueKey('empty'),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.note_alt_outlined,
-                          size: 64,
-                          color: AppTheme.textSecondary.withValues(alpha: 0.5)),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No notes here yet',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: AppTheme.textSecondary,
-                              fontWeight: FontWeight.bold,
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+              sliver: AnimationLimiter(
+                child: settings.isGridView
+                    ? SliverMasonryGrid.count(
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 12,
+                        crossAxisSpacing: 12,
+                        childCount: filteredNotes.length,
+                        itemBuilder: (context, index) {
+                          final note = filteredNotes[index];
+                          return AnimationConfiguration.staggeredGrid(
+                            position: index,
+                            duration: const Duration(milliseconds: 375),
+                            columnCount: 2,
+                            child: ScaleAnimation(
+                              child: FadeInAnimation(
+                                child: OpenContainer<bool>(
+                                  transitionType: ContainerTransitionType.fade,
+                                  openBuilder: (context, _) =>
+                                      NoteEditorScreen(note: note),
+                                  closedElevation: 0,
+                                  closedColor: Colors.transparent,
+                                  closedShape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20)),
+                                  onClosed: (returned) async {
+                                    if (returned == true) {
+                                      await refreshNotes();
+                                    }
+                                  },
+                                  closedBuilder: (context, openContainer) {
+                                    return NoteCard(
+                                      note: note,
+                                      onTap: openContainer,
+                                      tagColors: _tagColors,
+                                      onLongPress: () => _showNoteActions(note),
+                                    );
+                                  },
+                                ),
+                              ),
                             ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Tap + to create one',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color:
-                                  AppTheme.textSecondary.withValues(alpha: 0.7),
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-            else
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-                sliver: AnimationLimiter(
-                  child: settings.isGridView
-                      ? SliverMasonryGrid.count(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 12,
-                          crossAxisSpacing: 12,
-                          childCount: filteredNotes.length,
-                          itemBuilder: (context, index) {
+                          );
+                        },
+                      )
+                    : SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
                             final note = filteredNotes[index];
-                            return AnimationConfiguration.staggeredGrid(
+                            return AnimationConfiguration.staggeredList(
                               position: index,
                               duration: const Duration(milliseconds: 375),
-                              columnCount: 2,
-                              child: ScaleAnimation(
+                              child: SlideAnimation(
+                                verticalOffset: 50.0,
                                 child: FadeInAnimation(
-                                  child: OpenContainer<bool>(
-                                    transitionType:
-                                        ContainerTransitionType.fade,
-                                    openBuilder: (context, _) =>
-                                        NoteEditorScreen(note: note),
-                                    closedElevation: 0,
-                                    closedColor: Colors.transparent,
-                                    closedShape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(20)),
-                                    onClosed: (returned) async {
-                                      if (returned == true) {
-                                        await refreshNotes();
-                                      }
-                                    },
-                                    closedBuilder: (context, openContainer) {
-                                      return NoteCard(
-                                        note: note,
-                                        onTap: openContainer,
-                                        tagColors: _tagColors,
-                                        onLongPress: () =>
-                                            _showNoteActions(note),
-                                      );
-                                    },
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: OpenContainer<bool>(
+                                      transitionType:
+                                          ContainerTransitionType.fade,
+                                      openBuilder: (context, _) =>
+                                          NoteEditorScreen(note: note),
+                                      closedElevation: 0,
+                                      closedColor: Colors.transparent,
+                                      closedShape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(20)),
+                                      onClosed: (returned) async {
+                                        if (returned == true) {
+                                          await refreshNotes();
+                                        }
+                                      },
+                                      closedBuilder: (context, openContainer) {
+                                        return NoteCard(
+                                          note: note,
+                                          onTap: openContainer,
+                                          tagColors: _tagColors,
+                                          onLongPress: () =>
+                                              _showNoteActions(note),
+                                        );
+                                      },
+                                    ),
                                   ),
                                 ),
                               ),
                             );
                           },
-                        )
-                      : SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                              final note = filteredNotes[index];
-                              return AnimationConfiguration.staggeredList(
-                                position: index,
-                                duration: const Duration(milliseconds: 375),
-                                child: SlideAnimation(
-                                  verticalOffset: 50.0,
-                                  child: FadeInAnimation(
-                                    child: Padding(
-                                      padding:
-                                          const EdgeInsets.only(bottom: 12),
-                                      child: OpenContainer<bool>(
-                                        transitionType:
-                                            ContainerTransitionType.fade,
-                                        openBuilder: (context, _) =>
-                                            NoteEditorScreen(note: note),
-                                        closedElevation: 0,
-                                        closedColor: Colors.transparent,
-                                        closedShape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(20)),
-                                        onClosed: (returned) async {
-                                          if (returned == true) {
-                                            await refreshNotes();
-                                          }
-                                        },
-                                        closedBuilder:
-                                            (context, openContainer) {
-                                          return NoteCard(
-                                            note: note,
-                                            onTap: openContainer,
-                                            tagColors: _tagColors,
-                                            onLongPress: () =>
-                                                _showNoteActions(note),
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                            childCount: filteredNotes.length,
-                          ),
+                          childCount: filteredNotes.length,
                         ),
-                ),
+                      ),
               ),
-          ],
-        ),
-        floatingActionButton: OpenContainer<bool>(
-          transitionType: ContainerTransitionType.fade,
-          openBuilder: (context, _) => const NoteEditorScreen(),
-          closedElevation: 6.0,
-          closedShape: const StadiumBorder(),
-          closedColor: Theme.of(context).colorScheme.primary,
-          onClosed: (returned) async {
-            if (returned == true) await refreshNotes();
-          },
-          closedBuilder: (context, openContainer) {
-            return SizedBox(
-              height: 56,
-              child: FloatingActionButton.extended(
-                label: const Text('New Note'),
-                icon: const Icon(Icons.add),
-                tooltip: 'Create new note',
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                elevation: 0,
-                shape: const StadiumBorder(),
-                onPressed: openContainer,
-              ),
-            );
-          },
-        ),
-      );
-    });
+            ),
+        ],
+      ),
+      floatingActionButton: OpenContainer<bool>(
+        transitionType: ContainerTransitionType.fade,
+        openBuilder: (context, _) => const NoteEditorScreen(),
+        closedElevation: 6.0,
+        closedShape: const StadiumBorder(),
+        closedColor: Theme.of(context).colorScheme.primary,
+        onClosed: (returned) async {
+          if (returned == true) await refreshNotes();
+        },
+        closedBuilder: (context, openContainer) {
+          return SizedBox(
+            height: 56,
+            child: FloatingActionButton.extended(
+              label: const Text('New Note'),
+              icon: const Icon(Icons.add),
+              tooltip: 'Create new note',
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              elevation: 0,
+              shape: const StadiumBorder(),
+              onPressed: openContainer,
+            ),
+          );
+        },
+      ),
+    );
   }
 }
 

@@ -14,6 +14,7 @@ If you're looking for a minimal place to jot down thoughts, code snippets, or li
 - **💾 Auto-Save**: Never lose a thought.
 - **🌓 Dark Mode**: Looks great at night, with formatting that adapts to your note's color.
 - **📱 Uniform Toolbar**: Formatting tools are neatly organized in a consistent bottom bar.
+- **💰 Financial Manager**: dedicated space to track daily expenses and income with a built-in calculator.
 - **📤 Import/Export**: Backup your notes to a JSON file and take them anywhere.
 
 ## How to Install

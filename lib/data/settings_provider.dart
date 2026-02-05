@@ -18,7 +18,11 @@ class SettingsProvider extends ChangeNotifier {
   String get fontFamily => _fontFamily;
 
   bool _isGridView = true;
+
   bool get isGridView => _isGridView;
+
+  bool _showFinancialManager = false;
+  bool get showFinancialManager => _showFinancialManager; // Feature toggle
 
   SettingsProvider() {
     _loadSettings();
@@ -30,6 +34,7 @@ class SettingsProvider extends ChangeNotifier {
     _fontFamily =
         prefs.getString('fontFamily') ?? 'Rubik'; // Default to Rubik font
     _isGridView = prefs.getBool('isGridView') ?? true;
+    _showFinancialManager = prefs.getBool('showFinancialManager') ?? false;
 
     final themeIndex = prefs.getInt('themeMode') ?? 0;
     _themeMode = _getThemeModeFromInt(themeIndex);
@@ -55,6 +60,13 @@ class SettingsProvider extends ChangeNotifier {
     _isGridView = isGrid;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isGridView', isGrid);
+    notifyListeners();
+  }
+
+  Future<void> setShowFinancialManager(bool show) async {
+    _showFinancialManager = show;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('showFinancialManager', show);
     notifyListeners();
   }
 
