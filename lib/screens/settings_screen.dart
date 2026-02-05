@@ -505,35 +505,49 @@ class SettingsScreen extends StatelessWidget {
       final db = await DatabaseHelper.instance.database;
       final notes = await db.query('notes');
       final tags = await db.query('tags');
+      final transactions = await db.query('transactions');
 
       final backupData = {
         'notes': notes,
         'tags': tags,
-        'version': 1,
+        'transactions': transactions,
+        'version': 2, // Incremented version for new schema
         'exportedAt': DateTime.now().toIso8601String(),
       };
 
       String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
 
       if (selectedDirectory != null) {
+        // Create filename with date and app name
+        final dateStr = DateTime.now()
+            .toString()
+            .replaceAll(RegExp(r'[: ]'), '_')
+            .split('.')[0];
         final file = File(
-          '$selectedDirectory/notes_backup_${DateTime.now().millisecondsSinceEpoch}.json',
+          '$selectedDirectory/notebook_backup_$dateStr.json',
         );
+
         await file.writeAsString(
           const JsonEncoder.withIndent('  ').convert(backupData),
         );
-        // ignore: use_build_context_synchronously
+
         if (!context.mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Backup saved to ${file.path}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Backup saved successfully to ${file.path}'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } catch (e) {
-      // ignore: use_build_context_synchronously
       if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Backup failed: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Backup failed: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -554,8 +568,9 @@ class SettingsScreen extends StatelessWidget {
 
         int notesCount = 0;
         int tagsCount = 0;
+        int transactionsCount = 0;
 
-        // Handle new wrapper format
+        // Handle Notes
         if (data.containsKey('notes')) {
           final List<dynamic> notes = data['notes'];
           notesCount = notes.length;
@@ -566,8 +581,9 @@ class SettingsScreen extends StatelessWidget {
               conflictAlgorithm: ConflictAlgorithm.replace,
             );
           }
-        } else if (data is List) {
-          // Fallback for old format (just direct list of notes)
+        }
+        // Legacy format check (root level list)
+        else if (data is List) {
           final List<dynamic> notes = data as List;
           notesCount = notes.length;
           for (final row in notes) {
@@ -579,6 +595,7 @@ class SettingsScreen extends StatelessWidget {
           }
         }
 
+        // Handle Tags
         if (data.containsKey('tags')) {
           final List<dynamic> tags = data['tags'];
           tagsCount = tags.length;
@@ -591,20 +608,49 @@ class SettingsScreen extends StatelessWidget {
           }
         }
 
+        // Handle Transactions (New in v2)
+        if (data.containsKey('transactions')) {
+          final List<dynamic> transactions = data['transactions'];
+          transactionsCount = transactions.length;
+          for (final row in transactions) {
+            final map = Map<String, Object?>.from(row);
+            // Remove _id to avoid conflicts with auto-increment keys
+            // This ensures we don't overwrite existing transactions with same integers
+            // but creates new entries instead.
+            map.remove('_id');
+
+            batch.insert(
+              'transactions',
+              map,
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+          }
+        }
+
         await batch.commit(noResult: true);
-        // ignore: use_build_context_synchronously
+
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('Imported $notesCount notes and $tagsCount tags')),
+            content: Text(
+              'Restored: $notesCount notes, $tagsCount tags, $transactionsCount transactions',
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
+
+        // Notify user to restart or refresh if needed, usually Provider updates handle UI
+        // but explicit refresh might be good. For now, rely on standard navigation flow.
       }
     } catch (e) {
-      // ignore: use_build_context_synchronously
       if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Import failed: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Import failed: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 

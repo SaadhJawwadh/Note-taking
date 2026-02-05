@@ -15,7 +15,7 @@ If you're looking for a minimal place to jot down thoughts, code snippets, or li
 - **🌓 Dark Mode**: Looks great at night, with formatting that adapts to your note's color.
 - **📱 Uniform Toolbar**: Formatting tools are neatly organized in a consistent bottom bar.
 - **💰 Financial Manager**: dedicated space to track daily expenses and income with a built-in calculator.
-- **📤 Import/Export**: Backup your notes to a JSON file and take them anywhere.
+- **🛡️ Secure Backup**: Complete data export (Notes + Finances) and automatic Google Cloud Backup support.
 
 ## How to Install
 
@@ -44,12 +44,12 @@ You need the [Flutter SDK](https://flutter.dev/docs/get-started/install) install
 
 ### Releasing a New Version
 
-To release a new version, use the provided helper script:
+To release a new version, use the all-in-one deploy script:
 
 ```bash
-./bump_version.sh 1.8.0 1
+./deploy.sh 1.9.0 1
 ```
 
-This will automatically update `pubspec.yaml` to keep the build in sync. After that, commit your changes and push a new tag to GitHub to trigger the release workflow.
+This will automatically bump the version, tag the commit, and push to GitHub to trigger the release pipeline.
 
 That's it! Enjoy.

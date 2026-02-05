@@ -1,27 +1,26 @@
-# Note Book v1.8.0 - Financial Manager Edition 💰
+# Note Book v1.9.0 - Data Persistence Update 🛡️
 
-We are excited to introduce a major new feature: **Financial Manager**! Now you can track your daily expenses and income right alongside your notes, keeping everything in one private, local place.
+This release focuses on **Data Safety** and **Seamless Migration**. We've completely overhauled how your data is backed up and verified, ensuring you never lose your notes or financial records.
 
 ## ✨ New Features
 
-### 💰 Financial Manager
-Keep track of your spending habits without leaving the app.
-- **Daily Dashboard**: See your income, expenses, and balance for the day at a glance.
-- **Smart Entry**: Add transactions quickly with a built-in calculator.
-- **Private & Local**: Your financial data is stored 100% locally on your device.
+### 🛡️ Enhanced Backup & Restore
+- **Unified Backup**: The "Export" feature now saves **everything**—your Notes, Tags, AND Financial Transactions—into a single safety FILE.
+- **Smart Restore**: New import logic is "id-collision safe". Restoring data will intelligently merge entries without overwriting existing ones, so your data stays safe even if you import multiple times.
+- **Google Auto Backup**: We've enabled and configured Android's standardized Auto Backup. When you switch phones, your notes database will now automatically travel with you (via Google Drive).
 
-### 🧭 Improved Navigation
-- **Bottom Navigation Bar**: Switch seamlessly between your **Notes** and **Finances**.
-- **Settings Toggle**: Don't need the finance feature? You can toggle it off in Settings for a simpler experience.
+## 🚀 Migration Guide
 
-### 🎨 Visual Polish
-- **Uniform Design**: The new Finance screen features the same beautiful, pill-shaped header design as the Home screen.
-- **M3 Styling**: Enhanced animations and consistent typography throughout.
+**For existing users:**
+1.  **Before Updating**: It is always recommended to go to *Settings > Export Data* to create a manual backup of your current v1.8 data.
+2.  **After Updating**: You don't need to do anything! Your data will persist.
+3.  **For Cross-Device**: Use the new Export feature to move your complete digital life (Notes + Finances) to a new device in seconds.
 
-## 🛠 Fixes & Improvements
-- **Performance**: improved database performance for smoother interactions.
-- **Design**: Fixed minor layout inconsistencies in the settings menu.
+## 🛠 Technical Fixes
+- **Database Schema v2**: Updated internal schema to support robust transaction exporting.
+- **Conflict Resolution**: Added specific algorithms to strip auto-generated IDs during import to prevent data corruption.
+- **Version Sync**: Application versioning is now automated, removing potential UI inconsistencies.
 
 ---
 
-*Verified & Tested on Android.*
+*Verified & QA Tested on Android.*

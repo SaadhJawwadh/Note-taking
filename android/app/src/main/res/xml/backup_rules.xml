@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- Include the shared preferences file -->
+    <include domain="sharedpref" path="."/>
+    <!-- Include the database file -->
+    <include domain="database" path="notes.db"/>
+</full-backup-content>

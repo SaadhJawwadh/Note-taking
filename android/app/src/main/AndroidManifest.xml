@@ -3,6 +3,7 @@
         android:label="Note Book"
         android:name="${applicationName}"
         android:allowBackup="true"
+        android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/launcher_icon">
         <activity
             android:name=".MainActivity"
