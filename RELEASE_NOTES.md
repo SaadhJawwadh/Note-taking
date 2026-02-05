@@ -1,26 +1,21 @@
-# Note Book v1.10.0 - Global Finance Update 🌍
+# Note Book v1.11.0 - Advanced Financial Filtering 📅
 
-In this release, we're taking the **Financial Manager** global! You can now customize how your finances are displayed with full multi-currency support.
+Gain deeper insights into your spending habits with the new **Date Range Filter**.
 
 ## ✨ New Features
 
-### 🌍 Multi-Currency Selection
-- **Personalized Symbols**: Choose your preferred currency from Settings (LKR, USD, EUR, GBP, JPY, INR).
-- **Default Currency**: Set to **LKR** by default for our Sri Lankan users.
-- **Dynamic Updates**: Changing your currency in Settings instantly updates every screen in the app, from the Daily Dashboard to individual transactions.
+### 📅 Advanced Date Filtering
+- **Custom Ranges**: Tap the calendar icon to select any date range (e.g., "Last 7 Days", "This Weekend", or a custom trip duration).
+- **Monthly Summary**: Select a full month (e.g., "Oct 1 - Oct 31") to see your total income and expenses for that month.
+- **Unified Dashboard**: The top summary cards now dynamically update to show totals for **whatever period** you have selected.
 
-### 💰 Smarter Financial Manager
-- **Contextual UI**: The amount entry field now shows your selected currency prefix, helping you enter data accurately.
-- **Improved Dashboards**: All summary cards (Income, Expense, Balance) now respect your global currency preference.
+### 🛡️ Deployment & QA
+- **Code Quality**: Rigorous static analysis passed with 0 issues.
+- **Backup Verification**: Validated the "Smart Restore" logic to ensure seamless data migration from v1.8 and v1.9 backups.
 
-## 🛠 Technical Fixes
-- **State Management**: Integrated `SettingsProvider` with the Financial Manager for real-time UI synchronization.
-- **UI Consistency**: Standardized currency formatting across the app.
-- **Code Optimization**: Unified asset management for currency symbols.
-
-## 🚀 Migration Guide
-- **Automatic**: Your existing financial data remains safe. The app will simply display your historical data using the new currency setting you choose.
-- **Persistence**: Your currency choice is saved locally and survives app restarts.
+## 🛠 Improvements
+- **UI Logic**: Refactored the financial dashboard to handle `DateTimeRange` for more flexible data analysis.
+- **Performance**: Optimized in-memory filtering for transaction lists.
 
 ---
 

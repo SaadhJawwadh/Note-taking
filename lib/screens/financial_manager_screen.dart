@@ -16,7 +16,10 @@ class FinancialManagerScreen extends StatefulWidget {
 }
 
 class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
-  DateTime _selectedDate = DateTime.now();
+  DateTimeRange _selectedRange = DateTimeRange(
+    start: DateTime.now(),
+    end: DateTime.now(),
+  );
   List<TransactionModel> _transactions = [];
   bool _isLoading = true;
 
@@ -28,42 +31,54 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
 
   Future<void> _refreshTransactions() async {
     setState(() => _isLoading = true);
-    // In a real app, we should filter by date in SQL.
-    // For now, fetching all and filtering in memory as per current DB helper capabilities,
-    // or we can add a date filter method to DB helper.
-    // Given the task size, I'll fetch all and filter here for simplicity unless performance is an issue.
     final allTransactions = await DatabaseHelper.instance.readAllTransactions();
 
     _transactions = allTransactions.where((t) {
-      return t.date.year == _selectedDate.year &&
-          t.date.month == _selectedDate.month &&
-          t.date.day == _selectedDate.day;
+      // Normalize dates to ignore time components
+      final tDate = DateTime(t.date.year, t.date.month, t.date.day);
+      final start = DateTime(_selectedRange.start.year,
+          _selectedRange.start.month, _selectedRange.start.day);
+      final end = DateTime(_selectedRange.end.year, _selectedRange.end.month,
+          _selectedRange.end.day);
+
+      return tDate.isAfter(start.subtract(const Duration(days: 1))) &&
+          tDate.isBefore(end.add(const Duration(days: 1)));
     }).toList();
 
     setState(() => _isLoading = false);
   }
 
-  double get _dailyExpense {
+  double get _totalExpense {
     return _transactions
         .where((t) => t.isExpense)
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
-  double get _dailyIncome {
+  double get _totalIncome {
     return _transactions
         .where((t) => !t.isExpense)
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
-  Future<void> _selectDate(BuildContext context) async {
-    final picked = await showDatePicker(
+  Future<void> _selectDateRange(BuildContext context) async {
+    final picked = await showDateRangePicker(
       context: context,
-      initialDate: _selectedDate,
+      initialDateRange: _selectedRange,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+                  surface: Theme.of(context).colorScheme.surfaceContainerHigh,
+                ),
+          ),
+          child: child!,
+        );
+      },
     );
-    if (picked != null && picked != _selectedDate) {
-      setState(() => _selectedDate = picked);
+    if (picked != null && picked != _selectedRange) {
+      setState(() => _selectedRange = picked);
       await _refreshTransactions();
     }
   }
@@ -112,8 +127,8 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.calendar_today_outlined),
-                    tooltip: 'Select Date',
-                    onPressed: () => _selectDate(context),
+                    tooltip: 'Select Date Range',
+                    onPressed: () => _selectDateRange(context),
                   ),
                   Padding(
                     padding: const EdgeInsets.only(right: 4),
@@ -145,7 +160,10 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                   child: Column(
                     children: [
                       Text(
-                        DateFormat.MMMMEEEEd().format(_selectedDate),
+                        _selectedRange.duration.inDays == 0
+                            ? DateFormat.MMMMEEEEd()
+                                .format(_selectedRange.start)
+                            : '${DateFormat.MMMd().format(_selectedRange.start)} - ${DateFormat.MMMd().format(_selectedRange.end)}',
                         style: textTheme.titleMedium?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -156,7 +174,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                           Expanded(
                             child: _SummaryItem(
                               label: 'Expenses',
-                              amount: _dailyExpense,
+                              amount: _totalExpense,
                               currency: currency,
                               color: colorScheme.error,
                               icon: Icons.arrow_outward,
@@ -170,7 +188,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                           Expanded(
                             child: _SummaryItem(
                               label: 'Income',
-                              amount: _dailyIncome,
+                              amount: _totalIncome,
                               currency: currency,
                               color: colorScheme.primary, // Or green/tertiary
                               icon: Icons.south_west,
@@ -202,7 +220,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'No transactions today',
+                      'No transactions in this period',
                       style: textTheme.bodyLarge?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
