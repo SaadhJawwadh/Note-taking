@@ -1,7 +1,7 @@
 name: note_taking_app
 description: A fully local offline-first note taking application.
 publish_to: 'none'
-version: 1.9.0+1
+version: 1.9.0+2
 
 environment:
   sdk: '>=3.2.0 <4.0.0'
