@@ -23,7 +23,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 7,
+      version: 8,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -129,6 +129,27 @@ class DatabaseHelper {
       ''');
       await _seedBuiltInCategories(db);
     }
+    if (oldVersion < 8) {
+      // Add Payments and Deposit categories introduced in v1.14
+      const newCats = [
+        ('Payments', 0xFF795548, [
+          'koko instalment', 'koko installment', 'instalment', 'installment',
+          'emi', 'koko', 'loan', 'repayment', 'credit card', 'card payment',
+          'hire purchase',
+        ]),
+        ('Deposit', 0xFF00897B, [
+          'crm deposit', 'cash deposit', 'deposit', 'credited', 'salary',
+          'income',
+        ]),
+      ];
+      for (final (name, color, kws) in newCats) {
+        await db.insert(
+          'category_definitions',
+          {'name': name, 'color': color, 'keywords': jsonEncode(kws), 'isBuiltIn': 1},
+          conflictAlgorithm: ConflictAlgorithm.ignore,
+        );
+      }
+    }
   }
 
   /// Seeds the built-in categories into [db]. Uses ConflictAlgorithm.ignore so
@@ -189,11 +210,17 @@ class DatabaseHelper {
           'asiri', 'channel', 'clinic', 'diagnostic', 'medicine',
         ]
       ),
-      (
-        'Entertainment',
-        0xFFFF5722,
-        ['cinema', 'cinemax', 'scope', 'movie', 'concert', 'event', 'ticket']
-      ),
+      ('Entertainment', 0xFFFF5722,
+        ['cinema', 'cinemax', 'scope', 'movie', 'concert', 'event', 'ticket']),
+      ('Payments', 0xFF795548, [
+        'koko instalment', 'koko installment', 'instalment', 'installment',
+        'emi', 'koko', 'loan', 'repayment', 'credit card', 'card payment',
+        'hire purchase',
+      ]),
+      ('Deposit', 0xFF00897B, [
+        'crm deposit', 'cash deposit', 'deposit', 'credited', 'salary',
+        'income',
+      ]),
       ('Other', 0xFF9E9E9E, <String>[]),
     ];
     for (final (name, color, kws) in builtIns) {

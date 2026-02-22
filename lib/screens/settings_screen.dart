@@ -10,6 +10,7 @@ import 'dart:io';
 
 import 'package:sqflite/sqflite.dart';
 import '../data/database_helper.dart';
+import '../data/transaction_category.dart';
 
 import 'package:provider/provider.dart';
 import '../data/settings_provider.dart';
@@ -603,13 +604,15 @@ class SettingsScreen extends StatelessWidget {
       final notes = await db.query('notes');
       final tags = await db.query('tags');
       final transactions = await db.query('transactions');
+      final categoryDefinitions = await db.query('category_definitions');
 
       final backupData = {
         'notes': notes,
         'tags': tags,
         'transactions': transactions,
+        'categoryDefinitions': categoryDefinitions,
         'settings': settings.toBackupMap(),
-        'version': 3,
+        'version': 4,
         'exportedAt': DateTime.now().toIso8601String(),
       };
 
@@ -671,6 +674,11 @@ class SettingsScreen extends StatelessWidget {
         final previewTags = (data['tags'] as List?)?.length ?? 0;
         final previewTransactions =
             (data['transactions'] as List?)?.length ?? 0;
+        final previewCategories =
+            (data['categoryDefinitions'] as List?)?.where((c) {
+          final m = c as Map;
+          return (m['isBuiltIn'] as int? ?? 1) == 0;
+        }).length ?? 0;
         final previewVersion = data['version'] ?? 1;
 
         if (!context.mounted) return;
@@ -687,6 +695,8 @@ class SettingsScreen extends StatelessWidget {
                 Text('$previewNotes notes'),
                 Text('$previewTags tags'),
                 Text('$previewTransactions transactions'),
+                if (previewCategories > 0)
+                  Text('$previewCategories custom categories'),
                 const SizedBox(height: 12),
                 Text(
                   'Existing notes and tags with the same ID will be overwritten. '
@@ -781,6 +791,27 @@ class SettingsScreen extends StatelessWidget {
 
         await batch.commit(noResult: true);
 
+        // Restore custom category definitions (v4+ backups only)
+        // Built-in categories are seeded by DB migrations; only custom ones
+        // need restoring. We use replace so keyword edits carry over too.
+        if (data.containsKey('categoryDefinitions')) {
+          final List<dynamic> cats = data['categoryDefinitions'] as List;
+          final db2 = await DatabaseHelper.instance.database;
+          for (final row in cats) {
+            final map = Map<String, Object?>.from(row as Map);
+            // Custom categories: replace to restore user's keywords/colours.
+            // Built-in categories: ignore — DB migrations own their lifecycle.
+            final isBuiltIn = (map['isBuiltIn'] as int? ?? 0) == 1;
+            await db2.insert(
+              'category_definitions',
+              map,
+              conflictAlgorithm:
+                  isBuiltIn ? ConflictAlgorithm.ignore : ConflictAlgorithm.replace,
+            );
+          }
+          await TransactionCategory.reload();
+        }
+
         // Restore settings if present (v3+ backups)
         if (context.mounted &&
             data.containsKey('settings') &&
@@ -792,10 +823,14 @@ class SettingsScreen extends StatelessWidget {
         }
 
         if (!context.mounted) return;
+        final categoryMsg = previewCategories > 0
+            ? ', $previewCategories categories'
+            : '';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Restored: $notesCount notes, $tagsCount tags, $transactionsCount transactions',
+              'Restored: $notesCount notes, $tagsCount tags, '
+              '$transactionsCount transactions$categoryMsg',
             ),
             behavior: SnackBarBehavior.floating,
           ),

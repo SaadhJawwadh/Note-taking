@@ -12,6 +12,8 @@ class TransactionCategory {
   static const String utilities = 'Utilities';
   static const String health = 'Health';
   static const String entertainment = 'Entertainment';
+  static const String payments = 'Payments';
+  static const String deposit = 'Deposit';
   static const String other = 'Other';
 
   static const List<String> all = [
@@ -22,6 +24,8 @@ class TransactionCategory {
     utilities,
     health,
     entertainment,
+    payments,
+    deposit,
     other,
   ];
 
@@ -137,6 +141,25 @@ class TransactionCategory {
       'event',
       'ticket',
     ],
+    payments: [
+      'koko instalment', 'koko installment', // compound — before 'koko'
+      'instalment',
+      'installment',
+      'emi',
+      'koko',
+      'loan',
+      'repayment',
+      'credit card',
+      'card payment',
+      'hire purchase',
+    ],
+    deposit: [
+      'crm deposit', 'cash deposit', // compound
+      'deposit',
+      'credited',
+      'salary',
+      'income',
+    ],
   };
 
   static const Map<String, Color> badgeColors = {
@@ -147,6 +170,8 @@ class TransactionCategory {
     utilities: Color(0xFF607D8B),
     health: Color(0xFF4CAF50),
     entertainment: Color(0xFFFF5722),
+    payments: Color(0xFF795548),
+    deposit: Color(0xFF00897B),
     other: Color(0xFF9E9E9E),
   };
 

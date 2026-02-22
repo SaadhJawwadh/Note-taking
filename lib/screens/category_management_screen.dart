@@ -202,8 +202,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
                                 child: Row(
                                   children: cat.keywords.map((kw) {
                                     return Padding(
-                                      padding:
-                                          const EdgeInsets.only(right: 6),
+                                      padding: const EdgeInsets.only(right: 6),
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(
                                             horizontal: 10, vertical: 4),
@@ -213,8 +212,8 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
                                           borderRadius:
                                               BorderRadius.circular(20),
                                           border: Border.all(
-                                            color: catColor
-                                                .withValues(alpha: 0.3),
+                                            color:
+                                                catColor.withValues(alpha: 0.3),
                                             width: 0.5,
                                           ),
                                         ),
@@ -528,13 +527,14 @@ class _AddCategoryDialogState extends State<_AddCategoryDialog> {
                       color: color,
                       shape: BoxShape.circle,
                       border: selected
-                          ? Border.all(
-                              color: colorScheme.onSurface, width: 2.5)
+                          ? Border.all(color: colorScheme.onSurface, width: 2.5)
                           : null,
                     ),
                     child: selected
-                        ? const Icon(Icons.check,
-                            size: 16, color: Colors.white)
+                        ? Icon(Icons.check, size: 16,
+                            color: ThemeData.estimateBrightnessForColor(color) == Brightness.dark
+                                ? Colors.white
+                                : Colors.black)
                         : null,
                   ),
                 );
@@ -581,10 +581,9 @@ class _AddCategoryDialogState extends State<_AddCategoryDialog> {
                 children: _keywords.map((kw) {
                   return Chip(
                     label: Text(kw),
-                    labelStyle: textTheme.labelSmall
-                        ?.copyWith(color: _selectedColor),
-                    backgroundColor:
-                        _selectedColor.withValues(alpha: 0.1),
+                    labelStyle:
+                        textTheme.labelSmall?.copyWith(color: _selectedColor),
+                    backgroundColor: _selectedColor.withValues(alpha: 0.1),
                     side: BorderSide(
                         color: _selectedColor.withValues(alpha: 0.3),
                         width: 0.5),

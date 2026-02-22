@@ -2,6 +2,35 @@
 
 All notable changes to Note Book are documented here.
 
+## [1.14.0] - 2026-02-23
+
+### ✨ New Features
+- **Payments & Deposit Categories**: Two new built-in transaction categories covering instalments, EMI, KOKO buy-now-pay-later, loan repayments (Payments) and bank deposits, salary, and credited income (Deposit).
+- **Smarter SMS Descriptions**: Descriptions are now structured and human-readable instead of raw scraped text:
+  - Bank deposits → `"Deposit of 10,000 in Commercial Bank"`
+  - Card purchases → `"Purchase at PickMe Food 1,559"`
+  - KOKO/instalment → `"KOKO Instalment Simplytek"`
+  - Fund transfers → `"Transfer to Recipient 5,000"`
+  - ATM withdrawals → `"ATM Withdrawal 15,000"`
+- **Cancelled + Reversed Orders Auto-Delete**: SMS messages that are both cancelled *and* reversed (e.g. a cancelled PickMe Food order refund) now correctly delete the original expense — previously they were silently ignored.
+- **Bare Amount Parsing**: Instalment/due-reminder SMS messages without an LKR/Rs prefix (e.g. `"of 7895.98"`) are now parsed correctly.
+- **Expanded Bank & Provider Whitelist**: Added KOKO, Nations Trust Bank (NTB), LOLC, FriMi, and PayApp to the recognised sender list.
+- **Category Definitions in Backup**: Backups are now v4 — custom categories (names, keywords, colours) are exported and fully restored. Restoring a backup also reloads the in-memory category cache immediately.
+- **Adaptive Colour Swatch Check**: The checkmark icon on colour swatches in the category editor now uses white or black based on the swatch's luminance, ensuring legibility on both light and dark colours.
+
+### 🛠 Improvements
+- `purchase`, `authorised`, `authorized` added to debit keyword list for broader card transaction detection.
+- URL stripping added to PII removal so confirmation links never pollute descriptions.
+- Masked card numbers with `#` prefix (e.g. `ending #4525`) now correctly stripped.
+- Order ID / Order # patterns added to PII removal regex.
+- Amount formatting: trailing `.00` dropped, thousands separator added (e.g. `10,000`).
+
+### 🔒 Security / Data Integrity
+- Database schema bumped to version 8; migration automatically adds Payments and Deposit categories to existing installs — no reinstall required.
+- Backup version bumped 3 → 4; v1/v2/v3 backups continue to import correctly.
+
+---
+
 ## [1.13.0] - 2026-02-22
 
 ### ✨ New Features

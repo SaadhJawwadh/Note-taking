@@ -1,35 +1,39 @@
-# Note Book v1.13.0 — Custom Categories, Smarter SMS & Better Previews
+# Note Book v1.14.0 — Smarter SMS Descriptions, Payments & Deposit Categories
 
 ## What's New
 
-### Custom Category Management
-Create your own transaction categories with a name, colour, and keywords. Edit the keywords for any built-in category too. Accessible from **Settings → Financial Manager → Manage Categories**. Changes take effect immediately for new SMS imports and manual transactions.
+### Smarter, Human-Readable SMS Descriptions
+Descriptions extracted from bank SMS are now structured and meaningful rather than raw scraped text:
 
-### Transaction Search
-A search bar now appears above the category filter chips on the Finances screen. Filter transactions by description or category name in real time with a clear button to reset.
+| SMS | Description | Category |
+|-----|-------------|----------|
+| COMBANK CRM Deposit for Rs. 10,000 | `Deposit of 10,000 in Commercial Bank` | **Deposit** |
+| Purchase at PickMe Food for LKR 1,559 | `Purchase at PickMe Food 1,559` | **Food & Dining** |
+| KOKO instalment of 7895.98 for Simplytek order | `KOKO Instalment Simplytek` | **Payments** |
+| ATM withdrawal of LKR 15,000 | `ATM Withdrawal 15,000` | **Other** |
 
-### Date-Range Net Balance Card
-The hero card at the top of the Finances screen now shows the **net balance for your selected date range** rather than an all-time figure, giving you an instant read on the period you're viewing.
+Amounts are formatted with thousands separators (`10,000`) and trailing `.00` is dropped.
 
-### Long-Press to Delete Transactions
-Long-press any transaction card to get a confirmation dialog for deletion — no need to open the editor.
+### Cancelled + Reversed Orders Now Auto-Delete
+Previously, SMS messages that were **both cancelled and reversed** (e.g. a PickMe Food order that was cancelled and refunded) were silently ignored — leaving the original charge in your transaction list. They now correctly delete the original expense.
 
-### Note Checklist Preview
-Quill-format notes with checklist items now show **☐ unchecked** and **☑ checked** symbols in home-screen note cards, so you can see your list state at a glance.
+### New Built-in Categories: Payments & Deposit
+- **Payments** — covers instalments, EMI, KOKO, loan repayments, credit card payments
+- **Deposit** — covers bank deposits, salary credits, cash deposits, income
 
-### Better Note Preview (4-line limit)
-Note card previews are now capped at **4 lines** of content for both rich text and markdown notes, replacing the old 100-character limit.
+Both categories are **added automatically** to existing installs via a database migration. No reinstall required.
 
-## SMS Import Improvements
+### Custom Categories Now Included in Backup
+Backups are now **version 4**. Custom categories (names, keywords, colours) are fully exported and restored. Restoring a v4 backup reloads the category cache instantly so the changes take effect without restarting the app.
 
-| Behaviour | Before | After |
-|-----------|--------|-------|
-| Promotional messages | Imported | Skipped |
-| Cancelled / declined transactions | Imported | Skipped |
-| Reversal / refund SMS | Imported as income | Original expense deleted |
-| Salary / fund transfer credit | Missed | Imported as income |
-| "PickMe Food" vs "PickMe" | Both → Transport | Correctly Food vs Transport |
-| "Uber Eats" vs "Uber" | Both → Transport | Correctly Food vs Transport |
+Previous backups (v1, v2, v3) continue to import without any issues.
+
+### Expanded Provider Support
+Added **KOKO**, **Nations Trust Bank (NTB)**, **LOLC**, **FriMi**, and **PayApp** to the recognised SMS sender whitelist.
+
+## Upgrade Guide
+
+**From any previous version**: Simply install the new APK. The database migrates automatically — no data is lost and no reinstall is needed.
 
 ---
 
