@@ -394,41 +394,65 @@ class DatabaseHelper {
 
   Future<void> renameTag(String oldTag, String newTag) async {
     final db = await instance.database;
-    // Update notes
+    // Read all notes before entering the transaction (avoids re-entrant DB calls).
     final notes = await readAllNotes();
-    for (var note in notes) {
-      if (note.tags.contains(oldTag)) {
-        final updatedTags = List<String>.from(note.tags);
-        final index = updatedTags.indexOf(oldTag);
-        if (index != -1) {
-          updatedTags[index] = newTag;
-          updatedTags.sort();
-          await updateNote(note.copyWith(tags: updatedTags));
+    await db.transaction((txn) async {
+      // Update every note that carries the old tag.
+      for (var note in notes) {
+        if (note.tags.contains(oldTag)) {
+          final updatedTags = List<String>.from(note.tags);
+          final index = updatedTags.indexOf(oldTag);
+          if (index != -1) {
+            updatedTags[index] = newTag;
+            updatedTags.sort();
+            await txn.update(
+              'notes',
+              {'tags': jsonEncode(updatedTags)},
+              where: 'id = ?',
+              whereArgs: [note.id],
+            );
+          }
         }
       }
-    }
-
-    // Update color entry if exists
-    final color = await getTagColor(oldTag);
-    if (color != null) {
-      await setTagColor(newTag, color);
-      await db.delete('tags', where: 'name = ?', whereArgs: [oldTag]);
-    }
+      // Migrate the color entry atomically.
+      final colorRows = await txn.query(
+        'tags',
+        columns: ['color'],
+        where: 'name = ?',
+        whereArgs: [oldTag],
+      );
+      if (colorRows.isNotEmpty) {
+        final color = colorRows.first['color'] as int;
+        await txn.insert(
+          'tags',
+          {'name': newTag, 'color': color},
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+        await txn.delete('tags', where: 'name = ?', whereArgs: [oldTag]);
+      }
+    });
   }
 
   Future<void> deleteTag(String tag) async {
     final db = await instance.database;
-    // Update notes
+    // Read all notes before entering the transaction (avoids re-entrant DB calls).
     final notes = await readAllNotes();
-    for (var note in notes) {
-      if (note.tags.contains(tag)) {
-        final updatedTags = List<String>.from(note.tags);
-        updatedTags.remove(tag);
-        await updateNote(note.copyWith(tags: updatedTags));
+    await db.transaction((txn) async {
+      // Remove the tag from every note that carries it.
+      for (var note in notes) {
+        if (note.tags.contains(tag)) {
+          final updatedTags = List<String>.from(note.tags)..remove(tag);
+          await txn.update(
+            'notes',
+            {'tags': jsonEncode(updatedTags)},
+            where: 'id = ?',
+            whereArgs: [note.id],
+          );
+        }
       }
-    }
-    // Delete color entry
-    await db.delete('tags', where: 'name = ?', whereArgs: [tag]);
+      // Delete the color entry.
+      await txn.delete('tags', where: 'name = ?', whereArgs: [tag]);
+    });
   }
 
   // Transaction CRUD

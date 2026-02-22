@@ -41,10 +41,12 @@ class TransactionModel {
   static TransactionModel fromJson(Map<String, Object?> json) =>
       TransactionModel(
         id: json[TransactionFields.id] as int?,
-        amount: json[TransactionFields.amount] as double,
-        description: json[TransactionFields.description] as String,
-        date: DateTime.parse(json[TransactionFields.date] as String),
-        isExpense: (json[TransactionFields.isExpense] as int) == 1,
+        amount: (json[TransactionFields.amount] as num? ?? 0).toDouble(),
+        description: (json[TransactionFields.description] as String?) ?? '',
+        date: DateTime.tryParse(
+                (json[TransactionFields.date] as String?) ?? '') ??
+            DateTime.now(),
+        isExpense: ((json[TransactionFields.isExpense] as int?) ?? 1) == 1,
         category: (json[TransactionFields.category] as String?) ??
             TransactionCategory.other,
         smsId: json[TransactionFields.smsId] as String?,

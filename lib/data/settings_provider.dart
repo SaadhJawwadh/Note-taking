@@ -119,24 +119,33 @@ class SettingsProvider extends ChangeNotifier {
       };
 
   Future<void> restoreFromBackupMap(Map<String, dynamic> map) async {
-    if (map.containsKey('textSize')) {
-      await setTextSize((map['textSize'] as num).toDouble());
-    }
-    if (map.containsKey('themeMode')) {
-      final modeIndex = (map['themeMode'] as int?) ?? 0;
-      await setThemeMode(_getThemeModeFromInt(modeIndex));
-    }
-    if (map.containsKey('fontFamily')) {
-      await setFontFamily(map['fontFamily'] as String);
-    }
-    if (map.containsKey('isGridView')) {
-      await setIsGridView(map['isGridView'] as bool);
-    }
-    if (map.containsKey('showFinancialManager')) {
-      await setShowFinancialManager(map['showFinancialManager'] as bool);
-    }
-    if (map.containsKey('currency')) {
-      await setCurrency(map['currency'] as String);
+    try {
+      if (map.containsKey('textSize')) {
+        final size = (map['textSize'] as num?)?.toDouble() ?? 16.0;
+        if (size >= 8.0 && size <= 32.0) await setTextSize(size);
+      }
+      if (map.containsKey('themeMode')) {
+        final idx = (map['themeMode'] as num?)?.toInt() ?? 0;
+        await setThemeMode(_getThemeModeFromInt(idx));
+      }
+      if (map.containsKey('fontFamily')) {
+        final font = map['fontFamily'];
+        if (font is String && font.isNotEmpty) await setFontFamily(font);
+      }
+      if (map.containsKey('isGridView')) {
+        final grid = map['isGridView'];
+        if (grid is bool) await setIsGridView(grid);
+      }
+      if (map.containsKey('showFinancialManager')) {
+        final show = map['showFinancialManager'];
+        if (show is bool) await setShowFinancialManager(show);
+      }
+      if (map.containsKey('currency')) {
+        final curr = map['currency'];
+        if (curr is String && curr.isNotEmpty) await setCurrency(curr);
+      }
+    } catch (_) {
+      // Silently ignore malformed backup settings; existing values are kept.
     }
   }
 }

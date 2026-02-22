@@ -57,9 +57,9 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
     }
 
     final amount = double.tryParse(amountText);
-    if (amount == null) {
+    if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid amount')),
+        const SnackBar(content: Text('Amount must be greater than zero')),
       );
       return;
     }

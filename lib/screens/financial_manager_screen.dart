@@ -436,7 +436,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                       getTooltipItem: (group, groupIndex, rod, rodIndex) {
                         final type = rodIndex == 0 ? 'Income' : 'Expense';
                         return BarTooltipItem(
-                          '$type\n$currency ${rod.toY.toStringAsFixed(2)}',
+                          '$type\n$currency ${rod.toY.toStringAsFixed(0)}',
                           (tt.labelSmall ?? const TextStyle()).copyWith(
                             color: rodIndex == 0 ? cs.tertiary : cs.error,
                             fontWeight: FontWeight.bold,
