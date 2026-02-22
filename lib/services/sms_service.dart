@@ -228,6 +228,10 @@ class SmsService {
   /// KOKO, FriMi, etc.). Populated at startup and after whitelist edits.
   static var _userSenders = <String>{};
 
+  /// Public constant so callers outside this file can check the sentinel value
+  /// without coupling to an internal string literal.
+  static const String reversalSentinel = _reversalSentinel;
+
   /// Reloads the user-managed sender whitelist from the database.
   /// Call at app startup and after any whitelist add/delete.
   static Future<void> reloadUserSenders() async {
@@ -260,9 +264,12 @@ class SmsService {
     // Skip only if cancelled and NOT also a reversal
     if (isCancellation && !isReversal) return null;
 
-    // Must be from a known sender OR contain a direction keyword
+    // Must be from a known sender OR contain a direction keyword.
+    // Bank senders: exact case-sensitive substring (carrier IDs are stable).
+    // User whitelist: case-insensitive so "koko" matches "KOKO" and vice versa.
+    final senderLower = sender.toLowerCase();
     final isKnownSender = _bankSenders.any((s) => sender.contains(s)) ||
-        _userSenders.any((s) => sender.contains(s));
+        _userSenders.any((s) => senderLower.contains(s.toLowerCase()));
     final isDebit = _debitRegex.hasMatch(body);
     final isCredit = _creditRegex.hasMatch(body);
     final hasInstalment = _instalmentRegex.hasMatch(body);

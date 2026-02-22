@@ -628,14 +628,16 @@ class SettingsScreen extends StatelessWidget {
       final tags = await db.query('tags');
       final transactions = await db.query('transactions');
       final categoryDefinitions = await db.query('category_definitions');
+      final smsWhitelist = await db.query('sms_whitelist');
 
       final backupData = {
         'notes': notes,
         'tags': tags,
         'transactions': transactions,
         'categoryDefinitions': categoryDefinitions,
+        'smsWhitelist': smsWhitelist,
         'settings': settings.toBackupMap(),
-        'version': 4,
+        'version': 5,
         'exportedAt': DateTime.now().toIso8601String(),
       };
 
@@ -702,6 +704,8 @@ class SettingsScreen extends StatelessWidget {
           final m = c as Map;
           return (m['isBuiltIn'] as int? ?? 1) == 0;
         }).length ?? 0;
+        final previewWhitelist =
+            (data['smsWhitelist'] as List?)?.length ?? 0;
         final previewVersion = data['version'] ?? 1;
 
         if (!context.mounted) return;
@@ -720,6 +724,8 @@ class SettingsScreen extends StatelessWidget {
                 Text('$previewTransactions transactions'),
                 if (previewCategories > 0)
                   Text('$previewCategories custom categories'),
+                if (previewWhitelist > 0)
+                  Text('$previewWhitelist SMS whitelist sender(s)'),
                 const SizedBox(height: 12),
                 Text(
                   'Existing notes and tags with the same ID will be overwritten. '
@@ -835,6 +841,21 @@ class SettingsScreen extends StatelessWidget {
           await TransactionCategory.reload();
         }
 
+        // Restore SMS sender whitelist (v5+ backups only)
+        if (data.containsKey('smsWhitelist')) {
+          final List<dynamic> whitelist = data['smsWhitelist'] as List;
+          final db3 = await DatabaseHelper.instance.database;
+          for (final row in whitelist) {
+            final map = Map<String, Object?>.from(row as Map);
+            await db3.insert(
+              'sms_whitelist',
+              map,
+              conflictAlgorithm: ConflictAlgorithm.ignore,
+            );
+          }
+          await SmsService.reloadUserSenders();
+        }
+
         // Restore settings if present (v3+ backups)
         if (context.mounted &&
             data.containsKey('settings') &&
@@ -849,11 +870,14 @@ class SettingsScreen extends StatelessWidget {
         final categoryMsg = previewCategories > 0
             ? ', $previewCategories categories'
             : '';
+        final whitelistMsg = previewWhitelist > 0
+            ? ', $previewWhitelist whitelist senders'
+            : '';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               'Restored: $notesCount notes, $tagsCount tags, '
-              '$transactionsCount transactions$categoryMsg',
+              '$transactionsCount transactions$categoryMsg$whitelistMsg',
             ),
             behavior: SnackBarBehavior.floating,
           ),

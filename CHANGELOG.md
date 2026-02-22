@@ -2,6 +2,19 @@
 
 All notable changes to Note Book are documented here.
 
+## [1.14.2] - 2026-02-23
+
+### 🛠 Improvements
+- **Backup v5 — SMS Whitelist included**: The full backup now exports and restores the SMS sender whitelist alongside notes, transactions, categories, and settings. Previous backups (v1–v4) continue to import without issues.
+- **Case-insensitive whitelist matching**: Sender IDs stored in the whitelist are matched case-insensitively against incoming SMS senders (`KOKO` matches `koko` and vice versa).
+- **Reversal sentinel as a typed constant**: `SmsService.reversalSentinel` is now a public static constant; the hardcoded `'__reversal__'` string literal in `financial_manager_screen.dart` has been replaced.
+- **README updated**: Features list now reflects v1.14.x additions — 10 categories, SMS Sender Whitelist, due-reminder filtering, and v5 backup.
+
+### 🔒 Security / Data Integrity
+- Backup version bumped 4 → 5; v1/v2/v3/v4 backups continue to import correctly.
+
+---
+
 ## [1.14.1] - 2026-02-23
 
 ### ✨ New Features
