@@ -2,6 +2,25 @@
 
 All notable changes to Note Book are documented here.
 
+## [1.13.0] - 2026-02-22
+
+### ✨ New Features
+- **Custom Category Management**: Create your own transaction categories with a custom name, colour, and keywords. Built-in categories' keywords are also fully editable. Accessible from **Settings → Financial Manager → Manage Categories**.
+- **Transaction Search**: Search bar on the Finances screen filters transactions by description or category in real time.
+- **Date-Range Net Card**: The hero card at the top of the Finances screen now shows the net balance for the *currently selected date range* instead of an all-time figure.
+- **Long-Press to Delete Transactions**: Long-press any transaction card for a confirmation dialog to delete it.
+- **Note Checklist Preview**: Quill checklist items now appear with ☐ / ☑ symbols in home-screen note cards.
+- **Note Preview Line Truncation**: Note card previews now show up to 4 lines of content (rich text and markdown) instead of a fixed character count.
+
+### 🛠 SMS Import Improvements
+- **Promotional SMS Skipped**: Messages matching promo/offer patterns (and lacking a real debit/credit keyword) are ignored.
+- **Cancellation SMS Skipped**: Messages containing "cancelled", "transaction failed", "declined", etc. are not imported.
+- **Reversal / Refund Handling**: Reversal SMS messages automatically delete the original expense within a 7-day window; no duplicate credit entry is created.
+- **Better Income Detection**: Expanded credit keyword matching to catch salary, fund transfer, payment received, incoming transfer, and cash deposit.
+- **Compound Keyword Priority**: Multi-word keywords are tested before single-word ones. "PickMe Food" → Food & Dining; "PickMe Ride" → Transport; "Uber Eats" → Food & Dining; "Uber" → Transport.
+
+---
+
 ## [1.12.1] - 2026-02-22
 
 ### 🛠 Improvements & Fixes

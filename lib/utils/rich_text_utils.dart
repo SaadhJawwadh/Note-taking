@@ -58,27 +58,77 @@ class RichTextUtils {
   }
 
   /// Extracts plain text from either Delta JSON or Markdown content for card preview.
-  static String contentToPlainText(String content, {int maxChars = 100}) {
+  ///
+  /// For Quill Delta content, detects checklist items from `list` attributes on
+  /// newline ops and prepends ☑ / ☐ accordingly. Returns at most [maxLines] lines,
+  /// appending "..." when content is truncated.
+  static String contentToPlainText(String content, {int maxLines = 4}) {
     if (content.isEmpty) return '';
     if (content.startsWith('[')) {
       try {
         final ops = jsonDecode(content) as List;
         final delta = Delta.fromJson(ops);
-        final plain = delta
-            .toList()
-            .where((op) => op.isInsert && op.data is String)
-            .map((op) => op.data as String)
-            .join()
-            .replaceAll('\n', ' ')
-            .trim();
-        return plain.length > maxChars ? '${plain.substring(0, maxChars)}...' : plain;
+
+        final allLines = <String>[];
+        final lineBuffer = StringBuffer();
+
+        for (final op in delta.toList()) {
+          if (!op.isInsert) continue;
+          if (op.data is! String) continue; // skip embedded blots (images etc.)
+
+          final text = op.data as String;
+          var start = 0;
+
+          for (int i = 0; i < text.length; i++) {
+            if (text[i] == '\n') {
+              lineBuffer.write(text.substring(start, i));
+              var line = lineBuffer.toString();
+
+              // List prefix only for single-newline ops carrying list attributes
+              if (text == '\n') {
+                final listAttr = op.attributes?['list'] as String?;
+                if (listAttr == 'checked') {
+                  line = '☑ $line';
+                } else if (listAttr == 'unchecked') {
+                  line = '☐ $line';
+                }
+              }
+
+              allLines.add(line);
+              lineBuffer.clear();
+              start = i + 1;
+            }
+          }
+
+          // Remainder after the last newline (or the whole text if no newline)
+          if (start < text.length) {
+            lineBuffer.write(text.substring(start));
+          }
+        }
+
+        // Include any unterminated final line
+        if (lineBuffer.isNotEmpty) allLines.add(lineBuffer.toString());
+
+        // Remove trailing blank lines
+        while (allLines.isNotEmpty && allLines.last.trim().isEmpty) {
+          allLines.removeLast();
+        }
+
+        if (allLines.isEmpty) return '';
+        final taken = allLines.take(maxLines).join('\n');
+        return allLines.length > maxLines ? '$taken...' : taken;
       } catch (_) {}
     }
     // Legacy Markdown: strip common syntax characters for a rough plain-text preview
     final stripped = content
         .replaceAll(RegExp(r'[#*_`>\[\]!]'), '')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
-    return stripped.length > maxChars ? '${stripped.substring(0, maxChars)}...' : stripped;
+        .trim()
+        .split('\n')
+        .where((l) => l.trim().isNotEmpty)
+        .toList();
+
+    if (stripped.isEmpty) return '';
+    final taken = stripped.take(maxLines).join('\n');
+    return stripped.length > maxLines ? '$taken...' : taken;
   }
 }

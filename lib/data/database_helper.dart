@@ -2,6 +2,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'note_model.dart';
 import 'transaction_model.dart';
+import 'category_definition.dart';
 import 'dart:convert';
 
 class DatabaseHelper {
@@ -22,7 +23,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 6,
+      version: 7,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -67,6 +68,15 @@ class DatabaseHelper {
     await db.execute(
       'CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_smsId ON transactions(smsId) WHERE smsId IS NOT NULL',
     );
+    await db.execute('''
+      CREATE TABLE category_definitions (
+        name TEXT PRIMARY KEY,
+        color INTEGER NOT NULL,
+        keywords TEXT NOT NULL DEFAULT '[]',
+        isBuiltIn INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+    await _seedBuiltInCategories(db);
   }
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -106,6 +116,96 @@ class DatabaseHelper {
       );
       await db.execute(
         'CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_smsId ON transactions(smsId) WHERE smsId IS NOT NULL',
+      );
+    }
+    if (oldVersion < 7) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS category_definitions (
+          name TEXT PRIMARY KEY,
+          color INTEGER NOT NULL,
+          keywords TEXT NOT NULL DEFAULT '[]',
+          isBuiltIn INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+      await _seedBuiltInCategories(db);
+    }
+  }
+
+  /// Seeds the built-in categories into [db]. Uses ConflictAlgorithm.ignore so
+  /// running it more than once (e.g. multiple upgrades) is safe.
+  static Future<void> _seedBuiltInCategories(Database db) async {
+    final builtIns = [
+      (
+        'Transport',
+        0xFF2196F3,
+        [
+          'pickme ride', 'pickme express', 'pickme', 'uber', 'ola', 'taxi',
+          'cab', 'bus', 'train', 'tuk', 'fuel', 'petrol', 'toll', 'parking',
+          'grab',
+        ]
+      ),
+      (
+        'Food & Dining',
+        0xFFFF9800,
+        [
+          'pickme food', 'pickme eats', 'uber eats', 'food delivery', 'kfc',
+          'mcd', 'mcdonalds', 'pizza', 'dominos', 'domino', 'café', 'cafe',
+          'coffee', 'restaurant', 'groceries', 'grocery', 'food', 'keells',
+          'arpico', 'cargills', 'burger', 'noodles', 'rice', 'bakery',
+          'pastry', 'icecream', 'sushi', 'biryani', 'kottu', 'supermarket',
+        ]
+      ),
+      (
+        'Subscriptions',
+        0xFF9C27B0,
+        [
+          'amazon prime', 'netflix', 'spotify', 'youtube', 'apple', 'adobe',
+          'canva', 'hulu', 'disney', 'microsoft', 'office365', 'chatgpt',
+          'openai', 'icloud', 'subscription',
+        ]
+      ),
+      (
+        'Shopping',
+        0xFFE91E63,
+        [
+          'online shopping', 'amazon', 'daraz', 'kapruka', 'ebay',
+          'aliexpress', 'fabric', 'clothing',
+        ]
+      ),
+      (
+        'Utilities',
+        0xFF607D8B,
+        [
+          'mobile bill', 'phone bill', 'electricity', 'ceb', 'leco', 'water',
+          'dialog', 'airtel', 'mobitel', 'slt', 'broadband', 'internet',
+          'utility',
+        ]
+      ),
+      (
+        'Health',
+        0xFF4CAF50,
+        [
+          'lab test', 'pharmacy', 'hospital', 'doctor', 'medical', 'nawaloka',
+          'asiri', 'channel', 'clinic', 'diagnostic', 'medicine',
+        ]
+      ),
+      (
+        'Entertainment',
+        0xFFFF5722,
+        ['cinema', 'cinemax', 'scope', 'movie', 'concert', 'event', 'ticket']
+      ),
+      ('Other', 0xFF9E9E9E, <String>[]),
+    ];
+    for (final (name, color, kws) in builtIns) {
+      await db.insert(
+        'category_definitions',
+        {
+          'name': name,
+          'color': color,
+          'keywords': jsonEncode(kws),
+          'isBuiltIn': 1,
+        },
+        conflictAlgorithm: ConflictAlgorithm.ignore,
       );
     }
   }
@@ -399,6 +499,32 @@ class DatabaseHelper {
     );
   }
 
+  /// Returns the most recent SMS-imported expense matching [amount] that was
+  /// recorded within [windowDays] days before [date]. Used to locate the
+  /// original transaction that a reversal/refund SMS refers to.
+  /// Only SMS-imported transactions (smsId IS NOT NULL) are candidates —
+  /// manually-entered transactions are never auto-deleted by a reversal.
+  Future<TransactionModel?> findReversalTarget(
+    double amount,
+    DateTime date, {
+    int windowDays = 7,
+  }) async {
+    final db = await instance.database;
+    final windowStart =
+        date.subtract(Duration(days: windowDays)).toIso8601String();
+    final windowEnd = date.toIso8601String();
+    final rows = await db.query(
+      'transactions',
+      where:
+          'amount = ? AND isExpense = 1 AND smsId IS NOT NULL AND date >= ? AND date <= ?',
+      whereArgs: [amount, windowStart, windowEnd],
+      orderBy: '${TransactionFields.date} DESC',
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return TransactionModel.fromJson(rows.first);
+  }
+
   /// Returns true if a transaction with the given [smsId] already exists.
   Future<bool> smsExists(String smsId) async {
     final db = await instance.database;
@@ -430,10 +556,8 @@ class DatabaseHelper {
       ''', [periodStart.toIso8601String(), periodEnd.toIso8601String()]);
       result.add({
         'month': periodStart,
-        'totalIncome':
-            (rows.first['totalIncome'] as num?)?.toDouble() ?? 0.0,
-        'totalExpense':
-            (rows.first['totalExpense'] as num?)?.toDouble() ?? 0.0,
+        'totalIncome': (rows.first['totalIncome'] as num?)?.toDouble() ?? 0.0,
+        'totalExpense': (rows.first['totalExpense'] as num?)?.toDouble() ?? 0.0,
       });
     }
     return result;
@@ -449,10 +573,43 @@ class DatabaseHelper {
       FROM transactions
     ''');
     return {
-      'totalIncome':
-          (rows.first['totalIncome'] as num?)?.toDouble() ?? 0.0,
-      'totalExpense':
-          (rows.first['totalExpense'] as num?)?.toDouble() ?? 0.0,
+      'totalIncome': (rows.first['totalIncome'] as num?)?.toDouble() ?? 0.0,
+      'totalExpense': (rows.first['totalExpense'] as num?)?.toDouble() ?? 0.0,
     };
+  }
+
+  // ── Category Definition CRUD ──────────────────────────────────────────────
+
+  /// Returns all category definitions: built-in categories first, then custom
+  /// categories sorted alphabetically.
+  Future<List<CategoryDefinition>> getAllCategoryDefinitions() async {
+    final db = await instance.database;
+    final rows = await db.query(
+      'category_definitions',
+      orderBy: 'isBuiltIn DESC, name ASC',
+    );
+    return rows.map(CategoryDefinition.fromMap).toList();
+  }
+
+  /// Inserts or replaces a category definition. Use this for both creating
+  /// new custom categories and editing keywords on existing ones.
+  Future<void> upsertCategoryDefinition(CategoryDefinition def) async {
+    final db = await instance.database;
+    await db.insert(
+      'category_definitions',
+      def.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Deletes a custom (non-built-in) category definition by name.
+  /// Built-in categories are silently ignored.
+  Future<void> deleteCategoryDefinition(String name) async {
+    final db = await instance.database;
+    await db.delete(
+      'category_definitions',
+      where: 'name = ? AND isBuiltIn = 0',
+      whereArgs: [name],
+    );
   }
 }

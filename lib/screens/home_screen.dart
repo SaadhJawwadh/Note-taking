@@ -710,7 +710,7 @@ class NoteCard extends StatelessWidget {
                     note.content.startsWith('[')
                         ? Text(
                             RichTextUtils.contentToPlainText(note.content,
-                                maxChars: 100),
+                                maxLines: 4),
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
@@ -718,9 +718,14 @@ class NoteCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           )
                         : MarkdownBody(
-                            data: note.content.length > 100
-                                ? '${note.content.substring(0, 100)}...'
-                                : note.content,
+                            data: () {
+                              final lines = note.content.split('\n');
+                              final preview =
+                                  lines.take(4).join('\n');
+                              return lines.length > 4
+                                  ? '$preview...'
+                                  : preview;
+                            }(),
                             checkboxBuilder: (value) {
                               return Icon(
                                 value
@@ -904,8 +909,7 @@ extension _Actions on _HomeScreenState {
                     context: context,
                     builder: (context) => AlertDialog(
                       title: const Text('Move to Trash?'),
-                      content:
-                          const Text('This note will be moved to Trash.'),
+                      content: const Text('This note will be moved to Trash.'),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context, false),

@@ -132,8 +132,8 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.delete_outline,
-                      color: Colors.redAccent),
+                  leading:
+                      const Icon(Icons.delete_outline, color: Colors.redAccent),
                   title: const Text('Move to Trash',
                       style: TextStyle(color: Colors.redAccent)),
                   onTap: () async {
@@ -253,8 +253,8 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
                                     verticalOffset: 50.0,
                                     child: FadeInAnimation(
                                       child: Padding(
-                                        padding: const EdgeInsets.only(
-                                            bottom: 12.0),
+                                        padding:
+                                            const EdgeInsets.only(bottom: 12.0),
                                         child: OpenContainer<bool>(
                                           transitionType:
                                               ContainerTransitionType.fade,

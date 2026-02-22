@@ -30,11 +30,10 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
   List<String> _activeCategories = [];
 
   List<Map<String, dynamic>> _monthlyData = [];
-  Map<String, double> _allTimeSummary = {
-    'totalIncome': 0.0,
-    'totalExpense': 0.0,
-  };
   bool _isDashboardLoading = true;
+
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -43,8 +42,24 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     SmsService.startForegroundListener((t) async {
       if (!mounted) return;
       final inserted = await DatabaseHelper.instance.createSmsTransaction(t);
-      if (inserted != null && mounted) await _refreshTransactions();
+      if (inserted == null) return;
+      // Handle reversal sentinel — delete original expense if found
+      if (inserted.category == '__reversal__') {
+        final target = await DatabaseHelper.instance
+            .findReversalTarget(inserted.amount, inserted.date);
+        if (target != null) {
+          await DatabaseHelper.instance.deleteTransaction(target.id!);
+        }
+        await DatabaseHelper.instance.deleteTransaction(inserted.id!);
+      }
+      if (mounted) await _refreshTransactions();
     });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _refreshTransactions() async {
@@ -55,17 +70,18 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     final allTransactions = await DatabaseHelper.instance.readAllTransactions();
 
     final dateFiltered = allTransactions.where((t) {
+      // Filter out any orphan reversal sentinels
+      if (t.category == '__reversal__') return false;
       final tDate = DateTime(t.date.year, t.date.month, t.date.day);
       final start = DateTime(_selectedRange.start.year,
           _selectedRange.start.month, _selectedRange.start.day);
       final end = DateTime(_selectedRange.end.year, _selectedRange.end.month,
           _selectedRange.end.day);
-
       return tDate.isAfter(start.subtract(const Duration(days: 1))) &&
           tDate.isBefore(end.add(const Duration(days: 1)));
     }).toList();
 
-    // Compute active categories before applying category filter
+    // Compute active categories before applying category/search filters
     final activeCategories =
         dateFiltered.map((t) => t.category).toSet().toList()..sort();
 
@@ -76,9 +92,17 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
             .where((t) => t.category == _selectedCategory)
             .toList();
 
+    // Apply search filter
+    if (_searchQuery.isNotEmpty) {
+      _transactions = _transactions
+          .where((t) =>
+              t.description.toLowerCase().contains(_searchQuery) ||
+              t.category.toLowerCase().contains(_searchQuery))
+          .toList();
+    }
+
     _monthlyData =
         await DatabaseHelper.instance.getMonthlyTransactionSummary(6);
-    _allTimeSummary = await DatabaseHelper.instance.getAllTimeSummary();
 
     setState(() {
       _activeCategories = activeCategories;
@@ -146,16 +170,17 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     );
   }
 
-  Widget _buildNetBalanceCard(
-      ColorScheme cs, TextTheme tt, String currency) {
-    if (_isDashboardLoading) {
+  /// Net balance card for the currently selected date range.
+  Widget _buildRangeNetCard(ColorScheme cs, TextTheme tt, String currency) {
+    if (_isLoading) {
       return const SizedBox(
           height: 80, child: Center(child: CircularProgressIndicator()));
     }
-    final totalIncome = _allTimeSummary['totalIncome'] ?? 0.0;
-    final totalExpense = _allTimeSummary['totalExpense'] ?? 0.0;
-    final net = totalIncome - totalExpense;
+    final net = _totalIncome - _totalExpense;
     final isPositive = net >= 0;
+    final rangeLabel = _selectedRange.duration.inDays == 0
+        ? DateFormat.MMMMEEEEd().format(_selectedRange.start)
+        : '${DateFormat.MMMd().format(_selectedRange.start)} – ${DateFormat.MMMd().format(_selectedRange.end)}';
 
     return Card(
       elevation: 0,
@@ -168,7 +193,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'All-Time Net Balance',
+                  rangeLabel,
                   style: tt.labelMedium?.copyWith(
                     color: isPositive
                         ? cs.onPrimaryContainer
@@ -209,8 +234,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     );
   }
 
-  Widget _buildBarChartCard(
-      ColorScheme cs, TextTheme tt, String currency) {
+  Widget _buildBarChartCard(ColorScheme cs, TextTheme tt, String currency) {
     if (_isDashboardLoading || _monthlyData.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -346,7 +370,6 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     String currency,
     bool negativeIsGood,
   ) {
-    // For expenses: increase is bad (error); for income/net: increase is good (primary)
     final isIncrease = pctChange >= 0;
     final Color changeColor;
     if (negativeIsGood) {
@@ -517,12 +540,11 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
             ),
           ),
 
-          // ── Net balance hero card ──────────────────────────────────────
+          // ── Date-range net balance hero card ──────────────────────────
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child:
-                  _buildNetBalanceCard(colorScheme, textTheme, currency),
+              child: _buildRangeNetCard(colorScheme, textTheme, currency),
             ),
           ),
 
@@ -530,8 +552,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child:
-                  _buildBarChartCard(colorScheme, textTheme, currency),
+              child: _buildBarChartCard(colorScheme, textTheme, currency),
             ),
           ),
 
@@ -544,7 +565,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
             ),
           ),
 
-          // ── Date-range filtered summary card ─────────────────────────
+          // ── Date-range income/expense summary card ────────────────────
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -553,47 +574,68 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                 color: colorScheme.surfaceContainerHigh,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: Column(
+                  child: Row(
                     children: [
-                      Text(
-                        _selectedRange.duration.inDays == 0
-                            ? DateFormat.MMMMEEEEd()
-                                .format(_selectedRange.start)
-                            : '${DateFormat.MMMd().format(_selectedRange.start)} - ${DateFormat.MMMd().format(_selectedRange.end)}',
-                        style: textTheme.titleMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
+                      Expanded(
+                        child: _SummaryItem(
+                          label: 'Expenses',
+                          amount: _totalExpense,
+                          currency: currency,
+                          color: colorScheme.error,
+                          icon: Icons.arrow_outward,
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _SummaryItem(
-                              label: 'Expenses',
-                              amount: _totalExpense,
-                              currency: currency,
-                              color: colorScheme.error,
-                              icon: Icons.arrow_outward,
-                            ),
-                          ),
-                          Container(
-                            width: 1,
-                            height: 48,
-                            color: colorScheme.outlineVariant,
-                          ),
-                          Expanded(
-                            child: _SummaryItem(
-                              label: 'Income',
-                              amount: _totalIncome,
-                              currency: currency,
-                              color: colorScheme.primary,
-                              icon: Icons.south_west,
-                            ),
-                          ),
-                        ],
+                      Container(
+                        width: 1,
+                        height: 48,
+                        color: colorScheme.outlineVariant,
+                      ),
+                      Expanded(
+                        child: _SummaryItem(
+                          label: 'Income',
+                          amount: _totalIncome,
+                          currency: currency,
+                          color: colorScheme.primary,
+                          icon: Icons.south_west,
+                        ),
                       ),
                     ],
                   ),
+                ),
+              ),
+            ),
+          ),
+
+          // ── Search bar ────────────────────────────────────────────────
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (value) {
+                  setState(() => _searchQuery = value.trim().toLowerCase());
+                  _refreshTransactions();
+                },
+                decoration: InputDecoration(
+                  hintText: 'Search transactions…',
+                  prefixIcon: const Icon(Icons.search_outlined),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                            _refreshTransactions();
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: colorScheme.surfaceContainerHigh,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(28),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
                 ),
               ),
             ),
@@ -676,15 +718,27 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      _selectedCategory != null
-                          ? 'No $_selectedCategory transactions\nin this period'
-                          : 'No transactions in this period',
+                      _searchQuery.isNotEmpty
+                          ? 'No results for "$_searchQuery"'
+                          : _selectedCategory != null
+                              ? 'No $_selectedCategory transactions\nin this period'
+                              : 'No transactions in this period',
                       textAlign: TextAlign.center,
                       style: textTheme.bodyLarge?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
                     ),
-                    if (_selectedCategory != null) ...[
+                    if (_searchQuery.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                          _refreshTransactions();
+                        },
+                        child: const Text('Clear search'),
+                      ),
+                    ] else if (_selectedCategory != null) ...[
                       const SizedBox(height: 12),
                       TextButton(
                         onPressed: () {
@@ -723,6 +777,38 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                           color: colorScheme.surfaceContainer,
                           child: InkWell(
                             onTap: openContainer,
+                            onLongPress: () async {
+                              final confirm = await showDialog<bool>(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  title: const Text('Delete Transaction'),
+                                  content: Text(
+                                      'Delete "${transaction.description}"?'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(ctx, false),
+                                      child: const Text('Cancel'),
+                                    ),
+                                    FilledButton(
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: colorScheme.error,
+                                        foregroundColor:
+                                            colorScheme.onError,
+                                      ),
+                                      onPressed: () =>
+                                          Navigator.pop(ctx, true),
+                                      child: const Text('Delete'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (confirm == true && mounted) {
+                                await DatabaseHelper.instance
+                                    .deleteTransaction(transaction.id!);
+                                await _refreshTransactions();
+                              }
+                            },
                             borderRadius: BorderRadius.circular(12),
                             child: Padding(
                               padding: const EdgeInsets.all(16.0),

@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
-        <include domain="sharedpref" path="."/>
-        <include domain="database" path="notes.db"/>
+        <include domain="sharedpref" path="." />
+        <include domain="database" path="notes.db" />
     </cloud-backup>
     <device-transfer>
-        <include domain="sharedpref" path="."/>
-        <include domain="database" path="notes.db"/>
+        <include domain="sharedpref" path="." />
+        <include domain="database" path="notes.db" />
     </device-transfer>
 </data-extraction-rules>

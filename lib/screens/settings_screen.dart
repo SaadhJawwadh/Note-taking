@@ -16,6 +16,7 @@ import '../data/settings_provider.dart';
 
 import 'manage_tags_screen.dart';
 import 'filtered_notes_screen.dart';
+import 'category_management_screen.dart';
 import '../utils/app_constants.dart';
 
 import 'package:file_picker/file_picker.dart';
@@ -121,13 +122,36 @@ class SettingsScreen extends StatelessWidget {
                                 context,
                                 icon: Icons.sms_outlined,
                                 title: 'Import SMS Transactions',
-                                subtitle: 'Fetch bank transactions from messages',
+                                subtitle:
+                                    'Fetch bank transactions from messages',
                                 showArrow: true,
                                 onTap: () => showModalBottomSheet(
                                   context: context,
                                   isScrollControlled: true,
                                   backgroundColor: Colors.transparent,
                                   builder: (_) => const _SmsImportSheet(),
+                                ),
+                              ),
+                              Divider(
+                                height: 1,
+                                indent: 56,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .outlineVariant,
+                              ),
+                              _buildListTile(
+                                context,
+                                icon: Icons.category_outlined,
+                                title: 'Manage Categories',
+                                subtitle:
+                                    'Customise keywords and create new categories',
+                                showArrow: true,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const CategoryManagementScreen(),
+                                  ),
                                 ),
                               ),
                             ]
@@ -731,8 +755,7 @@ class SettingsScreen extends StatelessWidget {
             columns: ['amount', 'description', 'date', 'isExpense'],
           );
           final existingFingerprints = existingRows.map((row) {
-            final dateKey =
-                (row['date'] as String).substring(0, 10);
+            final dateKey = (row['date'] as String).substring(0, 10);
             return '${row['amount']}|${row['description']}|$dateKey|${row['isExpense']}';
           }).toSet();
 
@@ -740,8 +763,7 @@ class SettingsScreen extends StatelessWidget {
             final map = Map<String, Object?>.from(row);
             map.remove('_id');
 
-            final dateKey =
-                (map['date'] as String? ?? '').substring(0, 10);
+            final dateKey = (map['date'] as String? ?? '').substring(0, 10);
             final fingerprint =
                 '${map['amount']}|${map['description']}|$dateKey|${map['isExpense']}';
 
@@ -921,7 +943,8 @@ class _SmsImportSheetState extends State<_SmsImportSheet> {
           ),
           const SizedBox(height: 20),
           Text('Import SMS Transactions',
-              style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
+              style:
+                  textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
           Text(
             'Choose how far back to scan your SMS inbox for bank transactions.',
@@ -936,7 +959,8 @@ class _SmsImportSheetState extends State<_SmsImportSheet> {
               title: Text(label),
               value: i,
               groupValue: _selectedIndex,
-              onChanged: _loading ? null : (v) => setState(() => _selectedIndex = v!),
+              onChanged:
+                  _loading ? null : (v) => setState(() => _selectedIndex = v!),
               contentPadding: EdgeInsets.zero,
               dense: true,
             );

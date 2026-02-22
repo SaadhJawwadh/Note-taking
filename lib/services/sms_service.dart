@@ -37,7 +37,27 @@ final _debitRegex = RegExp(
   caseSensitive: false,
 );
 final _creditRegex = RegExp(
-  r'\b(credit(?:ed)?|received|deposited|transferred\s+to\s+you|credited\s+to)\b',
+  r'\b(credit(?:ed)?|received|deposited|transferred\s+to\s+you|credited\s+to|'
+  r'salary|payment\s+received|fund\s+transfer|incoming\s+transfer|cash\s+deposit)\b',
+  caseSensitive: false,
+);
+
+// ── Cancellation — skip entirely ─────────────────────────────────────────────
+final _cancellationRegex = RegExp(
+  r'\b(cancelled|cancellation|transaction\s+failed|declined|not\s+processed|unsuccessful)\b',
+  caseSensitive: false,
+);
+
+// ── Reversal — credit-back that should remove the original expense ────────────
+final _reversalRegex = RegExp(
+  r'\b(reversal|reversed|refund(?:ed)?|chargeback|credit\s+back|amount\s+refunded|money\s+returned)\b',
+  caseSensitive: false,
+);
+
+// ── Promotional messages — skip when no real direction keyword present ────────
+final _promotionalRegex = RegExp(
+  r'\b(offer|win|congratulations|promo|discount|exclusive|earn\s+\d+\s+points|'
+  r'cashback\s+up\s+to|get\s+\d+%|voucher|reward\s+point)\b',
   caseSensitive: false,
 );
 
@@ -47,13 +67,25 @@ final _boilerplateRegex = RegExp(
   caseSensitive: false,
 );
 
+/// Sentinel value stored in the category field to flag a reversal transaction.
+/// Handled immediately after DB insert; never left permanently in the DB.
+const _reversalSentinel = '__reversal__';
+
 // ── Top-level background handler — MUST be top-level (not a class member) ────
-// Registered via onBackgroundMessage in startForegroundListener.
 @pragma('vm:entry-point')
 Future<void> onBackgroundSms(SmsMessage message) async {
   final transaction = SmsService.parseMessage(message);
   if (transaction == null || transaction.smsId == null) return;
-  await DatabaseHelper.instance.createSmsTransaction(transaction);
+  final inserted = await DatabaseHelper.instance.createSmsTransaction(transaction);
+  if (inserted == null) return;
+  if (inserted.category == _reversalSentinel) {
+    final target = await DatabaseHelper.instance
+        .findReversalTarget(inserted.amount, inserted.date);
+    if (target != null) {
+      await DatabaseHelper.instance.deleteTransaction(target.id!);
+    }
+    await DatabaseHelper.instance.deleteTransaction(inserted.id!);
+  }
 }
 
 class SmsService {
@@ -78,10 +110,17 @@ class SmsService {
 
     if (body.trim().isEmpty) return null;
 
-    // Must be from a known bank sender OR contain debit/credit keywords
+    // Skip cancelled or failed transactions
+    if (_cancellationRegex.hasMatch(body)) return null;
+
+    // Must be from a known bank sender OR contain a direction keyword
     final isKnownBank = _bankSenders.any((s) => sender.contains(s));
-    final hasDirection = _debitRegex.hasMatch(body) || _creditRegex.hasMatch(body);
-    if (!isKnownBank && !hasDirection) return null;
+    final isDebit = _debitRegex.hasMatch(body);
+    final isCredit = _creditRegex.hasMatch(body);
+    if (!isKnownBank && !isDebit && !isCredit) return null;
+
+    // Skip promotional messages that have no actual debit/credit direction
+    if (_promotionalRegex.hasMatch(body) && !isDebit && !isCredit) return null;
 
     // Extract amount (required for a valid transaction)
     final amountMatch = _amountRegex.firstMatch(body);
@@ -90,25 +129,27 @@ class SmsService {
     final amount = double.tryParse(amountStr);
     if (amount == null || amount <= 0) return null;
 
-    // Determine direction — debit takes priority; skip if ambiguous
-    final isDebit = _debitRegex.hasMatch(body);
-    final isCredit = _creditRegex.hasMatch(body);
+    // Skip if no direction keyword at all
     if (!isDebit && !isCredit) return null;
+
+    // Detect reversal: credit-back with reversal language and no debit keyword
+    final isReversal = _reversalRegex.hasMatch(body) && isCredit && !isDebit;
+
+    // Debit takes priority when both are present
     final isExpense = isDebit;
 
     // Build a clean description
     final description = _buildDescription(body, sender);
-    final category = TransactionCategory.fromDescription('$description $body');
+    final category = isReversal
+        ? _reversalSentinel
+        : TransactionCategory.fromDescriptionCached('$description $body');
 
     // SMS timestamp or now
     final date = message.date != null
         ? DateTime.fromMillisecondsSinceEpoch(message.date!)
         : DateTime.now();
 
-    // Stable unique ID for deduplication.
-    // Prefer the message's own integer ID; fall back to a hash of the body
-    // so two different messages can't share the same smsId even if the
-    // Android SMS store returns null metadata.
+    // Stable unique ID for deduplication
     final msgId = message.id;
     final msgDate = message.date ?? DateTime.now().millisecondsSinceEpoch;
     final smsId =
@@ -125,15 +166,10 @@ class SmsService {
   }
 
   static String _buildDescription(String body, String sender) {
-    // Strip amount patterns first
     var desc = body.replaceAll(_amountRegex, '');
-    // Strip boilerplate keywords
     desc = desc.replaceAll(_boilerplateRegex, ' ');
-    // Collapse whitespace and trim
     desc = desc.replaceAll(RegExp(r'\s{2,}'), ' ').trim();
-    // Remove leading/trailing punctuation
     desc = desc.replaceAll(RegExp(r'^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$'), '').trim();
-
     if (desc.length > 60) desc = desc.substring(0, 60).trim();
     if (desc.isEmpty) desc = sender;
     return desc;
@@ -141,14 +177,19 @@ class SmsService {
 
   // ── Sync inbox ───────────────────────────────────────────────────────────
   /// Reads SMS received on or after [from], parses bank messages, and creates
-  /// new transactions. Returns the count of newly imported transactions.
-  /// Duplicate smsIds are silently ignored via createSmsTransaction.
+  /// new transactions. Returns the count of net new transactions imported.
+  /// Reversals delete the matching original expense and are not counted.
   static Future<int> syncInboxFrom(DateTime from) async {
     if (!await hasPermission()) return 0;
 
     final fromMs = from.millisecondsSinceEpoch;
     final messages = await _telephony.getInboxSms(
-      columns: [SmsColumn.ID, SmsColumn.ADDRESS, SmsColumn.BODY, SmsColumn.DATE],
+      columns: [
+        SmsColumn.ID,
+        SmsColumn.ADDRESS,
+        SmsColumn.BODY,
+        SmsColumn.DATE,
+      ],
       filter: SmsFilter.where(SmsColumn.DATE).greaterThanOrEqualTo('$fromMs'),
       sortOrder: [OrderBy(SmsColumn.DATE, sort: Sort.ASC)],
     );
@@ -158,14 +199,24 @@ class SmsService {
       final t = parseMessage(msg);
       if (t == null || t.smsId == null) continue;
       final inserted = await DatabaseHelper.instance.createSmsTransaction(t);
-      if (inserted != null) imported++;
+      if (inserted == null) continue; // duplicate smsId
+      if (inserted.category == _reversalSentinel) {
+        final target = await DatabaseHelper.instance
+            .findReversalTarget(inserted.amount, inserted.date);
+        if (target != null) {
+          await DatabaseHelper.instance.deleteTransaction(target.id!);
+        }
+        await DatabaseHelper.instance.deleteTransaction(inserted.id!);
+      } else {
+        imported++;
+      }
     }
     return imported;
   }
 
   // ── Real-time foreground listener ────────────────────────────────────────
   /// Starts listening for incoming SMS while the app is in the foreground.
-  /// Calls [onNew] for each bank transaction detected.
+  /// [onNew] is called for each successfully inserted (non-reversal) transaction.
   static void startForegroundListener(void Function(TransactionModel) onNew) {
     _telephony.listenIncomingSms(
       onNewMessage: (SmsMessage message) {

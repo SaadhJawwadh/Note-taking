@@ -247,14 +247,14 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
             // Category Picker
             Text(
               'Category',
-              style: textTheme.labelLarge?.copyWith(
-                  color: colorScheme.onSurfaceVariant),
+              style: textTheme.labelLarge
+                  ?.copyWith(color: colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: TransactionCategory.all.map((cat) {
+              children: TransactionCategory.allNames.map((cat) {
                 final catColor = TransactionCategory.colorFor(cat);
                 final selected = _category == cat;
                 return FilterChip(
@@ -265,8 +265,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                   checkmarkColor: catColor,
                   labelStyle: TextStyle(
                     color: selected ? catColor : colorScheme.onSurfaceVariant,
-                    fontWeight:
-                        selected ? FontWeight.w600 : FontWeight.normal,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
                   ),
                   side: BorderSide(
                     color: selected ? catColor : colorScheme.outline,

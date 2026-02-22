@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'category_definition.dart';
+import 'database_helper.dart';
 
 class TransactionCategory {
   TransactionCategory._();
@@ -23,8 +25,12 @@ class TransactionCategory {
     other,
   ];
 
+  // Compound keywords (multi-word) are listed first within their category for
+  // documentation clarity; fromDescription handles them via a two-pass algorithm
+  // that checks all compound keywords globally before single keywords.
   static const Map<String, List<String>> keywords = {
     transport: [
+      'pickme ride', 'pickme express', // compound — before single 'pickme'
       'pickme',
       'uber',
       'ola',
@@ -40,6 +46,7 @@ class TransactionCategory {
       'grab',
     ],
     food: [
+      'pickme food', 'pickme eats', 'uber eats', 'food delivery', // compound
       'kfc',
       'mcd',
       'mcdonalds',
@@ -68,11 +75,11 @@ class TransactionCategory {
       'supermarket',
     ],
     subscriptions: [
+      'amazon prime', // compound — before 'amazon' in shopping
       'netflix',
       'spotify',
       'youtube',
       'apple',
-      'amazon prime',
       'adobe',
       'canva',
       'hulu',
@@ -85,16 +92,17 @@ class TransactionCategory {
       'subscription',
     ],
     shopping: [
+      'online shopping', // compound
       'amazon',
       'daraz',
       'kapruka',
       'ebay',
       'aliexpress',
-      'online shopping',
       'fabric',
       'clothing',
     ],
     utilities: [
+      'mobile bill', 'phone bill', // compound
       'electricity',
       'ceb',
       'leco',
@@ -103,13 +111,12 @@ class TransactionCategory {
       'airtel',
       'mobitel',
       'slt',
-      'mobile bill',
       'broadband',
       'internet',
       'utility',
-      'phone bill',
     ],
     health: [
+      'lab test', // compound
       'pharmacy',
       'hospital',
       'doctor',
@@ -119,7 +126,6 @@ class TransactionCategory {
       'channel',
       'clinic',
       'diagnostic',
-      'lab test',
       'medicine',
     ],
     entertainment: [
@@ -144,18 +150,95 @@ class TransactionCategory {
     other: Color(0xFF9E9E9E),
   };
 
-  /// Returns the category for a given description string using keyword matching.
+  /// Returns the category for a description using two-pass keyword matching
+  /// against the static built-in keyword map.
+  ///
+  /// **Pass 1** — all compound (multi-word) keywords across every category,
+  /// checked in descending length order. This ensures "pickme food" matches
+  /// Food & Dining before "pickme" can match Transport.
+  ///
+  /// **Pass 2** — single keywords in category definition order.
   static String fromDescription(String description) {
     final desc = description.toLowerCase();
+
+    // Pass 1: compound keywords, longest first, across all categories
+    final compounds = <(String, String)>[];
     for (final entry in keywords.entries) {
       for (final kw in entry.value) {
-        if (desc.contains(kw)) return entry.key;
+        if (kw.contains(' ')) compounds.add((kw, entry.key));
       }
     }
+    compounds.sort((a, b) => b.$1.length.compareTo(a.$1.length));
+    for (final (kw, cat) in compounds) {
+      if (desc.contains(kw)) return cat;
+    }
+
+    // Pass 2: single keywords in category order
+    for (final entry in keywords.entries) {
+      for (final kw in entry.value) {
+        if (!kw.contains(' ') && desc.contains(kw)) return entry.key;
+      }
+    }
+
     return other;
   }
 
-  /// Returns the badge color for a category, falling back to grey.
-  static Color colorFor(String category) =>
-      badgeColors[category] ?? const Color(0xFF9E9E9E);
+  // ── Dynamic category cache ────────────────────────────────────────────────
+
+  /// In-memory cache of all category definitions loaded from the database.
+  /// Empty until [reload] is called.
+  static List<CategoryDefinition> _cache = [];
+
+  /// Loads all category definitions from the database into memory.
+  /// Call once at startup and after any category save/delete.
+  static Future<void> reload() async {
+    _cache = await DatabaseHelper.instance.getAllCategoryDefinitions();
+  }
+
+  /// Returns the names of all known categories.
+  /// Falls back to the static [all] list if the cache has not been loaded yet.
+  static List<String> get allNames => _cache.isNotEmpty
+      ? _cache.map((c) => c.name).toList()
+      : all;
+
+  /// Returns the category for a description using the DB-loaded cache with
+  /// two-pass matching. Falls back to [fromDescription] if the cache is empty
+  /// (e.g. in background isolates).
+  static String fromDescriptionCached(String description) {
+    if (_cache.isEmpty) return fromDescription(description);
+
+    final desc = description.toLowerCase();
+
+    // Pass 1: compound keywords (contain space), all categories, longest first
+    final compounds = <(String, String)>[];
+    for (final cat in _cache) {
+      for (final kw in cat.keywords) {
+        if (kw.contains(' ')) compounds.add((kw, cat.name));
+      }
+    }
+    compounds.sort((a, b) => b.$1.length.compareTo(a.$1.length));
+    for (final (kw, name) in compounds) {
+      if (desc.contains(kw)) return name;
+    }
+
+    // Pass 2: single keywords in cache order
+    for (final cat in _cache) {
+      for (final kw in cat.keywords) {
+        if (!kw.contains(' ') && desc.contains(kw)) return cat.name;
+      }
+    }
+
+    return other;
+  }
+
+  /// Returns the badge color for a category.
+  /// Checks the DB cache first, then the static [badgeColors] map, then grey.
+  static Color colorFor(String category) {
+    if (_cache.isNotEmpty) {
+      for (final def in _cache) {
+        if (def.name == category) return Color(def.colorValue);
+      }
+    }
+    return badgeColors[category] ?? const Color(0xFF9E9E9E);
+  }
 }
