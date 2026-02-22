@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../data/settings_provider.dart';
 import '../data/database_helper.dart';
 import '../data/transaction_model.dart';
+import '../data/transaction_category.dart';
 import '../widgets/calculator_dialog.dart';
 
 class TransactionEditorScreen extends StatefulWidget {
@@ -22,6 +23,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
   DateTime _selectedDate = DateTime.now();
   bool _isExpense = true;
   bool _isLoading = false;
+  String _category = TransactionCategory.other;
 
   @override
   void initState() {
@@ -32,6 +34,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
       _descriptionController.text = widget.transaction!.description;
       _selectedDate = widget.transaction!.date;
       _isExpense = widget.transaction!.isExpense;
+      _category = widget.transaction!.category;
     }
   }
 
@@ -69,6 +72,8 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
       description: description,
       date: _selectedDate,
       isExpense: _isExpense,
+      category: _category,
+      smsId: widget.transaction?.smsId,
     );
 
     if (widget.transaction == null) {
@@ -147,6 +152,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final settings = Provider.of<SettingsProvider>(context);
     final currency = settings.currency;
 
@@ -235,6 +241,41 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                 ),
                 prefixIcon: const Icon(Icons.description_outlined),
               ),
+            ),
+            const SizedBox(height: 24),
+
+            // Category Picker
+            Text(
+              'Category',
+              style: textTheme.labelLarge?.copyWith(
+                  color: colorScheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: TransactionCategory.all.map((cat) {
+                final catColor = TransactionCategory.colorFor(cat);
+                final selected = _category == cat;
+                return FilterChip(
+                  label: Text(cat),
+                  selected: selected,
+                  onSelected: (_) => setState(() => _category = cat),
+                  selectedColor: catColor.withValues(alpha: 0.2),
+                  checkmarkColor: catColor,
+                  labelStyle: TextStyle(
+                    color: selected ? catColor : colorScheme.onSurfaceVariant,
+                    fontWeight:
+                        selected ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                  side: BorderSide(
+                    color: selected ? catColor : colorScheme.outline,
+                    width: selected ? 1.5 : 0.5,
+                  ),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                );
+              }).toList(),
             ),
             const SizedBox(height: 24),
 

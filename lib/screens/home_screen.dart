@@ -14,6 +14,7 @@ import '../data/settings_provider.dart';
 import 'package:animations/animations.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'financial_manager_screen.dart';
+import '../utils/rich_text_utils.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -706,64 +707,74 @@ class NoteCard extends StatelessWidget {
                   ],
                   const SizedBox(height: 8),
                   if (note.content.isNotEmpty)
-                    MarkdownBody(
-                      data: note.content.length > 100
-                          ? '${note.content.substring(0, 100)}...'
-                          : note.content,
-                      checkboxBuilder: (value) {
-                        return Icon(
-                          value
-                              ? Icons.check_box
-                              : Icons.check_box_outline_blank,
-                          size: 16,
-                          color: theme.colorScheme.primary,
-                        );
-                      },
-                      styleSheet: MarkdownStyleSheet(
-                        p: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                        checkbox: TextStyle(
-                          color: theme.colorScheme.primary,
-                        ),
-                        blockquote: TextStyle(
-                          color: theme.colorScheme.onSurface
-                              .withValues(alpha: 0.9),
-                          fontStyle: FontStyle.italic,
-                        ),
-                        blockquoteDecoration: BoxDecoration(
-                          color: isSystemDefault
-                              ? theme.colorScheme.surfaceContainerHighest
-                              : ColorScheme.fromSeed(
-                                      seedColor: Color(note.color),
-                                      brightness: theme.brightness)
-                                  .surfaceContainerHighest
-                                  .withValues(alpha: 0.5),
-                          border: Border(
-                            left: BorderSide(
-                              color: isSystemDefault
-                                  ? theme.colorScheme.primary
-                                  : ColorScheme.fromSeed(
-                                          seedColor: Color(note.color),
-                                          brightness: theme.brightness)
-                                      .primary,
-                              width: 3,
+                    note.content.startsWith('[')
+                        ? Text(
+                            RichTextUtils.contentToPlainText(note.content,
+                                maxChars: 100),
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            maxLines: 4,
+                            overflow: TextOverflow.ellipsis,
+                          )
+                        : MarkdownBody(
+                            data: note.content.length > 100
+                                ? '${note.content.substring(0, 100)}...'
+                                : note.content,
+                            checkboxBuilder: (value) {
+                              return Icon(
+                                value
+                                    ? Icons.check_box
+                                    : Icons.check_box_outline_blank,
+                                size: 16,
+                                color: theme.colorScheme.primary,
+                              );
+                            },
+                            styleSheet: MarkdownStyleSheet(
+                              p: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                              checkbox: TextStyle(
+                                color: theme.colorScheme.primary,
+                              ),
+                              blockquote: TextStyle(
+                                color: theme.colorScheme.onSurface
+                                    .withValues(alpha: 0.9),
+                                fontStyle: FontStyle.italic,
+                              ),
+                              blockquoteDecoration: BoxDecoration(
+                                color: isSystemDefault
+                                    ? theme.colorScheme.surfaceContainerHighest
+                                    : ColorScheme.fromSeed(
+                                            seedColor: Color(note.color),
+                                            brightness: theme.brightness)
+                                        .surfaceContainerHighest
+                                        .withValues(alpha: 0.5),
+                                border: Border(
+                                  left: BorderSide(
+                                    color: isSystemDefault
+                                        ? theme.colorScheme.primary
+                                        : ColorScheme.fromSeed(
+                                                seedColor: Color(note.color),
+                                                brightness: theme.brightness)
+                                            .primary,
+                                    width: 3,
+                                  ),
+                                ),
+                                borderRadius: const BorderRadius.only(
+                                  topRight: Radius.circular(8),
+                                  bottomRight: Radius.circular(8),
+                                ),
+                              ),
+                              blockquotePadding: const EdgeInsets.all(8),
+                              code: TextStyle(
+                                backgroundColor: theme.colorScheme.onSurface
+                                    .withValues(alpha: 0.1),
+                                fontFamily: 'monospace',
+                                color: theme.colorScheme.onSurface,
+                              ),
                             ),
                           ),
-                          borderRadius: const BorderRadius.only(
-                            topRight: Radius.circular(8),
-                            bottomRight: Radius.circular(8),
-                          ),
-                        ),
-                        blockquotePadding: const EdgeInsets.all(8),
-                        code: TextStyle(
-                          backgroundColor: theme.colorScheme.onSurface
-                              .withValues(alpha: 0.1),
-                          fontFamily: 'monospace',
-                          color: theme.colorScheme.onSurface,
-                        ),
-                      ),
-                    ),
                   if (note.tags.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     Wrap(
@@ -892,9 +903,9 @@ extension _Actions on _HomeScreenState {
                   final confirmed = await showDialog<bool>(
                     context: context,
                     builder: (context) => AlertDialog(
-                      title: const Text('Delete Note?'),
+                      title: const Text('Move to Trash?'),
                       content:
-                          const Text('This note will be permanently deleted.'),
+                          const Text('This note will be moved to Trash.'),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context, false),
@@ -904,14 +915,14 @@ extension _Actions on _HomeScreenState {
                           style: FilledButton.styleFrom(
                               backgroundColor: Colors.red),
                           onPressed: () => Navigator.pop(context, true),
-                          child: const Text('Delete'),
+                          child: const Text('Move to Trash'),
                         ),
                       ],
                     ),
                   );
 
                   if (confirmed == true) {
-                    await DatabaseHelper.instance.deleteNote(note.id);
+                    await DatabaseHelper.instance.softDeleteNote(note.id);
                     await refreshNotes();
                   }
                 },

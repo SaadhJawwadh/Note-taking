@@ -7,7 +7,7 @@ import '../data/settings_provider.dart';
 import 'package:animations/animations.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
-import 'home_screen.dart'; // For NoteCard and actions (if reuse needed, for now we might duplicate actions or move them)
+import 'home_screen.dart';
 import 'note_editor_screen.dart';
 
 enum FilterType { archived, trash }
@@ -34,25 +34,23 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
 
   Future refreshNotes() async {
     setState(() => isLoading = true);
-    final allNotes = await DatabaseHelper.instance.readAllNotes();
     final colors = await DatabaseHelper.instance.getAllTagColors();
     _tagColors = colors;
 
     if (widget.filterType == FilterType.archived) {
+      final allNotes = await DatabaseHelper.instance.readAllNotes();
       displayedNotes =
           allNotes.where((n) => n.isArchived && n.deletedAt == null).toList();
     } else {
-      displayedNotes = []; // Trash is disabled
+      displayedNotes = await DatabaseHelper.instance.readTrashedNotes();
     }
 
-    // Sort by modification date desc by default
     displayedNotes.sort((a, b) => b.dateModified.compareTo(a.dateModified));
 
     setState(() => isLoading = false);
   }
 
   void _showNoteActions(Note note) {
-    // Re-implementing action logic similar to HomeScreen but specific to context
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
@@ -76,51 +74,76 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              // Only archived logic remains as trash list is not interactive
-              ListTile(
-                leading: Icon(Icons.archive_outlined, color: onSurfaceVariant),
-                title: Text('Unarchive', style: TextStyle(color: onSurface)),
-                onTap: () async {
-                  await DatabaseHelper.instance.archiveNote(note.id, false);
-                  if (!context.mounted) return;
-                  Navigator.pop(context);
-                  await refreshNotes();
-                },
-              ),
-              ListTile(
-                leading:
-                    const Icon(Icons.delete_outline, color: Colors.redAccent),
-                title: const Text('Delete',
-                    style: TextStyle(color: Colors.redAccent)),
-                onTap: () async {
-                  Navigator.pop(context); // Close bottom sheet
-                  final confirmed = await showDialog<bool>(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Delete Note?'),
-                      content:
-                          const Text('This note will be permanently deleted.'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, false),
-                          child: const Text('Cancel'),
-                        ),
-                        FilledButton(
-                          style: FilledButton.styleFrom(
-                              backgroundColor: Colors.red),
-                          onPressed: () => Navigator.pop(context, true),
-                          child: const Text('Delete'),
-                        ),
-                      ],
-                    ),
-                  );
-
-                  if (confirmed == true) {
-                    await DatabaseHelper.instance.deleteNote(note.id);
+              if (widget.filterType == FilterType.trash) ...[
+                ListTile(
+                  leading:
+                      Icon(Icons.restore_outlined, color: onSurfaceVariant),
+                  title: Text('Restore', style: TextStyle(color: onSurface)),
+                  onTap: () async {
+                    await DatabaseHelper.instance.restoreNote(note.id);
+                    if (!context.mounted) return;
+                    Navigator.pop(context);
                     await refreshNotes();
-                  }
-                },
-              ),
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.delete_forever_outlined,
+                      color: Colors.redAccent),
+                  title: const Text('Delete Permanently',
+                      style: TextStyle(color: Colors.redAccent)),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Delete Permanently?'),
+                        content: const Text(
+                            'This note will be removed forever and cannot be recovered.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel'),
+                          ),
+                          FilledButton(
+                            style: FilledButton.styleFrom(
+                                backgroundColor: Colors.red),
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('Delete Forever'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirmed == true) {
+                      await DatabaseHelper.instance.deleteNote(note.id);
+                      await refreshNotes();
+                    }
+                  },
+                ),
+              ] else ...[
+                ListTile(
+                  leading:
+                      Icon(Icons.archive_outlined, color: onSurfaceVariant),
+                  title: Text('Unarchive', style: TextStyle(color: onSurface)),
+                  onTap: () async {
+                    await DatabaseHelper.instance.archiveNote(note.id, false);
+                    if (!context.mounted) return;
+                    Navigator.pop(context);
+                    await refreshNotes();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.delete_outline,
+                      color: Colors.redAccent),
+                  title: const Text('Move to Trash',
+                      style: TextStyle(color: Colors.redAccent)),
+                  onTap: () async {
+                    await DatabaseHelper.instance.softDeleteNote(note.id);
+                    if (!context.mounted) return;
+                    Navigator.pop(context);
+                    await refreshNotes();
+                  },
+                ),
+              ],
               const SizedBox(height: 8),
             ],
           ),
@@ -142,146 +165,130 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
         ),
         body: isLoading
             ? const Center(child: CircularProgressIndicator())
-            : widget.filterType == FilterType.trash
+            : displayedNotes.isEmpty
                 ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32.0),
-                      child: Text(
-                        "Every mistake has a cost; Don't be sorry be better. Think before hitting delete next time",
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface,
-                              fontStyle: FontStyle.italic,
-                            ),
-                      ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          widget.filterType == FilterType.trash
+                              ? Icons.delete_outline
+                              : Icons.archive_outlined,
+                          size: 64,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant
+                              .withValues(alpha: 0.5),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No notes in $title',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyLarge
+                              ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant),
+                        ),
+                      ],
                     ),
                   )
-                : displayedNotes.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.archive_outlined,
-                              size: 64,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant
-                                  .withValues(alpha: 0.5),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No notes in $title',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyLarge
-                                  ?.copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurfaceVariant),
-                            ),
-                          ],
-                        ),
-                      )
-                    : Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: AnimationLimiter(
-                          child: settings.isGridView
-                              ? MasonryGridView.count(
-                                  crossAxisCount: 2,
-                                  mainAxisSpacing: 12,
-                                  crossAxisSpacing: 12,
-                                  itemCount: displayedNotes.length,
-                                  itemBuilder: (context, index) {
-                                    final note = displayedNotes[index];
-                                    return AnimationConfiguration.staggeredGrid(
-                                      position: index,
-                                      duration:
-                                          const Duration(milliseconds: 375),
-                                      columnCount: 2,
-                                      child: ScaleAnimation(
-                                        child: FadeInAnimation(
-                                          child: OpenContainer<bool>(
-                                            transitionType:
-                                                ContainerTransitionType.fade,
-                                            openBuilder: (context, _) =>
-                                                NoteEditorScreen(note: note),
-                                            closedElevation: 0,
-                                            closedColor: Colors.transparent,
-                                            closedShape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(20)),
-                                            onClosed: (returned) async {
-                                              if (returned == true) {
-                                                await refreshNotes();
-                                              }
-                                            },
-                                            closedBuilder:
-                                                (context, openContainer) {
-                                              return NoteCard(
-                                                note: note,
-                                                onTap: openContainer,
-                                                tagColors: _tagColors,
-                                                onLongPress: () =>
-                                                    _showNoteActions(note),
-                                              );
-                                            },
-                                          ),
+                : Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: AnimationLimiter(
+                      child: settings.isGridView
+                          ? MasonryGridView.count(
+                              crossAxisCount: 2,
+                              mainAxisSpacing: 12,
+                              crossAxisSpacing: 12,
+                              itemCount: displayedNotes.length,
+                              itemBuilder: (context, index) {
+                                final note = displayedNotes[index];
+                                return AnimationConfiguration.staggeredGrid(
+                                  position: index,
+                                  duration: const Duration(milliseconds: 375),
+                                  columnCount: 2,
+                                  child: ScaleAnimation(
+                                    child: FadeInAnimation(
+                                      child: OpenContainer<bool>(
+                                        transitionType:
+                                            ContainerTransitionType.fade,
+                                        openBuilder: (context, _) =>
+                                            NoteEditorScreen(note: note),
+                                        closedElevation: 0,
+                                        closedColor: Colors.transparent,
+                                        closedShape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(20)),
+                                        onClosed: (returned) async {
+                                          if (returned == true) {
+                                            await refreshNotes();
+                                          }
+                                        },
+                                        closedBuilder:
+                                            (context, openContainer) {
+                                          return NoteCard(
+                                            note: note,
+                                            onTap: openContainer,
+                                            tagColors: _tagColors,
+                                            onLongPress: () =>
+                                                _showNoteActions(note),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            )
+                          : ListView.builder(
+                              itemCount: displayedNotes.length,
+                              itemBuilder: (context, index) {
+                                final note = displayedNotes[index];
+                                return AnimationConfiguration.staggeredList(
+                                  position: index,
+                                  duration: const Duration(milliseconds: 375),
+                                  child: SlideAnimation(
+                                    verticalOffset: 50.0,
+                                    child: FadeInAnimation(
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(
+                                            bottom: 12.0),
+                                        child: OpenContainer<bool>(
+                                          transitionType:
+                                              ContainerTransitionType.fade,
+                                          openBuilder: (context, _) =>
+                                              NoteEditorScreen(note: note),
+                                          closedElevation: 0,
+                                          closedColor: Colors.transparent,
+                                          closedShape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(20)),
+                                          onClosed: (returned) async {
+                                            if (returned == true) {
+                                              await refreshNotes();
+                                            }
+                                          },
+                                          closedBuilder:
+                                              (context, openContainer) {
+                                            return NoteCard(
+                                              note: note,
+                                              onTap: openContainer,
+                                              tagColors: _tagColors,
+                                              onLongPress: () =>
+                                                  _showNoteActions(note),
+                                            );
+                                          },
                                         ),
                                       ),
-                                    );
-                                  },
-                                )
-                              : ListView.builder(
-                                  itemCount: displayedNotes.length,
-                                  itemBuilder: (context, index) {
-                                    final note = displayedNotes[index];
-                                    return AnimationConfiguration.staggeredList(
-                                      position: index,
-                                      duration:
-                                          const Duration(milliseconds: 375),
-                                      child: SlideAnimation(
-                                        verticalOffset: 50.0,
-                                        child: FadeInAnimation(
-                                          child: Padding(
-                                            padding: const EdgeInsets.only(
-                                                bottom: 12.0),
-                                            child: OpenContainer<bool>(
-                                              transitionType:
-                                                  ContainerTransitionType.fade,
-                                              openBuilder: (context, _) =>
-                                                  NoteEditorScreen(note: note),
-                                              closedElevation: 0,
-                                              closedColor: Colors.transparent,
-                                              closedShape:
-                                                  RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              20)),
-                                              onClosed: (returned) async {
-                                                if (returned == true) {
-                                                  await refreshNotes();
-                                                }
-                                              },
-                                              closedBuilder:
-                                                  (context, openContainer) {
-                                                return NoteCard(
-                                                  note: note,
-                                                  onTap: openContainer,
-                                                  tagColors: _tagColors,
-                                                  onLongPress: () =>
-                                                      _showNoteActions(note),
-                                                );
-                                              },
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                        ),
-                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ),
       );
     });
   }

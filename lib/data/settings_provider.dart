@@ -108,4 +108,35 @@ class SettingsProvider extends ChangeNotifier {
         return 0;
     }
   }
+
+  Map<String, dynamic> toBackupMap() => {
+        'textSize': _textSize,
+        'themeMode': _getIntFromThemeMode(_themeMode),
+        'fontFamily': _fontFamily,
+        'isGridView': _isGridView,
+        'showFinancialManager': _showFinancialManager,
+        'currency': _currency,
+      };
+
+  Future<void> restoreFromBackupMap(Map<String, dynamic> map) async {
+    if (map.containsKey('textSize')) {
+      await setTextSize((map['textSize'] as num).toDouble());
+    }
+    if (map.containsKey('themeMode')) {
+      final modeIndex = (map['themeMode'] as int?) ?? 0;
+      await setThemeMode(_getThemeModeFromInt(modeIndex));
+    }
+    if (map.containsKey('fontFamily')) {
+      await setFontFamily(map['fontFamily'] as String);
+    }
+    if (map.containsKey('isGridView')) {
+      await setIsGridView(map['isGridView'] as bool);
+    }
+    if (map.containsKey('showFinancialManager')) {
+      await setShowFinancialManager(map['showFinancialManager'] as bool);
+    }
+    if (map.containsKey('currency')) {
+      await setCurrency(map['currency'] as String);
+    }
+  }
 }

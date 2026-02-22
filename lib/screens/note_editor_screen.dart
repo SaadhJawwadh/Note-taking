@@ -48,7 +48,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
     // Convert Markdown to Delta for Quill
     final initialContent = widget.note?.content ?? '';
-    final delta = RichTextUtils.markdownToDelta(initialContent);
+    final delta = RichTextUtils.contentToDelta(initialContent);
     _quillController = QuillController(
       document: Document.fromDelta(delta),
       selection: const TextSelection.collapsed(offset: 0),
@@ -358,9 +358,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   Future saveNote() async {
     final title = _titleController.text.trim();
     final delta = _quillController.document.toDelta();
-    final content = RichTextUtils.deltaToMarkdown(delta);
-
-    final isEmpty = title.isEmpty && content.isEmpty && tags.isEmpty;
+    final content = RichTextUtils.deltaToJson(delta);
+    final plainText = _quillController.document.toPlainText().trim();
+    final isEmpty = title.isEmpty && plainText.isEmpty && tags.isEmpty;
     final exists = widget.note != null || isNoteSaved;
 
     if (isEmpty) {
@@ -396,8 +396,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Note?'),
-        content: const Text('This note will be permanently deleted.'),
+        title: const Text('Move to Trash?'),
+        content: const Text('This note will be moved to Trash.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -406,14 +406,14 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: const Text('Move to Trash'),
           ),
         ],
       ),
     );
 
     if (confirmed == true) {
-      await DatabaseHelper.instance.deleteNote(_noteId);
+      await DatabaseHelper.instance.softDeleteNote(_noteId);
       if (mounted) Navigator.pop(context, true);
     }
   }

@@ -1,9 +1,13 @@
+import 'transaction_category.dart';
+
 class TransactionModel {
   final int? id;
   final double amount;
   final String description;
   final DateTime date;
-  final bool isExpense; // true for expense, false for income (future proofing)
+  final bool isExpense;
+  final String category;
+  final String? smsId;
 
   TransactionModel({
     this.id,
@@ -11,6 +15,8 @@ class TransactionModel {
     required this.description,
     required this.date,
     this.isExpense = true,
+    this.category = TransactionCategory.other,
+    this.smsId,
   });
 
   TransactionModel copy({
@@ -19,6 +25,8 @@ class TransactionModel {
     String? description,
     DateTime? date,
     bool? isExpense,
+    String? category,
+    String? smsId,
   }) =>
       TransactionModel(
         id: id ?? this.id,
@@ -26,6 +34,8 @@ class TransactionModel {
         description: description ?? this.description,
         date: date ?? this.date,
         isExpense: isExpense ?? this.isExpense,
+        category: category ?? this.category,
+        smsId: smsId ?? this.smsId,
       );
 
   static TransactionModel fromJson(Map<String, Object?> json) =>
@@ -35,6 +45,9 @@ class TransactionModel {
         description: json[TransactionFields.description] as String,
         date: DateTime.parse(json[TransactionFields.date] as String),
         isExpense: (json[TransactionFields.isExpense] as int) == 1,
+        category: (json[TransactionFields.category] as String?) ??
+            TransactionCategory.other,
+        smsId: json[TransactionFields.smsId] as String?,
       );
 
   Map<String, Object?> toJson() => {
@@ -43,15 +56,27 @@ class TransactionModel {
         TransactionFields.description: description,
         TransactionFields.date: date.toIso8601String(),
         TransactionFields.isExpense: isExpense ? 1 : 0,
+        TransactionFields.category: category,
+        TransactionFields.smsId: smsId,
       };
 }
 
 class TransactionFields {
-  static final List<String> values = [id, amount, description, date, isExpense];
+  static final List<String> values = [
+    id,
+    amount,
+    description,
+    date,
+    isExpense,
+    category,
+    smsId,
+  ];
 
   static const String id = '_id';
   static const String amount = 'amount';
   static const String description = 'description';
   static const String date = 'date';
   static const String isExpense = 'isExpense';
+  static const String category = 'category';
+  static const String smsId = 'smsId';
 }

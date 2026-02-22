@@ -22,7 +22,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -59,9 +59,14 @@ class DatabaseHelper {
         amount REAL NOT NULL,
         description TEXT NOT NULL,
         date TEXT NOT NULL,
-        isExpense INTEGER NOT NULL
+        isExpense INTEGER NOT NULL,
+        category TEXT NOT NULL DEFAULT 'Other',
+        smsId TEXT
       )
     ''');
+    await db.execute(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_smsId ON transactions(smsId) WHERE smsId IS NOT NULL',
+    );
   }
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -91,6 +96,17 @@ class DatabaseHelper {
           isExpense INTEGER NOT NULL
         )
       ''');
+    }
+    if (oldVersion < 6) {
+      await db.execute(
+        "ALTER TABLE transactions ADD COLUMN category TEXT NOT NULL DEFAULT 'Other'",
+      );
+      await db.execute(
+        'ALTER TABLE transactions ADD COLUMN smsId TEXT',
+      );
+      await db.execute(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_smsId ON transactions(smsId) WHERE smsId IS NOT NULL',
+      );
     }
   }
 
@@ -185,6 +201,39 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [id],
     );
+  }
+
+  /// Moves a note to trash by setting deletedAt to now.
+  Future<int> softDeleteNote(String id) async {
+    final db = await instance.database;
+    return await db.update(
+      'notes',
+      {'deletedAt': DateTime.now().toIso8601String()},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Restores a trashed note by clearing deletedAt.
+  Future<int> restoreNote(String id) async {
+    final db = await instance.database;
+    return await db.update(
+      'notes',
+      {'deletedAt': null},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Returns all notes in trash (deletedAt IS NOT NULL).
+  Future<List<Note>> readTrashedNotes() async {
+    final db = await instance.database;
+    final result = await db.query(
+      'notes',
+      where: 'deletedAt IS NOT NULL',
+      orderBy: 'deletedAt DESC',
+    );
+    return result.map((json) => Note.fromMap(json)).toList();
   }
 
   Future<List<Note>> readNotesByCategory(String category) async {
@@ -341,5 +390,62 @@ class DatabaseHelper {
       where: '${TransactionFields.id} = ?',
       whereArgs: [id],
     );
+  }
+
+  /// Returns true if a transaction with the given [smsId] already exists.
+  Future<bool> smsExists(String smsId) async {
+    final db = await instance.database;
+    final result = await db.query(
+      'transactions',
+      columns: [TransactionFields.id],
+      where: '${TransactionFields.smsId} = ?',
+      whereArgs: [smsId],
+      limit: 1,
+    );
+    return result.isNotEmpty;
+  }
+
+  /// Returns income and expense totals for each of the last [months] calendar months.
+  Future<List<Map<String, dynamic>>> getMonthlyTransactionSummary(
+      int months) async {
+    final db = await instance.database;
+    final now = DateTime.now();
+    final result = <Map<String, dynamic>>[];
+    for (int i = months - 1; i >= 0; i--) {
+      final periodStart = DateTime(now.year, now.month - i, 1);
+      final periodEnd = DateTime(now.year, now.month - i + 1, 1);
+      final rows = await db.rawQuery('''
+        SELECT
+          SUM(CASE WHEN isExpense = 0 THEN amount ELSE 0.0 END) AS totalIncome,
+          SUM(CASE WHEN isExpense = 1 THEN amount ELSE 0.0 END) AS totalExpense
+        FROM transactions
+        WHERE date >= ? AND date < ?
+      ''', [periodStart.toIso8601String(), periodEnd.toIso8601String()]);
+      result.add({
+        'month': periodStart,
+        'totalIncome':
+            (rows.first['totalIncome'] as num?)?.toDouble() ?? 0.0,
+        'totalExpense':
+            (rows.first['totalExpense'] as num?)?.toDouble() ?? 0.0,
+      });
+    }
+    return result;
+  }
+
+  /// Returns all-time total income and expense.
+  Future<Map<String, double>> getAllTimeSummary() async {
+    final db = await instance.database;
+    final rows = await db.rawQuery('''
+      SELECT
+        SUM(CASE WHEN isExpense = 0 THEN amount ELSE 0.0 END) AS totalIncome,
+        SUM(CASE WHEN isExpense = 1 THEN amount ELSE 0.0 END) AS totalExpense
+      FROM transactions
+    ''');
+    return {
+      'totalIncome':
+          (rows.first['totalIncome'] as num?)?.toDouble() ?? 0.0,
+      'totalExpense':
+          (rows.first['totalExpense'] as num?)?.toDouble() ?? 0.0,
+    };
   }
 }
