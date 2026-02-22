@@ -211,7 +211,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
-                color: _isExpense ? colorScheme.error : colorScheme.primary,
+                color: _isExpense ? colorScheme.error : colorScheme.tertiary,
               ),
               decoration: InputDecoration(
                 prefixText: '$currency ',

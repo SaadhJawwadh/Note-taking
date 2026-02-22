@@ -184,7 +184,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
 
     return Card(
       elevation: 0,
-      color: isPositive ? cs.primaryContainer : cs.errorContainer,
+      color: isPositive ? cs.tertiaryContainer : cs.errorContainer,
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Row(
@@ -196,7 +196,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                   rangeLabel,
                   style: tt.labelMedium?.copyWith(
                     color: isPositive
-                        ? cs.onPrimaryContainer
+                        ? cs.onTertiaryContainer
                         : cs.onErrorContainer,
                   ),
                 ),
@@ -205,7 +205,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                   '${isPositive ? '+' : '-'} $currency ${net.abs().toStringAsFixed(2)}',
                   style: tt.headlineMedium?.copyWith(
                     color: isPositive
-                        ? cs.onPrimaryContainer
+                        ? cs.onTertiaryContainer
                         : cs.onErrorContainer,
                     fontWeight: FontWeight.bold,
                   ),
@@ -218,7 +218,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                   ? Icons.trending_up_rounded
                   : Icons.trending_down_rounded,
               size: 40,
-              color: isPositive ? cs.onPrimaryContainer : cs.onErrorContainer,
+              color: isPositive ? cs.onTertiaryContainer : cs.onErrorContainer,
             ),
           ],
         ),
@@ -247,7 +247,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
         barRods: [
           BarChartRodData(
             toY: data['totalIncome'] as double,
-            color: cs.primary,
+            color: cs.tertiary,
             width: 8,
             borderRadius:
                 const BorderRadius.vertical(top: Radius.circular(4)),
@@ -283,7 +283,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
             const SizedBox(height: 6),
             Row(
               children: [
-                _legendDot(cs.primary),
+                _legendDot(cs.tertiary),
                 const SizedBox(width: 4),
                 Text('Income',
                     style: tt.labelSmall
@@ -345,7 +345,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                         return BarTooltipItem(
                           '$type\n$currency ${rod.toY.toStringAsFixed(2)}',
                           (tt.labelSmall ?? const TextStyle()).copyWith(
-                            color: rodIndex == 0 ? cs.primary : cs.error,
+                            color: rodIndex == 0 ? cs.tertiary : cs.error,
                             fontWeight: FontWeight.bold,
                           ),
                         );
@@ -373,9 +373,9 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     final isIncrease = pctChange >= 0;
     final Color changeColor;
     if (negativeIsGood) {
-      changeColor = isIncrease ? cs.error : cs.primary;
+      changeColor = isIncrease ? cs.error : cs.tertiary;
     } else {
-      changeColor = isIncrease ? cs.primary : cs.error;
+      changeColor = isIncrease ? cs.tertiary : cs.error;
     }
 
     return Column(
@@ -595,7 +595,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                           label: 'Income',
                           amount: _totalIncome,
                           currency: currency,
-                          color: colorScheme.primary,
+                          color: colorScheme.tertiary,
                           icon: Icons.south_west,
                         ),
                       ),
@@ -819,7 +819,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                     decoration: BoxDecoration(
                                       color: transaction.isExpense
                                           ? colorScheme.errorContainer
-                                          : colorScheme.primaryContainer,
+                                          : colorScheme.tertiaryContainer,
                                       shape: BoxShape.circle,
                                     ),
                                     child: Icon(
@@ -828,7 +828,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                           : Icons.add,
                                       color: transaction.isExpense
                                           ? colorScheme.onErrorContainer
-                                          : colorScheme.onPrimaryContainer,
+                                          : colorScheme.onTertiaryContainer,
                                       size: 20,
                                     ),
                                   ),
@@ -882,7 +882,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                     style: textTheme.titleMedium?.copyWith(
                                       color: transaction.isExpense
                                           ? colorScheme.error
-                                          : colorScheme.primary,
+                                          : colorScheme.tertiary,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
