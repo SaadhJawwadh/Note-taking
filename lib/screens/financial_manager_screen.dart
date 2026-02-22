@@ -42,11 +42,8 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     _refreshTransactions();
     SmsService.startForegroundListener((t) async {
       if (!mounted) return;
-      final exists = await DatabaseHelper.instance.smsExists(t.smsId!);
-      if (!exists) {
-        await DatabaseHelper.instance.createTransaction(t);
-        if (mounted) await _refreshTransactions();
-      }
+      final inserted = await DatabaseHelper.instance.createSmsTransaction(t);
+      if (inserted != null && mounted) await _refreshTransactions();
     });
   }
 

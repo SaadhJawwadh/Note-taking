@@ -48,15 +48,12 @@ final _boilerplateRegex = RegExp(
 );
 
 // ── Top-level background handler — MUST be top-level (not a class member) ────
-// Registered before runApp in main.dart via Telephony.backgroundSmsReceiver
+// Registered via onBackgroundMessage in startForegroundListener.
 @pragma('vm:entry-point')
 Future<void> onBackgroundSms(SmsMessage message) async {
   final transaction = SmsService.parseMessage(message);
   if (transaction == null || transaction.smsId == null) return;
-  final exists = await DatabaseHelper.instance.smsExists(transaction.smsId!);
-  if (!exists) {
-    await DatabaseHelper.instance.createTransaction(transaction);
-  }
+  await DatabaseHelper.instance.createSmsTransaction(transaction);
 }
 
 class SmsService {
@@ -143,31 +140,9 @@ class SmsService {
   }
 
   // ── Sync inbox ───────────────────────────────────────────────────────────
-  /// Reads the full SMS inbox, parses bank messages, and creates new transactions.
-  /// Returns the count of newly imported transactions.
-  static Future<int> syncInbox() async {
-    if (!await hasPermission()) return 0;
-
-    final messages = await _telephony.getInboxSms(
-      columns: [SmsColumn.ID, SmsColumn.ADDRESS, SmsColumn.BODY, SmsColumn.DATE],
-      sortOrder: [OrderBy(SmsColumn.DATE, sort: Sort.ASC)],
-    );
-
-    int imported = 0;
-    for (final msg in messages) {
-      final t = parseMessage(msg);
-      if (t == null || t.smsId == null) continue;
-      final exists = await DatabaseHelper.instance.smsExists(t.smsId!);
-      if (!exists) {
-        await DatabaseHelper.instance.createTransaction(t);
-        imported++;
-      }
-    }
-    return imported;
-  }
-
   /// Reads SMS received on or after [from], parses bank messages, and creates
   /// new transactions. Returns the count of newly imported transactions.
+  /// Duplicate smsIds are silently ignored via createSmsTransaction.
   static Future<int> syncInboxFrom(DateTime from) async {
     if (!await hasPermission()) return 0;
 
@@ -182,11 +157,8 @@ class SmsService {
     for (final msg in messages) {
       final t = parseMessage(msg);
       if (t == null || t.smsId == null) continue;
-      final exists = await DatabaseHelper.instance.smsExists(t.smsId!);
-      if (!exists) {
-        await DatabaseHelper.instance.createTransaction(t);
-        imported++;
-      }
+      final inserted = await DatabaseHelper.instance.createSmsTransaction(t);
+      if (inserted != null) imported++;
     }
     return imported;
   }

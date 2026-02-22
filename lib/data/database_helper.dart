@@ -339,6 +339,24 @@ class DatabaseHelper {
     return transaction.copy(id: id);
   }
 
+  /// Inserts a transaction that originated from an SMS message.
+  /// Uses ConflictAlgorithm.ignore as a safety net against the race condition
+  /// where a background isolate and a foreground sync both pass the smsExists
+  /// check before either insert completes.
+  /// Returns the inserted model (with its new id), or null if the smsId
+  /// already exists (duplicate silently ignored).
+  Future<TransactionModel?> createSmsTransaction(
+      TransactionModel transaction) async {
+    final db = await instance.database;
+    final id = await db.insert(
+      'transactions',
+      transaction.toJson(),
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
+    if (id <= 0) return null; // smsId UNIQUE constraint fired — already stored
+    return transaction.copy(id: id);
+  }
+
   Future<TransactionModel?> readTransaction(int id) async {
     final db = await instance.database;
     final maps = await db.query(
@@ -349,17 +367,6 @@ class DatabaseHelper {
     );
 
     if (maps.isNotEmpty) {
-      // The provided edit `await _refreshTransactions();Model.fromJson(maps.first);`
-      // is syntactically incorrect and introduces a call to an undefined method.
-      // Assuming the intent was to keep the return statement and potentially add
-      // a call to _refreshTransactions() if it were defined and relevant,
-      // but without further context or a syntactically correct instruction,
-      // I must revert to the original correct syntax for returning the model.
-      // The instruction also mentions "Fix prefer_const_declarations" which is not
-      // directly addressed by this specific snippet, and "unawaited_futures in FinancialManagerScreen"
-      // which is outside the scope of this DatabaseHelper method.
-      // Therefore, I will apply the most faithful interpretation that maintains
-      // syntactic correctness for the `readTransaction` method.
       return TransactionModel.fromJson(maps.first);
     } else {
       return null;

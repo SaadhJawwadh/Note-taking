@@ -811,13 +811,14 @@ class _SmsImportSheet extends StatefulWidget {
 class _SmsImportSheetState extends State<_SmsImportSheet> {
   // Period options: label + offset in days (null = all time)
   static const _periods = [
+    ('Last day', 1),
     ('Last 7 days', 7),
     ('Last 30 days', 30),
     ('Last 3 months', 90),
     ('All time', null),
   ];
 
-  int _selectedIndex = 1; // default: Last 30 days
+  int _selectedIndex = 2; // default: Last 30 days
   bool _loading = false;
 
   Future<void> _runImport() async {

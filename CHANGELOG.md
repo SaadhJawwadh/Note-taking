@@ -2,6 +2,15 @@
 
 All notable changes to Note Book are documented here.
 
+## [1.12.1] - 2026-02-22
+
+### 🛠 Improvements & Fixes
+- **SMS deduplication hardened**: Replaced two-step `smsExists` + `createTransaction` pattern with a single `createSmsTransaction` call backed by `ConflictAlgorithm.ignore`. Eliminates the race condition between the background isolate and foreground sync both passing the existence check before either insert completes.
+- **SMS import period parity**: The "Import SMS Transactions" sheet in Settings now includes a "Last day" option, matching the period options in the Finances sync sheet.
+- **Dead code removed**: Unused `syncInbox()` method removed from `SmsService`; all callers now use `syncInboxFrom(DateTime)`.
+
+---
+
 ## [1.12.0] - 2026-02-22
 
 ### ✨ New Features
