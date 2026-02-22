@@ -202,7 +202,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${isPositive ? '+' : '-'} $currency ${net.abs().toStringAsFixed(2)}',
+                  '${isPositive ? '+' : '-'} $currency ${net.abs().toStringAsFixed(0)}',
                   style: tt.headlineMedium?.copyWith(
                     color: isPositive
                         ? cs.onTertiaryContainer
@@ -540,14 +540,6 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
             ),
           ),
 
-          // ── Date-range net balance hero card ──────────────────────────
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: _buildRangeNetCard(colorScheme, textTheme, currency),
-            ),
-          ),
-
           // ── 6-month bar chart ─────────────────────────────────────────
           SliverToBoxAdapter(
             child: Padding(
@@ -562,6 +554,14 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: _buildMonthComparisonCard(
                   colorScheme, textTheme, currency),
+            ),
+          ),
+
+          // ── Date-range net balance hero card ──────────────────────────
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: _buildRangeNetCard(colorScheme, textTheme, currency),
             ),
           ),
 
