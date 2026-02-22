@@ -18,6 +18,7 @@ import '../data/settings_provider.dart';
 import 'manage_tags_screen.dart';
 import 'filtered_notes_screen.dart';
 import 'category_management_screen.dart';
+import 'sms_whitelist_screen.dart';
 import '../utils/app_constants.dart';
 
 import 'package:file_picker/file_picker.dart';
@@ -152,6 +153,28 @@ class SettingsScreen extends StatelessWidget {
                                   MaterialPageRoute(
                                     builder: (_) =>
                                         const CategoryManagementScreen(),
+                                  ),
+                                ),
+                              ),
+                              Divider(
+                                height: 1,
+                                indent: 56,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .outlineVariant,
+                              ),
+                              _buildListTile(
+                                context,
+                                icon: Icons.mark_email_read_outlined,
+                                title: 'SMS Sender Whitelist',
+                                subtitle:
+                                    'Add non-bank senders (e.g. KOKO) to auto-import',
+                                showArrow: true,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const SmsWhitelistScreen(),
                                   ),
                                 ),
                               ),

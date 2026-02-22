@@ -222,9 +222,8 @@ class TransactionCategory {
 
   /// Returns the names of all known categories.
   /// Falls back to the static [all] list if the cache has not been loaded yet.
-  static List<String> get allNames => _cache.isNotEmpty
-      ? _cache.map((c) => c.name).toList()
-      : all;
+  static List<String> get allNames =>
+      _cache.isNotEmpty ? _cache.map((c) => c.name).toList() : all;
 
   /// Returns the category for a description using the DB-loaded cache with
   /// two-pass matching. Falls back to [fromDescription] if the cache is empty

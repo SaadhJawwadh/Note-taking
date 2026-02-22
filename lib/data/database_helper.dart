@@ -23,7 +23,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 8,
+      version: 9,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -77,6 +77,11 @@ class DatabaseHelper {
       )
     ''');
     await _seedBuiltInCategories(db);
+    await db.execute('''
+      CREATE TABLE sms_whitelist (
+        sender TEXT PRIMARY KEY
+      )
+    ''');
   }
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -149,6 +154,14 @@ class DatabaseHelper {
           conflictAlgorithm: ConflictAlgorithm.ignore,
         );
       }
+    }
+    if (oldVersion < 9) {
+      // Add user-managed SMS sender whitelist table (v1.14.1)
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS sms_whitelist (
+          sender TEXT PRIMARY KEY
+        )
+      ''');
     }
   }
 
@@ -662,5 +675,30 @@ class DatabaseHelper {
       where: 'name = ? AND isBuiltIn = 0',
       whereArgs: [name],
     );
+  }
+
+  // ── SMS Sender Whitelist CRUD ─────────────────────────────────────────────
+
+  /// Returns all sender IDs in the user-managed whitelist.
+  Future<List<String>> getAllWhitelistedSenders() async {
+    final db = await instance.database;
+    final rows = await db.query('sms_whitelist', orderBy: 'sender ASC');
+    return rows.map((r) => r['sender'] as String).toList();
+  }
+
+  /// Adds a sender ID to the whitelist. Duplicate entries are silently ignored.
+  Future<void> addWhitelistedSender(String sender) async {
+    final db = await instance.database;
+    await db.insert(
+      'sms_whitelist',
+      {'sender': sender.trim()},
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
+  }
+
+  /// Removes a sender ID from the whitelist.
+  Future<void> removeWhitelistedSender(String sender) async {
+    final db = await instance.database;
+    await db.delete('sms_whitelist', where: 'sender = ?', whereArgs: [sender]);
   }
 }

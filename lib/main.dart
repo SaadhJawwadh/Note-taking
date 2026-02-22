@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'data/settings_provider.dart';
 import 'data/transaction_category.dart';
+import 'services/sms_service.dart';
 import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
 import 'package:dynamic_color/dynamic_color.dart';
@@ -11,6 +12,7 @@ import 'package:flutter_quill/flutter_quill.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await TransactionCategory.reload();
+  await SmsService.reloadUserSenders();
   runApp(
     ChangeNotifierProvider(
       create: (_) => SettingsProvider(),

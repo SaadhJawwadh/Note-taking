@@ -4,7 +4,8 @@ import '../data/transaction_model.dart';
 import '../data/database_helper.dart';
 import '../data/transaction_category.dart';
 
-// ── Bank / payment sender IDs whitelisted for Sri Lanka ──────────────────────
+// ── Default bank sender IDs (banks only — actual debit/credit confirmations) ──
+// Non-bank services (KOKO, wallets, etc.) belong in the user-managed whitelist.
 const _bankSenders = {
   // Commercial Bank
   'COMBANK', 'Comm-Bank', 'CBSL',
@@ -24,15 +25,11 @@ const _bankSenders = {
   'AMANABNK', 'AMANA', 'AMANABK',
   // Nations Trust Bank
   'NTB', 'NTBBANK',
-  // LOLC / Commercial Leasing
+  // LOLC Finance
   'LOLC',
-  // Buy-now-pay-later / instalment providers
-  'KOKO', 'Koko',
-  // Digital wallets
-  'FRIMI', 'PAYAPP',
 };
 
-// ── Bank/provider human-readable name from sender ID ─────────────────────────
+// ── Human-readable name for known bank senders ────────────────────────────────
 const _senderToBankName = <String, String>{
   'COMBANK': 'Commercial Bank',
   'Comm-Bank': 'Commercial Bank',
@@ -60,11 +57,7 @@ const _senderToBankName = <String, String>{
   'AMANABK': 'Amana Bank',
   'NTB': 'Nations Trust Bank',
   'NTBBANK': 'Nations Trust Bank',
-  'LOLC': 'LOLC',
-  'KOKO': 'KOKO',
-  'Koko': 'KOKO',
-  'FRIMI': 'FriMi',
-  'PAYAPP': 'PayApp',
+  'LOLC': 'LOLC Finance',
 };
 
 // ── Amount extraction ─────────────────────────────────────────────────────────
@@ -92,7 +85,15 @@ final _purchaseRegex = RegExp(
 );
 
 final _instalmentRegex = RegExp(
-  r'\b(instalment|installment|emi|due\s+tomorrow|due\s+today|due\s+in\s+\d+|monthly\s+payment)\b',
+  r'\b(instalment|installment|emi|monthly\s+payment)\b',
+  caseSensitive: false,
+);
+
+// ── Due-reminder detection — skip these unless a real debit keyword is present
+// KOKO and similar services send "due tomorrow/today" reminders daily.
+// These are NOT transactions — the actual debit comes from the bank.
+final _dueReminderRegex = RegExp(
+  r'\b(due\s+tomorrow|due\s+today|due\s+in\s+\d+|payment\s+is\s+due|is\s+due\s+on)\b',
   caseSensitive: false,
 );
 
@@ -200,9 +201,12 @@ const _reversalSentinel = '__reversal__';
 // ── Top-level background handler — MUST be top-level ─────────────────────────
 @pragma('vm:entry-point')
 Future<void> onBackgroundSms(SmsMessage message) async {
+  // Reload user-managed sender whitelist so background isolate has latest data.
+  await SmsService.reloadUserSenders();
   final transaction = SmsService.parseMessage(message);
   if (transaction == null || transaction.smsId == null) return;
-  final inserted = await DatabaseHelper.instance.createSmsTransaction(transaction);
+  final inserted =
+      await DatabaseHelper.instance.createSmsTransaction(transaction);
   if (inserted == null) return;
   if (inserted.category == _reversalSentinel) {
     final target = await DatabaseHelper.instance
@@ -218,6 +222,18 @@ class SmsService {
   SmsService._();
 
   static final _telephony = Telephony.instance;
+
+  // ── User-managed sender whitelist ────────────────────────────────────────
+  /// In-memory cache of sender IDs added by the user (non-bank services like
+  /// KOKO, FriMi, etc.). Populated at startup and after whitelist edits.
+  static var _userSenders = <String>{};
+
+  /// Reloads the user-managed sender whitelist from the database.
+  /// Call at app startup and after any whitelist add/delete.
+  static Future<void> reloadUserSenders() async {
+    final senders = await DatabaseHelper.instance.getAllWhitelistedSenders();
+    _userSenders = Set<String>.from(senders);
+  }
 
   // ── Permission helpers ───────────────────────────────────────────────────
   static Future<bool> requestPermissions() async {
@@ -245,15 +261,24 @@ class SmsService {
     if (isCancellation && !isReversal) return null;
 
     // Must be from a known sender OR contain a direction keyword
-    final isKnownSender = _bankSenders.any((s) => sender.contains(s));
+    final isKnownSender = _bankSenders.any((s) => sender.contains(s)) ||
+        _userSenders.any((s) => sender.contains(s));
     final isDebit = _debitRegex.hasMatch(body);
     final isCredit = _creditRegex.hasMatch(body);
     final hasInstalment = _instalmentRegex.hasMatch(body);
 
     if (!isKnownSender && !isDebit && !isCredit && !hasInstalment) return null;
 
+    // Skip due-reminder SMS (e.g. "due tomorrow", "due today") that do NOT
+    // contain an actual debit confirmation keyword. KOKO and similar services
+    // send these daily; the real debit arrives later from the bank directly.
+    if (_dueReminderRegex.hasMatch(body) && !isDebit) return null;
+
     // Skip promotional messages with no actual direction
-    if (_promotionalRegex.hasMatch(body) && !isDebit && !isCredit && !hasInstalment) {
+    if (_promotionalRegex.hasMatch(body) &&
+        !isDebit &&
+        !isCredit &&
+        !hasInstalment) {
       return null;
     }
 
@@ -519,18 +544,14 @@ class SmsService {
   /// Title-cases each word; short ALL-CAPS tokens (≤4 chars) are kept as-is
   /// so acronyms like HNB, BOC, ATM survive the transformation.
   static String _cleanTitle(String s) {
-    return s
-        .split(RegExp(r'\s+'))
-        .where((w) => w.isNotEmpty)
-        .map((w) {
-          if (w.length <= 4 &&
-              w == w.toUpperCase() &&
-              RegExp(r'^[A-Z]+$').hasMatch(w)) {
-            return w;
-          }
-          return '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}';
-        })
-        .join(' ');
+    return s.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).map((w) {
+      if (w.length <= 4 &&
+          w == w.toUpperCase() &&
+          RegExp(r'^[A-Z]+$').hasMatch(w)) {
+        return w;
+      }
+      return '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}';
+    }).join(' ');
   }
 
   // ── Sync inbox ───────────────────────────────────────────────────────────

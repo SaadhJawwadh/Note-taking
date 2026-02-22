@@ -531,10 +531,13 @@ class _AddCategoryDialogState extends State<_AddCategoryDialog> {
                           : null,
                     ),
                     child: selected
-                        ? Icon(Icons.check, size: 16,
-                            color: ThemeData.estimateBrightnessForColor(color) == Brightness.dark
-                                ? Colors.white
-                                : Colors.black)
+                        ? Icon(Icons.check,
+                            size: 16,
+                            color:
+                                ThemeData.estimateBrightnessForColor(color) ==
+                                        Brightness.dark
+                                    ? Colors.white
+                                    : Colors.black)
                         : null,
                   ),
                 );

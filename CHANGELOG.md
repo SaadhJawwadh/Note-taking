@@ -2,6 +2,20 @@
 
 All notable changes to Note Book are documented here.
 
+## [1.14.1] - 2026-02-23
+
+### ✨ New Features
+- **SMS Sender Whitelist**: User-managed whitelist under **Settings → Financial Manager → SMS Sender Whitelist**. Add non-bank services (e.g. KOKO, FriMi) whose debit/credit SMS should be auto-imported. Banks are included by default and do not need to be added.
+
+### 🛠 Improvements
+- **Due-reminder SMS skipped**: Daily reminder messages (e.g. "Your KOKO payment is due tomorrow") are now ignored and never imported as transactions. Only SMS that contain an actual debit confirmation keyword are processed — eliminating the repeated KOKO entries.
+- **Banks-only default whitelist**: Non-bank SMS senders (KOKO, FriMi, PayApp) removed from the built-in sender set. They can be re-added individually via the new whitelist screen.
+
+### 🔒 Security / Data Integrity
+- Database schema bumped to version 9; migration automatically creates the `sms_whitelist` table on existing installs — no reinstall required.
+
+---
+
 ## [1.14.0] - 2026-02-23
 
 ### ✨ New Features
