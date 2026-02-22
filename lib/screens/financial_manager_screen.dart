@@ -123,6 +123,34 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
+  /// Flat list of [String] date-header labels and [TransactionModel] items,
+  /// ordered newest-first, for the grouped transaction list.
+  List<dynamic> get _groupedTransactions {
+    if (_transactions.isEmpty) return [];
+    final items = <dynamic>[];
+    DateTime? lastDate;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    for (final t in _transactions) {
+      final tDate = DateTime(t.date.year, t.date.month, t.date.day);
+      if (lastDate == null || tDate != lastDate) {
+        String header;
+        if (tDate == today) {
+          header = 'Today';
+        } else if (tDate == yesterday) {
+          header = 'Yesterday';
+        } else {
+          header = DateFormat.MMMd().format(tDate);
+        }
+        items.add(header);
+        lastDate = tDate;
+      }
+      items.add(t);
+    }
+    return items;
+  }
+
   Future<void> _selectDateRange(BuildContext context) async {
     final picked = await showDateRangePicker(
       context: context,
@@ -170,14 +198,17 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     );
   }
 
-  /// Net balance card for the currently selected date range.
-  Widget _buildRangeNetCard(ColorScheme cs, TextTheme tt, String currency) {
+  /// Combined hero card: net balance + income/expense breakdown for the
+  /// currently selected date range.
+  Widget _buildHeroSummaryCard(ColorScheme cs, TextTheme tt, String currency) {
     if (_isLoading) {
       return const SizedBox(
           height: 80, child: Center(child: CircularProgressIndicator()));
     }
     final net = _totalIncome - _totalExpense;
     final isPositive = net >= 0;
+    final onColor =
+        isPositive ? cs.onTertiaryContainer : cs.onErrorContainer;
     final rangeLabel = _selectedRange.duration.inDays == 0
         ? DateFormat.MMMMEEEEd().format(_selectedRange.start)
         : '${DateFormat.MMMd().format(_selectedRange.start)} – ${DateFormat.MMMd().format(_selectedRange.end)}';
@@ -187,42 +218,83 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
       color: isPositive ? cs.tertiaryContainer : cs.errorContainer,
       child: Padding(
         padding: const EdgeInsets.all(20.0),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            // Date range + trend icon
+            Row(
               children: [
                 Text(
                   rangeLabel,
-                  style: tt.labelMedium?.copyWith(
-                    color: isPositive
-                        ? cs.onTertiaryContainer
-                        : cs.onErrorContainer,
-                  ),
+                  style: tt.labelMedium?.copyWith(color: onColor),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '${isPositive ? '+' : '-'} $currency ${net.abs().toStringAsFixed(0)}',
-                  style: tt.headlineMedium?.copyWith(
-                    color: isPositive
-                        ? cs.onTertiaryContainer
-                        : cs.onErrorContainer,
-                    fontWeight: FontWeight.bold,
-                  ),
+                const Spacer(),
+                Icon(
+                  isPositive
+                      ? Icons.trending_up_rounded
+                      : Icons.trending_down_rounded,
+                  size: 24,
+                  color: onColor,
                 ),
               ],
             ),
-            const Spacer(),
-            Icon(
-              isPositive
-                  ? Icons.trending_up_rounded
-                  : Icons.trending_down_rounded,
-              size: 40,
-              color: isPositive ? cs.onTertiaryContainer : cs.onErrorContainer,
+            const SizedBox(height: 6),
+            // Net balance headline
+            Text(
+              '${isPositive ? '+' : '-'} $currency ${net.abs().toStringAsFixed(0)}',
+              style: tt.headlineMedium?.copyWith(
+                color: onColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Divider(
+                color: onColor.withValues(alpha: 0.2), height: 1),
+            const SizedBox(height: 12),
+            // Income / Expense breakdown
+            Row(
+              children: [
+                Expanded(
+                  child: _miniStat(tt, Icons.south_west, 'Income',
+                      _totalIncome, currency, onColor),
+                ),
+                Container(
+                    width: 1,
+                    height: 36,
+                    color: onColor.withValues(alpha: 0.2)),
+                Expanded(
+                  child: _miniStat(tt, Icons.arrow_outward, 'Expense',
+                      _totalExpense, currency, onColor),
+                ),
+              ],
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _miniStat(TextTheme tt, IconData icon, String label, double amount,
+      String currency, Color color) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 14, color: color.withValues(alpha: 0.7)),
+            const SizedBox(width: 4),
+            Text(label,
+                style: tt.labelSmall
+                    ?.copyWith(color: color.withValues(alpha: 0.7))),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '$currency ${amount.toStringAsFixed(0)}',
+          style:
+              tt.titleSmall?.copyWith(color: color, fontWeight: FontWeight.bold),
+        ),
+      ],
     );
   }
 
@@ -323,8 +395,28 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                         reservedSize: 24,
                       ),
                     ),
-                    leftTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false)),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 40,
+                        getTitlesWidget: (value, meta) {
+                          if (value == 0 || value == meta.min) {
+                            return const SizedBox.shrink();
+                          }
+                          final formatted = value >= 1000
+                              ? '${(value / 1000).toStringAsFixed(value % 1000 == 0 ? 0 : 1)}K'
+                              : value.toStringAsFixed(0);
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 4),
+                            child: Text(
+                              formatted,
+                              style: tt.labelSmall
+                                  ?.copyWith(color: cs.onSurfaceVariant),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                     topTitles: const AxisTitles(
                         sideTitles: SideTitles(showTitles: false)),
                     rightTitles: const AxisTitles(
@@ -503,11 +595,26 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
               child: Row(
                 children: [
                   const SizedBox(width: 16),
-                  Text(
-                    'Finances',
-                    style: textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Finances',
+                        style: textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        _selectedRange.duration.inDays == 0
+                            ? DateFormat.MMMd()
+                                .format(_selectedRange.start)
+                            : '${DateFormat.MMMd().format(_selectedRange.start)} – ${DateFormat.MMMd().format(_selectedRange.end)}',
+                        style: textTheme.labelSmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
                   const Spacer(),
                   IconButton(
@@ -557,52 +664,11 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
             ),
           ),
 
-          // ── Date-range net balance hero card ──────────────────────────
+          // ── Hero summary card (net + income/expense breakdown) ────────
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: _buildRangeNetCard(colorScheme, textTheme, currency),
-            ),
-          ),
-
-          // ── Date-range income/expense summary card ────────────────────
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Card(
-                elevation: 0,
-                color: colorScheme.surfaceContainerHigh,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _SummaryItem(
-                          label: 'Expenses',
-                          amount: _totalExpense,
-                          currency: currency,
-                          color: colorScheme.error,
-                          icon: Icons.arrow_outward,
-                        ),
-                      ),
-                      Container(
-                        width: 1,
-                        height: 48,
-                        color: colorScheme.outlineVariant,
-                      ),
-                      Expanded(
-                        child: _SummaryItem(
-                          label: 'Income',
-                          amount: _totalIncome,
-                          currency: currency,
-                          color: colorScheme.tertiary,
-                          icon: Icons.south_west,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              child: _buildHeroSummaryCard(colorScheme, textTheme, currency),
             ),
           ),
 
@@ -754,11 +820,27 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
             )
           else
             SliverPadding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
-                    final transaction = _transactions[index];
+                    final item = _groupedTransactions[index];
+
+                    // Date group header
+                    if (item is String) {
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
+                        child: Text(
+                          item,
+                          style: textTheme.labelMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      );
+                    }
+
+                    final transaction = item as TransactionModel;
                     return OpenContainer<bool>(
                       transitionType: ContainerTransitionType.fade,
                       openBuilder: (context, _) =>
@@ -894,7 +976,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                       },
                     );
                   },
-                  childCount: _transactions.length,
+                  childCount: _groupedTransactions.length,
                 ),
               ),
             ),
@@ -1079,47 +1161,3 @@ class _FinancesSmsImportSheetState extends State<_FinancesSmsImportSheet> {
   }
 }
 
-class _SummaryItem extends StatelessWidget {
-  final String label;
-  final double amount;
-  final String currency;
-  final Color color;
-  final IconData icon;
-
-  const _SummaryItem({
-    required this.label,
-    required this.amount,
-    required this.currency,
-    required this.color,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          '$currency ${amount.toStringAsFixed(2)}',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: color,
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-      ],
-    );
-  }
-}
