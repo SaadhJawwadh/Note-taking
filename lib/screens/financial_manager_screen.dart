@@ -252,21 +252,22 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                 color: onColor.withValues(alpha: 0.2), height: 1),
             const SizedBox(height: 12),
             // Income / Expense breakdown
-            Row(
-              children: [
-                Expanded(
-                  child: _miniStat(tt, Icons.south_west, 'Income',
-                      _totalIncome, currency, onColor),
-                ),
-                Container(
-                    width: 1,
-                    height: 36,
-                    color: onColor.withValues(alpha: 0.2)),
-                Expanded(
-                  child: _miniStat(tt, Icons.arrow_outward, 'Expense',
-                      _totalExpense, currency, onColor),
-                ),
-              ],
+            IntrinsicHeight(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _miniStat(tt, Icons.south_west, 'Income',
+                        _totalIncome, currency, onColor),
+                  ),
+                  VerticalDivider(
+                      width: 1,
+                      color: onColor.withValues(alpha: 0.2)),
+                  Expanded(
+                    child: _miniStat(tt, Icons.arrow_outward, 'Expense',
+                        _totalExpense, currency, onColor),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -960,7 +961,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                     ),
                                   ),
                                   Text(
-                                    '${transaction.isExpense ? '-' : '+'} $currency ${transaction.amount.toStringAsFixed(2)}',
+                                    '${transaction.isExpense ? '-' : '+'} $currency ${transaction.amount.toStringAsFixed(0)}',
                                     style: textTheme.titleMedium?.copyWith(
                                       color: transaction.isExpense
                                           ? colorScheme.error
