@@ -14,8 +14,10 @@ If you're looking for a minimal place to jot down thoughts, code snippets, or li
 - **💾 Auto-Save**: Never lose a thought.
 - **🌓 Dark Mode**: Looks great at night, with formatting that adapts to your note's color.
 - **📱 Uniform Toolbar**: Formatting tools are neatly organized in a consistent bottom bar.
-- **💰 Financial Manager**: dedicated space to track daily expenses and income with a built-in calculator.
-- **🛡️ Secure Backup**: Complete data export (Notes + Finances) and automatic Google Cloud Backup support.
+- **💰 Financial Manager**: Dedicated space to track daily expenses and income with a built-in calculator, 6-month chart, and custom date-range filtering.
+- **📲 SMS Auto-Import**: Automatically reads bank SMS messages (Sri Lankan banks) and creates transactions — even while the app is in the background.
+- **🏷 Transaction Categories**: Auto-categorises transactions into Transport, Food & Dining, Subscriptions, Shopping, Utilities, Health, Entertainment, or Other, with colour-coded badges and filter chips.
+- **🛡️ Secure Backup**: Complete data export (Notes + Finances + Settings) and automatic Google Cloud Backup support.
 
 ## How to Install
 

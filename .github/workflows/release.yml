@@ -32,13 +32,13 @@ jobs:
         run: flutter analyze
 
       - name: Build APK
-        run: flutter build apk --release --no-shrink
+        run: flutter build apk --release
 
       - name: Rename APK
-        run: mv build/app/outputs/flutter-apk/app-release.apk note-book-v${{ github.ref_name }}.apk
+        run: mv build/app/outputs/flutter-apk/app-release.apk note-book-${{ github.ref_name }}.apk
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: note-book-v${{ github.ref_name }}.apk
+          files: note-book-${{ github.ref_name }}.apk
           body_path: RELEASE_NOTES.md
