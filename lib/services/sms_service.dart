@@ -61,9 +61,49 @@ final _promotionalRegex = RegExp(
   caseSensitive: false,
 );
 
-// ── Boilerplate patterns to strip from description ───────────────────────────
-final _boilerplateRegex = RegExp(
-  r'\b(your|account|ending|no\.|has been|debited|credited|for|on|ref\s*:?\s*\w+|balance|available|dear|customer|valued|transaction|via|from|to\s+a/c|a/c|avl\s*bal|auth\s*code|code|on\s+\d{2}[-/]\d{2}[-/]\d{2,4})\b',
+// ── PII — always strip before building description ────────────────────────────
+/// Masked card / account numbers (e.g. *1234, ending 5678, a/c *xx1234, xxxx1234)
+final _piiCardRegex = RegExp(
+  r'\*\d{4,}'
+  r'|ending\s+\d{4,}'
+  r'|\bno\.?\s*\d{4,}'
+  r'|\ba\/c\s*[\d*x]+'
+  r'|\bxxxx\d{4,}'
+  r'|\b\d{16}\b',
+  caseSensitive: false,
+);
+
+/// Reference / auth codes (ref: ABC123, txn id: 123, auth code: X)
+final _piiRefRegex = RegExp(
+  r'\bref(?:\s*no\.?)?\s*:?\s*\w+'
+  r'|\btxn(?:\s*id)?\s*:?\s*[\w\d]+'
+  r'|\bauth(?:\s*code)?\s*:?\s*[\w\d]+'
+  r'|\btran\s*id\s*:?\s*[\w\d]+',
+  caseSensitive: false,
+);
+
+/// Balance lines (Avl Bal / Available Balance / Bal: X)
+final _piiBalanceRegex = RegExp(
+  r'avl\s*bal[^\d]*[\d,]+(?:\.\d{1,2})?'
+  r'|avail?(?:able)?\s*bal(?:ance)?\s*:?\s*(?:lkr|rs\.?)?\s*[\d,]+(?:\.\d{1,2})?'
+  r'|\bbal\s*:?\s*(?:lkr|rs\.?)?\s*[\d,]+(?:\.\d{1,2})?',
+  caseSensitive: false,
+);
+
+/// Dates, times, local phone numbers
+final _piiDateTimePhoneRegex = RegExp(
+  r'\b\d{1,2}[-/]\d{1,2}[-/]\d{2,4}\b'
+  r'|\b\d{1,2}:\d{2}\s*(?:[ap]m)?\b'
+  r'|\b0\d{9}\b'
+  r'|\b\d{11}\b',
+  caseSensitive: false,
+);
+
+/// Noise words stripped as a last-resort fallback
+final _noiseWordsRegex = RegExp(
+  r'\b(?:your|has\s+been|dear|valued|customer|card|account|transaction|'
+  r'bank|balance|available|avl|bal|via|the|please|contact|call|'
+  r'if\s+not\s+you|do\s+not\s+share)\b',
   caseSensitive: false,
 );
 
@@ -166,13 +206,74 @@ class SmsService {
   }
 
   static String _buildDescription(String body, String sender) {
-    var desc = body.replaceAll(_amountRegex, '');
-    desc = desc.replaceAll(_boilerplateRegex, ' ');
-    desc = desc.replaceAll(RegExp(r'\s{2,}'), ' ').trim();
-    desc = desc.replaceAll(RegExp(r'^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$'), '').trim();
-    if (desc.length > 60) desc = desc.substring(0, 60).trim();
-    if (desc.isEmpty) desc = sender;
-    return desc;
+    // 1. Strip PII so nothing sensitive survives into the description
+    var text = body;
+    text = text.replaceAll(_piiBalanceRegex, '');
+    text = text.replaceAll(_piiCardRegex, '');
+    text = text.replaceAll(_piiRefRegex, '');
+    text = text.replaceAll(_piiDateTimePhoneRegex, '');
+    text = text.replaceAll(_amountRegex, '');
+
+    // 2. Try to pull out just the vendor / merchant name
+    //    Patterns: "at <Merchant>", "for <Merchant>", "from <Merchant>"
+    //    Terminated by punctuation, balance/ref keywords, or end-of-string.
+    const terminators =
+        r"(?=\s*(?:[,.\n]|$|\bref\b|\bauth\b|\bavl\b|\bbal\b|\bon\b|\bvia\b|\bif\b))";
+
+    RegExpMatch? m;
+
+    // "at X" — most reliable for POS / digital payments
+    m = RegExp(
+      r"\bat\s+([A-Za-z][A-Za-z0-9\s&'\-\.]{1,35}?)" + terminators,
+      caseSensitive: false,
+    ).firstMatch(text);
+
+    // "for X" — bill payments, transfers
+    m ??= RegExp(
+      r"\bfor\s+([A-Za-z][A-Za-z0-9\s&'\-\.]{1,35}?)" + terminators,
+      caseSensitive: false,
+    ).firstMatch(text);
+
+    // "from X" — income / inward transfers
+    m ??= RegExp(
+      r"\bfrom\s+(?!(?:your|the|our|my)\b)([A-Za-z][A-Za-z0-9\s&'\-\.]{1,35}?)" +
+          terminators,
+      caseSensitive: false,
+    ).firstMatch(text);
+
+    if (m != null) {
+      final candidate =
+          m.group(1)!.trim().replaceAll(RegExp(r'\s{2,}'), ' ');
+      if (candidate.length >= 2) return _cleanTitle(candidate);
+    }
+
+    // 3. Fallback: strip direction and noise words, return whatever is left
+    text = text.replaceAll(_debitRegex, '');
+    text = text.replaceAll(_creditRegex, '');
+    text = text.replaceAll(_noiseWordsRegex, '');
+    text = text.replaceAll(RegExp(r"[^A-Za-z0-9\s&'\-]"), ' ');
+    text = text.replaceAll(RegExp(r'\s{2,}'), ' ').trim();
+    if (text.length > 50) text = text.substring(0, 50).trim();
+    if (text.isNotEmpty) return _cleanTitle(text);
+
+    return sender;
+  }
+
+  /// Title-cases each word; short ALL-CAPS tokens (≤4 chars) are kept as-is
+  /// so acronyms like HNB, BOC, ATM survive the transformation.
+  static String _cleanTitle(String s) {
+    return s
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .map((w) {
+          if (w.length <= 4 &&
+              w == w.toUpperCase() &&
+              RegExp(r'^[A-Z]+$').hasMatch(w)) {
+            return w; // preserve acronym
+          }
+          return '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}';
+        })
+        .join(' ');
   }
 
   // ── Sync inbox ───────────────────────────────────────────────────────────
