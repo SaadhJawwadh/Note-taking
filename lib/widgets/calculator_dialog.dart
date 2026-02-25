@@ -42,9 +42,13 @@ class _CalculatorDialogState extends State<CalculatorDialog> {
           ContextModel cm = ContextModel();
           double eval = exp.evaluate(EvaluationType.REAL, cm);
           _history = _expression;
-          _expression = eval.toString();
-          if (_expression.endsWith('.0')) {
-            _expression = _expression.substring(0, _expression.length - 2);
+          if (eval.isNaN || eval.isInfinite) {
+            _expression = 'Error';
+          } else {
+            _expression = eval.toString();
+            if (_expression.endsWith('.0')) {
+              _expression = _expression.substring(0, _expression.length - 2);
+            }
           }
         } catch (e) {
           _history = _expression;
@@ -70,11 +74,19 @@ class _CalculatorDialogState extends State<CalculatorDialog> {
       Expression exp = p.parse(_expression.replaceAll('x', '*'));
       ContextModel cm = ContextModel();
       double eval = exp.evaluate(EvaluationType.REAL, cm);
+      if (eval.isNaN || eval.isInfinite) {
+        Navigator.pop(context);
+        return;
+      }
       Navigator.pop(context, eval);
     } catch (e) {
       // If parse fails, try parsing as direct double
       double? val = double.tryParse(_expression);
-      Navigator.pop(context, val);
+      if (val != null && !val.isNaN && !val.isInfinite) {
+        Navigator.pop(context, val);
+      } else {
+        Navigator.pop(context);
+      }
     }
   }
 

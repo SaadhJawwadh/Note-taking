@@ -2,6 +2,19 @@
 
 All notable changes to Note Book are documented here.
 
+## [1.16.1] - 2026-02-25
+
+### 🐛 Bug Fixes
+- **Calculator: Division-by-zero & invalid expressions**: Evaluating `1/0` or `0/0` previously stored `Infinity`/`NaN` as a transaction amount. These are now blocked — the calculator shows "Error" and "Use Value" closes without setting an amount.
+- **Animation re-play on category filter**: Tapping a category chip in the Finances screen no longer re-animates the entire page from scratch (was caused by `AnimationLimiter` receiving a new `ValueKey` on every filter change).
+
+### 🛠 Improvements
+- **Snappier transitions**: All stagger durations reduced (375 ms → 220 ms), container fade-through 500 ms → 300 ms, slide offset 50 px → 24 px — matches M3 Expressive motion guidelines.
+- **Transaction rows**: Individual transaction cards no longer play a stagger entrance on every filter tap. Dashboard cards (chart, summary, search, chips) still animate in once on initial page load.
+- **Backup logging**: `print()` replaced with `debugPrint()` — production-safe and conforms to Flutter lint rules.
+
+---
+
 ## [1.16.0] - 2026-02-25
 
 ### ✨ New Features

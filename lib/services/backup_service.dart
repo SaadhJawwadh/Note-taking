@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
@@ -99,9 +100,7 @@ Future<bool> performAutoBackup() async {
 
     return true;
   } catch (e, st) {
-    // Log to system log (visible in logcat) so backup failures are debuggable
-    // ignore: avoid_print
-    print('AutoBackup failed: $e\n$st');
+    debugPrint('AutoBackup failed: $e\n$st');
     return false;
   }
 }
@@ -123,17 +122,15 @@ Future<void> _rotateBackups(String directoryPath) async {
   if (autoBackupFiles.length <= 5) return;
 
   // Sort by modification time descending (newest first)
-  autoBackupFiles.sort((a, b) =>
-      b.lastModifiedSync().compareTo(a.lastModifiedSync()));
+  autoBackupFiles
+      .sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
 
   // Delete all beyond the 5th
   for (final old in autoBackupFiles.skip(5)) {
     try {
       await old.delete();
     } catch (e) {
-      // Best-effort deletion; log and continue
-      // ignore: avoid_print
-      print('Failed to delete old backup ${old.path}: $e');
+      debugPrint('Failed to delete old backup ${old.path}: $e');
     }
   }
 }

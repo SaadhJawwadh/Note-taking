@@ -53,8 +53,7 @@ class SettingsProvider extends ChangeNotifier {
     _currency = prefs.getString('currency') ?? 'LKR';
 
     _autoBackupEnabled = prefs.getBool('autoBackupEnabled') ?? false;
-    _autoBackupFrequency =
-        prefs.getString('autoBackupFrequency') ?? 'daily';
+    _autoBackupFrequency = prefs.getString('autoBackupFrequency') ?? 'daily';
     _autoBackupPath = prefs.getString('autoBackupPath');
     _lastAutoBackupTime = prefs.getString('lastAutoBackupTime');
 
