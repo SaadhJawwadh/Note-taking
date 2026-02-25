@@ -1,29 +1,29 @@
-# Note Book v1.14.2 — QA Hardening & Backup Completeness
+# Note Book v1.15.0 — SMS Contacts, Cross-Sender Dedup & Blocking
 
 ## What's New
 
-### SMS Sender Whitelist (Settings → Financial Manager)
-Add any non-bank sender ID (e.g. **KOKO**, FriMi) to auto-import their debit/credit messages. Banks are always included by default. Changes take effect immediately without restarting the app.
+### SMS Contacts (Settings → Financial Manager)
+The old **SMS Sender Whitelist** is now a full **SMS Contacts** screen. All 10 built-in Sri Lankan banks and your custom senders appear in a single grouped list with toggle switches.
 
-| Action | How to do it |
-|--------|-------------|
-| Add a sender | Settings → Financial Manager → SMS Sender Whitelist → type ID → **Add** |
-| Remove a sender | Long-press (or tap trash icon) on any entry in the list |
+| Action | How |
+|--------|-----|
+| Block a sender | Tap the switch next to any bank or custom sender to turn it off |
+| Unblock a sender | Tap the switch again to re-enable importing |
+| Add a custom sender | Type the sender ID (e.g. KOKO) and tap **Add** |
+| Remove a custom sender | Tap the delete icon next to a custom entry |
 
-### KOKO Repeat Entries — Fixed
-KOKO's daily "due tomorrow / due today" reminders were each imported as separate transactions. They are now silently skipped. Only SMS containing an actual debit confirmation are processed.
+### Cross-Sender Deduplication
+When the same amount appears from two different senders within **5 minutes** (e.g. COMBANK and COMBANK Q+ for the same purchase), only the first transaction is saved. No more duplicate entries from parallel bank SMS.
 
-### Backup Now Includes SMS Whitelist
-Backups are now **version 5**. Your custom sender whitelist is exported and fully restored along with notes, transactions, and categories. All previous backup versions (v1–v4) continue to import without issues.
+### Default Import = Last Day
+The Import SMS Transactions sheet now defaults to **"Last day"** instead of "Last 30 days" for faster daily syncs.
 
-### QA Hardening
-- Whitelist sender matching is now **case-insensitive** — adding `koko` matches SMS from `KOKO` and vice versa.
-- Reversal sentinel value exposed as a typed constant (`SmsService.reversalSentinel`) — eliminates duplicate string literals in the codebase.
-- 0 analysis issues · Clean 69 MB release APK
+### Backup v6
+Backups now export the full `sms_contacts` table (banks + custom senders + block states). Restoring a v5 backup automatically migrates old whitelist entries as custom contacts. All previous backup versions (v1-v5) continue to import correctly.
 
 ## Upgrade Guide
 
-**From any previous version**: Install the new APK. The database and backup format migrate automatically — no data is lost and no reinstall is needed.
+**From any previous version**: Install the new APK. The database migrates automatically from v9 to v10 — existing whitelist entries become custom contacts, and 10 banks are seeded. No data is lost and no reinstall is needed.
 
 ---
 

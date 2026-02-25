@@ -201,10 +201,15 @@ const _reversalSentinel = '__reversal__';
 // ── Top-level background handler — MUST be top-level ─────────────────────────
 @pragma('vm:entry-point')
 Future<void> onBackgroundSms(SmsMessage message) async {
-  // Reload user-managed sender whitelist so background isolate has latest data.
-  await SmsService.reloadUserSenders();
+  // Reload SMS contacts so background isolate has latest blocked/allowed data.
+  await SmsService.reloadSmsContacts();
   final transaction = SmsService.parseMessage(message);
   if (transaction == null || transaction.smsId == null) return;
+  // Cross-sender dedup: skip if same amount exists within ±5 min
+  if (await DatabaseHelper.instance
+      .hasCrossSenderDuplicate(transaction.amount, transaction.date)) {
+    return;
+  }
   final inserted =
       await DatabaseHelper.instance.createSmsTransaction(transaction);
   if (inserted == null) return;
@@ -223,20 +228,34 @@ class SmsService {
 
   static final _telephony = Telephony.instance;
 
-  // ── User-managed sender whitelist ────────────────────────────────────────
-  /// In-memory cache of sender IDs added by the user (non-bank services like
-  /// KOKO, FriMi, etc.). Populated at startup and after whitelist edits.
-  static var _userSenders = <String>{};
+  // ── SMS contacts cache ───────────────────────────────────────────────────
+  /// Flat set of sender IDs from non-blocked contacts (both built-in banks
+  /// and custom user entries). Populated at startup and after edits.
+  static var _allowedSenderIds = <String>{};
+
+  /// Flat set of sender IDs from blocked contacts. Checked BEFORE allowed so
+  /// blocking a bank effectively disables it.
+  static var _blockedSenderIds = <String>{};
 
   /// Public constant so callers outside this file can check the sentinel value
   /// without coupling to an internal string literal.
   static const String reversalSentinel = _reversalSentinel;
 
-  /// Reloads the user-managed sender whitelist from the database.
-  /// Call at app startup and after any whitelist add/delete.
-  static Future<void> reloadUserSenders() async {
-    final senders = await DatabaseHelper.instance.getAllWhitelistedSenders();
-    _userSenders = Set<String>.from(senders);
+  /// Reloads the SMS contacts cache from the database.
+  /// Call at app startup and after any contact add/delete/block change.
+  static Future<void> reloadSmsContacts() async {
+    final contacts = await DatabaseHelper.instance.getAllSmsContacts();
+    final allowed = <String>{};
+    final blocked = <String>{};
+    for (final c in contacts) {
+      if (c.isBlocked) {
+        blocked.addAll(c.senderIds.map((s) => s.toLowerCase()));
+      } else {
+        allowed.addAll(c.senderIds.map((s) => s.toLowerCase()));
+      }
+    }
+    _allowedSenderIds = allowed;
+    _blockedSenderIds = blocked;
   }
 
   // ── Permission helpers ───────────────────────────────────────────────────
@@ -265,11 +284,12 @@ class SmsService {
     if (isCancellation && !isReversal) return null;
 
     // Must be from a known sender OR contain a direction keyword.
-    // Bank senders: exact case-sensitive substring (carrier IDs are stable).
-    // User whitelist: case-insensitive so "koko" matches "KOKO" and vice versa.
+    // Blocked senders are always rejected first.
     final senderLower = sender.toLowerCase();
+    if (_blockedSenderIds.any((s) => senderLower.contains(s))) return null;
+
     final isKnownSender = _bankSenders.any((s) => sender.contains(s)) ||
-        _userSenders.any((s) => senderLower.contains(s.toLowerCase()));
+        _allowedSenderIds.any((s) => senderLower.contains(s));
     final isDebit = _debitRegex.hasMatch(body);
     final isCredit = _creditRegex.hasMatch(body);
     final hasInstalment = _instalmentRegex.hasMatch(body);
@@ -584,6 +604,11 @@ class SmsService {
     for (final msg in messages) {
       final t = parseMessage(msg);
       if (t == null || t.smsId == null) continue;
+      // Cross-sender dedup: skip if same amount exists within ±5 min
+      if (await DatabaseHelper.instance
+          .hasCrossSenderDuplicate(t.amount, t.date)) {
+        continue;
+      }
       final inserted = await DatabaseHelper.instance.createSmsTransaction(t);
       if (inserted == null) continue; // duplicate smsId
       if (inserted.category == _reversalSentinel) {

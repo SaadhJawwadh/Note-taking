@@ -3,6 +3,7 @@ import 'package:path/path.dart';
 import 'note_model.dart';
 import 'transaction_model.dart';
 import 'category_definition.dart';
+import 'sms_contact.dart';
 import 'dart:convert';
 
 class DatabaseHelper {
@@ -23,7 +24,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 9,
+      version: 10,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -78,10 +79,15 @@ class DatabaseHelper {
     ''');
     await _seedBuiltInCategories(db);
     await db.execute('''
-      CREATE TABLE sms_whitelist (
-        sender TEXT PRIMARY KEY
+      CREATE TABLE sms_contacts (
+        id TEXT PRIMARY KEY,
+        senderIds TEXT NOT NULL DEFAULT '[]',
+        label TEXT,
+        isBuiltIn INTEGER NOT NULL DEFAULT 0,
+        isBlocked INTEGER NOT NULL DEFAULT 0
       )
     ''');
+    await _seedBuiltInSmsContacts(db);
   }
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -162,6 +168,41 @@ class DatabaseHelper {
           sender TEXT PRIMARY KEY
         )
       ''');
+    }
+    if (oldVersion < 10) {
+      // Replace sms_whitelist with sms_contacts (v1.15.0)
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS sms_contacts (
+          id TEXT PRIMARY KEY,
+          senderIds TEXT NOT NULL DEFAULT '[]',
+          label TEXT,
+          isBuiltIn INTEGER NOT NULL DEFAULT 0,
+          isBlocked INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+      await _seedBuiltInSmsContacts(db);
+      // Migrate existing whitelist entries as custom contacts
+      final hasOld = (await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='sms_whitelist'",
+      )).isNotEmpty;
+      if (hasOld) {
+        final oldRows = await db.query('sms_whitelist');
+        for (final row in oldRows) {
+          final sender = row['sender'] as String;
+          await db.insert(
+            'sms_contacts',
+            {
+              'id': sender,
+              'senderIds': jsonEncode([sender]),
+              'label': null,
+              'isBuiltIn': 0,
+              'isBlocked': 0,
+            },
+            conflictAlgorithm: ConflictAlgorithm.ignore,
+          );
+        }
+        await db.execute('DROP TABLE sms_whitelist');
+      }
     }
   }
 
@@ -247,6 +288,26 @@ class DatabaseHelper {
         },
         conflictAlgorithm: ConflictAlgorithm.ignore,
       );
+    }
+  }
+
+  /// Seeds the 10 built-in Sri Lankan bank contacts. Uses ignore so re-running
+  /// during multiple migration steps is safe.
+  static Future<void> _seedBuiltInSmsContacts(Database db) async {
+    final banks = <Map<String, Object?>>[
+      {'id': 'commercial_bank', 'senderIds': jsonEncode(['COMBANK', 'Comm-Bank', 'CBSL']), 'label': 'Commercial Bank', 'isBuiltIn': 1, 'isBlocked': 0},
+      {'id': 'peoples_bank', 'senderIds': jsonEncode(['PEOBANK', 'PeoplesB', 'PBOCSL', 'PEOPLBK']), 'label': 'Peoples Bank', 'isBuiltIn': 1, 'isBlocked': 0},
+      {'id': 'hnb', 'senderIds': jsonEncode(['HNB', 'HNBANK', 'HNBAlerts']), 'label': 'HNB', 'isBuiltIn': 1, 'isBlocked': 0},
+      {'id': 'sampath_bank', 'senderIds': jsonEncode(['SAMPATH', 'Sampath', 'SAMPTBK']), 'label': 'Sampath Bank', 'isBuiltIn': 1, 'isBlocked': 0},
+      {'id': 'boc', 'senderIds': jsonEncode(['BOCCSL', 'BOC', 'BOCSL']), 'label': 'BOC', 'isBuiltIn': 1, 'isBlocked': 0},
+      {'id': 'ndb_bank', 'senderIds': jsonEncode(['NDB', 'NDBBANK']), 'label': 'NDB Bank', 'isBuiltIn': 1, 'isBlocked': 0},
+      {'id': 'seylan_bank', 'senderIds': jsonEncode(['SEYLAN', 'Seybank', 'SEYLNBK']), 'label': 'Seylan Bank', 'isBuiltIn': 1, 'isBlocked': 0},
+      {'id': 'amana_bank', 'senderIds': jsonEncode(['AMANABNK', 'AMANA', 'AMANABK']), 'label': 'Amana Bank', 'isBuiltIn': 1, 'isBlocked': 0},
+      {'id': 'ntb', 'senderIds': jsonEncode(['NTB', 'NTBBANK']), 'label': 'Nations Trust Bank', 'isBuiltIn': 1, 'isBlocked': 0},
+      {'id': 'lolc', 'senderIds': jsonEncode(['LOLC']), 'label': 'LOLC Finance', 'isBuiltIn': 1, 'isBlocked': 0},
+    ];
+    for (final bank in banks) {
+      await db.insert('sms_contacts', bank, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
   }
 
@@ -677,28 +738,67 @@ class DatabaseHelper {
     );
   }
 
-  // ── SMS Sender Whitelist CRUD ─────────────────────────────────────────────
+  // ── SMS Contacts CRUD ────────────────────────────────────────────────────
 
-  /// Returns all sender IDs in the user-managed whitelist.
-  Future<List<String>> getAllWhitelistedSenders() async {
+  /// Returns all SMS contacts (built-in banks first, then custom).
+  Future<List<SmsContact>> getAllSmsContacts() async {
     final db = await instance.database;
-    final rows = await db.query('sms_whitelist', orderBy: 'sender ASC');
-    return rows.map((r) => r['sender'] as String).toList();
+    final rows = await db.query(
+      'sms_contacts',
+      orderBy: 'isBuiltIn DESC, label ASC, id ASC',
+    );
+    return rows.map(SmsContact.fromMap).toList();
   }
 
-  /// Adds a sender ID to the whitelist. Duplicate entries are silently ignored.
-  Future<void> addWhitelistedSender(String sender) async {
+  /// Inserts or replaces an SMS contact. Use for creating custom contacts
+  /// or updating existing ones (e.g. editing senderIds).
+  Future<void> upsertSmsContact(SmsContact contact) async {
     final db = await instance.database;
     await db.insert(
-      'sms_whitelist',
-      {'sender': sender.trim()},
-      conflictAlgorithm: ConflictAlgorithm.ignore,
+      'sms_contacts',
+      contact.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
 
-  /// Removes a sender ID from the whitelist.
-  Future<void> removeWhitelistedSender(String sender) async {
+  /// Deletes a custom (non-built-in) SMS contact by id.
+  Future<void> deleteSmsContact(String id) async {
     final db = await instance.database;
-    await db.delete('sms_whitelist', where: 'sender = ?', whereArgs: [sender]);
+    await db.delete(
+      'sms_contacts',
+      where: 'id = ? AND isBuiltIn = 0',
+      whereArgs: [id],
+    );
+  }
+
+  /// Toggles the blocked state of an SMS contact.
+  Future<void> setSmsContactBlocked(String id, bool blocked) async {
+    final db = await instance.database;
+    await db.update(
+      'sms_contacts',
+      {'isBlocked': blocked ? 1 : 0},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Returns true if a transaction with the same [amount] and smsId exists
+  /// within ±5 minutes of [date]. Used for cross-sender deduplication
+  /// (e.g. COMBANK and COMBANK Q+ firing for the same real transaction).
+  Future<bool> hasCrossSenderDuplicate(double amount, DateTime date) async {
+    final db = await instance.database;
+    final windowStart =
+        date.subtract(const Duration(minutes: 5)).toIso8601String();
+    final windowEnd =
+        date.add(const Duration(minutes: 5)).toIso8601String();
+    final rows = await db.query(
+      'transactions',
+      columns: [TransactionFields.id],
+      where:
+          'amount = ? AND smsId IS NOT NULL AND date >= ? AND date <= ?',
+      whereArgs: [amount, windowStart, windowEnd],
+      limit: 1,
+    );
+    return rows.isNotEmpty;
   }
 }

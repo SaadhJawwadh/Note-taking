@@ -41,6 +41,11 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     _refreshTransactions();
     SmsService.startForegroundListener((t) async {
       if (!mounted) return;
+      // Cross-sender dedup: skip if same amount exists within ±5 min
+      if (await DatabaseHelper.instance
+          .hasCrossSenderDuplicate(t.amount, t.date)) {
+        return;
+      }
       final inserted = await DatabaseHelper.instance.createSmsTransaction(t);
       if (inserted == null) return;
       // Handle reversal sentinel — delete original expense if found
@@ -88,9 +93,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     // Apply category filter
     _transactions = _selectedCategory == null
         ? dateFiltered
-        : dateFiltered
-            .where((t) => t.category == _selectedCategory)
-            .toList();
+        : dateFiltered.where((t) => t.category == _selectedCategory).toList();
 
     // Apply search filter
     if (_searchQuery.isNotEmpty) {
@@ -207,8 +210,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     }
     final net = _totalIncome - _totalExpense;
     final isPositive = net >= 0;
-    final onColor =
-        isPositive ? cs.onTertiaryContainer : cs.onErrorContainer;
+    final onColor = isPositive ? cs.onTertiaryContainer : cs.onErrorContainer;
     final rangeLabel = _selectedRange.duration.inDays == 0
         ? DateFormat.MMMMEEEEd().format(_selectedRange.start)
         : '${DateFormat.MMMd().format(_selectedRange.start)} – ${DateFormat.MMMd().format(_selectedRange.end)}';
@@ -248,8 +250,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            Divider(
-                color: onColor.withValues(alpha: 0.2), height: 1),
+            Divider(color: onColor.withValues(alpha: 0.2), height: 1),
             const SizedBox(height: 12),
             // Income / Expense breakdown
             IntrinsicHeight(
@@ -260,8 +261,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                         _totalIncome, currency, onColor),
                   ),
                   VerticalDivider(
-                      width: 1,
-                      color: onColor.withValues(alpha: 0.2)),
+                      width: 1, color: onColor.withValues(alpha: 0.2)),
                   Expanded(
                     child: _miniStat(tt, Icons.arrow_outward, 'Expense',
                         _totalExpense, currency, onColor),
@@ -292,8 +292,8 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
         const SizedBox(height: 4),
         Text(
           '$currency ${amount.toStringAsFixed(0)}',
-          style:
-              tt.titleSmall?.copyWith(color: color, fontWeight: FontWeight.bold),
+          style: tt.titleSmall
+              ?.copyWith(color: color, fontWeight: FontWeight.bold),
         ),
       ],
     );
@@ -322,15 +322,13 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
             toY: data['totalIncome'] as double,
             color: cs.tertiary,
             width: 8,
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(4)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
           ),
           BarChartRodData(
             toY: data['totalExpense'] as double,
             color: cs.error,
             width: 8,
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(4)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
           ),
         ],
         barsSpace: 4,
@@ -359,14 +357,12 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                 _legendDot(cs.tertiary),
                 const SizedBox(width: 4),
                 Text('Income',
-                    style: tt.labelSmall
-                        ?.copyWith(color: cs.onSurfaceVariant)),
+                    style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
                 const SizedBox(width: 12),
                 _legendDot(cs.error),
                 const SizedBox(width: 4),
                 Text('Expense',
-                    style: tt.labelSmall
-                        ?.copyWith(color: cs.onSurfaceVariant)),
+                    style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
               ],
             ),
             const SizedBox(height: 16),
@@ -473,8 +469,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
 
     return Column(
       children: [
-        Text(label,
-            style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
+        Text(label, style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
         const SizedBox(height: 4),
         Text(
           '$currency ${amount.abs().toStringAsFixed(0)}',
@@ -539,14 +534,12 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                   child: _comparisonTile(cs, tt, 'Income', thisIncome,
                       pctChange(thisIncome, lastIncome), currency, false),
                 ),
-                Container(
-                    width: 1, height: 48, color: cs.outlineVariant),
+                Container(width: 1, height: 48, color: cs.outlineVariant),
                 Expanded(
                   child: _comparisonTile(cs, tt, 'Expense', thisExpense,
                       pctChange(thisExpense, lastExpense), currency, true),
                 ),
-                Container(
-                    width: 1, height: 48, color: cs.outlineVariant),
+                Container(width: 1, height: 48, color: cs.outlineVariant),
                 Expanded(
                   child: _comparisonTile(cs, tt, 'Net', thisNet,
                       pctChange(thisNet, lastNet), currency, false),
@@ -608,8 +601,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                       ),
                       Text(
                         _selectedRange.duration.inDays == 0
-                            ? DateFormat.MMMd()
-                                .format(_selectedRange.start)
+                            ? DateFormat.MMMd().format(_selectedRange.start)
                             : '${DateFormat.MMMd().format(_selectedRange.start)} – ${DateFormat.MMMd().format(_selectedRange.end)}',
                         style: textTheme.labelSmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
@@ -660,8 +652,8 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: _buildMonthComparisonCard(
-                  colorScheme, textTheme, currency),
+              child:
+                  _buildMonthComparisonCard(colorScheme, textTheme, currency),
             ),
           ),
 
@@ -727,8 +719,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                       ),
                       const SizedBox(width: 8),
                       ..._activeCategories.map((cat) {
-                        final catColor =
-                            TransactionCategory.colorFor(cat);
+                        final catColor = TransactionCategory.colorFor(cat);
                         final selected = _selectedCategory == cat;
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
@@ -736,12 +727,11 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                             label: Text(cat),
                             selected: selected,
                             onSelected: (_) {
-                              setState(() => _selectedCategory =
-                                  selected ? null : cat);
+                              setState(() =>
+                                  _selectedCategory = selected ? null : cat);
                               _refreshTransactions();
                             },
-                            selectedColor:
-                                catColor.withValues(alpha: 0.2),
+                            selectedColor: catColor.withValues(alpha: 0.2),
                             checkmarkColor: catColor,
                             labelStyle: TextStyle(
                               color: selected
@@ -752,9 +742,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                   : FontWeight.normal,
                             ),
                             side: BorderSide(
-                              color: selected
-                                  ? catColor
-                                  : colorScheme.outline,
+                              color: selected ? catColor : colorScheme.outline,
                               width: selected ? 1.5 : 0.5,
                             ),
                           ),
@@ -876,11 +864,9 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                     FilledButton(
                                       style: FilledButton.styleFrom(
                                         backgroundColor: colorScheme.error,
-                                        foregroundColor:
-                                            colorScheme.onError,
+                                        foregroundColor: colorScheme.onError,
                                       ),
-                                      onPressed: () =>
-                                          Navigator.pop(ctx, true),
+                                      onPressed: () => Navigator.pop(ctx, true),
                                       child: const Text('Delete'),
                                     ),
                                   ],
@@ -923,8 +909,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                       children: [
                                         Text(
                                           transaction.description,
-                                          style:
-                                              textTheme.bodyLarge?.copyWith(
+                                          style: textTheme.bodyLarge?.copyWith(
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
@@ -933,25 +918,25 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                           padding: const EdgeInsets.symmetric(
                                               horizontal: 8, vertical: 2),
                                           decoration: BoxDecoration(
-                                            color: TransactionCategory
-                                                .colorFor(transaction.category)
+                                            color: TransactionCategory.colorFor(
+                                                    transaction.category)
                                                 .withValues(alpha: 0.12),
                                             borderRadius:
                                                 BorderRadius.circular(8),
                                             border: Border.all(
-                                              color: TransactionCategory
-                                                  .colorFor(
-                                                      transaction.category)
-                                                  .withValues(alpha: 0.4),
+                                              color:
+                                                  TransactionCategory.colorFor(
+                                                          transaction.category)
+                                                      .withValues(alpha: 0.4),
                                               width: 0.5,
                                             ),
                                           ),
                                           child: Text(
                                             transaction.category,
-                                            style: textTheme.labelSmall
-                                                ?.copyWith(
-                                              color: TransactionCategory
-                                                  .colorFor(
+                                            style:
+                                                textTheme.labelSmall?.copyWith(
+                                              color:
+                                                  TransactionCategory.colorFor(
                                                       transaction.category),
                                               fontWeight: FontWeight.w600,
                                             ),
@@ -1021,7 +1006,7 @@ class _FinancesSmsImportSheetState extends State<_FinancesSmsImportSheet> {
     ('All time', null),
   ];
 
-  int _selectedIndex = 2; // default: Last 30 days
+  int _selectedIndex = 0; // default: Last day
   bool _loading = false;
 
   Future<void> _runImport() async {
@@ -1112,8 +1097,7 @@ class _FinancesSmsImportSheetState extends State<_FinancesSmsImportSheet> {
           const SizedBox(height: 20),
           Text(
             'Import SMS Transactions',
-            style:
-                textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 4),
           Text(
@@ -1161,4 +1145,3 @@ class _FinancesSmsImportSheetState extends State<_FinancesSmsImportSheet> {
     );
   }
 }
-

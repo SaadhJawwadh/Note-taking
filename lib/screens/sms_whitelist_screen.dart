@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import '../data/database_helper.dart';
+import '../data/sms_contact.dart';
 import '../services/sms_service.dart';
 
-class SmsWhitelistScreen extends StatefulWidget {
-  const SmsWhitelistScreen({super.key});
+class SmsContactsScreen extends StatefulWidget {
+  const SmsContactsScreen({super.key});
 
   @override
-  State<SmsWhitelistScreen> createState() => _SmsWhitelistScreenState();
+  State<SmsContactsScreen> createState() => _SmsContactsScreenState();
 }
 
-class _SmsWhitelistScreenState extends State<SmsWhitelistScreen> {
-  List<String> _senders = [];
+class _SmsContactsScreenState extends State<SmsContactsScreen> {
+  List<SmsContact> _contacts = [];
   bool _loading = true;
   final _controller = TextEditingController();
 
@@ -27,27 +28,39 @@ class _SmsWhitelistScreenState extends State<SmsWhitelistScreen> {
   }
 
   Future<void> _load() async {
-    final senders = await DatabaseHelper.instance.getAllWhitelistedSenders();
+    final contacts = await DatabaseHelper.instance.getAllSmsContacts();
     if (mounted) {
       setState(() {
-        _senders = senders;
+        _contacts = contacts;
         _loading = false;
       });
     }
   }
 
-  Future<void> _add() async {
+  Future<void> _addCustomSender() async {
     final value = _controller.text.trim();
     if (value.isEmpty) return;
-    await DatabaseHelper.instance.addWhitelistedSender(value);
-    await SmsService.reloadUserSenders();
+    final id = value.toLowerCase().replaceAll(RegExp(r'\s+'), '_');
+    await DatabaseHelper.instance.upsertSmsContact(SmsContact(
+      id: 'custom_$id',
+      senderIds: [value],
+      label: value,
+    ));
+    await SmsService.reloadSmsContacts();
     _controller.clear();
     await _load();
   }
 
-  Future<void> _remove(String sender) async {
-    await DatabaseHelper.instance.removeWhitelistedSender(sender);
-    await SmsService.reloadUserSenders();
+  Future<void> _toggleBlocked(SmsContact contact) async {
+    await DatabaseHelper.instance
+        .setSmsContactBlocked(contact.id, !contact.isBlocked);
+    await SmsService.reloadSmsContacts();
+    await _load();
+  }
+
+  Future<void> _deleteCustom(SmsContact contact) async {
+    await DatabaseHelper.instance.deleteSmsContact(contact.id);
+    await SmsService.reloadSmsContacts();
     await _load();
   }
 
@@ -56,129 +69,180 @@ class _SmsWhitelistScreenState extends State<SmsWhitelistScreen> {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
 
+    final banks = _contacts.where((c) => c.isBuiltIn).toList();
+    final custom = _contacts.where((c) => !c.isBuiltIn).toList();
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('SMS Sender Whitelist'),
-      ),
-      body: Column(
-        children: [
-          // ── Info banner ────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Card(
-              color: cs.secondaryContainer,
-              elevation: 0,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.info_outline,
-                        size: 18, color: cs.onSecondaryContainer),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Banks are always included by default. '
-                        'Add sender IDs for non-bank services (e.g. KOKO) '
-                        'whose debit/credit SMS you want to import.',
-                        style: tt.bodySmall
-                            ?.copyWith(color: cs.onSecondaryContainer),
+      appBar: AppBar(title: const Text('SMS Contacts')),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator.adaptive())
+          : ListView(
+              children: [
+                // ── Info banner ──────────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: Card(
+                    color: cs.secondaryContainer,
+                    elevation: 0,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.info_outline,
+                              size: 18, color: cs.onSecondaryContainer),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Manage which SMS senders are imported as '
+                              'transactions. Toggle the switch to block a '
+                              'sender. Add custom sender IDs for non-bank '
+                              'services (e.g. KOKO, FriMi).',
+                              style: tt.bodySmall?.copyWith(
+                                  color: cs.onSecondaryContainer),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // ── Add sender row ─────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    textCapitalization: TextCapitalization.characters,
-                    decoration: const InputDecoration(
-                      hintText: 'Sender ID (e.g. KOKO)',
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
-                      isDense: true,
-                    ),
-                    onSubmitted: (_) => _add(),
                   ),
                 ),
-                const SizedBox(width: 8),
-                FilledButton.icon(
-                  onPressed: _add,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Add'),
+
+                // ── Add custom sender row ────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _controller,
+                          textCapitalization: TextCapitalization.characters,
+                          decoration: const InputDecoration(
+                            hintText: 'Sender ID (e.g. KOKO)',
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 10),
+                            isDense: true,
+                          ),
+                          onSubmitted: (_) => _addCustomSender(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton.icon(
+                        onPressed: _addCustomSender,
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('Add'),
+                      ),
+                    ],
+                  ),
                 ),
+
+                const Divider(height: 24),
+
+                // ── Banks section ────────────────────────────────────────
+                if (banks.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                    child: Text('Banks',
+                        style: tt.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: cs.onSurfaceVariant)),
+                  ),
+                  ...banks.map((c) => _contactTile(cs, tt, c, canDelete: false)),
+                  const Divider(height: 24),
+                ],
+
+                // ── Custom senders section ──────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                  child: Text('Custom Senders',
+                      style: tt.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: cs.onSurfaceVariant)),
+                ),
+                if (custom.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 24),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(Icons.sms_outlined,
+                              size: 40,
+                              color:
+                                  cs.onSurfaceVariant.withValues(alpha: 0.4)),
+                          const SizedBox(height: 8),
+                          Text('No custom senders yet',
+                              style: tt.bodyMedium
+                                  ?.copyWith(color: cs.onSurfaceVariant)),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  ...custom
+                      .map((c) => _contactTile(cs, tt, c, canDelete: true)),
+
+                const SizedBox(height: 32),
               ],
             ),
+    );
+  }
+
+  Widget _contactTile(ColorScheme cs, TextTheme tt, SmsContact contact,
+      {required bool canDelete}) {
+    final blocked = contact.isBlocked;
+    final label = contact.label ?? contact.id;
+    final subtitle = contact.senderIds.join(', ');
+
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor:
+            blocked ? cs.errorContainer : cs.primaryContainer,
+        radius: 18,
+        child: Icon(
+          blocked ? Icons.block : Icons.message_outlined,
+          size: 18,
+          color: blocked ? cs.onErrorContainer : cs.onPrimaryContainer,
+        ),
+      ),
+      title: Text(
+        label,
+        style: tt.bodyMedium?.copyWith(
+          decoration: blocked ? TextDecoration.lineThrough : null,
+          color: blocked ? cs.onSurfaceVariant : null,
+        ),
+      ),
+      subtitle: Text(subtitle,
+          style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Switch.adaptive(
+            value: !blocked,
+            onChanged: (_) => _toggleBlocked(contact),
+            activeTrackColor: cs.primary,
           ),
-
-          const Divider(height: 16),
-
-          // ── List ───────────────────────────────────────────────────────
-          if (_loading)
-            const Expanded(
-                child: Center(child: CircularProgressIndicator.adaptive()))
-          else if (_senders.isEmpty)
-            Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.sms_outlined,
-                        size: 48, color: cs.onSurfaceVariant.withValues(alpha: 0.4)),
-                    const SizedBox(height: 12),
-                    Text('No custom senders yet',
-                        style: tt.bodyMedium
-                            ?.copyWith(color: cs.onSurfaceVariant)),
-                  ],
-                ),
-              ),
-            )
-          else
-            Expanded(
-              child: ListView.separated(
-                itemCount: _senders.length,
-                separatorBuilder: (_, __) =>
-                    const Divider(height: 1, indent: 16, endIndent: 16),
-                itemBuilder: (ctx, i) {
-                  final s = _senders[i];
-                  return ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: cs.primaryContainer,
-                      radius: 18,
-                      child: Icon(Icons.message_outlined,
-                          size: 18, color: cs.onPrimaryContainer),
-                    ),
-                    title: Text(s, style: tt.bodyMedium),
-                    trailing: IconButton(
-                      icon: Icon(Icons.delete_outline, color: cs.error),
-                      tooltip: 'Remove',
-                      onPressed: () => _confirmRemove(ctx, s),
-                    ),
-                  );
-                },
-              ),
+          if (canDelete)
+            IconButton(
+              icon: Icon(Icons.delete_outline, color: cs.error),
+              tooltip: 'Remove',
+              onPressed: () => _confirmDelete(contact),
             ),
         ],
       ),
     );
   }
 
-  void _confirmRemove(BuildContext ctx, String sender) {
+  void _confirmDelete(SmsContact contact) {
     showDialog<bool>(
-      context: ctx,
+      context: context,
       builder: (dctx) => AlertDialog(
         title: const Text('Remove sender?'),
         content: Text(
-            'SMS from "$sender" will no longer be auto-imported as transactions.'),
+            'SMS from "${contact.label ?? contact.id}" will no longer be '
+            'auto-imported as transactions.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(dctx, false),
@@ -190,7 +254,7 @@ class _SmsWhitelistScreenState extends State<SmsWhitelistScreen> {
         ],
       ),
     ).then((confirmed) {
-      if (confirmed == true) _remove(sender);
+      if (confirmed == true) _deleteCustom(contact);
     });
   }
 }

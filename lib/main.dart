@@ -12,7 +12,7 @@ import 'package:flutter_quill/flutter_quill.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await TransactionCategory.reload();
-  await SmsService.reloadUserSenders();
+  await SmsService.reloadSmsContacts();
   runApp(
     ChangeNotifierProvider(
       create: (_) => SettingsProvider(),

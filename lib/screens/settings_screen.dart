@@ -10,6 +10,7 @@ import 'dart:io';
 
 import 'package:sqflite/sqflite.dart';
 import '../data/database_helper.dart';
+import '../data/sms_contact.dart';
 import '../data/transaction_category.dart';
 
 import 'package:provider/provider.dart';
@@ -18,7 +19,7 @@ import '../data/settings_provider.dart';
 import 'manage_tags_screen.dart';
 import 'filtered_notes_screen.dart';
 import 'category_management_screen.dart';
-import 'sms_whitelist_screen.dart';
+import 'sms_whitelist_screen.dart'; // SmsContactsScreen lives here
 import '../utils/app_constants.dart';
 
 import 'package:file_picker/file_picker.dart';
@@ -165,16 +166,16 @@ class SettingsScreen extends StatelessWidget {
                               ),
                               _buildListTile(
                                 context,
-                                icon: Icons.mark_email_read_outlined,
-                                title: 'SMS Sender Whitelist',
+                                icon: Icons.contacts_outlined,
+                                title: 'SMS Contacts',
                                 subtitle:
-                                    'Add non-bank senders (e.g. KOKO) to auto-import',
+                                    'Manage bank & custom senders for auto-import',
                                 showArrow: true,
                                 onTap: () => Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) =>
-                                        const SmsWhitelistScreen(),
+                                        const SmsContactsScreen(),
                                   ),
                                 ),
                               ),
@@ -628,16 +629,16 @@ class SettingsScreen extends StatelessWidget {
       final tags = await db.query('tags');
       final transactions = await db.query('transactions');
       final categoryDefinitions = await db.query('category_definitions');
-      final smsWhitelist = await db.query('sms_whitelist');
+      final smsContacts = await db.query('sms_contacts');
 
       final backupData = {
         'notes': notes,
         'tags': tags,
         'transactions': transactions,
         'categoryDefinitions': categoryDefinitions,
-        'smsWhitelist': smsWhitelist,
+        'smsContacts': smsContacts,
         'settings': settings.toBackupMap(),
-        'version': 5,
+        'version': 6,
         'exportedAt': DateTime.now().toIso8601String(),
       };
 
@@ -705,6 +706,7 @@ class SettingsScreen extends StatelessWidget {
           return (m['isBuiltIn'] as int? ?? 1) == 0;
         }).length ?? 0;
         final previewWhitelist =
+            (data['smsContacts'] as List?)?.length ??
             (data['smsWhitelist'] as List?)?.length ?? 0;
         final previewVersion = data['version'] ?? 1;
 
@@ -725,7 +727,7 @@ class SettingsScreen extends StatelessWidget {
                 if (previewCategories > 0)
                   Text('$previewCategories custom categories'),
                 if (previewWhitelist > 0)
-                  Text('$previewWhitelist SMS whitelist sender(s)'),
+                  Text('$previewWhitelist SMS contact(s)'),
                 const SizedBox(height: 12),
                 Text(
                   'Existing notes and tags with the same ID will be overwritten. '
@@ -841,19 +843,33 @@ class SettingsScreen extends StatelessWidget {
           await TransactionCategory.reload();
         }
 
-        // Restore SMS sender whitelist (v5+ backups only)
-        if (data.containsKey('smsWhitelist')) {
-          final List<dynamic> whitelist = data['smsWhitelist'] as List;
+        // Restore SMS contacts (v6+ backups) or legacy whitelist (v5 backups)
+        if (data.containsKey('smsContacts')) {
+          final List<dynamic> contacts = data['smsContacts'] as List;
           final db3 = await DatabaseHelper.instance.database;
-          for (final row in whitelist) {
+          for (final row in contacts) {
             final map = Map<String, Object?>.from(row as Map);
             await db3.insert(
-              'sms_whitelist',
+              'sms_contacts',
               map,
               conflictAlgorithm: ConflictAlgorithm.ignore,
             );
           }
-          await SmsService.reloadUserSenders();
+          await SmsService.reloadSmsContacts();
+        } else if (data.containsKey('smsWhitelist')) {
+          // v5 backup: migrate old whitelist entries as custom contacts
+          final List<dynamic> whitelist = data['smsWhitelist'] as List;
+          for (final row in whitelist) {
+            final map = Map<String, Object?>.from(row as Map);
+            final sender = map['sender'] as String? ?? '';
+            if (sender.isEmpty) continue;
+            await DatabaseHelper.instance.upsertSmsContact(SmsContact(
+              id: 'custom_${sender.toLowerCase().replaceAll(RegExp(r'\s+'), '_')}',
+              senderIds: [sender],
+              label: sender,
+            ));
+          }
+          await SmsService.reloadSmsContacts();
         }
 
         // Restore settings if present (v3+ backups)
@@ -871,7 +887,7 @@ class SettingsScreen extends StatelessWidget {
             ? ', $previewCategories categories'
             : '';
         final whitelistMsg = previewWhitelist > 0
-            ? ', $previewWhitelist whitelist senders'
+            ? ', $previewWhitelist SMS contacts'
             : '';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

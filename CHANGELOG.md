@@ -2,6 +2,25 @@
 
 All notable changes to Note Book are documented here.
 
+## [1.15.0] - 2026-02-25
+
+### ✨ New Features
+- **SMS Contacts Management**: Replaced the simple SMS Sender Whitelist with a full **SMS Contacts** screen (Settings → Financial Manager → SMS Contacts). View all 10 built-in Sri Lankan banks and any custom senders in a single grouped list.
+- **Block / Unblock Senders**: Toggle any bank or custom sender on/off with a switch. Blocked senders are completely ignored during SMS import — useful for suppressing duplicate notifications (e.g. block "COMBANK Q+" but keep "COMBANK").
+- **Cross-Sender Deduplication**: When the same amount appears from two different senders within a ±5-minute window, only the first transaction is imported. Eliminates duplicates from bank apps that send parallel SMS (e.g. COMBANK and COMBANK Q+ for the same purchase).
+
+### 🛠 Improvements
+- **Default import period**: Import SMS Transactions sheet now defaults to **"Last day"** instead of "Last 30 days" for faster routine syncs.
+- **Backup v6**: Exports/imports `sms_contacts` table. v5 backups (with `smsWhitelist` key) are automatically migrated during import — no data loss.
+- **Database v10**: `sms_contacts` table replaces `sms_whitelist`. Existing whitelist entries are migrated as custom contacts automatically on upgrade.
+
+### 🔒 Security / Data Integrity
+- Cross-sender dedup prevents inflated expense totals from duplicate bank SMS.
+- Blocked senders checked before allowed senders in the parsing pipeline — blocking always wins.
+- Backup version bumped 5 → 6; v1–v5 backups continue to import correctly.
+
+---
+
 ## [1.14.2] - 2026-02-23
 
 ### 🛠 Improvements
