@@ -519,7 +519,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           final note = filteredNotes[index];
                           return AnimationConfiguration.staggeredGrid(
                             position: index,
-                            duration: const Duration(milliseconds: 375),
+                            duration: const Duration(milliseconds: 220),
                             columnCount: 2,
                             child: ScaleAnimation(
                               child: FadeInAnimation(
@@ -527,7 +527,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   transitionType:
                                       ContainerTransitionType.fadeThrough,
                                   transitionDuration:
-                                      const Duration(milliseconds: 500),
+                                      const Duration(milliseconds: 300),
                                   openBuilder: (context, _) =>
                                       NoteEditorScreen(note: note),
                                   closedElevation: 0,
@@ -564,9 +564,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             final note = filteredNotes[index];
                             return AnimationConfiguration.staggeredList(
                               position: index,
-                              duration: const Duration(milliseconds: 375),
+                              duration: const Duration(milliseconds: 220),
                               child: SlideAnimation(
-                                verticalOffset: 50.0,
+                                verticalOffset: 24.0,
                                 child: FadeInAnimation(
                                   child: Padding(
                                     padding: const EdgeInsets.only(bottom: 12),
@@ -574,7 +574,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       transitionType:
                                           ContainerTransitionType.fadeThrough,
                                       transitionDuration:
-                                          const Duration(milliseconds: 500),
+                                          const Duration(milliseconds: 300),
                                       openBuilder: (context, _) =>
                                           NoteEditorScreen(note: note),
                                       closedElevation: 0,
@@ -616,7 +616,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       floatingActionButton: OpenContainer<bool>(
         transitionType: ContainerTransitionType.fadeThrough,
-        transitionDuration: const Duration(milliseconds: 500),
+        transitionDuration: const Duration(milliseconds: 300),
         openBuilder: (context, _) => const NoteEditorScreen(),
         closedElevation: 6.0,
         openElevation: 0,

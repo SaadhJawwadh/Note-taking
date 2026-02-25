@@ -573,7 +573,6 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
 
     return Scaffold(
       body: AnimationLimiter(
-        key: ValueKey('$_selectedCategory|$_searchQuery'),
         child: CustomScrollView(
           slivers: [
             SliverAppBar(
@@ -656,9 +655,9 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
             SliverToBoxAdapter(
               child: AnimationConfiguration.staggeredList(
                 position: 0,
-                duration: const Duration(milliseconds: 375),
+                duration: const Duration(milliseconds: 220),
                 child: SlideAnimation(
-                  verticalOffset: 50.0,
+                  verticalOffset: 24.0,
                   child: FadeInAnimation(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -674,9 +673,9 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
             SliverToBoxAdapter(
               child: AnimationConfiguration.staggeredList(
                 position: 1,
-                duration: const Duration(milliseconds: 375),
+                duration: const Duration(milliseconds: 220),
                 child: SlideAnimation(
-                  verticalOffset: 50.0,
+                  verticalOffset: 24.0,
                   child: FadeInAnimation(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -692,9 +691,9 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
             SliverToBoxAdapter(
               child: AnimationConfiguration.staggeredList(
                 position: 2,
-                duration: const Duration(milliseconds: 375),
+                duration: const Duration(milliseconds: 220),
                 child: SlideAnimation(
-                  verticalOffset: 50.0,
+                  verticalOffset: 24.0,
                   child: FadeInAnimation(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -710,9 +709,9 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
             SliverToBoxAdapter(
               child: AnimationConfiguration.staggeredList(
                 position: 3,
-                duration: const Duration(milliseconds: 375),
+                duration: const Duration(milliseconds: 220),
                 child: SlideAnimation(
-                  verticalOffset: 50.0,
+                  verticalOffset: 24.0,
                   child: FadeInAnimation(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -757,9 +756,9 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
               SliverToBoxAdapter(
                 child: AnimationConfiguration.staggeredList(
                   position: 4,
-                  duration: const Duration(milliseconds: 375),
+                  duration: const Duration(milliseconds: 220),
                   child: SlideAnimation(
-                    verticalOffset: 50.0,
+                    verticalOffset: 24.0,
                     child: FadeInAnimation(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -882,51 +881,34 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
 
                       // Date group header
                       if (item is String) {
-                        return AnimationConfiguration.staggeredList(
-                          position: index + 5,
-                          duration: const Duration(milliseconds: 375),
-                          child: SlideAnimation(
-                            verticalOffset: 50.0,
-                            child: FadeInAnimation(
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
-                                child: Text(
-                                  item,
-                                  style: textTheme.labelMedium?.copyWith(
-                                    color: colorScheme.onSurfaceVariant,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
+                        return Padding(
+                          padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
+                          child: Text(
+                            item,
+                            style: textTheme.labelMedium?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         );
                       }
 
                       final transaction = item as TransactionModel;
-                      return AnimationConfiguration.staggeredList(
-                        position: index + 5,
-                        duration: const Duration(milliseconds: 375),
-                        child: SlideAnimation(
-                          verticalOffset: 50.0,
-                          child: FadeInAnimation(
-                            child: OpenContainer<bool>(
-                              transitionType:
-                                  ContainerTransitionType.fadeThrough,
-                              transitionDuration:
-                                  const Duration(milliseconds: 500),
-                              openBuilder: (context, _) =>
-                                  TransactionEditorScreen(
-                                      transaction: transaction),
-                              closedElevation: 0,
-                              openElevation: 0,
-                              closedColor: colorScheme.surfaceContainer,
-                              openColor: colorScheme.surface,
-                              closedShape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12)),
-                              onClosed: (updated) {
-                                if (updated == true) _refreshTransactions();
-                              },
+                      return OpenContainer<bool>(
+                        transitionType: ContainerTransitionType.fadeThrough,
+                        transitionDuration: const Duration(milliseconds: 300),
+                        openBuilder: (context, _) =>
+                            TransactionEditorScreen(
+                                transaction: transaction),
+                        closedElevation: 0,
+                        openElevation: 0,
+                        closedColor: colorScheme.surfaceContainer,
+                        openColor: colorScheme.surface,
+                        closedShape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        onClosed: (updated) {
+                          if (updated == true) _refreshTransactions();
+                        },
                               closedBuilder: (context, openContainer) {
                                 return Card(
                                   elevation: 0,
@@ -1063,10 +1045,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                   ),
                                 );
                               },
-                            ),
-                          ),
-                        ),
-                      );
+                          );
                     },
                     childCount: _groupedTransactions.length,
                   ),
@@ -1077,7 +1056,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
       ),
       floatingActionButton: OpenContainer<bool>(
         transitionType: ContainerTransitionType.fadeThrough,
-        transitionDuration: const Duration(milliseconds: 500),
+        transitionDuration: const Duration(milliseconds: 300),
         openBuilder: (context, _) => const TransactionEditorScreen(),
         closedElevation: 6.0,
         openElevation: 0,

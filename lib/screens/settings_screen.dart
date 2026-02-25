@@ -84,9 +84,9 @@ class SettingsScreen extends StatelessWidget {
                   child: SliverList(
                     delegate: SliverChildListDelegate(
                       AnimationConfiguration.toStaggeredList(
-                        duration: const Duration(milliseconds: 375),
+                        duration: const Duration(milliseconds: 220),
                         childAnimationBuilder: (widget) => SlideAnimation(
-                          verticalOffset: 50.0,
+                          verticalOffset: 24.0,
                           child: FadeInAnimation(child: widget),
                         ),
                         children: [
