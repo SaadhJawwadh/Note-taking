@@ -27,6 +27,19 @@ class SettingsProvider extends ChangeNotifier {
   String _currency = 'LKR';
   String get currency => _currency;
 
+  // Auto-backup (device-specific — excluded from backup export/restore)
+  bool _autoBackupEnabled = false;
+  bool get autoBackupEnabled => _autoBackupEnabled;
+
+  String _autoBackupFrequency = 'daily';
+  String get autoBackupFrequency => _autoBackupFrequency;
+
+  String? _autoBackupPath;
+  String? get autoBackupPath => _autoBackupPath;
+
+  String? _lastAutoBackupTime;
+  String? get lastAutoBackupTime => _lastAutoBackupTime;
+
   SettingsProvider() {
     _loadSettings();
   }
@@ -39,6 +52,12 @@ class SettingsProvider extends ChangeNotifier {
     _showFinancialManager = prefs.getBool('showFinancialManager') ?? false;
     _currency = prefs.getString('currency') ?? 'LKR';
 
+    _autoBackupEnabled = prefs.getBool('autoBackupEnabled') ?? false;
+    _autoBackupFrequency =
+        prefs.getString('autoBackupFrequency') ?? 'daily';
+    _autoBackupPath = prefs.getString('autoBackupPath');
+    _lastAutoBackupTime = prefs.getString('lastAutoBackupTime');
+
     final themeIndex = prefs.getInt('themeMode') ?? 0;
     _themeMode = _getThemeModeFromInt(themeIndex);
 
@@ -49,6 +68,42 @@ class SettingsProvider extends ChangeNotifier {
     _currency = curr;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('currency', curr);
+    notifyListeners();
+  }
+
+  Future<void> setAutoBackupEnabled(bool enabled) async {
+    _autoBackupEnabled = enabled;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('autoBackupEnabled', enabled);
+    notifyListeners();
+  }
+
+  Future<void> setAutoBackupFrequency(String freq) async {
+    _autoBackupFrequency = freq;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('autoBackupFrequency', freq);
+    notifyListeners();
+  }
+
+  Future<void> setAutoBackupPath(String? path) async {
+    _autoBackupPath = path;
+    final prefs = await SharedPreferences.getInstance();
+    if (path != null) {
+      await prefs.setString('autoBackupPath', path);
+    } else {
+      await prefs.remove('autoBackupPath');
+    }
+    notifyListeners();
+  }
+
+  Future<void> setLastAutoBackupTime(String? time) async {
+    _lastAutoBackupTime = time;
+    final prefs = await SharedPreferences.getInstance();
+    if (time != null) {
+      await prefs.setString('lastAutoBackupTime', time);
+    } else {
+      await prefs.remove('lastAutoBackupTime');
+    }
     notifyListeners();
   }
 

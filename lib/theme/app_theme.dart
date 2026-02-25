@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:animations/animations.dart';
 
 class AppTheme {
   // Premium Colors
@@ -118,6 +119,13 @@ class AppTheme {
         labelTextStyle: WidgetStateProperty.all(
           textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w500),
         ),
+      ),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: FadeThroughPageTransitionsBuilder(),
+          TargetPlatform.iOS: FadeThroughPageTransitionsBuilder(),
+          TargetPlatform.macOS: FadeThroughPageTransitionsBuilder(),
+        },
       ),
     );
   }

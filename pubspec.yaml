@@ -1,7 +1,7 @@
 name: note_taking_app
 description: A fully local offline-first note-taking and financial manager app with SMS auto-import.
 publish_to: "none"
-version: 1.15.0+1
+version: 1.16.0+11600
 
 environment:
   sdk: ">=3.6.0 <4.0.0"
@@ -45,6 +45,7 @@ dependencies:
   font_awesome_flutter: ^10.7.0
   telephony: ^0.2.0
   permission_handler: ^11.3.1
+  workmanager: ^0.9.0
   flutter_localizations:
     sdk: flutter
 

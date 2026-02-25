@@ -1,29 +1,39 @@
-# Note Book v1.15.0 — SMS Contacts, Cross-Sender Dedup & Blocking
+# Note Book v1.16.0 — Inline Categories, Rich Previews & Polished UX
 
 ## What's New
 
-### SMS Contacts (Settings → Financial Manager)
-The old **SMS Sender Whitelist** is now a full **SMS Contacts** screen. All 10 built-in Sri Lankan banks and your custom senders appear in a single grouped list with toggle switches.
+### Inline Category Creation
+Create new spending categories directly from the transaction editor — no need to navigate to Settings. A **"+ New"** chip at the end of the category list opens a quick dialog (name + colour picker), and the new category is auto-selected for the current transaction. A **"Manage"** link next to the "Category" label navigates to the full Category Management screen.
 
-| Action | How |
-|--------|-----|
-| Block a sender | Tap the switch next to any bank or custom sender to turn it off |
-| Unblock a sender | Tap the switch again to re-enable importing |
-| Add a custom sender | Type the sender ID (e.g. KOKO) and tap **Add** |
-| Remove a custom sender | Tap the delete icon next to a custom entry |
+### Rich Note Previews
+Note cards on the home screen now render bullet lists, headings, blockquotes, and other formatting via Markdown — instead of stripping everything to plain text.
 
-### Cross-Sender Deduplication
-When the same amount appears from two different senders within **5 minutes** (e.g. COMBANK and COMBANK Q+ for the same purchase), only the first transaction is saved. No more duplicate entries from parallel bank SMS.
+### MRU Tag Sorting
+The tag bar on the home screen sorts tags by **most recently modified** note, so your active projects always appear first.
 
-### Default Import = Last Day
-The Import SMS Transactions sheet now defaults to **"Last day"** instead of "Last 30 days" for faster daily syncs.
+### Smooth Financial Animations
+- Category and search filtering is now **instant** (in-memory) — no loading spinners.
+- Opening and closing transactions uses a smooth fade-through transition (500 ms).
+- Switching categories replays staggered list animations.
 
-### Backup v6
-Backups now export the full `sms_contacts` table (banks + custom senders + block states). Restoring a v5 backup automatically migrates old whitelist entries as custom contacts. All previous backup versions (v1-v5) continue to import correctly.
+### Unified Design System
+All three main screens (Notes, Finances, Settings) now share:
+- Identical `fadeThrough` container transitions (500 ms)
+- Consistent staggered list animations (vertical slide + fade)
+- Matching AppBar styling, FAB style (extended with label), empty-state colours, and spacing.
+
+### Seamless CI/CD Updates
+- GitHub Actions release workflow now **auto-computes `versionCode`** from the git tag (`major×10000 + minor×100 + patch`), guaranteeing Android accepts every update without uninstall.
+- Optional release signing via GitHub Secrets (`KEYSTORE_BASE64`, `KEY_ALIAS`, `KEY_PASSWORD`, `STORE_PASSWORD`).
+- SHA-256 checksum published alongside each APK.
+- Updated to `softprops/action-gh-release@v2` with optional `RELEASE_NOTES.md` and auto-generated fallback.
+
+### Background Backup Logging
+Silent `catch` blocks in the auto-backup service now log errors to the system log (logcat), making backup failures debuggable without affecting user experience.
 
 ## Upgrade Guide
 
-**From any previous version**: Install the new APK. The database migrates automatically from v9 to v10 — existing whitelist entries become custom contacts, and 10 banks are seeded. No data is lost and no reinstall is needed.
+**From any previous version**: Install the new APK over the existing one. The `versionCode` (11600) is strictly higher than all previous releases (which used 1), so Android will accept the upgrade without data loss or reinstall.
 
 ---
 

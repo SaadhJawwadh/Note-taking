@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:animations/animations.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../data/settings_provider.dart';
@@ -25,6 +26,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     end: DateTime.now(),
   );
   List<TransactionModel> _transactions = [];
+  List<TransactionModel> _allDateFiltered = [];
   bool _isLoading = true;
   String? _selectedCategory;
   List<String> _activeCategories = [];
@@ -74,7 +76,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     });
     final allTransactions = await DatabaseHelper.instance.readAllTransactions();
 
-    final dateFiltered = allTransactions.where((t) {
+    _allDateFiltered = allTransactions.where((t) {
       // Filter out any orphan reversal sentinels
       if (t.category == SmsService.reversalSentinel) return false;
       final tDate = DateTime(t.date.year, t.date.month, t.date.day);
@@ -86,31 +88,39 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
           tDate.isBefore(end.add(const Duration(days: 1)));
     }).toList();
 
-    // Compute active categories before applying category/search filters
+    _monthlyData =
+        await DatabaseHelper.instance.getMonthlyTransactionSummary(6);
+
+    _applyFilters();
+    setState(() {
+      _isDashboardLoading = false;
+    });
+  }
+
+  /// Applies category and search filters from the cached [_allDateFiltered]
+  /// list. No DB call, no loading spinner — instant.
+  void _applyFilters() {
     final activeCategories =
-        dateFiltered.map((t) => t.category).toSet().toList()..sort();
+        _allDateFiltered.map((t) => t.category).toSet().toList()..sort();
 
-    // Apply category filter
-    _transactions = _selectedCategory == null
-        ? dateFiltered
-        : dateFiltered.where((t) => t.category == _selectedCategory).toList();
+    var filtered = _selectedCategory == null
+        ? _allDateFiltered
+        : _allDateFiltered
+            .where((t) => t.category == _selectedCategory)
+            .toList();
 
-    // Apply search filter
     if (_searchQuery.isNotEmpty) {
-      _transactions = _transactions
+      filtered = filtered
           .where((t) =>
               t.description.toLowerCase().contains(_searchQuery) ||
               t.category.toLowerCase().contains(_searchQuery))
           .toList();
     }
 
-    _monthlyData =
-        await DatabaseHelper.instance.getMonthlyTransactionSummary(6);
-
     setState(() {
       _activeCategories = activeCategories;
+      _transactions = filtered;
       _isLoading = false;
-      _isDashboardLoading = false;
     });
   }
 
@@ -562,426 +572,534 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     final currency = settings.currency;
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            backgroundColor: Colors.transparent,
-            floating: true,
-            snap: true,
-            toolbarHeight: 84,
-            titleSpacing: 16,
-            automaticallyImplyLeading: false,
-            title: Container(
-              margin: const EdgeInsets.only(top: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              height: 64,
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(32),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Finances',
-                        style: textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        _selectedRange.duration.inDays == 0
-                            ? DateFormat.MMMd().format(_selectedRange.start)
-                            : '${DateFormat.MMMd().format(_selectedRange.start)} – ${DateFormat.MMMd().format(_selectedRange.end)}',
-                        style: textTheme.labelSmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.sync_outlined),
-                    tooltip: 'Import SMS Transactions',
-                    onPressed: _showSmsImportSheet,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.calendar_today_outlined),
-                    tooltip: 'Select Date Range',
-                    onPressed: () => _selectDateRange(context),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(right: 4),
-                    child: IconButton(
-                      icon: const Icon(Icons.settings_outlined),
-                      tooltip: 'Settings',
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SettingsScreen(),
-                          ),
-                        );
-                      },
+      body: AnimationLimiter(
+        key: ValueKey('$_selectedCategory|$_searchQuery'),
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              backgroundColor: Colors.transparent,
+              floating: true,
+              snap: true,
+              toolbarHeight: 84,
+              titleSpacing: 16,
+              automaticallyImplyLeading: false,
+              title: Container(
+                margin: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                height: 64,
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(32),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // ── 6-month bar chart ─────────────────────────────────────────
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: _buildBarChartCard(colorScheme, textTheme, currency),
-            ),
-          ),
-
-          // ── Month-over-month comparison ───────────────────────────────
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child:
-                  _buildMonthComparisonCard(colorScheme, textTheme, currency),
-            ),
-          ),
-
-          // ── Hero summary card (net + income/expense breakdown) ────────
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: _buildHeroSummaryCard(colorScheme, textTheme, currency),
-            ),
-          ),
-
-          // ── Search bar ────────────────────────────────────────────────
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: TextField(
-                controller: _searchController,
-                onChanged: (value) {
-                  setState(() => _searchQuery = value.trim().toLowerCase());
-                  _refreshTransactions();
-                },
-                decoration: InputDecoration(
-                  hintText: 'Search transactions…',
-                  prefixIcon: const Icon(Icons.search_outlined),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() => _searchQuery = '');
-                            _refreshTransactions();
-                          },
-                        )
-                      : null,
-                  filled: true,
-                  fillColor: colorScheme.surfaceContainerHigh,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(28),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  ],
                 ),
-              ),
-            ),
-          ),
-
-          // ── Category filter chips ────────────────────────────────────
-          if (_activeCategories.isNotEmpty)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      FilterChip(
-                        label: const Text('All'),
-                        selected: _selectedCategory == null,
-                        onSelected: (_) {
-                          setState(() => _selectedCategory = null);
-                          _refreshTransactions();
-                        },
-                      ),
-                      const SizedBox(width: 8),
-                      ..._activeCategories.map((cat) {
-                        final catColor = TransactionCategory.colorFor(cat);
-                        final selected = _selectedCategory == cat;
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: FilterChip(
-                            label: Text(cat),
-                            selected: selected,
-                            onSelected: (_) {
-                              setState(() =>
-                                  _selectedCategory = selected ? null : cat);
-                              _refreshTransactions();
-                            },
-                            selectedColor: catColor.withValues(alpha: 0.2),
-                            checkmarkColor: catColor,
-                            labelStyle: TextStyle(
-                              color: selected
-                                  ? catColor
-                                  : colorScheme.onSurfaceVariant,
-                              fontWeight: selected
-                                  ? FontWeight.w600
-                                  : FontWeight.normal,
-                            ),
-                            side: BorderSide(
-                              color: selected ? catColor : colorScheme.outline,
-                              width: selected ? 1.5 : 0.5,
-                            ),
-                          ),
-                        );
-                      }),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-          // ── Transaction list ──────────────────────────────────────────
-          if (_isLoading)
-            const SliverFillRemaining(
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (_transactions.isEmpty)
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                child: Row(
                   children: [
-                    Icon(
-                      Icons.account_balance_wallet_outlined,
-                      size: 64,
-                      color: colorScheme.outlineVariant,
+                    const SizedBox(width: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Finances',
+                          style: textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          _selectedRange.duration.inDays == 0
+                              ? DateFormat.MMMd().format(_selectedRange.start)
+                              : '${DateFormat.MMMd().format(_selectedRange.start)} – ${DateFormat.MMMd().format(_selectedRange.end)}',
+                          style: textTheme.labelSmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      _searchQuery.isNotEmpty
-                          ? 'No results for "$_searchQuery"'
-                          : _selectedCategory != null
-                              ? 'No $_selectedCategory transactions\nin this period'
-                              : 'No transactions in this period',
-                      textAlign: TextAlign.center,
-                      style: textTheme.bodyLarge?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.sync_outlined),
+                      tooltip: 'Import SMS Transactions',
+                      onPressed: _showSmsImportSheet,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.calendar_today_outlined),
+                      tooltip: 'Select Date Range',
+                      onPressed: () => _selectDateRange(context),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: IconButton(
+                        icon: const Icon(Icons.settings_outlined),
+                        tooltip: 'Settings',
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SettingsScreen(),
+                            ),
+                          );
+                        },
                       ),
                     ),
-                    if (_searchQuery.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      TextButton(
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                          _refreshTransactions();
-                        },
-                        child: const Text('Clear search'),
-                      ),
-                    ] else if (_selectedCategory != null) ...[
-                      const SizedBox(height: 12),
-                      TextButton(
-                        onPressed: () {
-                          setState(() => _selectedCategory = null);
-                          _refreshTransactions();
-                        },
-                        child: const Text('Clear filter'),
-                      ),
-                    ],
                   ],
                 ),
               ),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final item = _groupedTransactions[index];
+            ),
 
-                    // Date group header
-                    if (item is String) {
-                      return Padding(
-                        padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
-                        child: Text(
-                          item,
-                          style: textTheme.labelMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
+            // ── 6-month bar chart ─────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: AnimationConfiguration.staggeredList(
+                position: 0,
+                duration: const Duration(milliseconds: 375),
+                child: SlideAnimation(
+                  verticalOffset: 50.0,
+                  child: FadeInAnimation(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                      child:
+                          _buildBarChartCard(colorScheme, textTheme, currency),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Month-over-month comparison ───────────────────────────────
+            SliverToBoxAdapter(
+              child: AnimationConfiguration.staggeredList(
+                position: 1,
+                duration: const Duration(milliseconds: 375),
+                child: SlideAnimation(
+                  verticalOffset: 50.0,
+                  child: FadeInAnimation(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                      child: _buildMonthComparisonCard(
+                          colorScheme, textTheme, currency),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Hero summary card (net + income/expense breakdown) ────────
+            SliverToBoxAdapter(
+              child: AnimationConfiguration.staggeredList(
+                position: 2,
+                duration: const Duration(milliseconds: 375),
+                child: SlideAnimation(
+                  verticalOffset: 50.0,
+                  child: FadeInAnimation(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                      child: _buildHeroSummaryCard(
+                          colorScheme, textTheme, currency),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Search bar ────────────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: AnimationConfiguration.staggeredList(
+                position: 3,
+                duration: const Duration(milliseconds: 375),
+                child: SlideAnimation(
+                  verticalOffset: 50.0,
+                  child: FadeInAnimation(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: (value) {
+                          setState(
+                              () => _searchQuery = value.trim().toLowerCase());
+                          _applyFilters();
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Search transactions…',
+                          prefixIcon: const Icon(Icons.search_outlined),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.close),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() => _searchQuery = '');
+                                    _applyFilters();
+                                  },
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: colorScheme.surfaceContainerHigh,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(28),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 0),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Category filter chips ────────────────────────────────────
+            if (_activeCategories.isNotEmpty)
+              SliverToBoxAdapter(
+                child: AnimationConfiguration.staggeredList(
+                  position: 4,
+                  duration: const Duration(milliseconds: 375),
+                  child: SlideAnimation(
+                    verticalOffset: 50.0,
+                    child: FadeInAnimation(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              FilterChip(
+                                label: const Text('All'),
+                                selected: _selectedCategory == null,
+                                onSelected: (_) {
+                                  setState(() => _selectedCategory = null);
+                                  _applyFilters();
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              ..._activeCategories.map((cat) {
+                                final catColor =
+                                    TransactionCategory.colorFor(cat);
+                                final selected = _selectedCategory == cat;
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: FilterChip(
+                                    label: Text(cat),
+                                    selected: selected,
+                                    onSelected: (_) {
+                                      setState(() => _selectedCategory =
+                                          selected ? null : cat);
+                                      _applyFilters();
+                                    },
+                                    selectedColor:
+                                        catColor.withValues(alpha: 0.2),
+                                    checkmarkColor: catColor,
+                                    labelStyle: TextStyle(
+                                      color: selected
+                                          ? catColor
+                                          : colorScheme.onSurfaceVariant,
+                                      fontWeight: selected
+                                          ? FontWeight.w600
+                                          : FontWeight.normal,
+                                    ),
+                                    side: BorderSide(
+                                      color: selected
+                                          ? catColor
+                                          : colorScheme.outline,
+                                      width: selected ? 1.5 : 0.5,
+                                    ),
+                                  ),
+                                );
+                              }),
+                            ],
                           ),
                         ),
-                      );
-                    }
+                      ),
+                    ),
+                  ),
+                ),
+              ),
 
-                    final transaction = item as TransactionModel;
-                    return OpenContainer<bool>(
-                      transitionType: ContainerTransitionType.fade,
-                      openBuilder: (context, _) =>
-                          TransactionEditorScreen(transaction: transaction),
-                      closedElevation: 0,
-                      closedColor: Colors.transparent,
-                      closedShape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      onClosed: (updated) {
-                        if (updated == true) _refreshTransactions();
-                      },
-                      closedBuilder: (context, openContainer) {
-                        return Card(
-                          elevation: 0,
-                          margin: const EdgeInsets.only(bottom: 12),
-                          color: colorScheme.surfaceContainer,
-                          child: InkWell(
-                            onTap: openContainer,
-                            onLongPress: () async {
-                              final confirm = await showDialog<bool>(
-                                context: context,
-                                builder: (ctx) => AlertDialog(
-                                  title: const Text('Delete Transaction'),
-                                  content: Text(
-                                      'Delete "${transaction.description}"?'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(ctx, false),
-                                      child: const Text('Cancel'),
-                                    ),
-                                    FilledButton(
-                                      style: FilledButton.styleFrom(
-                                        backgroundColor: colorScheme.error,
-                                        foregroundColor: colorScheme.onError,
-                                      ),
-                                      onPressed: () => Navigator.pop(ctx, true),
-                                      child: const Text('Delete'),
-                                    ),
-                                  ],
+            // ── Transaction list ──────────────────────────────────────────
+            if (_isLoading)
+              const SliverFillRemaining(
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_transactions.isEmpty)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.account_balance_wallet_outlined,
+                        size: 64,
+                        color: colorScheme.outlineVariant,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        _searchQuery.isNotEmpty
+                            ? 'No results for "$_searchQuery"'
+                            : _selectedCategory != null
+                                ? 'No $_selectedCategory transactions\nin this period'
+                                : 'No transactions in this period',
+                        textAlign: TextAlign.center,
+                        style: textTheme.bodyLarge?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      if (_searchQuery.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        TextButton(
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                            _applyFilters();
+                          },
+                          child: const Text('Clear search'),
+                        ),
+                      ] else if (_selectedCategory != null) ...[
+                        const SizedBox(height: 12),
+                        TextButton(
+                          onPressed: () {
+                            setState(() => _selectedCategory = null);
+                            _applyFilters();
+                          },
+                          child: const Text('Clear filter'),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final item = _groupedTransactions[index];
+
+                      // Date group header
+                      if (item is String) {
+                        return AnimationConfiguration.staggeredList(
+                          position: index + 5,
+                          duration: const Duration(milliseconds: 375),
+                          child: SlideAnimation(
+                            verticalOffset: 50.0,
+                            child: FadeInAnimation(
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
+                                child: Text(
+                                  item,
+                                  style: textTheme.labelMedium?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
-                              );
-                              if (confirm == true && mounted) {
-                                await DatabaseHelper.instance
-                                    .deleteTransaction(transaction.id!);
-                                await _refreshTransactions();
-                              }
-                            },
-                            borderRadius: BorderRadius.circular(12),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: transaction.isExpense
-                                          ? colorScheme.errorContainer
-                                          : colorScheme.tertiaryContainer,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      transaction.isExpense
-                                          ? Icons.remove
-                                          : Icons.add,
-                                      color: transaction.isExpense
-                                          ? colorScheme.onErrorContainer
-                                          : colorScheme.onTertiaryContainer,
-                                      size: 20,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          transaction.description,
-                                          style: textTheme.bodyLarge?.copyWith(
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: TransactionCategory.colorFor(
-                                                    transaction.category)
-                                                .withValues(alpha: 0.12),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                            border: Border.all(
-                                              color:
-                                                  TransactionCategory.colorFor(
-                                                          transaction.category)
-                                                      .withValues(alpha: 0.4),
-                                              width: 0.5,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            transaction.category,
-                                            style:
-                                                textTheme.labelSmall?.copyWith(
-                                              color:
-                                                  TransactionCategory.colorFor(
-                                                      transaction.category),
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Text(
-                                    '${transaction.isExpense ? '-' : '+'} $currency ${transaction.amount.toStringAsFixed(0)}',
-                                    style: textTheme.titleMedium?.copyWith(
-                                      color: transaction.isExpense
-                                          ? colorScheme.error
-                                          : colorScheme.tertiary,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
                               ),
                             ),
                           ),
                         );
-                      },
-                    );
-                  },
-                  childCount: _groupedTransactions.length,
+                      }
+
+                      final transaction = item as TransactionModel;
+                      return AnimationConfiguration.staggeredList(
+                        position: index + 5,
+                        duration: const Duration(milliseconds: 375),
+                        child: SlideAnimation(
+                          verticalOffset: 50.0,
+                          child: FadeInAnimation(
+                            child: OpenContainer<bool>(
+                              transitionType:
+                                  ContainerTransitionType.fadeThrough,
+                              transitionDuration:
+                                  const Duration(milliseconds: 500),
+                              openBuilder: (context, _) =>
+                                  TransactionEditorScreen(
+                                      transaction: transaction),
+                              closedElevation: 0,
+                              openElevation: 0,
+                              closedColor: colorScheme.surfaceContainer,
+                              openColor: colorScheme.surface,
+                              closedShape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                              onClosed: (updated) {
+                                if (updated == true) _refreshTransactions();
+                              },
+                              closedBuilder: (context, openContainer) {
+                                return Card(
+                                  elevation: 0,
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  color: colorScheme.surfaceContainer,
+                                  child: InkWell(
+                                    onTap: openContainer,
+                                    onLongPress: () async {
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          title:
+                                              const Text('Delete Transaction'),
+                                          content: Text(
+                                              'Delete "${transaction.description}"?'),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(ctx, false),
+                                              child: const Text('Cancel'),
+                                            ),
+                                            FilledButton(
+                                              style: FilledButton.styleFrom(
+                                                backgroundColor:
+                                                    colorScheme.error,
+                                                foregroundColor:
+                                                    colorScheme.onError,
+                                              ),
+                                              onPressed: () =>
+                                                  Navigator.pop(ctx, true),
+                                              child: const Text('Delete'),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                      if (confirm == true && mounted) {
+                                        await DatabaseHelper.instance
+                                            .deleteTransaction(transaction.id!);
+                                        await _refreshTransactions();
+                                      }
+                                    },
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16.0),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                              color: transaction.isExpense
+                                                  ? colorScheme.errorContainer
+                                                  : colorScheme
+                                                      .tertiaryContainer,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: Icon(
+                                              transaction.isExpense
+                                                  ? Icons.remove
+                                                  : Icons.add,
+                                              color: transaction.isExpense
+                                                  ? colorScheme.onErrorContainer
+                                                  : colorScheme
+                                                      .onTertiaryContainer,
+                                              size: 20,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 16),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  transaction.description,
+                                                  style: textTheme.bodyLarge
+                                                      ?.copyWith(
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: TransactionCategory
+                                                            .colorFor(
+                                                                transaction
+                                                                    .category)
+                                                        .withValues(
+                                                            alpha: 0.12),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            8),
+                                                    border: Border.all(
+                                                      color: TransactionCategory
+                                                              .colorFor(
+                                                                  transaction
+                                                                      .category)
+                                                          .withValues(
+                                                              alpha: 0.4),
+                                                      width: 0.5,
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    transaction.category,
+                                                    style: textTheme.labelSmall
+                                                        ?.copyWith(
+                                                      color: TransactionCategory
+                                                          .colorFor(transaction
+                                                              .category),
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          Text(
+                                            '${transaction.isExpense ? '-' : '+'} $currency ${transaction.amount.toStringAsFixed(0)}',
+                                            style:
+                                                textTheme.titleMedium?.copyWith(
+                                              color: transaction.isExpense
+                                                  ? colorScheme.error
+                                                  : colorScheme.tertiary,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                    childCount: _groupedTransactions.length,
+                  ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
       floatingActionButton: OpenContainer<bool>(
-        transitionType: ContainerTransitionType.fade,
+        transitionType: ContainerTransitionType.fadeThrough,
+        transitionDuration: const Duration(milliseconds: 500),
         openBuilder: (context, _) => const TransactionEditorScreen(),
         closedElevation: 6.0,
+        openElevation: 0,
         closedShape: const StadiumBorder(),
         closedColor: colorScheme.primary,
+        openColor: colorScheme.surface,
         onClosed: (updated) {
           if (updated == true) _refreshTransactions();
         },
         closedBuilder: (context, openContainer) {
-          return FloatingActionButton(
-            onPressed: openContainer,
-            tooltip: 'Add Transaction',
-            child: const Icon(Icons.add),
+          return SizedBox(
+            height: 56,
+            child: FloatingActionButton.extended(
+              label: const Text('New Transaction'),
+              icon: const Icon(Icons.add),
+              tooltip: 'Add Transaction',
+              backgroundColor: colorScheme.primary,
+              foregroundColor: colorScheme.onPrimary,
+              elevation: 0,
+              shape: const StadiumBorder(),
+              onPressed: openContainer,
+            ),
           );
         },
       ),

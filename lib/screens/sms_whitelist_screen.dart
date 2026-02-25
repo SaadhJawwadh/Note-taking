@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../data/database_helper.dart';
 import '../data/sms_contact.dart';
 import '../services/sms_service.dart';
@@ -72,120 +73,127 @@ class _SmsContactsScreenState extends State<SmsContactsScreen> {
     final banks = _contacts.where((c) => c.isBuiltIn).toList();
     final custom = _contacts.where((c) => !c.isBuiltIn).toList();
 
+    final items = <Widget>[
+      // ── Info banner ──────────────────────────────────────────
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+        child: Card(
+          color: cs.secondaryContainer,
+          elevation: 0,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.info_outline,
+                    size: 18, color: cs.onSecondaryContainer),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Manage which SMS senders are imported as '
+                    'transactions. Toggle the switch to block a '
+                    'sender. Add custom sender IDs for non-bank '
+                    'services (e.g. KOKO, FriMi).',
+                    style:
+                        tt.bodySmall?.copyWith(color: cs.onSecondaryContainer),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+
+      // ── Add custom sender row ────────────────────────────────
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _controller,
+                textCapitalization: TextCapitalization.characters,
+                decoration: const InputDecoration(
+                  hintText: 'Sender ID (e.g. KOKO)',
+                  border: OutlineInputBorder(),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  isDense: true,
+                ),
+                onSubmitted: (_) => _addCustomSender(),
+              ),
+            ),
+            const SizedBox(width: 8),
+            FilledButton.icon(
+              onPressed: _addCustomSender,
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Add'),
+            ),
+          ],
+        ),
+      ),
+
+      const Divider(height: 24),
+
+      // ── Banks section ────────────────────────────────────────
+      if (banks.isNotEmpty) ...[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+          child: Text('Banks',
+              style: tt.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600, color: cs.onSurfaceVariant)),
+        ),
+        ...banks.map((c) => _contactTile(cs, tt, c, canDelete: false)),
+        const Divider(height: 24),
+      ],
+
+      // ── Custom senders section ──────────────────────────────
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+        child: Text('Custom Senders',
+            style: tt.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600, color: cs.onSurfaceVariant)),
+      ),
+      if (custom.isEmpty)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          child: Center(
+            child: Column(
+              children: [
+                Icon(Icons.sms_outlined,
+                    size: 40,
+                    color: cs.onSurfaceVariant.withValues(alpha: 0.4)),
+                const SizedBox(height: 8),
+                Text('No custom senders yet',
+                    style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
+              ],
+            ),
+          ),
+        )
+      else
+        ...custom.map((c) => _contactTile(cs, tt, c, canDelete: true)),
+
+      const SizedBox(height: 32),
+    ];
+
     return Scaffold(
       appBar: AppBar(title: const Text('SMS Contacts')),
       body: _loading
           ? const Center(child: CircularProgressIndicator.adaptive())
-          : ListView(
-              children: [
-                // ── Info banner ──────────────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                  child: Card(
-                    color: cs.secondaryContainer,
-                    elevation: 0,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(Icons.info_outline,
-                              size: 18, color: cs.onSecondaryContainer),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'Manage which SMS senders are imported as '
-                              'transactions. Toggle the switch to block a '
-                              'sender. Add custom sender IDs for non-bank '
-                              'services (e.g. KOKO, FriMi).',
-                              style: tt.bodySmall?.copyWith(
-                                  color: cs.onSecondaryContainer),
-                            ),
-                          ),
-                        ],
+          : AnimationLimiter(
+              child: ListView(
+                children: [
+                  for (int i = 0; i < items.length; i++)
+                    AnimationConfiguration.staggeredList(
+                      position: i,
+                      duration: const Duration(milliseconds: 375),
+                      child: SlideAnimation(
+                        verticalOffset: 50.0,
+                        child: FadeInAnimation(child: items[i]),
                       ),
                     ),
-                  ),
-                ),
-
-                // ── Add custom sender row ────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _controller,
-                          textCapitalization: TextCapitalization.characters,
-                          decoration: const InputDecoration(
-                            hintText: 'Sender ID (e.g. KOKO)',
-                            border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 10),
-                            isDense: true,
-                          ),
-                          onSubmitted: (_) => _addCustomSender(),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton.icon(
-                        onPressed: _addCustomSender,
-                        icon: const Icon(Icons.add, size: 18),
-                        label: const Text('Add'),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const Divider(height: 24),
-
-                // ── Banks section ────────────────────────────────────────
-                if (banks.isNotEmpty) ...[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-                    child: Text('Banks',
-                        style: tt.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: cs.onSurfaceVariant)),
-                  ),
-                  ...banks.map((c) => _contactTile(cs, tt, c, canDelete: false)),
-                  const Divider(height: 24),
                 ],
-
-                // ── Custom senders section ──────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-                  child: Text('Custom Senders',
-                      style: tt.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: cs.onSurfaceVariant)),
-                ),
-                if (custom.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 24),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          Icon(Icons.sms_outlined,
-                              size: 40,
-                              color:
-                                  cs.onSurfaceVariant.withValues(alpha: 0.4)),
-                          const SizedBox(height: 8),
-                          Text('No custom senders yet',
-                              style: tt.bodyMedium
-                                  ?.copyWith(color: cs.onSurfaceVariant)),
-                        ],
-                      ),
-                    ),
-                  )
-                else
-                  ...custom
-                      .map((c) => _contactTile(cs, tt, c, canDelete: true)),
-
-                const SizedBox(height: 32),
-              ],
+              ),
             ),
     );
   }
@@ -198,8 +206,7 @@ class _SmsContactsScreenState extends State<SmsContactsScreen> {
 
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor:
-            blocked ? cs.errorContainer : cs.primaryContainer,
+        backgroundColor: blocked ? cs.errorContainer : cs.primaryContainer,
         radius: 18,
         child: Icon(
           blocked ? Icons.block : Icons.message_outlined,
@@ -240,9 +247,9 @@ class _SmsContactsScreenState extends State<SmsContactsScreen> {
       context: context,
       builder: (dctx) => AlertDialog(
         title: const Text('Remove sender?'),
-        content: Text(
-            'SMS from "${contact.label ?? contact.id}" will no longer be '
-            'auto-imported as transactions.'),
+        content:
+            Text('SMS from "${contact.label ?? contact.id}" will no longer be '
+                'auto-imported as transactions.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(dctx, false),

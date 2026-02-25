@@ -44,6 +44,27 @@ class _HomeScreenState extends State<HomeScreen> {
     notes = await DatabaseHelper.instance.readAllNotes();
     final tags = await DatabaseHelper.instance.getAllTags();
     final colors = await DatabaseHelper.instance.getAllTagColors();
+
+    // Sort tags by most recently modified active note (MRU)
+    final tagLastModified = <String, DateTime>{};
+    for (final note in notes) {
+      if (note.isArchived || note.deletedAt != null) continue;
+      for (final tag in note.tags) {
+        final existing = tagLastModified[tag];
+        if (existing == null || note.dateModified.isAfter(existing)) {
+          tagLastModified[tag] = note.dateModified;
+        }
+      }
+    }
+    tags.sort((a, b) {
+      final aTime = tagLastModified[a];
+      final bTime = tagLastModified[b];
+      if (aTime == null && bTime == null) return a.compareTo(b);
+      if (aTime == null) return 1;
+      if (bTime == null) return -1;
+      return bTime.compareTo(aTime);
+    });
+
     allTags = ['All', ...tags];
 
     // If selected tag no longer exists (e.g. deleted), revert to All Notes
@@ -462,12 +483,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Icon(Icons.note_alt_outlined,
                         size: 64,
-                        color: AppTheme.textSecondary.withValues(alpha: 0.5)),
+                        color: Theme.of(context).colorScheme.outlineVariant),
                     const SizedBox(height: 16),
                     Text(
                       'No notes here yet',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: AppTheme.textSecondary,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                             fontWeight: FontWeight.bold,
                           ),
                     ),
@@ -476,7 +498,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       'Tap + to create one',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color:
-                                AppTheme.textSecondary.withValues(alpha: 0.7),
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                     ),
                   ],
@@ -485,7 +507,7 @@ class _HomeScreenState extends State<HomeScreen> {
             )
           else
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
               sliver: AnimationLimiter(
                 child: settings.isGridView
                     ? SliverMasonryGrid.count(
@@ -502,11 +524,19 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: ScaleAnimation(
                               child: FadeInAnimation(
                                 child: OpenContainer<bool>(
-                                  transitionType: ContainerTransitionType.fade,
+                                  transitionType:
+                                      ContainerTransitionType.fadeThrough,
+                                  transitionDuration:
+                                      const Duration(milliseconds: 500),
                                   openBuilder: (context, _) =>
                                       NoteEditorScreen(note: note),
                                   closedElevation: 0,
-                                  closedColor: Colors.transparent,
+                                  openElevation: 0,
+                                  closedColor: Theme.of(context)
+                                      .colorScheme
+                                      .surfaceContainer,
+                                  openColor:
+                                      Theme.of(context).colorScheme.surface,
                                   closedShape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(20)),
                                   onClosed: (returned) async {
@@ -542,11 +572,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                     padding: const EdgeInsets.only(bottom: 12),
                                     child: OpenContainer<bool>(
                                       transitionType:
-                                          ContainerTransitionType.fade,
+                                          ContainerTransitionType.fadeThrough,
+                                      transitionDuration:
+                                          const Duration(milliseconds: 500),
                                       openBuilder: (context, _) =>
                                           NoteEditorScreen(note: note),
                                       closedElevation: 0,
-                                      closedColor: Colors.transparent,
+                                      openElevation: 0,
+                                      closedColor: Theme.of(context)
+                                          .colorScheme
+                                          .surfaceContainer,
+                                      openColor:
+                                          Theme.of(context).colorScheme.surface,
                                       closedShape: RoundedRectangleBorder(
                                           borderRadius:
                                               BorderRadius.circular(20)),
@@ -578,11 +615,14 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       floatingActionButton: OpenContainer<bool>(
-        transitionType: ContainerTransitionType.fade,
+        transitionType: ContainerTransitionType.fadeThrough,
+        transitionDuration: const Duration(milliseconds: 500),
         openBuilder: (context, _) => const NoteEditorScreen(),
         closedElevation: 6.0,
+        openElevation: 0,
         closedShape: const StadiumBorder(),
         closedColor: Theme.of(context).colorScheme.primary,
+        openColor: Theme.of(context).colorScheme.surface,
         onClosed: (returned) async {
           if (returned == true) await refreshNotes();
         },
@@ -707,79 +747,74 @@ class NoteCard extends StatelessWidget {
                   ],
                   const SizedBox(height: 8),
                   if (note.content.isNotEmpty)
-                    note.content.startsWith('[')
-                        ? Text(
-                            RichTextUtils.contentToPlainText(note.content,
-                                maxLines: 4),
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                            maxLines: 4,
-                            overflow: TextOverflow.ellipsis,
-                          )
-                        : MarkdownBody(
-                            data: () {
-                              final lines = note.content.split('\n');
-                              final preview =
-                                  lines.take(4).join('\n');
-                              return lines.length > 4
-                                  ? '$preview...'
-                                  : preview;
-                            }(),
-                            checkboxBuilder: (value) {
-                              return Icon(
-                                value
-                                    ? Icons.check_box
-                                    : Icons.check_box_outline_blank,
-                                size: 16,
-                                color: theme.colorScheme.primary,
-                              );
-                            },
-                            styleSheet: MarkdownStyleSheet(
-                              p: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                              checkbox: TextStyle(
-                                color: theme.colorScheme.primary,
-                              ),
-                              blockquote: TextStyle(
-                                color: theme.colorScheme.onSurface
-                                    .withValues(alpha: 0.9),
-                                fontStyle: FontStyle.italic,
-                              ),
-                              blockquoteDecoration: BoxDecoration(
-                                color: isSystemDefault
-                                    ? theme.colorScheme.surfaceContainerHighest
-                                    : ColorScheme.fromSeed(
-                                            seedColor: Color(note.color),
-                                            brightness: theme.brightness)
-                                        .surfaceContainerHighest
-                                        .withValues(alpha: 0.5),
-                                border: Border(
-                                  left: BorderSide(
-                                    color: isSystemDefault
-                                        ? theme.colorScheme.primary
-                                        : ColorScheme.fromSeed(
-                                                seedColor: Color(note.color),
-                                                brightness: theme.brightness)
-                                            .primary,
-                                    width: 3,
-                                  ),
-                                ),
-                                borderRadius: const BorderRadius.only(
-                                  topRight: Radius.circular(8),
-                                  bottomRight: Radius.circular(8),
-                                ),
-                              ),
-                              blockquotePadding: const EdgeInsets.all(8),
-                              code: TextStyle(
-                                backgroundColor: theme.colorScheme.onSurface
-                                    .withValues(alpha: 0.1),
-                                fontFamily: 'monospace',
-                                color: theme.colorScheme.onSurface,
-                              ),
+                    MarkdownBody(
+                      data: () {
+                        String md;
+                        if (note.content.startsWith('[')) {
+                          final delta =
+                              RichTextUtils.contentToDelta(note.content);
+                          md = RichTextUtils.deltaToMarkdown(delta);
+                        } else {
+                          md = note.content;
+                        }
+                        final lines = md.split('\n');
+                        final preview = lines.take(6).join('\n');
+                        return lines.length > 6 ? '$preview...' : preview;
+                      }(),
+                      checkboxBuilder: (value) {
+                        return Icon(
+                          value
+                              ? Icons.check_box
+                              : Icons.check_box_outline_blank,
+                          size: 16,
+                          color: theme.colorScheme.primary,
+                        );
+                      },
+                      styleSheet: MarkdownStyleSheet(
+                        p: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        checkbox: TextStyle(
+                          color: theme.colorScheme.primary,
+                        ),
+                        blockquote: TextStyle(
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.9),
+                          fontStyle: FontStyle.italic,
+                        ),
+                        blockquoteDecoration: BoxDecoration(
+                          color: isSystemDefault
+                              ? theme.colorScheme.surfaceContainerHighest
+                              : ColorScheme.fromSeed(
+                                      seedColor: Color(note.color),
+                                      brightness: theme.brightness)
+                                  .surfaceContainerHighest
+                                  .withValues(alpha: 0.5),
+                          border: Border(
+                            left: BorderSide(
+                              color: isSystemDefault
+                                  ? theme.colorScheme.primary
+                                  : ColorScheme.fromSeed(
+                                          seedColor: Color(note.color),
+                                          brightness: theme.brightness)
+                                      .primary,
+                              width: 3,
                             ),
                           ),
+                          borderRadius: const BorderRadius.only(
+                            topRight: Radius.circular(8),
+                            bottomRight: Radius.circular(8),
+                          ),
+                        ),
+                        blockquotePadding: const EdgeInsets.all(8),
+                        code: TextStyle(
+                          backgroundColor: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.1),
+                          fontFamily: 'monospace',
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
                   if (note.tags.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     Wrap(

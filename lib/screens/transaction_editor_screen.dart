@@ -5,7 +5,9 @@ import '../data/settings_provider.dart';
 import '../data/database_helper.dart';
 import '../data/transaction_model.dart';
 import '../data/transaction_category.dart';
+import '../data/category_definition.dart';
 import '../widgets/calculator_dialog.dart';
+import 'category_management_screen.dart';
 
 class TransactionEditorScreen extends StatefulWidget {
   final TransactionModel? transaction;
@@ -149,6 +151,101 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
     }
   }
 
+  static const _colorSwatches = [
+    Color(0xFFE53935), // Red
+    Color(0xFFE91E63), // Pink
+    Color(0xFF9C27B0), // Purple
+    Color(0xFF673AB7), // Deep Purple
+    Color(0xFF3F51B5), // Indigo
+    Color(0xFF2196F3), // Blue
+    Color(0xFF00BCD4), // Cyan
+    Color(0xFF009688), // Teal
+    Color(0xFF4CAF50), // Green
+    Color(0xFFFF9800), // Orange
+    Color(0xFFFF5722), // Deep Orange
+    Color(0xFF607D8B), // Blue Grey
+  ];
+
+  Future<void> _showNewCategoryDialog() async {
+    String name = '';
+    Color selectedColor = _colorSwatches[5];
+
+    final created = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('New Category'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    autofocus: true,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: const InputDecoration(
+                      labelText: 'Category name',
+                      hintText: 'e.g., Groceries',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (v) => name = v.trim(),
+                  ),
+                  const SizedBox(height: 16),
+                  Text('Color', style: Theme.of(context).textTheme.labelLarge),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _colorSwatches.map((c) {
+                      final isSelected =
+                          c.toARGB32() == selectedColor.toARGB32();
+                      return GestureDetector(
+                        onTap: () => setDialogState(() => selectedColor = c),
+                        child: CircleAvatar(
+                          radius: 16,
+                          backgroundColor: c,
+                          child: isSelected
+                              ? const Icon(Icons.check,
+                                  size: 16, color: Colors.white)
+                              : null,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    if (name.isEmpty) return;
+                    Navigator.pop(context, true);
+                  },
+                  child: const Text('Create'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (created == true && name.isNotEmpty) {
+      final def = CategoryDefinition(
+        name: name,
+        colorValue: selectedColor.toARGB32(),
+        keywords: [],
+      );
+      await DatabaseHelper.instance.upsertCategoryDefinition(def);
+      await TransactionCategory.reload();
+      setState(() => _category = name);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -245,36 +342,74 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
             const SizedBox(height: 24),
 
             // Category Picker
-            Text(
-              'Category',
-              style: textTheme.labelLarge
-                  ?.copyWith(color: colorScheme.onSurfaceVariant),
+            Row(
+              children: [
+                Text(
+                  'Category',
+                  style: textTheme.labelLarge
+                      ?.copyWith(color: colorScheme.onSurfaceVariant),
+                ),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const CategoryManagementScreen(),
+                      ),
+                    );
+                    await TransactionCategory.reload();
+                    if (!TransactionCategory.allNames.contains(_category)) {
+                      _category = TransactionCategory.other;
+                    }
+                    setState(() {});
+                  },
+                  icon: const Icon(Icons.tune, size: 16),
+                  label: const Text('Manage'),
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    textStyle: textTheme.labelSmall,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: TransactionCategory.allNames.map((cat) {
-                final catColor = TransactionCategory.colorFor(cat);
-                final selected = _category == cat;
-                return FilterChip(
-                  label: Text(cat),
-                  selected: selected,
-                  onSelected: (_) => setState(() => _category = cat),
-                  selectedColor: catColor.withValues(alpha: 0.2),
-                  checkmarkColor: catColor,
-                  labelStyle: TextStyle(
-                    color: selected ? catColor : colorScheme.onSurfaceVariant,
-                    fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-                  ),
-                  side: BorderSide(
-                    color: selected ? catColor : colorScheme.outline,
-                    width: selected ? 1.5 : 0.5,
-                  ),
+              children: [
+                ...TransactionCategory.allNames.map((cat) {
+                  final catColor = TransactionCategory.colorFor(cat);
+                  final selected = _category == cat;
+                  return FilterChip(
+                    label: Text(cat),
+                    selected: selected,
+                    onSelected: (_) => setState(() => _category = cat),
+                    selectedColor: catColor.withValues(alpha: 0.2),
+                    checkmarkColor: catColor,
+                    labelStyle: TextStyle(
+                      color: selected ? catColor : colorScheme.onSurfaceVariant,
+                      fontWeight:
+                          selected ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                    side: BorderSide(
+                      color: selected ? catColor : colorScheme.outline,
+                      width: selected ? 1.5 : 0.5,
+                    ),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  );
+                }).toList(),
+                ActionChip(
+                  avatar: Icon(Icons.add, size: 18, color: colorScheme.primary),
+                  label:
+                      Text('New', style: TextStyle(color: colorScheme.primary)),
+                  onPressed: _showNewCategoryDialog,
+                  side: BorderSide(color: colorScheme.primary, width: 0.5),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)),
-                );
-              }).toList(),
+                ),
+              ],
             ),
             const SizedBox(height: 24),
 

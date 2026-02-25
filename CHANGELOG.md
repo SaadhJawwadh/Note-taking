@@ -2,6 +2,30 @@
 
 All notable changes to Note Book are documented here.
 
+## [1.16.0] - 2026-02-25
+
+### ✨ New Features
+- **Inline Category Creation**: Create new spending categories directly from the transaction editor via a "+ New" chip. Quick dialog with name + colour picker; new category is auto-selected.
+- **Category Management Link**: "Manage" button next to the "Category" label in the transaction editor navigates to the full Category Management screen. Changes are reflected immediately on return.
+- **Rich Note Previews**: Home screen note cards now render bullet lists, headings, blockquotes, and other formatting via Markdown instead of plain text.
+- **MRU Tag Sorting**: Tags on the home screen sort by most recently modified note, so active projects appear first.
+
+### 🛠 Improvements
+- **Instant Category & Search Filtering**: Financial manager filters categories and search in-memory — eliminates loading spinners and DB round-trips.
+- **Smooth Fade-Through Transitions**: Opening/closing notes and transactions uses Material fade-through (500 ms) across all screens.
+- **Staggered Animation Replay**: Switching category filters replays the staggered list entrance animation.
+- **Unified Design System**: Notes, Finances, and Settings screens now share identical transition types, AppBar styling, FAB format (extended with label), empty-state colours, animation directions, and spacing.
+- **Background Backup Logging**: Silent catches in auto-backup service replaced with logged errors (visible in logcat).
+
+### 🔒 Security / DevOps
+- **Auto versionCode from git tag**: CI computes `versionCode = major×10000 + minor×100 + patch`, guaranteeing Android accepts every update without uninstall.
+- **Optional release signing**: GitHub Secrets support for `KEYSTORE_BASE64`, `KEY_ALIAS`, `KEY_PASSWORD`, `STORE_PASSWORD`.
+- **SHA-256 checksums**: Published alongside each release APK.
+- **Updated CI actions**: `softprops/action-gh-release@v2` with optional `RELEASE_NOTES.md`.
+- **Keystore files excluded**: `.gitignore` updated for `key.properties`, `*.jks`, `*.keystore`.
+
+---
+
 ## [1.15.0] - 2026-02-25
 
 ### ✨ New Features

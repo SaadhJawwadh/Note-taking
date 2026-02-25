@@ -25,6 +25,7 @@ import '../utils/app_constants.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/sms_service.dart';
+import '../services/backup_service.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -42,13 +43,15 @@ class SettingsScreen extends StatelessWidget {
                 floating: true,
                 snap: true,
                 toolbarHeight: 84,
+                titleSpacing: 16,
                 automaticallyImplyLeading: false,
                 title: Container(
                   margin: const EdgeInsets.only(top: 8),
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   height: 64,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainer,
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(32),
                     boxShadow: [
                       BoxShadow(
@@ -83,7 +86,7 @@ class SettingsScreen extends StatelessWidget {
                       AnimationConfiguration.toStaggeredList(
                         duration: const Duration(milliseconds: 375),
                         childAnimationBuilder: (widget) => SlideAnimation(
-                          horizontalOffset: 50.0,
+                          verticalOffset: 50.0,
                           child: FadeInAnimation(child: widget),
                         ),
                         children: [
@@ -174,8 +177,7 @@ class SettingsScreen extends StatelessWidget {
                                 onTap: () => Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) =>
-                                        const SmsContactsScreen(),
+                                    builder: (_) => const SmsContactsScreen(),
                                   ),
                                 ),
                               ),
@@ -295,6 +297,88 @@ class SettingsScreen extends StatelessWidget {
                               showArrow: true,
                               onTap: () => _importBackup(context),
                             ),
+                            if (Platform.isAndroid) ...[
+                              Divider(
+                                height: 1,
+                                indent: 56,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .outlineVariant,
+                              ),
+                              _buildSwitchTile(
+                                context,
+                                icon: Icons.backup_outlined,
+                                title: 'Auto Backup',
+                                subtitle: 'Schedule automatic backups',
+                                value: settings.autoBackupEnabled,
+                                onChanged: (value) async {
+                                  if (value) {
+                                    final dir = await FilePicker.platform
+                                        .getDirectoryPath();
+                                    if (dir == null) return;
+                                    await settings.setAutoBackupPath(dir);
+                                  }
+                                  await settings.setAutoBackupEnabled(value);
+                                  await syncAutoBackupSchedule();
+                                },
+                              ),
+                              if (settings.autoBackupEnabled) ...[
+                                Divider(
+                                  height: 1,
+                                  indent: 56,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .outlineVariant,
+                                ),
+                                _buildListTile(
+                                  context,
+                                  icon: Icons.schedule_outlined,
+                                  title: 'Backup Frequency',
+                                  subtitle: _getFrequencyLabel(
+                                      settings.autoBackupFrequency),
+                                  onTap: () =>
+                                      _showFrequencyPicker(context, settings),
+                                ),
+                                Divider(
+                                  height: 1,
+                                  indent: 56,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .outlineVariant,
+                                ),
+                                _buildListTile(
+                                  context,
+                                  icon: Icons.folder_outlined,
+                                  title: 'Backup Location',
+                                  subtitle: settings.autoBackupPath ??
+                                      'App default directory',
+                                  onTap: () async {
+                                    final dir = await FilePicker.platform
+                                        .getDirectoryPath();
+                                    if (dir != null) {
+                                      await settings.setAutoBackupPath(dir);
+                                      await syncAutoBackupSchedule();
+                                    }
+                                  },
+                                ),
+                                if (settings.lastAutoBackupTime != null) ...[
+                                  Divider(
+                                    height: 1,
+                                    indent: 56,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .outlineVariant,
+                                  ),
+                                  _buildListTile(
+                                    context,
+                                    icon: Icons.history_outlined,
+                                    title: 'Last Auto Backup',
+                                    subtitle: _formatLastBackupTime(
+                                        settings.lastAutoBackupTime!),
+                                  ),
+                                ],
+                              ],
+                            ],
                           ]),
                           const SizedBox(height: 24),
                           _buildSectionHeader(context, 'ABOUT'),
@@ -620,6 +704,96 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
+  // ── Auto-backup helpers ──────────────────────────────────────────────────
+
+  String _getFrequencyLabel(String frequency) {
+    switch (frequency) {
+      case 'weekly':
+        return 'Weekly';
+      case 'monthly':
+        return 'Monthly';
+      case 'daily':
+      default:
+        return 'Daily';
+    }
+  }
+
+  String _formatLastBackupTime(String isoTime) {
+    final dt = DateTime.tryParse(isoTime);
+    if (dt == null) return 'Unknown';
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inHours < 1) return '${diff.inMinutes} minutes ago';
+    if (diff.inDays < 1) return '${diff.inHours} hours ago';
+    if (diff.inDays == 1) return 'Yesterday';
+    return '${diff.inDays} days ago';
+  }
+
+  void _showFrequencyPicker(BuildContext context, SettingsProvider settings) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+          title: Text(
+            'Backup Frequency',
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<String>(
+                title: Text(
+                  'Daily',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                value: 'daily',
+                groupValue: settings.autoBackupFrequency,
+                onChanged: (value) async {
+                  await settings.setAutoBackupFrequency(value!);
+                  await syncAutoBackupSchedule();
+                  if (context.mounted) Navigator.pop(context);
+                },
+              ),
+              RadioListTile<String>(
+                title: Text(
+                  'Weekly',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                value: 'weekly',
+                groupValue: settings.autoBackupFrequency,
+                onChanged: (value) async {
+                  await settings.setAutoBackupFrequency(value!);
+                  await syncAutoBackupSchedule();
+                  if (context.mounted) Navigator.pop(context);
+                },
+              ),
+              RadioListTile<String>(
+                title: Text(
+                  'Monthly',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                value: 'monthly',
+                groupValue: settings.autoBackupFrequency,
+                onChanged: (value) async {
+                  await settings.setAutoBackupFrequency(value!);
+                  await syncAutoBackupSchedule();
+                  if (context.mounted) Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _exportBackup(BuildContext context) async {
     try {
       final settings = Provider.of<SettingsProvider>(context, listen: false);
@@ -702,12 +876,13 @@ class SettingsScreen extends StatelessWidget {
             (data['transactions'] as List?)?.length ?? 0;
         final previewCategories =
             (data['categoryDefinitions'] as List?)?.where((c) {
-          final m = c as Map;
-          return (m['isBuiltIn'] as int? ?? 1) == 0;
-        }).length ?? 0;
-        final previewWhitelist =
-            (data['smsContacts'] as List?)?.length ??
-            (data['smsWhitelist'] as List?)?.length ?? 0;
+                  final m = c as Map;
+                  return (m['isBuiltIn'] as int? ?? 1) == 0;
+                }).length ??
+                0;
+        final previewWhitelist = (data['smsContacts'] as List?)?.length ??
+            (data['smsWhitelist'] as List?)?.length ??
+            0;
         final previewVersion = data['version'] ?? 1;
 
         if (!context.mounted) return;
@@ -836,8 +1011,9 @@ class SettingsScreen extends StatelessWidget {
             await db2.insert(
               'category_definitions',
               map,
-              conflictAlgorithm:
-                  isBuiltIn ? ConflictAlgorithm.ignore : ConflictAlgorithm.replace,
+              conflictAlgorithm: isBuiltIn
+                  ? ConflictAlgorithm.ignore
+                  : ConflictAlgorithm.replace,
             );
           }
           await TransactionCategory.reload();
@@ -883,12 +1059,10 @@ class SettingsScreen extends StatelessWidget {
         }
 
         if (!context.mounted) return;
-        final categoryMsg = previewCategories > 0
-            ? ', $previewCategories categories'
-            : '';
-        final whitelistMsg = previewWhitelist > 0
-            ? ', $previewWhitelist SMS contacts'
-            : '';
+        final categoryMsg =
+            previewCategories > 0 ? ', $previewCategories categories' : '';
+        final whitelistMsg =
+            previewWhitelist > 0 ? ', $previewWhitelist SMS contacts' : '';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(

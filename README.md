@@ -7,10 +7,10 @@ If you're looking for a minimal place to jot down thoughts, code snippets, or li
 ## Features
 
 - **🎨 Dynamic Colors**: Tags have distinct colors from a rich palette of 18 Material shades, and your notes automatically adopt them.
-- **🏷️ Smart Tagging**: Organize everything with color-coded tags.
+- **🏷️ Smart Tagging**: Organize everything with color-coded tags, sorted by most recently modified note.
 - **📝 WYSIWYG Editor**: Write with a rich text editor supporting adaptive quotes, code blocks, and **smart image previews**.
 - **☑ Checklist Preview**: Quill checklist items show ☐ / ☑ symbols directly on home-screen note cards.
-- **📄 Smart Preview**: Note cards display up to 4 lines of content instead of a fixed character count.
+- **📄 Smart Preview**: Note cards render rich formatting (bullet lists, headings, blockquotes) via Markdown, with up to 6 lines of preview.
 - **📂 Organization**: Archive completed notes or move them to Trash (recoverable).
 - **🔒 Fully Local**: Your data stays on your device. Always.
 - **💾 Auto-Save**: Never lose a thought.
@@ -20,7 +20,7 @@ If you're looking for a minimal place to jot down thoughts, code snippets, or li
 - **🔍 Transaction Search**: Search transactions in real time by description or category.
 - **🗑️ Long-Press Delete**: Long-press any transaction card to delete it with a confirmation dialog.
 - **🏷 Transaction Categories**: Auto-categorises transactions into 10 categories — Transport, Food & Dining, Subscriptions, Shopping, Utilities, Health, Entertainment, Payments, Deposit, and Other — using compound keyword priority (e.g. "PickMe Food" → Food & Dining before "PickMe" → Transport).
-- **⚙️ Custom Categories**: Create your own categories with a custom name, colour, and keywords. Built-in category keywords are fully editable from Settings → Financial Manager → Manage Categories.
+- **⚙️ Custom Categories**: Create your own categories with a custom name, colour, and keywords — directly from the transaction editor or from Settings → Financial Manager → Manage Categories.
 - **📲 SMS Auto-Import**: Automatically reads bank SMS messages (Sri Lankan banks) and creates transactions — even while the app is in the background. Promotional, cancelled, due-reminder, and duplicate messages are silently skipped; reversals/refunds automatically delete the original expense. Cross-sender deduplication (±5 min window) prevents duplicates when multiple bank apps fire for the same transaction.
 - **📋 SMS Contacts**: Full SMS sender management under Settings → Financial Manager → SMS Contacts. View all 10 built-in Sri Lankan banks and custom senders. Block/unblock any sender with a toggle. Add non-bank services (e.g. KOKO, FriMi) to include them in auto-import.
 - **🛡️ Secure Backup**: Complete data export (Notes + Finances + Categories + SMS Contacts + Settings) and automatic Google Cloud Backup support. Restores from any previous backup version (v1–v6).
@@ -52,12 +52,12 @@ You need the [Flutter SDK](https://flutter.dev/docs/get-started/install) install
 
 ### Releasing a New Version
 
-To release a new version, use the all-in-one deploy script:
+To release a new version, use the deploy script:
 
 ```bash
-./deploy.sh 1.15.0 1
+./deploy.sh 1.16.0
 ```
 
-This will automatically bump the version, tag the commit, and push to GitHub to trigger the release pipeline.
+The script auto-computes the `versionCode` from the version number (`major×10000 + minor×100 + patch`), bumps `pubspec.yaml`, commits, tags, and pushes to GitHub to trigger the release pipeline.
 
 That's it! Enjoy.

@@ -28,3 +28,7 @@
 
 # Suppress warnings for libraries that reference missing classes
 -dontwarn com.shounakmulay.telephony.**
+
+# WorkManager (background task scheduling)
+-keep class androidx.work.** { *; }
+-keep class be.tramckrijte.workmanager.** { *; }
