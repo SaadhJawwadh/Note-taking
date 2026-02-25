@@ -330,7 +330,8 @@ class SmsService {
     final isExpense = isDebit || hasInstalment || (!isCredit && !isReversal);
 
     // Build human-readable description
-    final description = _buildDescription(body, sender, amount);
+    final description =
+        _buildDescription(body, sender, amount, isExpense: isExpense);
 
     final category = isReversal
         ? _reversalSentinel
@@ -359,16 +360,23 @@ class SmsService {
 
   // ── Description builder ──────────────────────────────────────────────────
   /// Produces a short, meaningful description from an SMS body.
+  /// Always includes the bank name (when known) and uses direction-aware
+  /// prefixes for ambiguous fallback cases.
   ///
   /// Priority:
   ///   1. Deposit       → "Deposit of 10,000 in Commercial Bank"
   ///   2. Instalment    → "KOKO Instalment Simplytek"
-  ///   3. Withdrawal    → "ATM Withdrawal 5,000"
-  ///   4. Transfer      → "Fund Transfer to [Recipient]"
-  ///   5. Purchase      → "Purchase at PickMe Food 1,559"
-  ///   6. Generic debit → "Payment at [Merchant] [amount]"
-  ///   7. Fallback      → cleaned remainder text
-  static String _buildDescription(String body, String sender, double amount) {
+  ///   3. Withdrawal    → "ATM Withdrawal 5,000 – Amana Bank"
+  ///   4. Transfer      → "Transfer to John 5,000 – HNB"
+  ///   5. Purchase      → "Purchase at PickMe Food 1,559 – Amana Bank"
+  ///   6. Generic debit → "Payment at [Merchant] [amount] – Bank"
+  ///   7. Fallback      → "Debit – [text] [amount] – Bank"
+  static String _buildDescription(
+    String body,
+    String sender,
+    double amount, {
+    required bool isExpense,
+  }) {
     final amountLabel = _formatAmount(amount);
     final bankName = _getBankName(sender);
 
@@ -382,12 +390,13 @@ class SmsService {
     text = text.replaceAll(_amountRegex, '');
     text = text.replaceAll(_bareAmountRegex, '');
 
+    String desc;
+
     // ── 1. Deposit ────────────────────────────────────────────────────────
     if (_depositRegex.hasMatch(body)) {
       if (bankName != null) {
         return 'Deposit of $amountLabel in $bankName';
       }
-      // Try "through X BR/Branch" for ATM / CRM branch name
       final throughMatch = RegExp(
         r'\bthrough\s+([A-Za-z][A-Za-z0-9\s\-]{1,25}?)\s+(?:BR|branch)\b',
         caseSensitive: false,
@@ -401,9 +410,7 @@ class SmsService {
 
     // ── 2. Instalment / EMI ───────────────────────────────────────────────
     if (_instalmentRegex.hasMatch(body)) {
-      // Identify the provider (from sender or "From X" in body)
       final provider = bankName ?? _extractBodySender(body);
-      // Identify the merchant/order ("for your X order")
       final instalForRe = RegExp(
         r"\bfor\s+(?:your\s+)?([A-Za-z][A-Za-z0-9\s&'\-\.]{1,25}?)"
         r"\s+(?:order|purchase|plan|account)\b",
@@ -414,13 +421,15 @@ class SmsService {
           forMatch != null ? _cleanTitle(forMatch.group(1)!.trim()) : null;
 
       if (provider != null && merchant != null) {
-        return '$provider Instalment $merchant';
+        desc = '$provider Instalment $merchant';
       } else if (provider != null) {
-        return '$provider Instalment $amountLabel';
+        desc = '$provider Instalment $amountLabel';
       } else if (merchant != null) {
-        return 'Instalment – $merchant $amountLabel';
+        desc = 'Instalment – $merchant $amountLabel';
+      } else {
+        desc = 'Instalment $amountLabel';
       }
-      return 'Instalment $amountLabel';
+      return _appendBankSuffix(desc, bankName);
     }
 
     // ── 3. ATM Withdrawal ─────────────────────────────────────────────────
@@ -431,7 +440,6 @@ class SmsService {
 
     // ── 4. Fund Transfer ─────────────────────────────────────────────────
     if (_transferRegex.hasMatch(body)) {
-      // "to <Recipient>"
       final transferToRe = RegExp(
         r"\bto\s+(?!(?:your|the|our|my)\b)([A-Za-z][A-Za-z0-9\s&'\-\.]{1,30}?)"
         r"(?=\s*(?:[,.\n]|$|\baccount\b|\ba\/c\b))",
@@ -440,35 +448,39 @@ class SmsService {
       final toMatch = transferToRe.firstMatch(text);
       if (toMatch != null) {
         final recipient = _cleanTitle(toMatch.group(1)!.trim());
-        return 'Transfer to $recipient $amountLabel';
+        desc = 'Transfer to $recipient $amountLabel';
+      } else {
+        desc = 'Fund Transfer $amountLabel';
       }
-      if (bankName != null) return 'Transfer $amountLabel – $bankName';
-      return 'Fund Transfer $amountLabel';
+      return _appendBankSuffix(desc, bankName);
     }
 
     // ── 5. Purchase (explicitly stated) ──────────────────────────────────
     if (_purchaseRegex.hasMatch(body)) {
       final merchant = _extractMerchantAt(text) ?? _extractMerchantFor(text);
       if (merchant != null) {
-        return 'Purchase at $merchant $amountLabel';
+        desc = 'Purchase at $merchant $amountLabel';
+      } else {
+        desc = 'Purchase $amountLabel';
       }
-      return 'Purchase $amountLabel';
+      return _appendBankSuffix(desc, bankName);
     }
 
     // ── 6. Generic: try at / for / from merchant patterns ─────────────────
     final atMerchant = _extractMerchantAt(text);
     if (atMerchant != null) {
-      return 'Payment at $atMerchant $amountLabel';
+      return _appendBankSuffix('Payment at $atMerchant $amountLabel', bankName);
     }
 
     final forMerchant = _extractMerchantFor(text);
     if (forMerchant != null) {
-      return 'Payment – $forMerchant $amountLabel';
+      return _appendBankSuffix('Payment – $forMerchant $amountLabel', bankName);
     }
 
     final fromEntity = _extractMerchantFrom(text);
     if (fromEntity != null) {
-      return 'Received from $fromEntity $amountLabel';
+      return _appendBankSuffix(
+          'Received from $fromEntity $amountLabel', bankName);
     }
 
     // ── 7. Last-resort fallback ───────────────────────────────────────────
@@ -478,9 +490,24 @@ class SmsService {
     text = text.replaceAll(RegExp(r"[^A-Za-z0-9\s&'\-]"), ' ');
     text = text.replaceAll(RegExp(r'\s{2,}'), ' ').trim();
     if (text.length > 50) text = text.substring(0, 50).trim();
-    if (text.isNotEmpty) return '${_cleanTitle(text)} $amountLabel'.trim();
 
-    return bankName ?? sender;
+    final direction = isExpense ? 'Debit' : 'Credit';
+    if (text.isNotEmpty) {
+      desc = '$direction – ${_cleanTitle(text)} $amountLabel'.trim();
+    } else if (bankName != null) {
+      return '$direction $amountLabel – $bankName';
+    } else {
+      return '$direction $amountLabel – $sender';
+    }
+    return _appendBankSuffix(desc, bankName);
+  }
+
+  /// Appends " – {bankName}" to a description when the bank name is known
+  /// and not already present in the text.
+  static String _appendBankSuffix(String desc, String? bankName) {
+    if (bankName == null) return desc;
+    if (desc.contains(bankName)) return desc;
+    return '$desc – $bankName';
   }
 
   // ── Entity extraction helpers ────────────────────────────────────────────
