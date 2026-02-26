@@ -2,9 +2,19 @@
 
 All notable changes to Note Book are documented here.
 
-## [1.16.1] - 2026-02-25
+## [1.16.2] - 2026-02-26
 
 ### 🐛 Bug Fixes
+- **Q+ Transfer Expenses**: Fixed an issue where `ComBank_Q+` fund transfers were categorized ambiguously. They are now correctly identified as financial expenses.
+- **Note Editor Layout**: Fixed corrupted blockquote and header padding caused by inherited inline-style overrides. Formats render natively using Material 3 text theming now.
+- **Lint Cleanup**: Fixed deprecated `withOpacity` usages and unresolved flow control structures, passing a completely clean `flutter analyze`.
+
+### 🛠 Security / DevOps
+- **Release Fonts preserved**: Disabled aggressive Android resource shrinking (`isShrinkResources = false`) that was stripping bundled `Rubik` fonts in the GitHub Actions Android release build. Font rendering in production builds is now identical to local profiles.
+
+---
+
+## [1.16.1] - 2026-02-25
 - **Calculator: Division-by-zero & invalid expressions**: Evaluating `1/0` or `0/0` previously stored `Infinity`/`NaN` as a transaction amount. These are now blocked — the calculator shows "Error" and "Use Value" closes without setting an amount.
 - **Animation re-play on category filter**: Tapping a category chip in the Finances screen no longer re-animates the entire page from scratch (was caused by `AnimationLimiter` receiving a new `ValueKey` on every filter change).
 

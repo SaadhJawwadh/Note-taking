@@ -55,7 +55,7 @@ You need the [Flutter SDK](https://flutter.dev/docs/get-started/install) install
 To release a new version, use the deploy script:
 
 ```bash
-./deploy.sh 1.16.0
+./deploy.sh 1.16.2
 ```
 
 The script auto-computes the `versionCode` from the version number (`major×10000 + minor×100 + patch`), bumps `pubspec.yaml`, commits, tags, and pushes to GitHub to trigger the release pipeline.

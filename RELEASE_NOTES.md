@@ -1,29 +1,24 @@
-# Note Book v1.16.1 — Bug Fixes & Faster Animations
+# Note Book v1.16.2 — Edge Case Fixes & Release Stability
 
 ## Bug Fixes
 
-### Calculator: Invalid Results No Longer Stored
-Entering a division-by-zero expression (`1/0`) or other invalid input previously allowed `Infinity` or `NaN` to be saved as a transaction amount. The calculator now detects these and shows "Error" — pressing "Use Value" closes without setting an amount.
+### Q+ Fund Transfers
+Fixed an edge case where "Fund Transfer" messages initiated via `ComBank_Q+` were parsing incorrectly. They now correctly debit from the net balance.
 
-### Finance Screen: No More Full-Page Re-Animation on Filter Tap
-Tapping a category chip previously re-animated the entire page (charts, summary cards, and all transaction rows) from scratch on every tap. This was caused by `AnimationLimiter` receiving a new `key` on every filter change. The root cause has been removed — filters now update the list instantly without any animation disruption.
+### Editor Padding Anomalies
+Resolved visual overlap and padding anomalies in the Note Editor. Blockquotes and Headers (`H1`-`H3`) now render with the correct Material 3 spacing and no longer inadvertently inherit inline-code background colours.
 
-## Improvements
+## Improvements & Stability
 
-### Faster, M3-Compliant Transitions
-All motion now follows Material 3 Expressive guidelines:
-- Stagger entrance duration: 375 ms → **220 ms**
-- Container fade-through (open note / open transaction): 500 ms → **300 ms**
-- Slide offset: 50 px → **24 px** (subtle, not dramatic)
+### GitHub Release Fonts
+Disabled a native Android resource shrinker that was aggressively stripping the `Rubik` font files during the GitHub Actions CI pipeline. Font rendering in the production APK is now 100% identical to the local development build.
 
-Dashboard cards (6-month chart, summary, search bar, category chips) still animate in elegantly on initial page load. Transaction rows simply update in-place when filters change — no re-entry animation.
-
-### Backup Logging
-Backup error logging switched from `print()` to `debugPrint()`, conforming to Flutter's production lint rules.
+### Zero Lint Warnings
+Cleared all remaining static analysis warnings (deprecated properties, flow control structures). The codebase officially passes `flutter analyze` with 0 issues.
 
 ## Upgrade Guide
 
-**From any version (including v1.16.0)**: Install the new APK over the existing one. The `versionCode` (11601) is strictly higher than all previous releases, so Android accepts the upgrade without data loss or reinstall.
+**From any version**: Install the new APK over the existing one. The Android `versionCode` automatically increments so no uninstalls or data migrations are required.
 
 ---
 
