@@ -56,13 +56,10 @@ android {
                 signingConfigs.getByName("debug")
             }
 
-            // Code shrinking + resource shrinking for release APKs
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro",
-            )
+            // Code shrinking + resource shrinking usually strips Flutter assets
+            // from the final APK on GitHub Actions depending on AGP versions.
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
         debug {
             isMinifyEnabled = false

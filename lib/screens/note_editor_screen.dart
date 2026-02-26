@@ -632,40 +632,48 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                         .withValues(alpha: 0.15),
                                     fontFamily: 'monospace',
                                   ),
-                                  header1: TextStyle(
+                                ),
+                                h1: DefaultTextBlockStyle(
+                                  theme.textTheme.displaySmall!.copyWith(
                                     color: noteScheme.onSurface,
-                                    backgroundColor: noteScheme.onSurface
-                                        .withValues(alpha: 0.15),
-                                    fontFamily: 'monospace',
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                  header2: TextStyle(
+                                  const HorizontalSpacing(0, 0),
+                                  const VerticalSpacing(16, 0),
+                                  const VerticalSpacing(0, 0),
+                                  null,
+                                ),
+                                h2: DefaultTextBlockStyle(
+                                  theme.textTheme.headlineMedium!.copyWith(
                                     color: noteScheme.onSurface,
-                                    backgroundColor: noteScheme.onSurface
-                                        .withValues(alpha: 0.15),
-                                    fontFamily: 'monospace',
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                  header3: TextStyle(
+                                  const HorizontalSpacing(0, 0),
+                                  const VerticalSpacing(14, 0),
+                                  const VerticalSpacing(0, 0),
+                                  null,
+                                ),
+                                h3: DefaultTextBlockStyle(
+                                  theme.textTheme.headlineSmall!.copyWith(
                                     color: noteScheme.onSurface,
-                                    backgroundColor: noteScheme.onSurface
-                                        .withValues(alpha: 0.15),
-                                    fontFamily: 'monospace',
+                                    fontWeight: FontWeight.bold,
                                   ),
+                                  const HorizontalSpacing(0, 0),
+                                  const VerticalSpacing(12, 0),
+                                  const VerticalSpacing(0, 0),
+                                  null,
                                 ),
                                 quote: DefaultTextBlockStyle(
                                   TextStyle(
-                                    color: noteScheme.onSurface,
+                                    color: noteScheme.onSurface
+                                        .withValues(alpha: 0.7),
                                     fontStyle: FontStyle.italic,
+                                    fontSize: 16,
                                   ),
-                                  const HorizontalSpacing(0, 0),
-                                  const VerticalSpacing(0, 0),
+                                  const HorizontalSpacing(16, 0),
+                                  const VerticalSpacing(8, 8),
                                   const VerticalSpacing(0, 0),
                                   BoxDecoration(
-                                    color: noteScheme.surfaceContainerHighest
-                                        .withValues(alpha: 0.5),
-                                    borderRadius: const BorderRadius.only(
-                                      topRight: Radius.circular(8),
-                                      bottomRight: Radius.circular(8),
-                                    ),
                                     border: Border(
                                       left: BorderSide(
                                         width: 4,

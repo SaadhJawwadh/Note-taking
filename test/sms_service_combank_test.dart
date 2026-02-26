@@ -22,20 +22,22 @@ void main() {
     final sms2 = SmsMessage.fromMap(
         sms2Map, [SmsColumn.ADDRESS, SmsColumn.BODY, SmsColumn.DATE]);
 
+    final sms3Map = {
+      'address': 'ComBank_Q+',
+      'body':
+          'Dear Customer,Your Fund Transfer of Rs. 5,600.00 to Account Number XXXXXXXX7341 is successful. Reference Number is 605707618054.',
+      'date': DateTime.now().millisecondsSinceEpoch.toString(),
+    };
+    final sms3 = SmsMessage.fromMap(
+        sms3Map, [SmsColumn.ADDRESS, SmsColumn.BODY, SmsColumn.DATE]);
+
     final t1 = SmsService.parseMessage(sms1);
     expect(t1, isNotNull, reason: 'SMS 1 should parse');
-    print('SMS 1 Parsed:');
-    print('  Amount: ${t1?.amount}');
-    print('  Is Expense: ${t1?.isExpense}');
-    print('  Description: ${t1?.description}');
-
-    print('\\n--------------------\\n');
 
     final t2 = SmsService.parseMessage(sms2);
     expect(t2, isNotNull, reason: 'SMS 2 should parse');
-    print('SMS 2 Parsed:');
-    print('  Amount: ${t2?.amount}');
-    print('  Is Expense: ${t2?.isExpense}');
-    print('  Description: ${t2?.description}');
+
+    final t3 = SmsService.parseMessage(sms3);
+    expect(t3, isNotNull, reason: 'SMS 3 should parse');
   });
 }

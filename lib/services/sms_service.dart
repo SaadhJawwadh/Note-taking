@@ -8,7 +8,7 @@ import '../data/transaction_category.dart';
 // Non-bank services (KOKO, wallets, etc.) belong in the user-managed whitelist.
 const _bankSenders = {
   // Commercial Bank
-  'COMBANK', 'Comm-Bank', 'CBSL',
+  'COMBANK', 'Comm-Bank', 'CBSL', 'ComBank_Q+',
   // Peoples Bank
   'PEOBANK', 'PeoplesB', 'PBOCSL', 'PEOPLBK',
   // HNB
@@ -34,6 +34,7 @@ const _senderToBankName = <String, String>{
   'COMBANK': 'Commercial Bank',
   'Comm-Bank': 'Commercial Bank',
   'CBSL': 'Commercial Bank',
+  'ComBank_Q+': 'Commercial Bank',
   'PEOBANK': 'Peoples Bank',
   'PeoplesB': 'Peoples Bank',
   'PBOCSL': 'Peoples Bank',
@@ -115,7 +116,7 @@ final _debitRegex = RegExp(
 );
 final _creditRegex = RegExp(
   r'\b(credit(?:ed)?|received|deposited|deposit|transferred\s+to\s+you|credited\s+to|'
-  r'salary|payment\s+received|fund\s+transfer|incoming\s+transfer|cash\s+deposit)\b',
+  r'salary|payment\s+received|incoming\s+transfer|cash\s+deposit)\b',
   caseSensitive: false,
 );
 
@@ -293,13 +294,22 @@ class SmsService {
     final isDebit = _debitRegex.hasMatch(body);
     final isCredit = _creditRegex.hasMatch(body);
     final hasInstalment = _instalmentRegex.hasMatch(body);
+    final isTransfer = _transferRegex.hasMatch(body);
 
-    if (!isKnownSender && !isDebit && !isCredit && !hasInstalment) return null;
+    if (!isKnownSender &&
+        !isDebit &&
+        !isCredit &&
+        !hasInstalment &&
+        !isTransfer) {
+      return null;
+    }
 
     // Skip due-reminder SMS (e.g. "due tomorrow", "due today") that do NOT
     // contain an actual debit confirmation keyword. KOKO and similar services
     // send these daily; the real debit arrives later from the bank directly.
-    if (_dueReminderRegex.hasMatch(body) && !isDebit) return null;
+    if (_dueReminderRegex.hasMatch(body) && !isDebit) {
+      return null;
+    }
 
     // Skip promotional messages with no actual direction
     if (_promotionalRegex.hasMatch(body) &&
@@ -320,14 +330,24 @@ class SmsService {
         amount = double.tryParse(bareMatch.group(1)!.replaceAll(',', ''));
       }
     }
-    if (amount == null || amount <= 0) return null;
+    if (amount == null || amount <= 0) {
+      return null;
+    }
 
     // For a reversal we need an amount but direction may not matter
-    if (!isReversal && !isDebit && !isCredit && !hasInstalment) return null;
+    if (!isReversal && !isDebit && !isCredit && !hasInstalment && !isTransfer) {
+      return null;
+    }
 
     // Debit takes priority when both keywords present.
     // Instalment messages are always treated as expenses.
-    final isExpense = isDebit || hasInstalment || (!isCredit && !isReversal);
+    // Transfers from Q+ are expenses (user paying someone else).
+    final isQPlusTransfer =
+        senderLower.contains('q+') && _transferRegex.hasMatch(body);
+    final isExpense = isDebit ||
+        hasInstalment ||
+        isQPlusTransfer ||
+        (!isCredit && !isReversal);
 
     // Build human-readable description
     final description =
