@@ -392,9 +392,9 @@ class SmsService {
 
     String desc;
 
-    // ── 1. Deposit ────────────────────────────────────────────────────────
-    if (_depositRegex.hasMatch(body)) {
-      if (bankName != null) {
+    // ── 1. Deposit / Credit ────────────────────────────────────────────────────────
+    if (_depositRegex.hasMatch(body) || _creditRegex.hasMatch(body)) {
+      if (bankName != null && !_creditRegex.hasMatch(body)) {
         return 'Deposit of $amountLabel in $bankName';
       }
       final throughMatch = RegExp(
@@ -405,6 +405,24 @@ class SmsService {
         final branch = _cleanTitle(throughMatch.group(1)!.trim());
         return 'Deposit of $amountLabel via $branch';
       }
+
+      final atMatch = RegExp(
+        r'\bat\s+([A-Za-z][A-Za-z0-9\s\-]{1,35}?)($|\n)',
+        caseSensitive: false,
+      ).firstMatch(body);
+      if (atMatch != null) {
+        final branch = _cleanTitle(atMatch.group(1)!.trim());
+        if (_creditRegex.hasMatch(body)) {
+          return 'Credit of $amountLabel at $branch – ${bankName ?? "Bank"}';
+        }
+        return 'Deposit of $amountLabel at $branch';
+      }
+
+      if (_creditRegex.hasMatch(body)) {
+        final bankSuffix = bankName != null ? ' – $bankName' : '';
+        return 'Credit of $amountLabel$bankSuffix';
+      }
+
       return 'Deposit of $amountLabel';
     }
 
