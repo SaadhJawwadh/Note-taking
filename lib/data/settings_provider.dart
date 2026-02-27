@@ -40,6 +40,19 @@ class SettingsProvider extends ChangeNotifier {
   String? _lastAutoBackupTime;
   String? get lastAutoBackupTime => _lastAutoBackupTime;
 
+  // Period Tracker & App Lock
+  bool _isPeriodTrackerEnabled = false;
+  bool get isPeriodTrackerEnabled => _isPeriodTrackerEnabled;
+
+  bool _appLockEnabled = false;
+  bool get appLockEnabled => _appLockEnabled;
+
+  bool _useBiometrics = false;
+  bool get useBiometrics => _useBiometrics;
+
+  String _discreetNotificationText = 'Check the app';
+  String get discreetNotificationText => _discreetNotificationText;
+
   SettingsProvider() {
     _loadSettings();
   }
@@ -56,6 +69,12 @@ class SettingsProvider extends ChangeNotifier {
     _autoBackupFrequency = prefs.getString('autoBackupFrequency') ?? 'daily';
     _autoBackupPath = prefs.getString('autoBackupPath');
     _lastAutoBackupTime = prefs.getString('lastAutoBackupTime');
+
+    _isPeriodTrackerEnabled = prefs.getBool('isPeriodTrackerEnabled') ?? false;
+    _appLockEnabled = prefs.getBool('appLockEnabled') ?? false;
+    _useBiometrics = prefs.getBool('useBiometrics') ?? false;
+    _discreetNotificationText =
+        prefs.getString('discreetNotificationText') ?? 'Check the app';
 
     final themeIndex = prefs.getInt('themeMode') ?? 0;
     _themeMode = _getThemeModeFromInt(themeIndex);
@@ -141,6 +160,34 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setIsPeriodTrackerEnabled(bool enabled) async {
+    _isPeriodTrackerEnabled = enabled;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isPeriodTrackerEnabled', enabled);
+    notifyListeners();
+  }
+
+  Future<void> setAppLockEnabled(bool enabled) async {
+    _appLockEnabled = enabled;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('appLockEnabled', enabled);
+    notifyListeners();
+  }
+
+  Future<void> setUseBiometrics(bool use) async {
+    _useBiometrics = use;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('useBiometrics', use);
+    notifyListeners();
+  }
+
+  Future<void> setDiscreetNotificationText(String text) async {
+    _discreetNotificationText = text;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('discreetNotificationText', text);
+    notifyListeners();
+  }
+
   ThemeMode _getThemeModeFromInt(int value) {
     switch (value) {
       case 1:
@@ -170,6 +217,10 @@ class SettingsProvider extends ChangeNotifier {
         'isGridView': _isGridView,
         'showFinancialManager': _showFinancialManager,
         'currency': _currency,
+        'isPeriodTrackerEnabled': _isPeriodTrackerEnabled,
+        'appLockEnabled': _appLockEnabled,
+        'useBiometrics': _useBiometrics,
+        'discreetNotificationText': _discreetNotificationText,
       };
 
   Future<void> restoreFromBackupMap(Map<String, dynamic> map) async {
@@ -197,6 +248,19 @@ class SettingsProvider extends ChangeNotifier {
       if (map.containsKey('currency')) {
         final curr = map['currency'];
         if (curr is String && curr.isNotEmpty) await setCurrency(curr);
+      }
+      if (map.containsKey('isPeriodTrackerEnabled')) {
+        final ptEnabled = map['isPeriodTrackerEnabled'];
+        if (ptEnabled is bool) await setIsPeriodTrackerEnabled(ptEnabled);
+      }
+      // Security settings (appLockEnabled, useBiometrics) are intentionally
+      // excluded from restore to prevent bypass via crafted backup files.
+      // Users must configure these manually after a restore.
+      if (map.containsKey('discreetNotificationText')) {
+        final txt = map['discreetNotificationText'];
+        if (txt is String && txt.isNotEmpty) {
+          await setDiscreetNotificationText(txt);
+        }
       }
     } catch (_) {
       // Silently ignore malformed backup settings; existing values are kept.

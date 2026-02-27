@@ -1,7 +1,7 @@
 name: note_taking_app
 description: A fully local offline-first note-taking and financial manager app with SMS auto-import.
 publish_to: "none"
-version: 1.16.2+11602
+version: 1.17.0+11700
 
 environment:
   sdk: ">=3.6.0 <4.0.0"
@@ -14,8 +14,9 @@ dependencies:
   # State Management
   provider: ^6.1.1
 
-  # Local Storage
-  sqflite: ^2.3.0
+  # Local Storage (encrypted)
+  sqflite_sqlcipher: ^3.4.0
+  flutter_secure_storage: ^9.2.3
   path: ^1.8.3
 
   # UI & Design
@@ -46,6 +47,10 @@ dependencies:
   telephony: ^0.2.0
   permission_handler: ^11.3.1
   workmanager: ^0.9.0
+  flutter_local_notifications: ^17.1.2
+  local_auth: ^2.2.0
+  table_calendar: ^3.1.2
+  timezone: ^0.9.4
   flutter_localizations:
     sdk: flutter
 

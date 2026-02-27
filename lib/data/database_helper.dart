@@ -1,5 +1,9 @@
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_sqlcipher/sqflite.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path/path.dart';
+import 'dart:io';
+import 'dart:math';
+import 'period_log_model.dart';
 import 'note_model.dart';
 import 'transaction_model.dart';
 import 'category_definition.dart';
@@ -10,6 +14,13 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
 
+  /// Secure storage for the database encryption key.
+  static const _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+  );
+  static const _keyStorageKey = 'db_encryption_key';
+
   DatabaseHelper._init();
 
   Future<Database> get database async {
@@ -18,21 +29,99 @@ class DatabaseHelper {
     return _database!;
   }
 
+  /// Returns (or generates) the database encryption passphrase.
+  static Future<String> _getOrCreateEncryptionKey() async {
+    String? key = await _secureStorage.read(key: _keyStorageKey);
+    if (key == null || key.isEmpty) {
+      // Generate a cryptographically secure 32-character hex key
+      final random = Random.secure();
+      final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+      key = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+      await _secureStorage.write(key: _keyStorageKey, value: key);
+    }
+    return key;
+  }
+
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
+    final password = await _getOrCreateEncryptionKey();
+
+    // ── Migration: convert an existing unencrypted DB to encrypted ────────
+    final dbFile = File(path);
+    if (await dbFile.exists()) {
+      final needsMigration = await _isUnencryptedDb(path);
+      if (needsMigration) {
+        await _migrateToEncrypted(path, password);
+      }
+    }
 
     return await openDatabase(
       path,
-      version: 10,
+      password: password,
+      version: 12,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
   }
 
+  /// Checks whether the database at [path] is unencrypted by trying to open
+  /// it without a password.
+  static Future<bool> _isUnencryptedDb(String path) async {
+    Database? db;
+    try {
+      db = await openDatabase(path, readOnly: true, singleInstance: false);
+      // If we can query sqlite_master, it's unencrypted
+      await db.rawQuery('SELECT count(*) FROM sqlite_master');
+      return true;
+    } catch (_) {
+      // Failed to open without password → already encrypted (or corrupt)
+      return false;
+    } finally {
+      await db?.close();
+    }
+  }
+
+  /// Migrates an unencrypted database to an encrypted one.
+  /// Strategy: open old DB → export via ATTACH encrypted → swap files.
+  static Future<void> _migrateToEncrypted(String path, String password) async {
+    final encryptedPath = '$path.encrypted';
+
+    try {
+      // 1. Open the unencrypted DB
+      final oldDb = await openDatabase(path, singleInstance: false);
+
+      // Extract current version to copy over
+      final versionResult = await oldDb.rawQuery("PRAGMA user_version");
+      final userVersion = versionResult.first.values.first as int;
+
+      // 2. Attach a new encrypted DB and copy all content
+      await oldDb.execute(
+          "ATTACH DATABASE '$encryptedPath' AS encrypted KEY '$password'");
+      await oldDb.rawQuery("SELECT sqlcipher_export('encrypted')");
+      // sqlcipher_export does not export user_version; we must set it manually
+      await oldDb.execute("PRAGMA encrypted.user_version = $userVersion");
+
+      await oldDb.execute("DETACH DATABASE encrypted");
+      await oldDb.close();
+
+      // 3. Replace old file with encrypted one
+      final oldFile = File(path);
+      final encFile = File(encryptedPath);
+      if (await oldFile.exists()) await oldFile.delete();
+      await encFile.rename(path);
+    } catch (e) {
+      // If migration fails, delete the partial encrypted file and let the
+      // app proceed with re-creating the DB (data loss, but app won't crash).
+      final encFile = File(encryptedPath);
+      if (await encFile.exists()) await encFile.delete();
+      rethrow;
+    }
+  }
+
   Future _createDB(Database db, int version) async {
     await db.execute('''
-      CREATE TABLE notes (
+      CREATE TABLE IF NOT EXISTS notes (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
         content TEXT NOT NULL,
@@ -49,14 +138,14 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE tags (
+      CREATE TABLE IF NOT EXISTS tags (
         name TEXT PRIMARY KEY,
         color INTEGER NOT NULL
       )
     ''');
 
     await db.execute('''
-      CREATE TABLE transactions (
+      CREATE TABLE IF NOT EXISTS transactions (
         _id INTEGER PRIMARY KEY AUTOINCREMENT,
         amount REAL NOT NULL,
         description TEXT NOT NULL,
@@ -70,7 +159,7 @@ class DatabaseHelper {
       'CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_smsId ON transactions(smsId) WHERE smsId IS NOT NULL',
     );
     await db.execute('''
-      CREATE TABLE category_definitions (
+      CREATE TABLE IF NOT EXISTS category_definitions (
         name TEXT PRIMARY KEY,
         color INTEGER NOT NULL,
         keywords TEXT NOT NULL DEFAULT '[]',
@@ -79,7 +168,7 @@ class DatabaseHelper {
     ''');
     await _seedBuiltInCategories(db);
     await db.execute('''
-      CREATE TABLE sms_contacts (
+      CREATE TABLE IF NOT EXISTS sms_contacts (
         id TEXT PRIMARY KEY,
         senderIds TEXT NOT NULL DEFAULT '[]',
         label TEXT,
@@ -88,6 +177,16 @@ class DatabaseHelper {
       )
     ''');
     await _seedBuiltInSmsContacts(db);
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS period_logs (
+        id TEXT PRIMARY KEY,
+        startDate TEXT NOT NULL,
+        endDate TEXT,
+        intensity TEXT NOT NULL,
+        notes TEXT NOT NULL DEFAULT ''
+      )
+    ''');
   }
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -143,20 +242,45 @@ class DatabaseHelper {
     if (oldVersion < 8) {
       // Add Payments and Deposit categories introduced in v1.14
       const newCats = [
-        ('Payments', 0xFF795548, [
-          'koko instalment', 'koko installment', 'instalment', 'installment',
-          'emi', 'koko', 'loan', 'repayment', 'credit card', 'card payment',
-          'hire purchase',
-        ]),
-        ('Deposit', 0xFF00897B, [
-          'crm deposit', 'cash deposit', 'deposit', 'credited', 'salary',
-          'income',
-        ]),
+        (
+          'Payments',
+          0xFF795548,
+          [
+            'koko instalment',
+            'koko installment',
+            'instalment',
+            'installment',
+            'emi',
+            'koko',
+            'loan',
+            'repayment',
+            'credit card',
+            'card payment',
+            'hire purchase',
+          ]
+        ),
+        (
+          'Deposit',
+          0xFF00897B,
+          [
+            'crm deposit',
+            'cash deposit',
+            'deposit',
+            'credited',
+            'salary',
+            'income',
+          ]
+        ),
       ];
       for (final (name, color, kws) in newCats) {
         await db.insert(
           'category_definitions',
-          {'name': name, 'color': color, 'keywords': jsonEncode(kws), 'isBuiltIn': 1},
+          {
+            'name': name,
+            'color': color,
+            'keywords': jsonEncode(kws),
+            'isBuiltIn': 1
+          },
           conflictAlgorithm: ConflictAlgorithm.ignore,
         );
       }
@@ -184,7 +308,8 @@ class DatabaseHelper {
       // Migrate existing whitelist entries as custom contacts
       final hasOld = (await db.rawQuery(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='sms_whitelist'",
-      )).isNotEmpty;
+      ))
+          .isNotEmpty;
       if (hasOld) {
         final oldRows = await db.query('sms_whitelist');
         for (final row in oldRows) {
@@ -204,6 +329,38 @@ class DatabaseHelper {
         await db.execute('DROP TABLE sms_whitelist');
       }
     }
+    if (oldVersion < 11) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS period_logs (
+          id TEXT PRIMARY KEY,
+          startDate TEXT NOT NULL,
+          endDate TEXT,
+          intensity TEXT NOT NULL,
+          notes TEXT NOT NULL DEFAULT ''
+        )
+      ''');
+    }
+    if (oldVersion < 12) {
+      // Version 11 accidentally created endDate as NOT NULL.
+      // SQLite doesn't support ALTER TABLE ALTER COLUMN.
+      // Must recreate the table and migrate data.
+      await db.execute('ALTER TABLE period_logs RENAME TO period_logs_old');
+      await db.execute('''
+        CREATE TABLE period_logs (
+          id TEXT PRIMARY KEY,
+          startDate TEXT NOT NULL,
+          endDate TEXT,
+          intensity TEXT NOT NULL,
+          notes TEXT NOT NULL DEFAULT ''
+        )
+      ''');
+      await db.execute('''
+        INSERT INTO period_logs (id, startDate, endDate, intensity, notes)
+        SELECT id, startDate, NULLIF(endDate, ''), intensity, notes
+        FROM period_logs_old
+      ''');
+      await db.execute('DROP TABLE period_logs_old');
+    }
   }
 
   /// Seeds the built-in categories into [db]. Uses ConflictAlgorithm.ignore so
@@ -214,8 +371,20 @@ class DatabaseHelper {
         'Transport',
         0xFF2196F3,
         [
-          'pickme ride', 'pickme express', 'pickme', 'uber', 'ola', 'taxi',
-          'cab', 'bus', 'train', 'tuk', 'fuel', 'petrol', 'toll', 'parking',
+          'pickme ride',
+          'pickme express',
+          'pickme',
+          'uber',
+          'ola',
+          'taxi',
+          'cab',
+          'bus',
+          'train',
+          'tuk',
+          'fuel',
+          'petrol',
+          'toll',
+          'parking',
           'grab',
         ]
       ),
@@ -223,36 +392,89 @@ class DatabaseHelper {
         'Food & Dining',
         0xFFFF9800,
         [
-          'pickme food', 'pickme eats', 'uber eats', 'food delivery', 'kfc',
-          'mcd', 'mcdonalds', 'pizza', 'dominos', 'domino', 'café', 'cafe',
-          'coffee', 'restaurant', 'groceries', 'grocery', 'food', 'keells',
-          'arpico', 'cargills', 'burger', 'noodles', 'rice', 'bakery',
-          'pastry', 'icecream', 'sushi', 'biryani', 'kottu', 'supermarket',
+          'pickme food',
+          'pickme eats',
+          'uber eats',
+          'food delivery',
+          'kfc',
+          'mcd',
+          'mcdonalds',
+          'pizza',
+          'dominos',
+          'domino',
+          'café',
+          'cafe',
+          'coffee',
+          'restaurant',
+          'groceries',
+          'grocery',
+          'food',
+          'keells',
+          'arpico',
+          'cargills',
+          'burger',
+          'noodles',
+          'rice',
+          'bakery',
+          'pastry',
+          'icecream',
+          'sushi',
+          'biryani',
+          'kottu',
+          'supermarket',
         ]
       ),
       (
         'Subscriptions',
         0xFF9C27B0,
         [
-          'amazon prime', 'netflix', 'spotify', 'youtube', 'apple', 'adobe',
-          'canva', 'hulu', 'disney', 'microsoft', 'office365', 'chatgpt',
-          'openai', 'icloud', 'subscription',
+          'amazon prime',
+          'netflix',
+          'spotify',
+          'youtube',
+          'apple',
+          'adobe',
+          'canva',
+          'hulu',
+          'disney',
+          'microsoft',
+          'office365',
+          'chatgpt',
+          'openai',
+          'icloud',
+          'subscription',
         ]
       ),
       (
         'Shopping',
         0xFFE91E63,
         [
-          'online shopping', 'amazon', 'daraz', 'kapruka', 'ebay',
-          'aliexpress', 'fabric', 'clothing',
+          'online shopping',
+          'amazon',
+          'daraz',
+          'kapruka',
+          'ebay',
+          'aliexpress',
+          'fabric',
+          'clothing',
         ]
       ),
       (
         'Utilities',
         0xFF607D8B,
         [
-          'mobile bill', 'phone bill', 'electricity', 'ceb', 'leco', 'water',
-          'dialog', 'airtel', 'mobitel', 'slt', 'broadband', 'internet',
+          'mobile bill',
+          'phone bill',
+          'electricity',
+          'ceb',
+          'leco',
+          'water',
+          'dialog',
+          'airtel',
+          'mobitel',
+          'slt',
+          'broadband',
+          'internet',
           'utility',
         ]
       ),
@@ -260,21 +482,53 @@ class DatabaseHelper {
         'Health',
         0xFF4CAF50,
         [
-          'lab test', 'pharmacy', 'hospital', 'doctor', 'medical', 'nawaloka',
-          'asiri', 'channel', 'clinic', 'diagnostic', 'medicine',
+          'lab test',
+          'pharmacy',
+          'hospital',
+          'doctor',
+          'medical',
+          'nawaloka',
+          'asiri',
+          'channel',
+          'clinic',
+          'diagnostic',
+          'medicine',
         ]
       ),
-      ('Entertainment', 0xFFFF5722,
-        ['cinema', 'cinemax', 'scope', 'movie', 'concert', 'event', 'ticket']),
-      ('Payments', 0xFF795548, [
-        'koko instalment', 'koko installment', 'instalment', 'installment',
-        'emi', 'koko', 'loan', 'repayment', 'credit card', 'card payment',
-        'hire purchase',
-      ]),
-      ('Deposit', 0xFF00897B, [
-        'crm deposit', 'cash deposit', 'deposit', 'credited', 'salary',
-        'income',
-      ]),
+      (
+        'Entertainment',
+        0xFFFF5722,
+        ['cinema', 'cinemax', 'scope', 'movie', 'concert', 'event', 'ticket']
+      ),
+      (
+        'Payments',
+        0xFF795548,
+        [
+          'koko instalment',
+          'koko installment',
+          'instalment',
+          'installment',
+          'emi',
+          'koko',
+          'loan',
+          'repayment',
+          'credit card',
+          'card payment',
+          'hire purchase',
+        ]
+      ),
+      (
+        'Deposit',
+        0xFF00897B,
+        [
+          'crm deposit',
+          'cash deposit',
+          'deposit',
+          'credited',
+          'salary',
+          'income',
+        ]
+      ),
       ('Other', 0xFF9E9E9E, <String>[]),
     ];
     for (final (name, color, kws) in builtIns) {
@@ -295,19 +549,80 @@ class DatabaseHelper {
   /// during multiple migration steps is safe.
   static Future<void> _seedBuiltInSmsContacts(Database db) async {
     final banks = <Map<String, Object?>>[
-      {'id': 'commercial_bank', 'senderIds': jsonEncode(['COMBANK', 'Comm-Bank', 'CBSL']), 'label': 'Commercial Bank', 'isBuiltIn': 1, 'isBlocked': 0},
-      {'id': 'peoples_bank', 'senderIds': jsonEncode(['PEOBANK', 'PeoplesB', 'PBOCSL', 'PEOPLBK']), 'label': 'Peoples Bank', 'isBuiltIn': 1, 'isBlocked': 0},
-      {'id': 'hnb', 'senderIds': jsonEncode(['HNB', 'HNBANK', 'HNBAlerts']), 'label': 'HNB', 'isBuiltIn': 1, 'isBlocked': 0},
-      {'id': 'sampath_bank', 'senderIds': jsonEncode(['SAMPATH', 'Sampath', 'SAMPTBK']), 'label': 'Sampath Bank', 'isBuiltIn': 1, 'isBlocked': 0},
-      {'id': 'boc', 'senderIds': jsonEncode(['BOCCSL', 'BOC', 'BOCSL']), 'label': 'BOC', 'isBuiltIn': 1, 'isBlocked': 0},
-      {'id': 'ndb_bank', 'senderIds': jsonEncode(['NDB', 'NDBBANK']), 'label': 'NDB Bank', 'isBuiltIn': 1, 'isBlocked': 0},
-      {'id': 'seylan_bank', 'senderIds': jsonEncode(['SEYLAN', 'Seybank', 'SEYLNBK']), 'label': 'Seylan Bank', 'isBuiltIn': 1, 'isBlocked': 0},
-      {'id': 'amana_bank', 'senderIds': jsonEncode(['AMANABNK', 'AMANA', 'AMANABK']), 'label': 'Amana Bank', 'isBuiltIn': 1, 'isBlocked': 0},
-      {'id': 'ntb', 'senderIds': jsonEncode(['NTB', 'NTBBANK']), 'label': 'Nations Trust Bank', 'isBuiltIn': 1, 'isBlocked': 0},
-      {'id': 'lolc', 'senderIds': jsonEncode(['LOLC']), 'label': 'LOLC Finance', 'isBuiltIn': 1, 'isBlocked': 0},
+      {
+        'id': 'commercial_bank',
+        'senderIds': jsonEncode(['COMBANK', 'Comm-Bank', 'CBSL']),
+        'label': 'Commercial Bank',
+        'isBuiltIn': 1,
+        'isBlocked': 0
+      },
+      {
+        'id': 'peoples_bank',
+        'senderIds': jsonEncode(['PEOBANK', 'PeoplesB', 'PBOCSL', 'PEOPLBK']),
+        'label': 'Peoples Bank',
+        'isBuiltIn': 1,
+        'isBlocked': 0
+      },
+      {
+        'id': 'hnb',
+        'senderIds': jsonEncode(['HNB', 'HNBANK', 'HNBAlerts']),
+        'label': 'HNB',
+        'isBuiltIn': 1,
+        'isBlocked': 0
+      },
+      {
+        'id': 'sampath_bank',
+        'senderIds': jsonEncode(['SAMPATH', 'Sampath', 'SAMPTBK']),
+        'label': 'Sampath Bank',
+        'isBuiltIn': 1,
+        'isBlocked': 0
+      },
+      {
+        'id': 'boc',
+        'senderIds': jsonEncode(['BOCCSL', 'BOC', 'BOCSL']),
+        'label': 'BOC',
+        'isBuiltIn': 1,
+        'isBlocked': 0
+      },
+      {
+        'id': 'ndb_bank',
+        'senderIds': jsonEncode(['NDB', 'NDBBANK']),
+        'label': 'NDB Bank',
+        'isBuiltIn': 1,
+        'isBlocked': 0
+      },
+      {
+        'id': 'seylan_bank',
+        'senderIds': jsonEncode(['SEYLAN', 'Seybank', 'SEYLNBK']),
+        'label': 'Seylan Bank',
+        'isBuiltIn': 1,
+        'isBlocked': 0
+      },
+      {
+        'id': 'amana_bank',
+        'senderIds': jsonEncode(['AMANABNK', 'AMANA', 'AMANABK']),
+        'label': 'Amana Bank',
+        'isBuiltIn': 1,
+        'isBlocked': 0
+      },
+      {
+        'id': 'ntb',
+        'senderIds': jsonEncode(['NTB', 'NTBBANK']),
+        'label': 'Nations Trust Bank',
+        'isBuiltIn': 1,
+        'isBlocked': 0
+      },
+      {
+        'id': 'lolc',
+        'senderIds': jsonEncode(['LOLC']),
+        'label': 'LOLC Finance',
+        'isBuiltIn': 1,
+        'isBlocked': 0
+      },
     ];
     for (final bank in banks) {
-      await db.insert('sms_contacts', bank, conflictAlgorithm: ConflictAlgorithm.ignore);
+      await db.insert('sms_contacts', bank,
+          conflictAlgorithm: ConflictAlgorithm.ignore);
     }
   }
 
@@ -789,16 +1104,61 @@ class DatabaseHelper {
     final db = await instance.database;
     final windowStart =
         date.subtract(const Duration(minutes: 5)).toIso8601String();
-    final windowEnd =
-        date.add(const Duration(minutes: 5)).toIso8601String();
+    final windowEnd = date.add(const Duration(minutes: 5)).toIso8601String();
     final rows = await db.query(
       'transactions',
       columns: [TransactionFields.id],
-      where:
-          'amount = ? AND smsId IS NOT NULL AND date >= ? AND date <= ?',
+      where: 'amount = ? AND smsId IS NOT NULL AND date >= ? AND date <= ?',
       whereArgs: [amount, windowStart, windowEnd],
       limit: 1,
     );
     return rows.isNotEmpty;
+  }
+
+  // ── Period Tracker CRUD ────────────────────────────────────────────────────
+
+  Future<PeriodLog> createPeriodLog(PeriodLog log) async {
+    final db = await instance.database;
+    await db.insert('period_logs', log.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace);
+    return log;
+  }
+
+  Future<PeriodLog?> readPeriodLog(String id) async {
+    final db = await instance.database;
+    final maps = await db.query(
+      'period_logs',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    if (maps.isNotEmpty) {
+      return PeriodLog.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  Future<List<PeriodLog>> readAllPeriodLogs() async {
+    final db = await instance.database;
+    final result = await db.query('period_logs', orderBy: 'startDate DESC');
+    return result.map((json) => PeriodLog.fromMap(json)).toList();
+  }
+
+  Future<int> updatePeriodLog(PeriodLog log) async {
+    final db = await instance.database;
+    return await db.update(
+      'period_logs',
+      log.toMap(),
+      where: 'id = ?',
+      whereArgs: [log.id],
+    );
+  }
+
+  Future<int> deletePeriodLog(String id) async {
+    final db = await instance.database;
+    return await db.delete(
+      'period_logs',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 }

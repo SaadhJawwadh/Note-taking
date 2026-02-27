@@ -26,6 +26,9 @@
 # sqflite — keeps sqlite JNI helpers
 -keep class com.tekartik.sqflite.** { *; }
 
+# SQLCipher — keep all native classes
+-keep class net.sqlcipher.** { *; }
+
 # Suppress warnings for libraries that reference missing classes
 -dontwarn com.shounakmulay.telephony.**
 

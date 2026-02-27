@@ -14,6 +14,7 @@ import '../data/settings_provider.dart';
 import 'package:animations/animations.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'financial_manager_screen.dart';
+import 'period_tracker_screen.dart';
 import '../utils/rich_text_utils.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -40,6 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<String, int> _tagColors = {};
 
   Future refreshNotes() async {
+    if (!mounted) return;
     setState(() => isLoading = true);
     notes = await DatabaseHelper.instance.readAllNotes();
     final tags = await DatabaseHelper.instance.getAllTags();
@@ -76,6 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _tagColors = colors;
 
     filterNotes();
+    if (!mounted) return;
     setState(() => isLoading = false);
   }
 
@@ -281,8 +284,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Consumer<SettingsProvider>(builder: (context, settings, child) {
-      // Return simple Notes View if feature disabled
-      if (!settings.showFinancialManager) {
+      // Return simple Notes View if both features are disabled
+      if (!settings.showFinancialManager && !settings.isPeriodTrackerEnabled) {
         return _buildNotesView(context, settings);
       }
 
@@ -296,30 +299,58 @@ class _HomeScreenState extends State<HomeScreen> {
               child: child,
             );
           },
-          child: _currentIndex == 0
-              ? _buildNotesView(context, settings)
-              : const FinancialManagerScreen(),
+          child: _buildCurrentScreen(settings),
         ),
         bottomNavigationBar: NavigationBar(
           selectedIndex: _currentIndex,
           onDestinationSelected: (index) {
             setState(() => _currentIndex = index);
           },
-          destinations: const [
-            NavigationDestination(
+          destinations: [
+            const NavigationDestination(
               icon: Icon(Icons.note_alt_outlined),
               selectedIcon: Icon(Icons.note_alt),
               label: 'Notes',
             ),
-            NavigationDestination(
-              icon: Icon(Icons.account_balance_wallet_outlined),
-              selectedIcon: Icon(Icons.account_balance_wallet),
-              label: 'Finances',
-            ),
+            if (settings.showFinancialManager)
+              const NavigationDestination(
+                icon: Icon(Icons.account_balance_wallet_outlined),
+                selectedIcon: Icon(Icons.account_balance_wallet),
+                label: 'Finances',
+              ),
+            if (settings.isPeriodTrackerEnabled)
+              const NavigationDestination(
+                icon: Icon(Icons.water_drop_outlined),
+                selectedIcon: Icon(Icons.water_drop),
+                label: 'Tracker',
+              ),
           ],
         ),
       );
     });
+  }
+
+  Widget _buildCurrentScreen(SettingsProvider settings) {
+    int index = 0;
+
+    // Check index 0
+    if (_currentIndex == index) return _buildNotesView(context, settings);
+    index++;
+
+    // Check Financial Manager
+    if (settings.showFinancialManager) {
+      if (_currentIndex == index) return const FinancialManagerScreen();
+      index++;
+    }
+
+    // Check Period Tracker
+    if (settings.isPeriodTrackerEnabled) {
+      if (_currentIndex == index) return const PeriodTrackerScreen();
+      index++;
+    }
+
+    // Default fallback
+    return _buildNotesView(context, settings);
   }
 
   Widget _buildNotesView(BuildContext context, SettingsProvider settings) {

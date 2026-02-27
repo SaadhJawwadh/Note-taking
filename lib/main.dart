@@ -6,6 +6,7 @@ import 'services/sms_service.dart';
 import 'services/backup_service.dart';
 import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
+import 'screens/app_lock_screen.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -46,7 +47,7 @@ class NoteApp extends StatelessWidget {
             settings.fontFamily,
           ),
           themeMode: settings.themeMode,
-          home: const HomeScreen(),
+          home: const AppLockScreen(child: HomeScreen()),
           locale: const Locale('en',
               'US'), // No changes needed based on grep, but good to be sure.
           localizationsDelegates: const [

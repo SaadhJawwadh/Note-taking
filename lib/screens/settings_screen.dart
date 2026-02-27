@@ -8,7 +8,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_sqlcipher/sqflite.dart';
 import '../data/database_helper.dart';
 import '../data/sms_contact.dart';
 import '../data/transaction_category.dart';
@@ -269,6 +269,53 @@ class SettingsScreen extends StatelessWidget {
                                             filterType: FilterType.trash),
                                   ),
                                 );
+                              },
+                            ),
+                          ]),
+                          const SizedBox(height: 24),
+                          _buildSectionHeader(context, 'PERIOD & PRIVACY'),
+                          _buildSettingsContainer(context, [
+                            _buildSwitchTile(
+                              context,
+                              icon: Icons.calendar_month_outlined,
+                              title: 'Period Tracker',
+                              subtitle: 'Optional cycle tracking',
+                              value: settings.isPeriodTrackerEnabled,
+                              onChanged: (value) =>
+                                  settings.setIsPeriodTrackerEnabled(value),
+                            ),
+                            if (settings.isPeriodTrackerEnabled) ...[
+                              Divider(
+                                height: 1,
+                                indent: 56,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .outlineVariant,
+                              ),
+                              _buildListTile(
+                                context,
+                                icon: Icons.notifications_none_outlined,
+                                title: 'Discreet Notification Text',
+                                subtitle: settings.discreetNotificationText,
+                                onTap: () => _showNotificationTextDialog(
+                                    context, settings),
+                              ),
+                            ],
+                            Divider(
+                              height: 1,
+                              indent: 56,
+                              color:
+                                  Theme.of(context).colorScheme.outlineVariant,
+                            ),
+                            _buildSwitchTile(
+                              context,
+                              icon: Icons.lock_outline,
+                              title: 'App Lock',
+                              subtitle: 'Require authentication to open app',
+                              value: settings.appLockEnabled,
+                              onChanged: (value) async {
+                                // If enabling, we might want to check if hardware supports it, but local_auth handles it.
+                                await settings.setAppLockEnabled(value);
                               },
                             ),
                           ]),
@@ -605,6 +652,42 @@ class SettingsScreen extends StatelessWidget {
               },
             ),
           ),
+        );
+      },
+    );
+  }
+
+  void _showNotificationTextDialog(
+      BuildContext context, SettingsProvider settings) {
+    final TextEditingController controller =
+        TextEditingController(text: settings.discreetNotificationText);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Discreet Notification'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              hintText: 'e.g., Check the app',
+              labelText: 'Alert Text',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (controller.text.trim().isNotEmpty) {
+                  settings.setDiscreetNotificationText(controller.text.trim());
+                }
+                Navigator.pop(context);
+              },
+              child: const Text('Save'),
+            ),
+          ],
         );
       },
     );

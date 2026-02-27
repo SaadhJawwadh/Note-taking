@@ -2,6 +2,9 @@
 <full-backup-content>
     <!-- Include the shared preferences file -->
     <include domain="sharedpref" path="."/>
+    <!-- Exclude secure storage to prevent encryption keys from leaking to cloud -->
+    <exclude domain="sharedpref" path="FlutterSecureKeyStorage.xml" />
+    <exclude domain="sharedpref" path="FlutterSecureStorage.xml" />
     <!-- Include the database file -->
     <include domain="database" path="notes.db"/>
 </full-backup-content>

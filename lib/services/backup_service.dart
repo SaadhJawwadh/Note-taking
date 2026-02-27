@@ -31,6 +31,7 @@ Future<String> generateBackupJson() async {
   final transactions = await db.query('transactions');
   final categoryDefinitions = await db.query('category_definitions');
   final smsContacts = await db.query('sms_contacts');
+  final periodLogs = await db.query('period_logs');
 
   final prefs = await SharedPreferences.getInstance();
   final settingsMap = {
@@ -40,6 +41,11 @@ Future<String> generateBackupJson() async {
     'isGridView': prefs.getBool('isGridView') ?? true,
     'showFinancialManager': prefs.getBool('showFinancialManager') ?? false,
     'currency': prefs.getString('currency') ?? 'LKR',
+    'isPeriodTrackerEnabled': prefs.getBool('isPeriodTrackerEnabled') ?? false,
+    'appLockEnabled': prefs.getBool('appLockEnabled') ?? false,
+    'useBiometrics': prefs.getBool('useBiometrics') ?? false,
+    'discreetNotificationText':
+        prefs.getString('discreetNotificationText') ?? 'Check the app',
   };
 
   final backupData = {
@@ -48,8 +54,9 @@ Future<String> generateBackupJson() async {
     'transactions': transactions,
     'categoryDefinitions': categoryDefinitions,
     'smsContacts': smsContacts,
+    'periodLogs': periodLogs,
     'settings': settingsMap,
-    'version': 6,
+    'version': 7, // Incremented version to denote periodLogs inclusion
     'exportedAt': DateTime.now().toIso8601String(),
   };
 
