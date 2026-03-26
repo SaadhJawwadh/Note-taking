@@ -18,6 +18,9 @@ Specialist in Flutter CI/CD, Android release optimization, and Play Store delive
 ## Instructions
 - **JVM Targets**: Always ensure a consistent `jvmTarget = "17"` across all Android subprojects to avoid build failures with modern plugins.
 - **Resource Shrinking**: Disable resource shrinking (`isShrinkResources = false`) if the project uses local custom fonts or dynamically loaded assets.
+- **ProGuard Integrity**: 
+    - Audit `proguard-rules.pro` to ensure it `-keep`s essential native namespaces.
+    - **SQLCipher**: Always use `-keep class net.sqlcipher.** { *; }` and keep `net.sqlcipher.database.SQLiteDatabase` to prevent blank screens or crashes in encrypted release builds.
 - **Play Store Bundles**: Prefer `flutter build appbundle` for production releases to allow Google Play to serve optimized APKs.
 - **Dependency Desugaring**: Use `coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")` or higher to support modern Java APIs on older Android devices.
 - **CI/CD Pipeline**: 
