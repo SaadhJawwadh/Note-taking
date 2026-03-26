@@ -33,4 +33,4 @@ When instructed to use the Tester skill, you must execute the following roles an
 - **Dependency Audit**: Verify all core dependencies (like `Workmanager` 0.9.0) use their latest stable and compatible APIs.
 
 ## Phase 5: Release Confirmation
-- **CRITICAL:** After all the above phases are successfully completed, you must **WAIT FOR USER CONFIRMATION** before triggering any public release or deployment pipeline. Do not release the application without explicit user approval.
+- **CRITICAL:** After all the above phases are successfully completed, you must **WAIT FOR EXPLICIT USER CONSENT** before pushing any tags or triggering any public release or deployment pipeline. Do not release the application without explicit user approval for that specific action.

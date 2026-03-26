@@ -24,6 +24,7 @@ Specialist in Flutter CI/CD, Android release optimization, and Play Store delive
 - **Play Store Bundles**: Prefer `flutter build appbundle` for production releases to allow Google Play to serve optimized APKs.
 - **Dependency Desugaring**: Use `coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")` or higher to support modern Java APIs on older Android devices.
 - **CI/CD Pipeline**: 
+    - **CRITICAL**: Do NOT trigger GitHub workflows or push tags (`v*`) without explicit user consent for each specific release event.
     - The `release.yml` should automate versioning based on git tags (`v*`).
     - Always generate SHA256 checksums for all release artifacts.
     - Automate the creation of GitHub Releases with attached `.aab` and `.apk` files.
