@@ -148,15 +148,11 @@ Expert Flutter developer specializing in Flutter 3.x+, Dart 3.x, and comprehensi
 - Runtime security and tampering detection
 - Penetration testing and vulnerability assessment
 
-### Advanced Features
-- Machine Learning integration with TensorFlow Lite
-- Computer vision and image processing capabilities
-- Augmented Reality with ARCore and ARKit integration
-- IoT device connectivity and BLE protocol implementation
-- Real-time features with WebSockets and Firebase
-- Background processing and notification handling
-- Deep linking and dynamic link implementation
-- Internationalization and localization best practices
+### Advanced Features & Media Processing
+- **Media Conversion & Compression (FFmpeg)**: The original `ffmpeg_kit_flutter` and `min_gpl` packages are unreliable due to Maven Central delisting. **Always use `ffmpeg_kit_flutter_new`**.
+- **Dynamic Conversion Architectures**: Implement `SettingsProvider` driven conversion pipelines that dynamically adjust `-vf` (scaling/padding) and `-map_metadata` based on user preferences for resolution and privacy.
+- **Gallery Integration**: Use `gal` for cross-platform media saving, ensuring `NSPhotoLibraryAddUsageDescription` (iOS) and MediaStore compliance (Android) are handled.
+- **Shared Intent Management**: Implement native Android `ACTION_SEND` and `ACTION_SEND_MULTIPLE` filters in `AndroidManifest.xml`. Route to a specialized `FileConverterScreen` via a `MethodChannel` and `WidgetsBindingObserver` (lifecycle state resumed checks) to catch external shares instantly.
 
 ## Behavioral Traits
 - Prioritizes widget composition over inheritance

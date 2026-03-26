@@ -72,14 +72,21 @@ jobs:
         run: flutter analyze
 
       - name: Build APK
-        run: flutter build apk --release
+        run: flutter build apk --release --split-per-abi
 
-      - name: Rename APK
-        run: mv build/app/outputs/flutter-apk/app-release.apk note-book-${{ github.ref_name }}.apk
+      - name: Build App Bundle
+        run: flutter build appbundle --release
+
+      - name: Rename Artifacts
+        run: |
+          mv build/app/outputs/flutter-apk/app-release.apk note-book-${{ github.ref_name }}.apk
+          mv build/app/outputs/bundle/release/app-release.aab note-book-${{ github.ref_name }}.aab
 
       # ── Checksum ─────────────────────────────────────────────────────
-      - name: Generate SHA256 checksum
-        run: sha256sum note-book-${{ github.ref_name }}.apk > note-book-${{ github.ref_name }}.apk.sha256
+      - name: Generate SHA256 checksums
+        run: |
+          sha256sum note-book-${{ github.ref_name }}.apk > note-book-${{ github.ref_name }}.apk.sha256
+          sha256sum note-book-${{ github.ref_name }}.aab > note-book-${{ github.ref_name }}.aab.sha256
 
       # ── Release ──────────────────────────────────────────────────────
       - name: Create Release
@@ -87,6 +94,8 @@ jobs:
         with:
           files: |
             note-book-${{ github.ref_name }}.apk
+            note-book-${{ github.ref_name }}.aab
             note-book-${{ github.ref_name }}.apk.sha256
+            note-book-${{ github.ref_name }}.aab.sha256
           body_path: ${{ hashFiles('RELEASE_NOTES.md') != '' && 'RELEASE_NOTES.md' || '' }}
           generate_release_notes: true

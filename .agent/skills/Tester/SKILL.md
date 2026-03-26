@@ -25,14 +25,12 @@ When instructed to use the Tester skill, you must execute the following roles an
 - Audit the code for potential security or privacy issues (e.g., encryption flaws, exposed keys, unsafe data storage).
 
 ## Phase 4: CI/CD Pipeline DevOps
-- Test all deployment or CI/CD related files, scripts, and configurations.
-- Ensure GitHub workflows and actions are properly updated and configured.
-- Check Android release boundaries (verify `isShrinkResources = false` if local fonts are used, and verify `proguard-rules.pro` retains essential background native isolates like Telephony or Sqflite).
-- Verify SQLite Database migrations (`onUpgrade`) to ensure seamless non-destructive schema transitions for updating existing clients without data loss.
-- Ensure a seamless upgrade and migration path from the older version, guaranteeing releases occur without conflicts.
-- Update the `README.md`, `CHANGELOG.md` (or equivalent change logs), and any relevant files related to library versions.
-- Ensure the system is completely up-to-date with clear change logs documented for the next version push.
-- Verify that all necessary commits are made, properly formatted, and meaningfully commented.
+- **Android Release Consistency**: Ensure strict **JVM 17** targets are enforced across all subprojects to prevent `Inconsistent JVM Target` errors.
+- **Resource Management**: Verify `isShrinkResources = false` in `build.gradle.kts` if the app relies on dynamically referenced assets like `Rubik` fonts.
+- **ProGuard Integrity**: Audit `proguard-rules.pro` to ensure it `-keep`s essential native namespaces (e.g., `com.shounakmulay.telephony`, `net.sqlcipher`).
+- **Play Store Readiness**: Ensure the `release.yml` workflow builds both the Universal APK and the Play Store App Bundle (`.aab`).
+- **Database Migrations**: Rigorously test `onUpgrade` logic (e.g., v12 to v13 junction table migration) to ensure zero data loss for existing users.
+- **Dependency Audit**: Verify all core dependencies (like `Workmanager` 0.9.0) use their latest stable and compatible APIs.
 
 ## Phase 5: Release Confirmation
 - **CRITICAL:** After all the above phases are successfully completed, you must **WAIT FOR USER CONFIRMATION** before triggering any public release or deployment pipeline. Do not release the application without explicit user approval.

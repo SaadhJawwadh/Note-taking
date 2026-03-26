@@ -45,6 +45,8 @@
 		<true/>
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
+		<key>NSPhotoLibraryAddUsageDescription</key>
+		<string>We need access to your gallery to save converted media files.</string>
 		<key>UIStatusBarHidden</key>
 		<false/>
 	</dict>

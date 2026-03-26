@@ -27,7 +27,7 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+        jvmTarget = "17"
     }
 
     defaultConfig {
@@ -57,13 +57,29 @@ android {
                 signingConfigs.getByName("debug")
             }
 
-            // Code shrinking + resource shrinking usually strips Flutter assets
-            // from the final APK on GitHub Actions depending on AGP versions.
-            isMinifyEnabled = false
+            // Code shrinking + resource shrinking (enabled for release builds)
+            isMinifyEnabled = true
             isShrinkResources = false
+            isDebuggable = false
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
         debug {
             isMinifyEnabled = false
+        }
+    }
+
+    splits {
+        abi {
+            isEnable = false
+        }
+    }
+
+    packaging {
+        jniLibs {
+            pickFirsts += listOf(
+                "lib/**/libc++_shared.so",
+                "lib/**/libsqlite3.so"
+            )
         }
     }
 }
@@ -73,5 +89,5 @@ flutter {
 }
 
 dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

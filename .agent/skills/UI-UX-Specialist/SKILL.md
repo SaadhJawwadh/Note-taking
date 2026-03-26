@@ -45,4 +45,8 @@ metadata:
   - Drag-and-Drop organization using `LongPressDraggable` and `DragTarget`, paired with visual drop-zone feedback.
 - Refine layout transitions (like the `animations` package's `OpenContainer`) to use snappy, deliberate durations (around ~300ms) rather than slow fades.
 - Manage visual clutter actively. Handle edge cases like lengthy text overflow, rich link previews, and empty states gracefully, leaving plenty of whitespace.
-- **Frictionless Utility**: Design one-tap default behaviors for frequent actions (e.g., tapping a sync button assumes a default quick-fetch window instantly), burying complex multi-step dialogs inside long-presses or settings categories.
+- **Frictionless Utility**: Design one-tap default behaviors for frequent actions. Bury complex multi-step dialogs inside long-presses or settings categories.
+- **Standalone Utility Architecture**: For high-value secondary features (like File Converters), implement a "Standalone Module" pattern:
+    - Accessible via a dedicated Home Screen app bar icon for quick entry.
+    - Grouped under "Standalone Utilities" in `SettingsScreen` using `ExpansionTile` to avoid cluttering the main navigation.
+    - Deeply integrated with OS Share Intents to provide value outside the app's core loop.

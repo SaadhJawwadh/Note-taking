@@ -35,3 +35,32 @@
 # WorkManager (background task scheduling)
 -keep class androidx.work.** { *; }
 -keep class be.tramckrijte.workmanager.** { *; }
+
+# FFmpeg Kit - keep native methods
+-keep class com.arthenica.ffmpegkit.** { *; }
+-keepclassmembers class * { native <methods>; }
+
+# Local Auth
+-keep class androidx.biometric.** { *; }
+-keep class io.flutter.plugins.localauth.** { *; }
+
+# Image Picker
+-keep class io.flutter.plugins.imagepicker.** { *; }
+
+# File Picker
+-keep class com.mr.flutter.plugin.filepicker.** { *; }
+
+# Notifications
+-keep class com.dexterous.flutterlocalnotifications.** { *; }
+
+# URL Launcher
+-keep class io.flutter.plugins.urllauncher.** { *; }
+
+# Share Plus
+-keep class dev.fluttercommunity.plus.share.** { *; }
+
+# Gal (image saver)
+-keep class gal.** { *; }
+
+# General Flutter plugins
+-keep class io.flutter.plugins.** { *; }

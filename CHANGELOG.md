@@ -2,19 +2,22 @@
 
 All notable changes to Note Book are documented here.
 
-## [1.18.0] - 2026-03-26
+## [1.19.0] - 2026-03-26
 
 ### ✨ New Features
-- **Dynamic Themed Icons**: Complete support for Android 13+ and Samsung One UI monochrome/themed icons. The app icon will now adapt its palette to match your system wallpaper and theme.
-- **Intelligent SMS Parser Training**: Fix incorrect SMS transaction types directly from the transaction editor, and the system will prompt to learn and save your custom keyword patterns for future auto-imports.
-- **Quick 24-Hour Fetch**: Tapping the sync button on the Financial Manager dashboard instantly fetches the last 24 hours of SMS without opening any modals.
-- **Kanban Card Drag-and-Drop**: Move notes seamlessly between tag columns in the continuous Kanban layout view, automatically updating their active tag.
-- **Rich URL Link Previews**: Dropping web links into note bodies will automatically fetch and display open-graph image summaries mapped below the text.
-- **Uniform Grid View**: Choose standard, locked 0.8 aspect ratio grids in addition to staggered masonry views.
+- **Streamlined UI/UX**: Removed the complex Kanban view in favor of a fast, high-performance List and Dynamic Grid interface inspired by Bundled Notes.
+- **Dynamic Grid Layout**: Improved grid view with modern cards, better spacing, and subtle shadows for a premium feel.
+- **Converter Lite Mode**: New optional "Lite Mode" for the File Converter that uses native mobile-friendly tools instead of the heavy FFmpeg engine — perfect for quick image conversions without the large download.
+- **Converter in Toolbar**: The File Converter is now conveniently integrated into the main bottom navigation bar when enabled.
 
 ### 🛠 Improvements
-- **Settings Declutter**: The massive settings page has been compartmentalised into distinct categorised Expansion Tiles for massive reduction in cognitive load (`Appearance`, `Privacy`, `Finances & Features`, `Data & Backup`). Advanced historical SMS syncing is relocated beneath the Finances tab.
-- **Archive/Trash Gestures**: Introduced rapid swipe-to-dismiss states natively into the List view interface, complete with undo Snackbar actions.
+- **Refined Selection Mode**: Long-pressing notes now instantly enters a more intuitive batch selection mode.
+- **Modern Settings**: Re-designed the entire settings experience with categorized sections and a cleaner aesthetic.
+- **Developer Consistency**: Enforced strict JVM 17 targets across all Android components for better stability and performance.
+
+### 🐛 Bug Fixes
+- **Build Errors**: Fixed several dependency and Kotlin compatibility issues that were preventing Android builds.
+- **Tag Colors**: Fixed tag color synchronization in the note editor.
 
 ---
 

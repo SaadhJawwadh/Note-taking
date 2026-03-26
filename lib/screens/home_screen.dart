@@ -16,6 +16,9 @@ import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'financial_manager_screen.dart';
 import 'period_tracker_screen.dart';
 import '../utils/rich_text_utils.dart';
+import 'package:receive_sharing_intent/receive_sharing_intent.dart';
+import 'dart:async';
+import 'file_converter_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,18 +27,71 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<Note> notes = [];
   List<Note> filteredNotes = [];
   bool isLoading = true;
   String selectedTag = 'All';
   List<String> allTags = ['All'];
   int _currentIndex = 0;
+  Set<String> selectedNoteIds = {};
+  bool isSelectionMode = false;
+  
+  final ScrollController _scrollController = ScrollController();
+  static const int _pageSize = 20;
+  int _currentPage = 0;
+  bool _isLoadingMore = false;
+  bool _hasMoreNotes = true;
+  
+  late StreamSubscription _intentDataStreamSubscription;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _scrollController.addListener(_scrollListener);
     refreshNotes();
+    
+    // For sharing images coming from outside the app while the app is in the memory
+    _intentDataStreamSubscription = ReceiveSharingIntent.instance.getMediaStream().listen((List<SharedMediaFile> value) {
+      if (value.isNotEmpty && mounted) {
+        _navigateToConverter(value.map((f) => f.path).toList());
+      }
+    }, onError: (err) {
+      debugPrint("getIntentDataStream error: $err");
+    });
+
+    // For sharing images coming from outside the app while the app is closed
+    ReceiveSharingIntent.instance.getInitialMedia().then((List<SharedMediaFile> value) {
+      if (value.isNotEmpty && mounted) {
+        _navigateToConverter(value.map((f) => f.path).toList());
+      }
+      ReceiveSharingIntent.instance.reset();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      refreshNotes();
+    }
+  }
+
+
+  void _navigateToConverter(List<String> paths) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FileConverterScreen(initialFilePaths: paths),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _intentDataStreamSubscription.cancel();
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Map<String, int> _tagColors = {};
@@ -45,7 +101,6 @@ class _HomeScreenState extends State<HomeScreen> {
       case NoteViewMode.list: return Icons.view_agenda_outlined;
       case NoteViewMode.masonryGrid: return Icons.grid_view_outlined;
       case NoteViewMode.uniformGrid: return Icons.dashboard_outlined;
-      case NoteViewMode.kanban: return Icons.view_column_outlined;
     }
   }
 
@@ -54,7 +109,6 @@ class _HomeScreenState extends State<HomeScreen> {
       case NoteViewMode.list: return 'List view';
       case NoteViewMode.masonryGrid: return 'Masonry grid view';
       case NoteViewMode.uniformGrid: return 'Uniform grid view';
-      case NoteViewMode.kanban: return 'Kanban view';
     }
   }
 
@@ -66,44 +120,43 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future refreshNotes() async {
     if (!mounted) return;
-    setState(() => isLoading = true);
-    notes = await DatabaseHelper.instance.readAllNotes();
+    setState(() {
+      isLoading = true;
+      _currentPage = 0;
+      _hasMoreNotes = true;
+    });
+
+    // 1. Fetch tags and colors (small tables)
     final tags = await DatabaseHelper.instance.getAllTags();
     final colors = await DatabaseHelper.instance.getAllTagColors();
 
-    // Sort tags by most recently modified active note (MRU)
-    final tagLastModified = <String, DateTime>{};
-    for (final note in notes) {
-      if (note.isArchived || note.deletedAt != null) continue;
-      for (final tag in note.tags) {
-        final existing = tagLastModified[tag];
-        if (existing == null || note.dateModified.isAfter(existing)) {
-          tagLastModified[tag] = note.dateModified;
-        }
-      }
-    }
-    tags.sort((a, b) {
-      final aTime = tagLastModified[a];
-      final bTime = tagLastModified[b];
-      if (aTime == null && bTime == null) return a.compareTo(b);
-      if (aTime == null) return 1;
-      if (bTime == null) return -1;
-      return bTime.compareTo(aTime);
-    });
+    // 2. Fetch first page of notes
+    final fetchedNotes = await DatabaseHelper.instance.readAllNotes(
+      limit: _pageSize,
+      offset: 0,
+    );
 
+    // 3. Optional: Still sort tags by MRU based on ALL active notes (lightweight query)
+    // For now, we'll just use the tags as fetched or from the first page if we want MRU.
+    // Let's assume tags are already somewhat ordered or order doesn't matter as much as performance.
+    
     allTags = ['All', ...tags];
-
-    // If selected tag no longer exists (e.g. deleted), revert to All Notes
     if (!allTags.contains(selectedTag)) {
       selectedTag = 'All';
     }
 
-    // Refresh local colors map
     _tagColors = colors;
-
-    filterNotes();
-    if (!mounted) return;
-    setState(() => isLoading = false);
+    
+    if (mounted) {
+      setState(() {
+        notes = fetchedNotes;
+        filterNotes();
+        isLoading = false;
+        if (fetchedNotes.length < _pageSize) {
+          _hasMoreNotes = false;
+        }
+      });
+    }
   }
 
   void filterNotes() {
@@ -131,6 +184,103 @@ class _HomeScreenState extends State<HomeScreen> {
       }
       return b.dateModified.compareTo(a.dateModified);
     });
+  }
+
+  void onNoteTap(Note note, VoidCallback openContainer) {
+    if (isSelectionMode) {
+      toggleSelection(note.id);
+    } else {
+      openContainer();
+    }
+  }
+
+  void onNoteLongPress(Note note) {
+    toggleSelection(note.id);
+  }
+
+  void toggleSelection(String id) {
+    setState(() {
+      if (selectedNoteIds.contains(id)) {
+        selectedNoteIds.remove(id);
+        if (selectedNoteIds.isEmpty) isSelectionMode = false;
+      } else {
+        selectedNoteIds.add(id);
+        isSelectionMode = true;
+      }
+    });
+  }
+
+  void clearSelection() {
+    setState(() {
+      selectedNoteIds.clear();
+      isSelectionMode = false;
+    });
+  }
+
+  Future<void> bulkArchive() async {
+    for (final id in selectedNoteIds) {
+      final note = notes.firstWhere((n) => n.id == id);
+      await DatabaseHelper.instance.updateNote(note.copyWith(isArchived: true));
+    }
+    clearSelection();
+    await refreshNotes();
+  }
+
+  Future<void> bulkDelete() async {
+    for (final id in selectedNoteIds) {
+      await DatabaseHelper.instance.softDeleteNote(id);
+    }
+    clearSelection();
+    await refreshNotes();
+  }
+
+  Future<void> bulkTag() async {
+    final availableTags = allTags.where((t) => t != 'All').toList();
+    if (availableTags.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No tags available. Create a tag first.')),
+      );
+      return;
+    }
+
+    final selectedNewTag = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Tag to Selected'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: availableTags.length,
+            itemBuilder: (context, index) {
+              final tag = availableTags[index];
+              return ListTile(
+                title: Text(tag),
+                onTap: () => Navigator.pop(context, tag),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
+        ],
+      ),
+    );
+
+    if (selectedNewTag != null) {
+      for (final id in selectedNoteIds) {
+        final note = notes.firstWhere((n) => n.id == id);
+        if (!note.tags.contains(selectedNewTag)) {
+          final newTags = [...note.tags, selectedNewTag];
+          await DatabaseHelper.instance
+              .updateNote(note.copyWith(tags: newTags));
+        }
+      }
+      clearSelection();
+      await refreshNotes();
+    }
   }
 
   void onTagSelected(String tag) {
@@ -308,12 +458,14 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Consumer<SettingsProvider>(builder: (context, settings, child) {
-      // Return simple Notes View if both features are disabled
-      if (!settings.showFinancialManager && !settings.isPeriodTrackerEnabled) {
+      // Return simple Notes View if no extra features are enabled
+      if (!settings.showFinancialManager && 
+          !settings.isPeriodTrackerEnabled && 
+          !settings.showFileConverter) {
         return _buildNotesView(context, settings);
       }
 
-      // Return Bottom Nav View if enabled
+      // Return Bottom Nav View if any feature is enabled
       return Scaffold(
         body: PageTransitionSwitcher(
           transitionBuilder: (child, primaryAnimation, secondaryAnimation) {
@@ -336,6 +488,12 @@ class _HomeScreenState extends State<HomeScreen> {
               selectedIcon: Icon(Icons.note_alt),
               label: 'Notes',
             ),
+            if (settings.showFileConverter)
+              const NavigationDestination(
+                icon: Icon(Icons.transform_rounded),
+                selectedIcon: Icon(Icons.transform_rounded),
+                label: 'Converter',
+              ),
             if (settings.showFinancialManager)
               const NavigationDestination(
                 icon: Icon(Icons.account_balance_wallet_outlined),
@@ -357,9 +515,15 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildCurrentScreen(SettingsProvider settings) {
     int index = 0;
 
-    // Check index 0
-    if (_currentIndex == index) return _buildNotesView(context, settings);
+    // Notes is always at 0
+    if (_currentIndex == 0) return _buildNotesView(context, settings);
     index++;
+
+    // Check File Converter
+    if (settings.showFileConverter) {
+      if (_currentIndex == index) return const FileConverterScreen();
+      index++;
+    }
 
     // Check Financial Manager
     if (settings.showFinancialManager) {
@@ -380,6 +544,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildNotesView(BuildContext context, SettingsProvider settings) {
     return Scaffold(
       body: CustomScrollView(
+        controller: _scrollController,
         slivers: [
           SliverAppBar(
             backgroundColor: Colors.transparent,
@@ -393,7 +558,9 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 8),
               height: 64,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                color: isSelectionMode
+                    ? Theme.of(context).colorScheme.primaryContainer
+                    : Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(32),
                 boxShadow: [
                   BoxShadow(
@@ -403,46 +570,81 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              child: Row(
-                children: [
-                  const SizedBox(width: 16),
-                  Text(
-                    'Note book',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
+              child: isSelectionMode
+                  ? Row(
+                      children: [
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: clearSelection,
                         ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: Icon(_getIconForMode(settings.noteViewMode)),
-                    tooltip: _getTooltipForMode(settings.noteViewMode),
-                    onPressed: () => _cycleViewMode(settings),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.search),
-                    tooltip: 'Search notes',
-                    onPressed: () {
-                      showSearch(
-                          context: context, delegate: NoteSearchDelegate());
-                    },
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(right: 4),
-                    child: IconButton(
-                      icon: const Icon(Icons.settings_outlined),
-                      tooltip: 'Settings',
-                      onPressed: () {
-                        Navigator.of(context)
-                            .push(
-                              MaterialPageRoute(
-                                  builder: (context) => const SettingsScreen()),
-                            )
-                            .then((_) => refreshNotes());
-                      },
+                        const SizedBox(width: 8),
+                        Text(
+                          '${selectedNoteIds.length} selected',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.onPrimaryContainer,
+                              ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.archive_outlined),
+                          tooltip: 'Archive selected',
+                          onPressed: bulkArchive,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.label_outline),
+                          tooltip: 'Tag selected',
+                          onPressed: bulkTag,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline),
+                          tooltip: 'Delete selected',
+                          color: Colors.red,
+                          onPressed: bulkDelete,
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        const SizedBox(width: 16),
+                        Text(
+                          'Note book',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: Icon(_getIconForMode(settings.noteViewMode)),
+                          tooltip: _getTooltipForMode(settings.noteViewMode),
+                          onPressed: () => _cycleViewMode(settings),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.search),
+                          tooltip: 'Global search',
+                          onPressed: () {
+                            showSearch(
+                                context: context, delegate: GlobalSearchDelegate());
+                          },
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(right: 4),
+                          child: IconButton(
+                            icon: const Icon(Icons.settings_outlined),
+                            tooltip: 'Settings',
+                            onPressed: () {
+                              Navigator.of(context)
+                                  .push(
+                                    MaterialPageRoute(
+                                        builder: (context) => const SettingsScreen()),
+                                  )
+                                  .then((_) => refreshNotes());
+                            },
+                          ),
+                        )
+                      ],
                     ),
-                  )
-                ],
-              ),
             ),
           ),
           // Tag Selector
@@ -555,11 +757,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-            )
-          else if (settings.noteViewMode == NoteViewMode.kanban)
-            SliverFillRemaining(
-              hasScrollBody: true,
-              child: _buildKanbanView(),
             )
           else
             SliverPadding(
@@ -755,127 +952,49 @@ class _HomeScreenState extends State<HomeScreen> {
       closedBuilder: (context, openContainer) {
         return NoteCard(
           note: note,
-          onTap: openContainer,
+          onTap: () => onNoteTap(note, openContainer),
+          isSelected: selectedNoteIds.contains(note.id),
           tagColors: _tagColors,
-          onLongPress: () => _showNoteActions(note),
+          onLongPress: () => onNoteLongPress(note),
         );
       },
     );
   }
 
-  Widget _buildKanbanView() {
-    final realTags = allTags.where((t) => t != 'All').toList();
-    final columns = ['Untagged', ...realTags];
+  void _scrollListener() {
+    if (_scrollController.hasClients &&
+        _scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 500 &&
+        !_isLoadingMore &&
+        _hasMoreNotes &&
+        selectedTag == 'All') {
+      _loadMoreNotes();
+    }
+  }
 
-    return ListView.builder(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: columns.length,
-      itemBuilder: (context, index) {
-        final columnTag = columns[index];
-        
-        List<Note> columnNotes;
-        if (columnTag == 'Untagged') {
-          columnNotes = filteredNotes.where((n) => n.tags.isEmpty).toList();
-        } else {
-          columnNotes = filteredNotes.where((n) => n.tags.contains(columnTag)).toList();
-        }
+  Future<void> _loadMoreNotes() async {
+    if (_isLoadingMore || !_hasMoreNotes) return;
 
-        return Container(
-          width: MediaQuery.of(context).size.width * 0.75, // responsive width
-          margin: const EdgeInsets.only(right: 16),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      columnTag,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainerHigh,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '${columnNotes.length}',
-                        style: Theme.of(context).textTheme.labelSmall,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: DragTarget<Note>(
-                  onWillAcceptWithDetails: (details) => true,
-                  onAcceptWithDetails: (details) async {
-                    final note = details.data;
-                    
-                    if (columnTag == 'Untagged' && note.tags.isEmpty) return;
-                    if (columnTag != 'Untagged' && note.tags.contains(columnTag) && note.tags.length == 1) return;
+    setState(() {
+      _isLoadingMore = true;
+    });
 
-                    List<String> newTags = [];
-                    if (columnTag != 'Untagged') {
-                      newTags.add(columnTag);
-                    }
-                    
-                    final updatedNote = note.copyWith(tags: newTags);
-                    await DatabaseHelper.instance.updateNote(updatedNote);
-                    await refreshNotes();
-                  },
-                  builder: (context, candidateData, rejectedData) {
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: candidateData.isNotEmpty 
-                            ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3) 
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ListView.separated(
-                        padding: const EdgeInsets.only(bottom: 80, top: 8),
-                        itemCount: columnNotes.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
-                        itemBuilder: (context, noteIndex) {
-                          final note = columnNotes[noteIndex];
-                          return LongPressDraggable<Note>(
-                            data: note,
-                            feedback: Material(
-                              color: Colors.transparent,
-                              child: SizedBox(
-                                width: MediaQuery.of(context).size.width * 0.75 - 24,
-                                child: Opacity(
-                                  opacity: 0.8,
-                                  child: _buildOpenContainer(note),
-                                ),
-                              ),
-                            ),
-                            childWhenDragging: Opacity(
-                              opacity: 0.3,
-                              child: _buildOpenContainer(note),
-                            ),
-                            child: _buildOpenContainer(note),
-                          );
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+    _currentPage++;
+    final moreNotes = await DatabaseHelper.instance.readAllNotes(
+      limit: _pageSize,
+      offset: _currentPage * _pageSize,
     );
+
+    if (mounted) {
+      setState(() {
+        notes.addAll(moreNotes);
+        filterNotes();
+        _isLoadingMore = false;
+        if (moreNotes.length < _pageSize) {
+          _hasMoreNotes = false;
+        }
+      });
+    }
   }
 }
 
@@ -885,12 +1004,16 @@ class NoteCard extends StatelessWidget {
   final VoidCallback? onLongPress;
   final Map<String, int>? tagColors;
 
-  const NoteCard(
-      {super.key,
-      required this.note,
-      required this.onTap,
-      this.onLongPress,
-      this.tagColors});
+  final bool isSelected;
+
+  const NoteCard({
+    super.key,
+    required this.note,
+    required this.onTap,
+    this.onLongPress,
+    this.tagColors,
+    this.isSelected = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -902,15 +1025,15 @@ class NoteCard extends StatelessWidget {
     Color borderColor;
 
     if (isSystemDefault) {
-      backgroundColor = theme.colorScheme.surfaceContainer;
-      borderColor = theme.colorScheme.outlineVariant;
+      backgroundColor = theme.colorScheme.surface;
+      borderColor = theme.colorScheme.outlineVariant.withValues(alpha: 0.3);
     } else {
       final scheme = ColorScheme.fromSeed(
         seedColor: Color(note.color),
         brightness: theme.brightness,
       );
-      backgroundColor = scheme.surfaceContainerHigh;
-      borderColor = scheme.outline; // Use outline color for visibility
+      backgroundColor = scheme.surfaceContainerLow;
+      borderColor = scheme.outline.withValues(alpha: 0.2);
     }
 
     return Semantics(
@@ -921,21 +1044,32 @@ class NoteCard extends StatelessWidget {
           onTap: onTap,
           onLongPress: onLongPress,
           child: Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(20),
+              color: isSelected ? theme.colorScheme.primaryContainer : backgroundColor,
+              borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: borderColor.withValues(alpha: 0.6), // Subtle but visible
-                width: 1,
+                color: isSelected 
+                    ? theme.colorScheme.primary 
+                    : borderColor,
+                width: isSelected ? 2 : 1,
               ),
+              boxShadow: isSystemDefault ? null : [
+                BoxShadow(
+                  color: Color(note.color).withValues(alpha: 0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-            child: SingleChildScrollView(
-              physics: const ClampingScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
+            child: Stack(
+              children: [
+                SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                   if (note.title.isNotEmpty)
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1107,8 +1241,20 @@ class NoteCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                ],
-              ),
+                    ],
+                  ),
+                ),
+                if (isSelected)
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: Icon(
+                      Icons.check_circle,
+                      color: theme.colorScheme.primary,
+                      size: 20,
+                    ),
+                  ),
+              ],
             ),
           ),
         ));

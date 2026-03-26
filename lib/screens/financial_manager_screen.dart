@@ -10,6 +10,7 @@ import '../data/database_helper.dart';
 import '../data/transaction_model.dart';
 import '../data/transaction_category.dart';
 import '../services/sms_service.dart';
+import '../services/sms_constants.dart';
 import 'transaction_editor_screen.dart';
 import 'settings_screen.dart';
 
@@ -51,7 +52,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
       final inserted = await DatabaseHelper.instance.createSmsTransaction(t);
       if (inserted == null) return;
       // Handle reversal sentinel — delete original expense if found
-      if (inserted.category == SmsService.reversalSentinel) {
+      if (inserted.category == SmsConstants.reversalSentinel) {
         final target = await DatabaseHelper.instance
             .findReversalTarget(inserted.amount, inserted.date);
         if (target != null) {
@@ -78,7 +79,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
 
     _allDateFiltered = allTransactions.where((t) {
       // Filter out any orphan reversal sentinels
-      if (t.category == SmsService.reversalSentinel) return false;
+      if (t.category == SmsConstants.reversalSentinel) return false;
       final tDate = DateTime(t.date.year, t.date.month, t.date.day);
       final start = DateTime(_selectedRange.start.year,
           _selectedRange.start.month, _selectedRange.start.day);
