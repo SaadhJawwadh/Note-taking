@@ -7,6 +7,11 @@ class AppLockScreen extends StatefulWidget {
   final Widget child;
 
   const AppLockScreen({super.key, required this.child});
+  
+  // Static helper to manually unlock the session (useful for sharing)
+  static void unlockSession() {
+    AppLockScreenState._isSessionAuthenticated = true;
+  }
 
   @override
   AppLockScreenState createState() => AppLockScreenState();
@@ -15,7 +20,10 @@ class AppLockScreen extends StatefulWidget {
 class AppLockScreenState extends State<AppLockScreen>
     with WidgetsBindingObserver {
   final LocalAuthentication auth = LocalAuthentication();
-  bool _isAuthenticated = false;
+  
+  // Static to persist across widget rebuilds in the same app session
+  static bool _isSessionAuthenticated = false;
+  
   bool _isAuthenticating = false;
 
   @override
@@ -35,25 +43,21 @@ class AppLockScreenState extends State<AppLockScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused) {
-      if (mounted) {
-        setState(() {
-          _isAuthenticated = false;
-        });
-      }
-    } else if (state == AppLifecycleState.resumed) {
-      if (!_isAuthenticated && !_isAuthenticating) {
-        _checkAuth(context);
-      }
-    }
+    // Only re-lock if the app is paused and we want to enforce strict locking.
+    // However, the requirement is "once per session until device is locked".
+    // We will keep the session authenticated while the app is alive.
   }
 
   Future<void> _checkAuth(BuildContext context) async {
     final settings = Provider.of<SettingsProvider>(context, listen: false);
-    if (!settings.appLockEnabled) {
-      setState(() {
-        _isAuthenticated = true;
-      });
+    
+    // Bypass if lock is disabled or already authenticated in this session
+    if (!settings.appLockEnabled || _isSessionAuthenticated) {
+      if (mounted) {
+        setState(() {
+          _isSessionAuthenticated = true;
+        });
+      }
       return;
     }
 
@@ -72,12 +76,11 @@ class AppLockScreenState extends State<AppLockScreen>
 
       if (mounted) {
         setState(() {
-          _isAuthenticated = didAuthenticate;
+          _isSessionAuthenticated = didAuthenticate;
         });
       }
     } catch (e) {
       debugPrint('Authentication error: $e');
-      // On error, let them try again or fall back securely
     } finally {
       if (mounted) {
         setState(() {
@@ -91,7 +94,7 @@ class AppLockScreenState extends State<AppLockScreen>
   Widget build(BuildContext context) {
     final settings = Provider.of<SettingsProvider>(context);
 
-    if (!settings.appLockEnabled || _isAuthenticated) {
+    if (!settings.appLockEnabled || _isSessionAuthenticated) {
       return widget.child;
     }
 

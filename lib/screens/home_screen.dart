@@ -19,6 +19,7 @@ import '../utils/rich_text_utils.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'dart:async';
 import 'file_converter_screen.dart';
+import 'app_lock_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -79,6 +80,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
 
   void _navigateToConverter(List<String> paths) {
+    // Unlock session for sharing utility to avoid interrupting the user
+    AppLockScreen.unlockSession();
+    
     Navigator.push(
       context,
       MaterialPageRoute(
