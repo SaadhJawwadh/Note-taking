@@ -144,7 +144,7 @@ class BackupService {
           context: context,
           builder: (ctx) => AlertDialog(
             title: const Text('Import Backup?'),
-            content: Text('This will overwrite existing data. Continue?'),
+            content: const Text('This will overwrite existing data. Continue?'),
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
               FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Import')),
@@ -158,10 +158,14 @@ class BackupService {
       final batch = db.batch();
 
       if (data.containsKey('notes')) {
-        for (final row in data['notes']) batch.insert('notes', Map<String, Object?>.from(row), conflictAlgorithm: ConflictAlgorithm.replace);
+        for (final row in data['notes']) {
+          batch.insert('notes', Map<String, Object?>.from(row), conflictAlgorithm: ConflictAlgorithm.replace);
+        }
       }
       if (data.containsKey('tags')) {
-        for (final row in data['tags']) batch.insert('tags', Map<String, Object?>.from(row), conflictAlgorithm: ConflictAlgorithm.replace);
+        for (final row in data['tags']) {
+          batch.insert('tags', Map<String, Object?>.from(row), conflictAlgorithm: ConflictAlgorithm.replace);
+        }
       }
       if (data.containsKey('transactions')) {
         for (final row in data['transactions']) {
@@ -176,10 +180,14 @@ class BackupService {
         }
       }
       if (data.containsKey('smsContacts')) {
-        for (final row in data['smsContacts']) batch.insert('sms_contacts', Map<String, Object?>.from(row), conflictAlgorithm: ConflictAlgorithm.ignore);
+        for (final row in data['smsContacts']) {
+          batch.insert('sms_contacts', Map<String, Object?>.from(row), conflictAlgorithm: ConflictAlgorithm.ignore);
+        }
       }
       if (data.containsKey('periodLogs')) {
-        for (final row in data['periodLogs']) batch.insert('period_logs', Map<String, Object?>.from(row), conflictAlgorithm: ConflictAlgorithm.replace);
+        for (final row in data['periodLogs']) {
+          batch.insert('period_logs', Map<String, Object?>.from(row), conflictAlgorithm: ConflictAlgorithm.replace);
+        }
       }
 
       await batch.commit(noResult: true);

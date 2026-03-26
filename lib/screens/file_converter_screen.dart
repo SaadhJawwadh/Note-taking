@@ -192,6 +192,7 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
 
   void _shareResults() {
     if (_results.isEmpty) return;
+    // ignore: deprecated_member_use
     Share.shareXFiles(_results.map((r) => XFile(r.outputPath)).toList());
   }
 
@@ -388,6 +389,7 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
                   padding: const EdgeInsets.only(bottom: 12.0),
                   child: _ResultCard(
                     result: res,
+                    // ignore: deprecated_member_use
                     onShare: () => Share.shareXFiles([XFile(res.outputPath)]),
                     onSave: () => _saveToGallery(res.outputPath),
                   ),

@@ -150,7 +150,7 @@ class SettingsSwitchTile extends StatelessWidget {
       value: value,
       onChanged: onChanged,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      activeColor: theme.colorScheme.primary,
+      activeThumbColor: theme.colorScheme.primary,
     );
   }
 }

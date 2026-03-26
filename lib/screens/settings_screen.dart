@@ -248,8 +248,11 @@ class SettingsScreen extends StatelessWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // ignore: deprecated_member_use
             RadioListTile<ThemeMode>(title: const Text('System Default'), value: ThemeMode.system, groupValue: settings.themeMode, onChanged: (v) { settings.setThemeMode(v!); Navigator.pop(context); }),
+            // ignore: deprecated_member_use
             RadioListTile<ThemeMode>(title: const Text('Light'), value: ThemeMode.light, groupValue: settings.themeMode, onChanged: (v) { settings.setThemeMode(v!); Navigator.pop(context); }),
+            // ignore: deprecated_member_use
             RadioListTile<ThemeMode>(title: const Text('Dark'), value: ThemeMode.dark, groupValue: settings.themeMode, onChanged: (v) { settings.setThemeMode(v!); Navigator.pop(context); }),
           ],
         ),
@@ -266,8 +269,11 @@ class SettingsScreen extends StatelessWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // ignore: deprecated_member_use
             RadioListTile<double>(title: const Text('Small'), value: 14.0, groupValue: settings.textSize, onChanged: (v) { settings.setTextSize(v!); Navigator.pop(context); }),
+            // ignore: deprecated_member_use
             RadioListTile<double>(title: const Text('Medium'), value: 16.0, groupValue: settings.textSize, onChanged: (v) { settings.setTextSize(v!); Navigator.pop(context); }),
+            // ignore: deprecated_member_use
             RadioListTile<double>(title: const Text('Large'), value: 20.0, groupValue: settings.textSize, onChanged: (v) { settings.setTextSize(v!); Navigator.pop(context); }),
           ],
         ),
@@ -287,6 +293,7 @@ class SettingsScreen extends StatelessWidget {
             itemCount: AppConstants.currencies.length,
             itemBuilder: (context, index) {
               final currency = AppConstants.currencies[index];
+              // ignore: deprecated_member_use
               return RadioListTile<String>(title: Text(currency), value: currency, groupValue: settings.currency, onChanged: (v) { settings.setCurrency(v!); Navigator.pop(context); });
             },
           ),
@@ -338,9 +345,24 @@ class SettingsScreen extends StatelessWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            RadioListTile<String>(title: const Text('Daily'), value: 'daily', groupValue: settings.autoBackupFrequency, onChanged: (v) async { await settings.setAutoBackupFrequency(v!); await syncAutoBackupSchedule(); Navigator.pop(context); }),
-            RadioListTile<String>(title: const Text('Weekly'), value: 'weekly', groupValue: settings.autoBackupFrequency, onChanged: (v) async { await settings.setAutoBackupFrequency(v!); await syncAutoBackupSchedule(); Navigator.pop(context); }),
-            RadioListTile<String>(title: const Text('Monthly'), value: 'monthly', groupValue: settings.autoBackupFrequency, onChanged: (v) async { await settings.setAutoBackupFrequency(v!); await syncAutoBackupSchedule(); Navigator.pop(context); }),
+            // ignore: deprecated_member_use
+            RadioListTile<String>(title: const Text('Daily'), value: 'daily', groupValue: settings.autoBackupFrequency, onChanged: (v) async { 
+              await settings.setAutoBackupFrequency(v!); 
+              await syncAutoBackupSchedule(); 
+              if (context.mounted) Navigator.pop(context); 
+            }),
+            // ignore: deprecated_member_use
+            RadioListTile<String>(title: const Text('Weekly'), value: 'weekly', groupValue: settings.autoBackupFrequency, onChanged: (v) async { 
+              await settings.setAutoBackupFrequency(v!); 
+              await syncAutoBackupSchedule(); 
+              if (context.mounted) Navigator.pop(context); 
+            }),
+            // ignore: deprecated_member_use
+            RadioListTile<String>(title: const Text('Monthly'), value: 'monthly', groupValue: settings.autoBackupFrequency, onChanged: (v) async { 
+              await settings.setAutoBackupFrequency(v!); 
+              await syncAutoBackupSchedule(); 
+              if (context.mounted) Navigator.pop(context); 
+            }),
           ],
         ),
       ),
@@ -360,6 +382,7 @@ class SettingsScreen extends StatelessWidget {
         title: Text('Select $title'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
+          // ignore: deprecated_member_use
           children: options.map((option) => RadioListTile<String>(title: Text(option.toUpperCase()), value: option, groupValue: currentValue, onChanged: (v) { onSelected(v!); Navigator.pop(context); })).toList(),
         ),
       ),

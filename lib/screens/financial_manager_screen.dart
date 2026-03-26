@@ -42,7 +42,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
   void initState() {
     super.initState();
     _refreshTransactions();
-    SmsService.startForegroundListener((t) async {
+    SmsService.listenForSms(onNew: (t) async {
       if (!mounted) return;
       // Cross-sender dedup: skip if same amount exists within ±5 min
       if (await DatabaseHelper.instance

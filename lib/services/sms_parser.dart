@@ -101,10 +101,15 @@ class SmsParser {
       final provider = bankName ?? extractBodySender(body);
       final merchant = _extractEntity(body, r"\bfor\s+(?:your\s+)?([A-Za-z][A-Za-z0-9\s&'\-\.]{1,25}?)\s+(?:order|purchase|plan|account)\b");
       String desc;
-      if (provider != null && merchant != null) desc = '$provider Instalment $merchant';
-      else if (provider != null) desc = '$provider Instalment $amountLabel';
-      else if (merchant != null) desc = 'Instalment – $merchant $amountLabel';
-      else desc = 'Instalment $amountLabel';
+      if (provider != null && merchant != null) {
+        desc = '$provider Instalment $merchant';
+      } else if (provider != null) {
+        desc = '$provider Instalment $amountLabel';
+      } else if (merchant != null) {
+        desc = 'Instalment – $merchant $amountLabel';
+      } else {
+        desc = 'Instalment $amountLabel';
+      }
       return appendBankSuffix(desc, bankName);
     }
 

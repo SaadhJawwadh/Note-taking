@@ -1,8 +1,22 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:note_taking_app/services/sms_service.dart';
+import 'package:note_taking_app/services/sms_parser.dart';
+import 'package:note_taking_app/data/transaction_model.dart';
 import 'package:telephony/telephony.dart';
 
 void main() {
+  TransactionModel? parse(SmsMessage sms) {
+    return SmsParser.parseMessage(
+      body: sms.body ?? '',
+      address: sms.address ?? '',
+      messageId: sms.id,
+      messageDate: sms.date,
+      allowedSenderIds: {},
+      blockedSenderIds: {},
+      customExpenseRules: [],
+      customIncomeRules: [],
+    );
+  }
+
   test('Parses Commercial Bank messages correctly', () {
     final sms1Map = {
       'address': 'COMBANK',
@@ -31,13 +45,13 @@ void main() {
     final sms3 = SmsMessage.fromMap(
         sms3Map, [SmsColumn.ADDRESS, SmsColumn.BODY, SmsColumn.DATE]);
 
-    final t1 = SmsService.parseMessage(sms1);
+    final t1 = parse(sms1);
     expect(t1, isNotNull, reason: 'SMS 1 should parse');
 
-    final t2 = SmsService.parseMessage(sms2);
+    final t2 = parse(sms2);
     expect(t2, isNotNull, reason: 'SMS 2 should parse');
 
-    final t3 = SmsService.parseMessage(sms3);
+    final t3 = parse(sms3);
     expect(t3, isNotNull, reason: 'SMS 3 should parse');
   });
 }

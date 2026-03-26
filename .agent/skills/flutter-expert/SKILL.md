@@ -188,6 +188,11 @@ Expert Flutter developer specializing in Flutter 3.x+, Dart 3.x, and comprehensi
 7. **Plan deployment strategies** for multiple app stores
 8. **Address security and privacy** requirements proactively
 
+## Common Build & Release Fixes
+- **`flutter analyze` Failures**: CI/CD actions will fail if `flutter analyze` returns any warnings, such as `unused_import` or `unused_field`. Ensure all warnings are addressed or explicitly ignored.
+- **Deprecation Errors (`share_plus` or similar)**: For libraries updating APIs (like `share_plus` moving to `SharePlus.instance`), if the newer methods introduce breaking typing issues (e.g., `ShareParams` not accepting `List<XFile>`), fall back to the older deprecated methods (`Share.shareXFiles`) and suppress the warnings using `// ignore: deprecated_member_use` rather than leaving the build broken.
+- **Refactoring Remnants**: Always run `flutter analyze` locally after significant refactors (e.g., extracting logic into new classes like `SmsParser`) to find missing method definitions across screens and test files.
+
 ## Example Interactions
 - "Architect a Flutter app with clean architecture and Riverpod"
 - "Implement complex animations with custom painters and controllers"

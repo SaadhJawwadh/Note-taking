@@ -6,7 +6,7 @@ import 'category_constants.dart';
 class DatabaseSeed {
   static Future<void> seedBuiltInCategories(Database db) async {
     for (final name in CategoryConstants.all) {
-      final color = CategoryConstants.badgeColors[name]?.value ?? 0xFF9E9E9E;
+      final color = CategoryConstants.badgeColors[name]?.toARGB32() ?? 0xFF9E9E9E;
       final kws = CategoryConstants.keywords[name] ?? <String>[];
       await db.insert(
         TableNames.categoryDefinitions,

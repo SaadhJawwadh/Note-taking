@@ -80,6 +80,7 @@ class _SmsImportSheetState extends State<SmsImportSheet> {
           const SizedBox(height: 20),
           ...List.generate(_periods.length, (i) {
             final (label, _) = _periods[i];
+            // ignore: deprecated_member_use
             return RadioListTile<int>(title: Text(label), value: i, groupValue: _selectedIndex, onChanged: _loading ? null : (v) => setState(() => _selectedIndex = v!), contentPadding: EdgeInsets.zero, dense: true);
           }),
           const SizedBox(height: 20),
