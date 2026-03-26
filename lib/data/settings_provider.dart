@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+enum NoteViewMode { list, masonryGrid, uniformGrid, kanban }
+
 class SettingsProvider extends ChangeNotifier {
   double _textSize = 16.0;
   ThemeMode _themeMode = ThemeMode.system;
@@ -17,9 +19,12 @@ class SettingsProvider extends ChangeNotifier {
   String _fontFamily = 'Rubik';
   String get fontFamily => _fontFamily;
 
-  bool _isGridView = true;
+  NoteViewMode _noteViewMode = NoteViewMode.masonryGrid;
 
-  bool get isGridView => _isGridView;
+  NoteViewMode get noteViewMode => _noteViewMode;
+  
+  // Legacy getter for broader compatibility
+  bool get isGridView => _noteViewMode == NoteViewMode.masonryGrid || _noteViewMode == NoteViewMode.uniformGrid;
 
   bool _showFinancialManager = false;
   bool get showFinancialManager => _showFinancialManager;
@@ -53,6 +58,12 @@ class SettingsProvider extends ChangeNotifier {
   String _discreetNotificationText = 'Check the app';
   String get discreetNotificationText => _discreetNotificationText;
 
+  List<String> _customExpenseRules = [];
+  List<String> get customExpenseRules => _customExpenseRules;
+
+  List<String> _customIncomeRules = [];
+  List<String> get customIncomeRules => _customIncomeRules;
+
   SettingsProvider() {
     _loadSettings();
   }
@@ -61,7 +72,13 @@ class SettingsProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _textSize = prefs.getDouble('textSize') ?? 16.0;
     _fontFamily = prefs.getString('fontFamily') ?? 'Rubik';
-    _isGridView = prefs.getBool('isGridView') ?? true;
+    final viewModeIndex = prefs.getInt('noteViewMode');
+    if (viewModeIndex != null && viewModeIndex >= 0 && viewModeIndex < NoteViewMode.values.length) {
+      _noteViewMode = NoteViewMode.values[viewModeIndex];
+    } else {
+      final legacyGrid = prefs.getBool('isGridView') ?? true;
+      _noteViewMode = legacyGrid ? NoteViewMode.masonryGrid : NoteViewMode.list;
+    }
     _showFinancialManager = prefs.getBool('showFinancialManager') ?? false;
     _currency = prefs.getString('currency') ?? 'LKR';
 
@@ -76,6 +93,9 @@ class SettingsProvider extends ChangeNotifier {
     _discreetNotificationText =
         prefs.getString('discreetNotificationText') ?? 'Check the app';
 
+    _customExpenseRules = prefs.getStringList('customExpenseRules') ?? [];
+    _customIncomeRules = prefs.getStringList('customIncomeRules') ?? [];
+
     final themeIndex = prefs.getInt('themeMode') ?? 0;
     _themeMode = _getThemeModeFromInt(themeIndex);
 
@@ -86,6 +106,34 @@ class SettingsProvider extends ChangeNotifier {
     _currency = curr;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('currency', curr);
+    notifyListeners();
+  }
+
+  Future<void> addCustomRule(String rule, {required bool isExpense}) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (isExpense) {
+      if (!_customExpenseRules.contains(rule)) {
+        _customExpenseRules.add(rule);
+        await prefs.setStringList('customExpenseRules', _customExpenseRules);
+      }
+    } else {
+      if (!_customIncomeRules.contains(rule)) {
+        _customIncomeRules.add(rule);
+        await prefs.setStringList('customIncomeRules', _customIncomeRules);
+      }
+    }
+    notifyListeners();
+  }
+
+  Future<void> removeCustomRule(String rule, {required bool isExpense}) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (isExpense) {
+      _customExpenseRules.remove(rule);
+      await prefs.setStringList('customExpenseRules', _customExpenseRules);
+    } else {
+      _customIncomeRules.remove(rule);
+      await prefs.setStringList('customIncomeRules', _customIncomeRules);
+    }
     notifyListeners();
   }
 
@@ -139,11 +187,16 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setIsGridView(bool isGrid) async {
-    _isGridView = isGrid;
+  Future<void> setNoteViewMode(NoteViewMode mode) async {
+    _noteViewMode = mode;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isGridView', isGrid);
+    await prefs.setInt('noteViewMode', mode.index);
     notifyListeners();
+  }
+
+  // Legacy fallback
+  Future<void> setIsGridView(bool isGrid) async {
+    await setNoteViewMode(isGrid ? NoteViewMode.masonryGrid : NoteViewMode.list);
   }
 
   Future<void> setShowFinancialManager(bool show) async {
@@ -214,7 +267,8 @@ class SettingsProvider extends ChangeNotifier {
         'textSize': _textSize,
         'themeMode': _getIntFromThemeMode(_themeMode),
         'fontFamily': _fontFamily,
-        'isGridView': _isGridView,
+        'isGridView': isGridView, // Legacy export support
+        'noteViewMode': _noteViewMode.index,
         'showFinancialManager': _showFinancialManager,
         'currency': _currency,
         'isPeriodTrackerEnabled': _isPeriodTrackerEnabled,
@@ -237,7 +291,12 @@ class SettingsProvider extends ChangeNotifier {
         final font = map['fontFamily'];
         if (font is String && font.isNotEmpty) await setFontFamily(font);
       }
-      if (map.containsKey('isGridView')) {
+      if (map.containsKey('noteViewMode')) {
+        final viewModeIdx = (map['noteViewMode'] as num?)?.toInt() ?? NoteViewMode.masonryGrid.index;
+        if (viewModeIdx >= 0 && viewModeIdx < NoteViewMode.values.length) {
+          await setNoteViewMode(NoteViewMode.values[viewModeIdx]);
+        }
+      } else if (map.containsKey('isGridView')) {
         final grid = map['isGridView'];
         if (grid is bool) await setIsGridView(grid);
       }

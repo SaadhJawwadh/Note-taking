@@ -11,6 +11,7 @@ import '../data/settings_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/rich_text_utils.dart';
 import 'dart:io';
+import 'package:any_link_preview/any_link_preview.dart';
 
 class NoteEditorScreen extends StatefulWidget {
   final Note? note;
@@ -38,6 +39,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   final FocusNode _focusNode = FocusNode();
   bool isNoteSaved = false;
   bool _isImageSelected = false;
+  String? _firstUrl;
 
   @override
   void initState() {
@@ -59,6 +61,16 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     color = widget.note?.color ?? 0;
     tags = List.from(widget.note?.tags ?? []);
     _loadTags();
+
+    final plainText = _quillController.document.toPlainText();
+    final urlRegExp = RegExp(r'https?:\/\/[^\s]+');
+    final match = urlRegExp.firstMatch(plainText);
+    String? url = match?.group(0);
+    // Remove trailing punctuation
+    if (url != null && RegExp(r'[.,;:]$').hasMatch(url)) {
+      url = url.substring(0, url.length - 1);
+    }
+    _firstUrl = url;
 
     // Auto-save listeners
     _titleController.addListener(_onContentChanged);
@@ -128,6 +140,19 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
   void _onContentChanged() {
     if (_debounce?.isActive ?? false) _debounce?.cancel();
+
+    final plainText = _quillController.document.toPlainText();
+    final urlRegExp = RegExp(r'https?:\/\/[^\s]+');
+    final match = urlRegExp.firstMatch(plainText);
+    String? url = match?.group(0);
+    // Remove trailing punctuation
+    if (url != null && RegExp(r'[.,;:]$').hasMatch(url)) {
+      url = url.substring(0, url.length - 1);
+    }
+    if (_firstUrl != url) {
+      if (mounted) setState(() => _firstUrl = url);
+    }
+
     _debounce = Timer(const Duration(seconds: 2), () {
       saveNote();
     });
@@ -686,6 +711,20 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                             ),
                           ),
                         ),
+                        if (_firstUrl != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: AnyLinkPreview(
+                              link: _firstUrl!,
+                              displayDirection: UIDirection.uiDirectionHorizontal,
+                              cache: const Duration(hours: 1),
+                              backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+                              errorWidget: const SizedBox.shrink(),
+                              errorImage: "https://via.placeholder.com/150", 
+                              removeElevation: true,
+                              borderRadius: 12,
+                            ),
+                          ),
                       ],
                     ),
                   ),

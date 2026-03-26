@@ -10,6 +10,9 @@ When instructed to use the Tester skill, you must execute the following roles an
 ## Phase 1: UI/UX Developer
 - Test all usability, user experience, accessibility, and UI component aspects.
 - Ensure the project strictly follows **Material Tree Expressive Design** by Google.
+- Verify multi-view layouts (e.g. Kanban, Masonry Grid, List) persist correctly and perform smoothly.
+- Test complex interactive widgets like `Dismissible` swipe actions (Archive/Trash) and ensure Undo functions correctly.
+- Test drag-and-drop states (e.g. Kanban drag to new columns) for both visual state and Database persistence.
 - Verify that all components across each page follow a consistent structure and provide a unified UI experience.
 
 ## Phase 2: QA Tester

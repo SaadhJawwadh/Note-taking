@@ -3,6 +3,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../data/transaction_model.dart';
 import '../data/database_helper.dart';
 import '../data/transaction_category.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ── Default bank sender IDs (banks only — actual debit/credit confirmations) ──
 // Non-bank services (KOKO, wallets, etc.) belong in the user-managed whitelist.
@@ -111,11 +112,11 @@ final _transferRegex = RegExp(
 // ── Direction keywords ────────────────────────────────────────────────────────
 final _debitRegex = RegExp(
   r'\b(debit(?:ed)?|withdrawn|withdrawal|spent|charged|purchase(?:d)?|'
-  r'authorised|authorized|payment(?:\s+of)?)\b',
+  r'authorised|authorized|payment(?:\s+of)?|deduct(?:ed)?|paid)\b',
   caseSensitive: false,
 );
 final _creditRegex = RegExp(
-  r'\b(credit(?:ed)?|received|deposited|deposit|transferred\s+to\s+you|credited\s+to|'
+  r'\b(credit(?:ed)?(?!\s+card)|received|deposited|deposit|transferred\s+to\s+you|credited\s+to|'
   r'salary|payment\s+received|incoming\s+transfer|cash\s+deposit)\b',
   caseSensitive: false,
 );
@@ -238,6 +239,10 @@ class SmsService {
   /// blocking a bank effectively disables it.
   static var _blockedSenderIds = <String>{};
 
+  /// Custom rules applied on message body to force direction.
+  static var _customExpenseRules = <String>[];
+  static var _customIncomeRules = <String>[];
+
   /// Public constant so callers outside this file can check the sentinel value
   /// without coupling to an internal string literal.
   static const String reversalSentinel = _reversalSentinel;
@@ -257,6 +262,12 @@ class SmsService {
     }
     _allowedSenderIds = allowed;
     _blockedSenderIds = blocked;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _customExpenseRules = prefs.getStringList('customExpenseRules') ?? [];
+      _customIncomeRules = prefs.getStringList('customIncomeRules') ?? [];
+    } catch (_) {}
   }
 
   // ── Permission helpers ───────────────────────────────────────────────────
@@ -289,10 +300,17 @@ class SmsService {
     final senderLower = sender.toLowerCase();
     if (_blockedSenderIds.any((s) => senderLower.contains(s))) return null;
 
+    final bodyLower = body.toLowerCase();
+    final matchesExpenseRule = _customExpenseRules.any((r) => bodyLower.contains(r.toLowerCase()));
+    final matchesIncomeRule = _customIncomeRules.any((r) => bodyLower.contains(r.toLowerCase()));
+
     final isKnownSender = _bankSenders.any((s) => sender.contains(s)) ||
         _allowedSenderIds.any((s) => senderLower.contains(s));
-    final isDebit = _debitRegex.hasMatch(body);
-    final isCredit = _creditRegex.hasMatch(body);
+    
+    // Explicit override via custom training rules
+    final isDebit = matchesExpenseRule || _debitRegex.hasMatch(body);
+    final isCredit = matchesIncomeRule || (!matchesExpenseRule && _creditRegex.hasMatch(body));
+    
     final hasInstalment = _instalmentRegex.hasMatch(body);
     final isTransfer = _transferRegex.hasMatch(body);
 

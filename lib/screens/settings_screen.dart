@@ -90,286 +90,278 @@ class SettingsScreen extends StatelessWidget {
                           child: FadeInAnimation(child: widget),
                         ),
                         children: [
-                          _buildSectionHeader(context, 'FEATURES'),
-                          _buildSettingsContainer(context, [
-                            _buildSwitchTile(
-                              context,
-                              icon: Icons.account_balance_wallet_outlined,
-                              title: 'Financial Manager',
-                              subtitle: 'Enable expense tracking',
-                              value: settings.showFinancialManager,
-                              onChanged: (value) =>
-                                  settings.setShowFinancialManager(value),
-                            ),
-                            if (settings.showFinancialManager) ...[
+                          _buildExpandableSection(
+                            context,
+                            title: 'Finances & Features',
+                            icon: Icons.account_balance_wallet_outlined,
+                            initiallyExpanded: true,
+                            children: [
+                              _buildSwitchTile(
+                                context,
+                                icon: Icons.account_balance_wallet_outlined,
+                                title: 'Financial Manager',
+                                subtitle: 'Enable expense tracking',
+                                value: settings.showFinancialManager,
+                                onChanged: (value) =>
+                                    settings.setShowFinancialManager(value),
+                              ),
+                              if (settings.showFinancialManager) ...[
+                                Divider(
+                                  height: 1,
+                                  indent: 56,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .outlineVariant,
+                                ),
+                                _buildListTile(
+                                  context,
+                                  icon: Icons.currency_exchange_outlined,
+                                  title: 'Currency',
+                                  subtitle: settings.currency,
+                                  onTap: () =>
+                                      _showCurrencyPicker(context, settings),
+                                ),
+                                Divider(
+                                  height: 1,
+                                  indent: 56,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .outlineVariant,
+                                ),
+                                _buildListTile(
+                                  context,
+                                  icon: Icons.sms_outlined,
+                                  title: 'Advanced SMS Import',
+                                  subtitle:
+                                      'Fetch past bank transactions from messages',
+                                  showArrow: true,
+                                  onTap: () => showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.transparent,
+                                    builder: (_) => const _SmsImportSheet(),
+                                  ),
+                                ),
+                                Divider(
+                                  height: 1,
+                                  indent: 56,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .outlineVariant,
+                                ),
+                                _buildListTile(
+                                  context,
+                                  icon: Icons.category_outlined,
+                                  title: 'Manage Categories',
+                                  subtitle:
+                                      'Customise keywords and create new categories',
+                                  showArrow: true,
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const CategoryManagementScreen(),
+                                    ),
+                                  ),
+                                ),
+                                Divider(
+                                  height: 1,
+                                  indent: 56,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .outlineVariant,
+                                ),
+                                _buildListTile(
+                                  context,
+                                  icon: Icons.contacts_outlined,
+                                  title: 'SMS Contacts',
+                                  subtitle:
+                                      'Manage bank & custom senders for auto-import',
+                                  showArrow: true,
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const SmsContactsScreen(),
+                                    ),
+                                  ),
+                                ),
+                              ]
+                            ],
+                          ),
+                          _buildExpandableSection(
+                            context,
+                            title: 'Appearance & UI',
+                            icon: Icons.palette_outlined,
+                            children: [
+                              _buildListTile(
+                                context,
+                                icon: Icons.palette_outlined,
+                                title: 'Theme',
+                                subtitle: _getThemeLabel(settings.themeMode),
+                                onTap: () => _showThemePicker(context, settings),
+                              ),
                               Divider(
                                 height: 1,
                                 indent: 56,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .outlineVariant,
+                                color:
+                                    Theme.of(context).colorScheme.outlineVariant,
                               ),
                               _buildListTile(
                                 context,
-                                icon: Icons.currency_exchange_outlined,
-                                title: 'Currency',
-                                subtitle: settings.currency,
+                                icon: Icons.text_fields,
+                                title: 'Text Size',
+                                subtitle: settings.textSizeLabel,
                                 onTap: () =>
-                                    _showCurrencyPicker(context, settings),
-                              ),
-                              Divider(
-                                height: 1,
-                                indent: 56,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .outlineVariant,
-                              ),
-                              _buildListTile(
-                                context,
-                                icon: Icons.sms_outlined,
-                                title: 'Import SMS Transactions',
-                                subtitle:
-                                    'Fetch bank transactions from messages',
-                                showArrow: true,
-                                onTap: () => showModalBottomSheet(
-                                  context: context,
-                                  isScrollControlled: true,
-                                  backgroundColor: Colors.transparent,
-                                  builder: (_) => const _SmsImportSheet(),
-                                ),
-                              ),
-                              Divider(
-                                height: 1,
-                                indent: 56,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .outlineVariant,
-                              ),
-                              _buildListTile(
-                                context,
-                                icon: Icons.category_outlined,
-                                title: 'Manage Categories',
-                                subtitle:
-                                    'Customise keywords and create new categories',
-                                showArrow: true,
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        const CategoryManagementScreen(),
-                                  ),
-                                ),
-                              ),
-                              Divider(
-                                height: 1,
-                                indent: 56,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .outlineVariant,
-                              ),
-                              _buildListTile(
-                                context,
-                                icon: Icons.contacts_outlined,
-                                title: 'SMS Contacts',
-                                subtitle:
-                                    'Manage bank & custom senders for auto-import',
-                                showArrow: true,
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const SmsContactsScreen(),
-                                  ),
-                                ),
-                              ),
-                            ]
-                          ]),
-                          const SizedBox(height: 24),
-                          _buildSectionHeader(context, 'APPEARANCE'),
-                          _buildSettingsContainer(context, [
-                            _buildListTile(
-                              context,
-                              icon: Icons.palette_outlined,
-                              title: 'Theme',
-                              subtitle: _getThemeLabel(settings.themeMode),
-                              onTap: () => _showThemePicker(context, settings),
-                            ),
-                            Divider(
-                              height: 1,
-                              indent: 56,
-                              color:
-                                  Theme.of(context).colorScheme.outlineVariant,
-                            ),
-                            _buildListTile(
-                              context,
-                              icon: Icons.text_fields,
-                              title: 'Text Size',
-                              subtitle: settings.textSizeLabel,
-                              onTap: () =>
-                                  _showTextSizePicker(context, settings),
-                            ),
-                          ]),
-                          const SizedBox(height: 24),
-                          _buildSectionHeader(context, 'CONTENT'),
-                          _buildSettingsContainer(context, [
-                            _buildListTile(
-                              context,
-                              icon: Icons.label_outline,
-                              title: 'Manage Tags',
-                              subtitle: 'Rename or delete tags',
-                              showArrow: true,
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const ManageTagsScreen(),
-                                  ),
-                                );
-                              },
-                            ),
-                          ]),
-                          const SizedBox(height: 24),
-                          _buildSectionHeader(context, 'FOLDERS'),
-                          _buildSettingsContainer(context, [
-                            _buildListTile(
-                              context,
-                              icon: Icons.folder_open_outlined,
-                              title: 'Archive',
-                              subtitle: 'View archived notes',
-                              showArrow: true,
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const FilteredNotesScreen(
-                                            filterType: FilterType.archived),
-                                  ),
-                                );
-                              },
-                            ),
-                            Divider(
-                              height: 1,
-                              indent: 56,
-                              color:
-                                  Theme.of(context).colorScheme.outlineVariant,
-                            ),
-                            _buildListTile(
-                              context,
-                              icon: Icons.delete_outline,
-                              title: 'Trash',
-                              subtitle: 'View deleted notes',
-                              showArrow: true,
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const FilteredNotesScreen(
-                                            filterType: FilterType.trash),
-                                  ),
-                                );
-                              },
-                            ),
-                          ]),
-                          const SizedBox(height: 24),
-                          _buildSectionHeader(context, 'PERIOD & PRIVACY'),
-                          _buildSettingsContainer(context, [
-                            _buildSwitchTile(
-                              context,
-                              icon: Icons.calendar_month_outlined,
-                              title: 'Period Tracker',
-                              subtitle: 'Optional cycle tracking',
-                              value: settings.isPeriodTrackerEnabled,
-                              onChanged: (value) =>
-                                  settings.setIsPeriodTrackerEnabled(value),
-                            ),
-                            if (settings.isPeriodTrackerEnabled) ...[
-                              Divider(
-                                height: 1,
-                                indent: 56,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .outlineVariant,
-                              ),
-                              _buildListTile(
-                                context,
-                                icon: Icons.notifications_none_outlined,
-                                title: 'Discreet Notification Text',
-                                subtitle: settings.discreetNotificationText,
-                                onTap: () => _showNotificationTextDialog(
-                                    context, settings),
+                                    _showTextSizePicker(context, settings),
                               ),
                             ],
-                            Divider(
-                              height: 1,
-                              indent: 56,
-                              color:
-                                  Theme.of(context).colorScheme.outlineVariant,
-                            ),
-                            _buildSwitchTile(
-                              context,
-                              icon: Icons.lock_outline,
-                              title: 'App Lock',
-                              subtitle: 'Require authentication to open app',
-                              value: settings.appLockEnabled,
-                              onChanged: (value) async {
-                                // If enabling, we might want to check if hardware supports it, but local_auth handles it.
-                                await settings.setAppLockEnabled(value);
-                              },
-                            ),
-                          ]),
-                          const SizedBox(height: 24),
-                          _buildSectionHeader(context, 'DATA & SYNC'),
-                          _buildSettingsContainer(context, [
-                            _buildListTile(
-                              context,
-                              icon: Icons.download_outlined,
-                              title: 'Export Backup',
-                              subtitle: 'Save notes to a JSON file',
-                              showArrow: true,
-                              onTap: () => _exportBackup(context),
-                            ),
-                            Divider(
-                              height: 1,
-                              indent: 56,
-                              color:
-                                  Theme.of(context).colorScheme.outlineVariant,
-                            ),
-                            _buildListTile(
-                              context,
-                              icon: Icons.upload_outlined,
-                              title: 'Import Backup',
-                              subtitle: 'Restore from a JSON file',
-                              showArrow: true,
-                              onTap: () => _importBackup(context),
-                            ),
-                            if (Platform.isAndroid) ...[
+                          ),
+                          _buildExpandableSection(
+                            context,
+                            title: 'Organization & Folders',
+                            icon: Icons.folder_open_outlined,
+                            children: [
+                              _buildListTile(
+                                context,
+                                icon: Icons.label_outline,
+                                title: 'Manage Tags',
+                                subtitle: 'Rename or delete tags',
+                                showArrow: true,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const ManageTagsScreen(),
+                                    ),
+                                  );
+                                },
+                              ),
                               Divider(
                                 height: 1,
                                 indent: 56,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .outlineVariant,
+                                color:
+                                    Theme.of(context).colorScheme.outlineVariant,
+                              ),
+                              _buildListTile(
+                                context,
+                                icon: Icons.archive_outlined,
+                                title: 'Archive',
+                                subtitle: 'View archived notes',
+                                showArrow: true,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const FilteredNotesScreen(
+                                              filterType: FilterType.archived),
+                                    ),
+                                  );
+                                },
+                              ),
+                              Divider(
+                                height: 1,
+                                indent: 56,
+                                color:
+                                    Theme.of(context).colorScheme.outlineVariant,
+                              ),
+                              _buildListTile(
+                                context,
+                                icon: Icons.delete_outline,
+                                title: 'Trash',
+                                subtitle: 'View deleted notes',
+                                showArrow: true,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const FilteredNotesScreen(
+                                              filterType: FilterType.trash),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                          _buildExpandableSection(
+                            context,
+                            title: 'Privacy & Personal',
+                            icon: Icons.security_outlined,
+                            children: [
+                              _buildSwitchTile(
+                                context,
+                                icon: Icons.calendar_month_outlined,
+                                title: 'Period Tracker',
+                                subtitle: 'Optional cycle tracking',
+                                value: settings.isPeriodTrackerEnabled,
+                                onChanged: (value) =>
+                                    settings.setIsPeriodTrackerEnabled(value),
+                              ),
+                              if (settings.isPeriodTrackerEnabled) ...[
+                                Divider(
+                                  height: 1,
+                                  indent: 56,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .outlineVariant,
+                                ),
+                                _buildListTile(
+                                  context,
+                                  icon: Icons.notifications_none_outlined,
+                                  title: 'Discreet Notification Text',
+                                  subtitle: settings.discreetNotificationText,
+                                  onTap: () => _showNotificationTextDialog(
+                                      context, settings),
+                                ),
+                              ],
+                              Divider(
+                                height: 1,
+                                indent: 56,
+                                color:
+                                    Theme.of(context).colorScheme.outlineVariant,
                               ),
                               _buildSwitchTile(
                                 context,
-                                icon: Icons.backup_outlined,
-                                title: 'Auto Backup',
-                                subtitle: 'Schedule automatic backups',
-                                value: settings.autoBackupEnabled,
+                                icon: Icons.lock_outline,
+                                title: 'App Lock',
+                                subtitle: 'Require authentication to open app',
+                                value: settings.appLockEnabled,
                                 onChanged: (value) async {
-                                  if (value) {
-                                    final dir = await FilePicker.platform
-                                        .getDirectoryPath();
-                                    if (dir == null) return;
-                                    await settings.setAutoBackupPath(dir);
-                                  }
-                                  await settings.setAutoBackupEnabled(value);
-                                  await syncAutoBackupSchedule();
+                                  await settings.setAppLockEnabled(value);
                                 },
                               ),
-                              if (settings.autoBackupEnabled) ...[
+                            ],
+                          ),
+                          _buildExpandableSection(
+                            context,
+                            title: 'Data & Backup',
+                            icon: Icons.cloud_sync_outlined,
+                            children: [
+                              _buildListTile(
+                                context,
+                                icon: Icons.download_outlined,
+                                title: 'Export Backup',
+                                subtitle: 'Save notes to a JSON file',
+                                showArrow: true,
+                                onTap: () => _exportBackup(context),
+                              ),
+                              Divider(
+                                height: 1,
+                                indent: 56,
+                                color:
+                                    Theme.of(context).colorScheme.outlineVariant,
+                              ),
+                              _buildListTile(
+                                context,
+                                icon: Icons.upload_outlined,
+                                title: 'Import Backup',
+                                subtitle: 'Restore from a JSON file',
+                                showArrow: true,
+                                onTap: () => _importBackup(context),
+                              ),
+                              if (Platform.isAndroid) ...[
                                 Divider(
                                   height: 1,
                                   indent: 56,
@@ -377,38 +369,24 @@ class SettingsScreen extends StatelessWidget {
                                       .colorScheme
                                       .outlineVariant,
                                 ),
-                                _buildListTile(
+                                _buildSwitchTile(
                                   context,
-                                  icon: Icons.schedule_outlined,
-                                  title: 'Backup Frequency',
-                                  subtitle: _getFrequencyLabel(
-                                      settings.autoBackupFrequency),
-                                  onTap: () =>
-                                      _showFrequencyPicker(context, settings),
-                                ),
-                                Divider(
-                                  height: 1,
-                                  indent: 56,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .outlineVariant,
-                                ),
-                                _buildListTile(
-                                  context,
-                                  icon: Icons.folder_outlined,
-                                  title: 'Backup Location',
-                                  subtitle: settings.autoBackupPath ??
-                                      'App default directory',
-                                  onTap: () async {
-                                    final dir = await FilePicker.platform
-                                        .getDirectoryPath();
-                                    if (dir != null) {
+                                  icon: Icons.backup_outlined,
+                                  title: 'Auto Backup',
+                                  subtitle: 'Schedule automatic backups',
+                                  value: settings.autoBackupEnabled,
+                                  onChanged: (value) async {
+                                    if (value) {
+                                      final dir = await FilePicker.platform
+                                          .getDirectoryPath();
+                                      if (dir == null) return;
                                       await settings.setAutoBackupPath(dir);
-                                      await syncAutoBackupSchedule();
                                     }
+                                    await settings.setAutoBackupEnabled(value);
+                                    await syncAutoBackupSchedule();
                                   },
                                 ),
-                                if (settings.lastAutoBackupTime != null) ...[
+                                if (settings.autoBackupEnabled) ...[
                                   Divider(
                                     height: 1,
                                     indent: 56,
@@ -418,58 +396,101 @@ class SettingsScreen extends StatelessWidget {
                                   ),
                                   _buildListTile(
                                     context,
-                                    icon: Icons.history_outlined,
-                                    title: 'Last Auto Backup',
-                                    subtitle: _formatLastBackupTime(
-                                        settings.lastAutoBackupTime!),
+                                    icon: Icons.schedule_outlined,
+                                    title: 'Backup Frequency',
+                                    subtitle: _getFrequencyLabel(
+                                        settings.autoBackupFrequency),
+                                    onTap: () =>
+                                        _showFrequencyPicker(context, settings),
                                   ),
+                                  Divider(
+                                    height: 1,
+                                    indent: 56,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .outlineVariant,
+                                  ),
+                                  _buildListTile(
+                                    context,
+                                    icon: Icons.folder_outlined,
+                                    title: 'Backup Location',
+                                    subtitle: settings.autoBackupPath ??
+                                        'App default directory',
+                                    onTap: () async {
+                                      final dir = await FilePicker.platform
+                                          .getDirectoryPath();
+                                      if (dir != null) {
+                                        await settings.setAutoBackupPath(dir);
+                                        await syncAutoBackupSchedule();
+                                      }
+                                    },
+                                  ),
+                                  if (settings.lastAutoBackupTime != null) ...[
+                                    Divider(
+                                      height: 1,
+                                      indent: 56,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .outlineVariant,
+                                    ),
+                                    _buildListTile(
+                                      context,
+                                      icon: Icons.history_outlined,
+                                      title: 'Last Auto Backup',
+                                      subtitle: _formatLastBackupTime(
+                                          settings.lastAutoBackupTime!),
+                                    ),
+                                  ],
                                 ],
                               ],
                             ],
-                          ]),
-                          const SizedBox(height: 24),
-                          _buildSectionHeader(context, 'ABOUT'),
-                          _buildSettingsContainer(context, [
-                            _buildListTile(
-                              context,
-                              icon: FontAwesomeIcons.github,
-                              title: 'GitHub Repository',
-                              subtitle: 'View source code & contribute',
-                              trailing: Icon(
-                                Icons.open_in_new_rounded,
-                                size: 18,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
+                          ),
+                          _buildExpandableSection(
+                            context,
+                            title: 'About',
+                            icon: Icons.info_outline_rounded,
+                            children: [
+                              _buildListTile(
+                                context,
+                                icon: FontAwesomeIcons.github,
+                                title: 'GitHub Repository',
+                                subtitle: 'View source code & contribute',
+                                trailing: Icon(
+                                  Icons.open_in_new_rounded,
+                                  size: 18,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                                onTap: () => _launchUrl(AppConstants.repoUrl),
                               ),
-                              onTap: () => _launchUrl(AppConstants.repoUrl),
-                            ),
-                            Divider(
-                              height: 1,
-                              indent: 56,
-                              color:
-                                  Theme.of(context).colorScheme.outlineVariant,
-                            ),
-                            FutureBuilder<PackageInfo>(
-                              future: PackageInfo.fromPlatform(),
-                              builder: (context, snapshot) {
-                                String version = 'Loading...';
-                                if (snapshot.hasData) {
-                                  version =
-                                      '${snapshot.data!.version}+${snapshot.data!.buildNumber}';
-                                }
-                                return _buildListTile(
-                                  context,
-                                  icon: Icons.info_outline_rounded,
-                                  title: 'Version',
-                                  subtitle:
-                                      snapshot.hasData ? 'v$version' : version,
-                                  onTap: () =>
-                                      _launchUrl(AppConstants.releaseUrl),
-                                );
-                              },
-                            ),
-                          ]),
+                              Divider(
+                                height: 1,
+                                indent: 56,
+                                color:
+                                    Theme.of(context).colorScheme.outlineVariant,
+                              ),
+                              FutureBuilder<PackageInfo>(
+                                future: PackageInfo.fromPlatform(),
+                                builder: (context, snapshot) {
+                                  String version = 'Loading...';
+                                  if (snapshot.hasData) {
+                                    version =
+                                        '${snapshot.data!.version}+${snapshot.data!.buildNumber}';
+                                  }
+                                  return _buildListTile(
+                                    context,
+                                    icon: Icons.info_outline_rounded,
+                                    title: 'Version',
+                                    subtitle:
+                                        snapshot.hasData ? 'v$version' : version,
+                                    onTap: () =>
+                                        _launchUrl(AppConstants.releaseUrl),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
                           const SizedBox(height: 24),
                         ],
                       ),
@@ -693,26 +714,46 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title) {
+  Widget _buildExpandableSection(
+    BuildContext context, {
+    required String title,
+    required IconData icon,
+    bool initiallyExpanded = false,
+    required List<Widget> children,
+  }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8, left: 16),
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.bold,
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          dividerColor: Colors.transparent, // remove expansion borders
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHigh,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
             ),
+          ),
+          child: ExpansionTile(
+            initiallyExpanded: initiallyExpanded,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
+            title: Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            children: [
+              ...children,
+              const SizedBox(height: 8), // Padding at bottom of expanded area
+            ],
+          ),
+        ),
       ),
-    );
-  }
-
-  Widget _buildSettingsContainer(BuildContext context, List<Widget> children) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(children: children),
     );
   }
 

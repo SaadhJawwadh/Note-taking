@@ -40,6 +40,30 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Map<String, int> _tagColors = {};
 
+  IconData _getIconForMode(NoteViewMode mode) {
+    switch (mode) {
+      case NoteViewMode.list: return Icons.view_agenda_outlined;
+      case NoteViewMode.masonryGrid: return Icons.grid_view_outlined;
+      case NoteViewMode.uniformGrid: return Icons.dashboard_outlined;
+      case NoteViewMode.kanban: return Icons.view_column_outlined;
+    }
+  }
+
+  String _getTooltipForMode(NoteViewMode mode) {
+    switch (mode) {
+      case NoteViewMode.list: return 'List view';
+      case NoteViewMode.masonryGrid: return 'Masonry grid view';
+      case NoteViewMode.uniformGrid: return 'Uniform grid view';
+      case NoteViewMode.kanban: return 'Kanban view';
+    }
+  }
+
+  void _cycleViewMode(SettingsProvider settings) {
+    const values = NoteViewMode.values;
+    final nextIndex = (settings.noteViewMode.index + 1) % values.length;
+    settings.setNoteViewMode(values[nextIndex]);
+  }
+
   Future refreshNotes() async {
     if (!mounted) return;
     setState(() => isLoading = true);
@@ -390,13 +414,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: Icon(settings.isGridView
-                        ? Icons.view_agenda_outlined
-                        : Icons.grid_view_outlined),
-                    tooltip: settings.isGridView ? 'List view' : 'Grid view',
-                    onPressed: () {
-                      settings.setIsGridView(!settings.isGridView);
-                    },
+                    icon: Icon(_getIconForMode(settings.noteViewMode)),
+                    tooltip: _getTooltipForMode(settings.noteViewMode),
+                    onPressed: () => _cycleViewMode(settings),
                   ),
                   IconButton(
                     icon: const Icon(Icons.search),
@@ -536,111 +556,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             )
+          else if (settings.noteViewMode == NoteViewMode.kanban)
+            SliverFillRemaining(
+              hasScrollBody: true,
+              child: _buildKanbanView(),
+            )
           else
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
               sliver: AnimationLimiter(
-                child: settings.isGridView
-                    ? SliverMasonryGrid.count(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childCount: filteredNotes.length,
-                        itemBuilder: (context, index) {
-                          final note = filteredNotes[index];
-                          return AnimationConfiguration.staggeredGrid(
-                            position: index,
-                            duration: const Duration(milliseconds: 220),
-                            columnCount: 2,
-                            child: ScaleAnimation(
-                              child: FadeInAnimation(
-                                child: OpenContainer<bool>(
-                                  transitionType:
-                                      ContainerTransitionType.fadeThrough,
-                                  transitionDuration:
-                                      const Duration(milliseconds: 300),
-                                  openBuilder: (context, _) =>
-                                      NoteEditorScreen(note: note),
-                                  closedElevation: 0,
-                                  openElevation: 0,
-                                  closedColor: Theme.of(context)
-                                      .colorScheme
-                                      .surfaceContainer,
-                                  openColor:
-                                      Theme.of(context).colorScheme.surface,
-                                  closedShape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(20)),
-                                  onClosed: (returned) async {
-                                    if (returned == true) {
-                                      await refreshNotes();
-                                    }
-                                  },
-                                  closedBuilder: (context, openContainer) {
-                                    return NoteCard(
-                                      note: note,
-                                      onTap: openContainer,
-                                      tagColors: _tagColors,
-                                      onLongPress: () => _showNoteActions(note),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      )
-                    : SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final note = filteredNotes[index];
-                            return AnimationConfiguration.staggeredList(
-                              position: index,
-                              duration: const Duration(milliseconds: 220),
-                              child: SlideAnimation(
-                                verticalOffset: 24.0,
-                                child: FadeInAnimation(
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(bottom: 12),
-                                    child: OpenContainer<bool>(
-                                      transitionType:
-                                          ContainerTransitionType.fadeThrough,
-                                      transitionDuration:
-                                          const Duration(milliseconds: 300),
-                                      openBuilder: (context, _) =>
-                                          NoteEditorScreen(note: note),
-                                      closedElevation: 0,
-                                      openElevation: 0,
-                                      closedColor: Theme.of(context)
-                                          .colorScheme
-                                          .surfaceContainer,
-                                      openColor:
-                                          Theme.of(context).colorScheme.surface,
-                                      closedShape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(20)),
-                                      onClosed: (returned) async {
-                                        if (returned == true) {
-                                          await refreshNotes();
-                                        }
-                                      },
-                                      closedBuilder: (context, openContainer) {
-                                        return NoteCard(
-                                          note: note,
-                                          onTap: openContainer,
-                                          tagColors: _tagColors,
-                                          onLongPress: () =>
-                                              _showNoteActions(note),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                          childCount: filteredNotes.length,
-                        ),
-                      ),
+                child: _buildSliverLayout(settings),
               ),
             ),
         ],
@@ -673,6 +598,283 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildSliverLayout(SettingsProvider settings) {
+    if (settings.noteViewMode == NoteViewMode.list) {
+      return SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final note = filteredNotes[index];
+            return AnimationConfiguration.staggeredList(
+              position: index,
+              duration: const Duration(milliseconds: 220),
+              child: SlideAnimation(
+                verticalOffset: 24.0,
+                child: FadeInAnimation(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _buildDismissibleNoteCard(note),
+                  ),
+                ),
+              ),
+            );
+          },
+          childCount: filteredNotes.length,
+        ),
+      );
+    } else if (settings.noteViewMode == NoteViewMode.uniformGrid) {
+      return SliverGrid(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 0.8, // Uniform aspect ratio
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final note = filteredNotes[index];
+            return AnimationConfiguration.staggeredGrid(
+              position: index,
+              duration: const Duration(milliseconds: 220),
+              columnCount: 2,
+              child: ScaleAnimation(
+                child: FadeInAnimation(
+                  child: _buildOpenContainer(note),
+                ),
+              ),
+            );
+          },
+          childCount: filteredNotes.length,
+        ),
+      );
+    } else {
+      // Masonry Grid
+      return SliverMasonryGrid.count(
+        crossAxisCount: 2,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childCount: filteredNotes.length,
+        itemBuilder: (context, index) {
+          final note = filteredNotes[index];
+          return AnimationConfiguration.staggeredGrid(
+            position: index,
+            duration: const Duration(milliseconds: 220),
+            columnCount: 2,
+            child: ScaleAnimation(
+              child: FadeInAnimation(
+                child: _buildOpenContainer(note),
+              ),
+            ),
+          );
+        },
+      );
+    }
+  }
+
+  Widget _buildDismissibleNoteCard(Note note) {
+    return Dismissible(
+      key: ValueKey(note.id),
+      direction: DismissDirection.horizontal,
+      background: Container(
+        decoration: BoxDecoration(
+          color: Colors.green.withValues(alpha: 0.8),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: const Icon(Icons.archive, color: Colors.white),
+      ),
+      secondaryBackground: Container(
+        decoration: BoxDecoration(
+          color: Colors.red.withValues(alpha: 0.8),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: const Icon(Icons.delete, color: Colors.white),
+      ),
+      onDismissed: (direction) async {
+        if (direction == DismissDirection.endToStart) {
+          // Swipe left -> Delete to trash
+          await DatabaseHelper.instance.softDeleteNote(note.id);
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Note moved to trash'),
+              action: SnackBarAction(
+                label: 'Undo',
+                onPressed: () async {
+                  await DatabaseHelper.instance.restoreNote(note.id);
+                  await refreshNotes();
+                },
+              ),
+            ),
+          );
+        } else {
+          // Swipe right -> Archive
+          final updated = note.copyWith(isArchived: true);
+          await DatabaseHelper.instance.updateNote(updated);
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Note archived'),
+              action: SnackBarAction(
+                label: 'Undo',
+                onPressed: () async {
+                  final reverted = note.copyWith(isArchived: false);
+                  await DatabaseHelper.instance.updateNote(reverted);
+                  await refreshNotes();
+                },
+              ),
+            ),
+          );
+        }
+        await refreshNotes();
+      },
+      child: _buildOpenContainer(note),
+    );
+  }
+
+  Widget _buildOpenContainer(Note note) {
+    return OpenContainer<bool>(
+      transitionType: ContainerTransitionType.fadeThrough,
+      transitionDuration: const Duration(milliseconds: 300),
+      openBuilder: (context, _) => NoteEditorScreen(note: note),
+      closedElevation: 0,
+      openElevation: 0,
+      closedColor: Theme.of(context).colorScheme.surfaceContainer,
+      openColor: Theme.of(context).colorScheme.surface,
+      closedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      onClosed: (returned) async {
+        if (returned == true) {
+          await refreshNotes();
+        }
+      },
+      closedBuilder: (context, openContainer) {
+        return NoteCard(
+          note: note,
+          onTap: openContainer,
+          tagColors: _tagColors,
+          onLongPress: () => _showNoteActions(note),
+        );
+      },
+    );
+  }
+
+  Widget _buildKanbanView() {
+    final realTags = allTags.where((t) => t != 'All').toList();
+    final columns = ['Untagged', ...realTags];
+
+    return ListView.builder(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: columns.length,
+      itemBuilder: (context, index) {
+        final columnTag = columns[index];
+        
+        List<Note> columnNotes;
+        if (columnTag == 'Untagged') {
+          columnNotes = filteredNotes.where((n) => n.tags.isEmpty).toList();
+        } else {
+          columnNotes = filteredNotes.where((n) => n.tags.contains(columnTag)).toList();
+        }
+
+        return Container(
+          width: MediaQuery.of(context).size.width * 0.75, // responsive width
+          margin: const EdgeInsets.only(right: 16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      columnTag,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${columnNotes.length}',
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: DragTarget<Note>(
+                  onWillAcceptWithDetails: (details) => true,
+                  onAcceptWithDetails: (details) async {
+                    final note = details.data;
+                    
+                    if (columnTag == 'Untagged' && note.tags.isEmpty) return;
+                    if (columnTag != 'Untagged' && note.tags.contains(columnTag) && note.tags.length == 1) return;
+
+                    List<String> newTags = [];
+                    if (columnTag != 'Untagged') {
+                      newTags.add(columnTag);
+                    }
+                    
+                    final updatedNote = note.copyWith(tags: newTags);
+                    await DatabaseHelper.instance.updateNote(updatedNote);
+                    await refreshNotes();
+                  },
+                  builder: (context, candidateData, rejectedData) {
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: candidateData.isNotEmpty 
+                            ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3) 
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: ListView.separated(
+                        padding: const EdgeInsets.only(bottom: 80, top: 8),
+                        itemCount: columnNotes.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, noteIndex) {
+                          final note = columnNotes[noteIndex];
+                          return LongPressDraggable<Note>(
+                            data: note,
+                            feedback: Material(
+                              color: Colors.transparent,
+                              child: SizedBox(
+                                width: MediaQuery.of(context).size.width * 0.75 - 24,
+                                child: Opacity(
+                                  opacity: 0.8,
+                                  child: _buildOpenContainer(note),
+                                ),
+                              ),
+                            ),
+                            childWhenDragging: Opacity(
+                              opacity: 0.3,
+                              child: _buildOpenContainer(note),
+                            ),
+                            child: _buildOpenContainer(note),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

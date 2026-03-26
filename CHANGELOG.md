@@ -2,9 +2,23 @@
 
 All notable changes to Note Book are documented here.
 
-## [1.17.0] - 2026-02-27
+## [1.18.0] - 2026-03-26
 
-### 🔒 Security / Data Integrity
+### ✨ New Features
+- **Dynamic Themed Icons**: Complete support for Android 13+ and Samsung One UI monochrome/themed icons. The app icon will now adapt its palette to match your system wallpaper and theme.
+- **Intelligent SMS Parser Training**: Fix incorrect SMS transaction types directly from the transaction editor, and the system will prompt to learn and save your custom keyword patterns for future auto-imports.
+- **Quick 24-Hour Fetch**: Tapping the sync button on the Financial Manager dashboard instantly fetches the last 24 hours of SMS without opening any modals.
+- **Kanban Card Drag-and-Drop**: Move notes seamlessly between tag columns in the continuous Kanban layout view, automatically updating their active tag.
+- **Rich URL Link Previews**: Dropping web links into note bodies will automatically fetch and display open-graph image summaries mapped below the text.
+- **Uniform Grid View**: Choose standard, locked 0.8 aspect ratio grids in addition to staggered masonry views.
+
+### 🛠 Improvements
+- **Settings Declutter**: The massive settings page has been compartmentalised into distinct categorised Expansion Tiles for massive reduction in cognitive load (`Appearance`, `Privacy`, `Finances & Features`, `Data & Backup`). Advanced historical SMS syncing is relocated beneath the Finances tab.
+- **Archive/Trash Gestures**: Introduced rapid swipe-to-dismiss states natively into the List view interface, complete with undo Snackbar actions.
+
+---
+
+## [1.17.0] - 2026-02-27
 - **Database Encryption at Rest**: The entire SQLite database (notes, financial transactions, period logs, SMS contacts) is now encrypted at rest using SQLCipher (256-bit AES).
 - **Transparent Migration**: Existing unencrypted databases are automatically converted to the new encrypted format on the first app launch.
 - **Improved Backup Security**:

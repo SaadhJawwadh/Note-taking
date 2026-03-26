@@ -8,6 +8,7 @@ import '../data/transaction_category.dart';
 import '../data/category_definition.dart';
 import '../widgets/calculator_dialog.dart';
 import 'category_management_screen.dart';
+import '../services/sms_service.dart';
 
 class TransactionEditorScreen extends StatefulWidget {
   final TransactionModel? transaction;
@@ -82,6 +83,24 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
       await DatabaseHelper.instance.createTransaction(transaction);
     } else {
       await DatabaseHelper.instance.updateTransaction(transaction);
+
+      // Training Prompt logic
+      if (widget.transaction!.smsId != null &&
+          widget.transaction!.isExpense != _isExpense) {
+        final rule = await _showTrainingDialog(description);
+        if (rule != null && rule.isNotEmpty) {
+           if (!mounted) return;
+           final settings = Provider.of<SettingsProvider>(context, listen: false);
+           await settings.addCustomRule(rule, isExpense: _isExpense);
+           // We also need to reload the static SMS service cache
+           // For that, we need to import SmsService at the top.
+           try {
+             // Use dynamic invocation or ensure reloadSmsContacts is available.
+             // We will import sms_service.dart at the top.
+             await SmsService.reloadSmsContacts();
+           } catch (_) {}
+        }
+      }
     }
 
     setState(() => _isLoading = false);
@@ -120,6 +139,49 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
       setState(() => _isLoading = false);
       if (mounted) Navigator.pop(context, true);
     }
+  }
+
+  Future<String?> _showTrainingDialog(String initialKeyword) async {
+    String keyword = initialKeyword.replaceAll(RegExp(r'(?:Debit|Credit|Payment at|Purchase at|Transfer to)\s*', caseSensitive: false), '').trim();
+    if (keyword.contains(' ')) {
+      keyword = keyword.split(' ').first; // Take just the most prominent word for robustness
+    }
+
+    return showDialog<String>(
+      context: context,
+      builder: (context) {
+        String input = keyword;
+        return AlertDialog(
+          title: const Text('Train SMS Parser?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Would you like the app to remember this? Future SMS messages containing the keyword below will automatically be marked as exactly what you selected.'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: TextEditingController(text: keyword),
+                decoration: const InputDecoration(
+                  labelText: 'Matching Keyword/Phrase',
+                  border: OutlineInputBorder(),
+                  hintText: 'e.g., Uber, Keells, Salary',
+                ),
+                onChanged: (v) => input = v.trim(),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, null),
+              child: const Text('No, just this once'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, input),
+              child: const Text('Train Parser'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _pickDate() async {
