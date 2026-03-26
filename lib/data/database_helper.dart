@@ -9,6 +9,7 @@ import 'transaction_model.dart';
 import 'category_definition.dart';
 import 'sms_contact.dart';
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -30,15 +31,44 @@ class DatabaseHelper {
   }
 
   /// Returns (or generates) the database encryption passphrase.
+  /// Uses SharedPreferences as a cloud-backup-capable fallback when Secure Storage
+  /// is wiped after a factory reset or uninstallation.
   static Future<String> _getOrCreateEncryptionKey() async {
-    String? key = await _secureStorage.read(key: _keyStorageKey);
+    // 1. Try to get it from Secure Storage (primary secure location)
+    String? key;
+    try {
+      key = await _secureStorage.read(key: _keyStorageKey);
+    } catch (e) {
+      // Ignore keystore exceptions on corrupted devices
+    }
+
+    // 2. Fallback to standard SharedPreferences 
+    // (This survives factory reset via Google Drive Auto-Backup)
+    final prefs = await SharedPreferences.getInstance();
     if (key == null || key.isEmpty) {
-      // Generate a cryptographically secure 32-character hex key
+      key = prefs.getString('db_encryption_key_backup');
+      if (key != null && key.isNotEmpty) {
+        // Restore it back into secure storage for active use
+        await _secureStorage.write(key: _keyStorageKey, value: key);
+      }
+    }
+
+    // 3. Generate a new key if it still doesn't exist
+    if (key == null || key.isEmpty) {
       final random = Random.secure();
       final bytes = List<int>.generate(16, (_) => random.nextInt(256));
       key = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+      
       await _secureStorage.write(key: _keyStorageKey, value: key);
+      await prefs.setString('db_encryption_key_backup', key); // Save fallback
+    } else {
+      // Ensure fallback is always kept in sync
+      final existingFallback = prefs.getString('db_encryption_key_backup');
+      if (existingFallback != key) {
+        await prefs.setString('db_encryption_key_backup', key);
+      }
     }
+    
     return key;
   }
 
