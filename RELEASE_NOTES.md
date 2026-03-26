@@ -1,4 +1,4 @@
-# Note Book — Initial Release v1.19.0
+# Note Book — Initial Release v1.19.1
 
 Welcome to the initial public release of **Note Book**, your all-in-one local-first productivity companion. Designed with privacy, speed, and versatility in mind, Note Book combines four powerful modules into a single, cohesive experience.
 

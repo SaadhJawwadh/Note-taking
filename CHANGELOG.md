@@ -2,7 +2,7 @@
 
 All notable changes to Note Book are documented here.
 
-## [1.19.0] - 2026-03-26
+## [1.19.1] - 2026-03-26
 
 ### ✨ New Features
 - **Streamlined UI/UX**: Removed the complex Kanban view in favor of a fast, high-performance List and Dynamic Grid interface inspired by Bundled Notes.
