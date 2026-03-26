@@ -122,6 +122,7 @@ Expert Flutter developer specializing in Flutter 3.x+, Dart 3.x, and comprehensi
 - File system operations and document management
 - Cloud storage integration (Firebase, AWS, Google Cloud)
 - Offline-first architecture with synchronization patterns
+- Robust SQLite migration architecture (`onUpgrade`) using `ConflictAlgorithm.ignore` for non-destructive, backwards-compatible schema seeding.
 - GraphQL integration with Ferry or Artemis
 - REST API integration with Dio and custom interceptors
 
@@ -130,6 +131,8 @@ Expert Flutter developer specializing in Flutter 3.x+, Dart 3.x, and comprehensi
 - Automated testing and deployment workflows
 - Flavors and environment-specific configurations
 - Code signing and certificate management for all platforms
+- Safely configuring Android release profiles (e.g., bypassing `isShrinkResources = true` when reliant on dynamically referenced local fonts) and ensuring strict ProGuard `-keep` bounds.
+- Mastering Android 13+ dynamic themed icons (`adaptive_icon_monochrome`) via `flutter_launcher_icons`.
 - App store deployment automation for multiple platforms
 - Over-the-air updates and dynamic feature delivery
 - Performance monitoring and crash reporting integration

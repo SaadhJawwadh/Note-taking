@@ -27,6 +27,8 @@ When instructed to use the Tester skill, you must execute the following roles an
 ## Phase 4: CI/CD Pipeline DevOps
 - Test all deployment or CI/CD related files, scripts, and configurations.
 - Ensure GitHub workflows and actions are properly updated and configured.
+- Check Android release boundaries (verify `isShrinkResources = false` if local fonts are used, and verify `proguard-rules.pro` retains essential background native isolates like Telephony or Sqflite).
+- Verify SQLite Database migrations (`onUpgrade`) to ensure seamless non-destructive schema transitions for updating existing clients without data loss.
 - Ensure a seamless upgrade and migration path from the older version, guaranteeing releases occur without conflicts.
 - Update the `README.md`, `CHANGELOG.md` (or equivalent change logs), and any relevant files related to library versions.
 - Ensure the system is completely up-to-date with clear change logs documented for the next version push.

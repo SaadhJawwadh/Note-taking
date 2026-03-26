@@ -36,6 +36,7 @@ metadata:
   - **Masonry/Staggered Grid** for visual-heavy mixed content.
   - **Uniform Grid** for organized, rigid alignment.
   - **Kanban Boards** for state-based or tag-based organization.
+  - **Settings & Configuration**: Refactor massive endless option lists into structured, categorized `ExpansionTile` groups. This dramatically reduces cognitive load and keeps advanced configuration discoverable but hidden.
 - Implement seamless state management to switch between these layouts fluently.
 
 ### 4. Advanced Gestures & Micro-interactions
@@ -44,3 +45,4 @@ metadata:
   - Drag-and-Drop organization using `LongPressDraggable` and `DragTarget`, paired with visual drop-zone feedback.
 - Refine layout transitions (like the `animations` package's `OpenContainer`) to use snappy, deliberate durations (around ~300ms) rather than slow fades.
 - Manage visual clutter actively. Handle edge cases like lengthy text overflow, rich link previews, and empty states gracefully, leaving plenty of whitespace.
+- **Frictionless Utility**: Design one-tap default behaviors for frequent actions (e.g., tapping a sync button assumes a default quick-fetch window instantly), burying complex multi-step dialogs inside long-presses or settings categories.
