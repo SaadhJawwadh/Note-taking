@@ -33,6 +33,10 @@ class NoteApp extends StatelessWidget {
     return DynamicColorBuilder(
       builder: (lightDynamic, darkDynamic) {
         final settings = Provider.of<SettingsProvider>(context);
+        
+        // Log for diagnostics in case of blank screen
+        debugPrint('NoteApp Build: Dynamic Scheme: ${lightDynamic != null}, ThemeMode: ${settings.themeMode}');
+
         return MaterialApp(
           title: 'Note Book',
           debugShowCheckedModeBanner: false,
@@ -48,8 +52,7 @@ class NoteApp extends StatelessWidget {
           ),
           themeMode: settings.themeMode,
           home: const AppLockScreen(child: HomeScreen()),
-          locale: const Locale('en',
-              'US'), // No changes needed based on grep, but good to be sure.
+          locale: const Locale('en', 'US'),
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
