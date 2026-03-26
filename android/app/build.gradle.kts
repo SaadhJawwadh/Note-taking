@@ -57,8 +57,8 @@ android {
                 signingConfigs.getByName("debug")
             }
 
-            // Code shrinking + resource shrinking (enabled for release builds)
-            isMinifyEnabled = true
+            // Temporarily disable shrinking to fix plugin stripping issues
+            isMinifyEnabled = false
             isShrinkResources = false
             isDebuggable = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")

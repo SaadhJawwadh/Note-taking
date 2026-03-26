@@ -23,8 +23,6 @@ class AppLockScreenState extends State<AppLockScreen>
   
   // Static to persist across widget rebuilds in the same app session
   static bool _isSessionAuthenticated = false;
-  
-  bool _isAuthenticating = false;
 
   @override
   void initState() {
@@ -61,10 +59,6 @@ class AppLockScreenState extends State<AppLockScreen>
       return;
     }
 
-    setState(() {
-      _isAuthenticating = true;
-    });
-
     try {
       final bool didAuthenticate = await auth.authenticate(
         localizedReason: 'Please authenticate to access the app',
@@ -81,12 +75,6 @@ class AppLockScreenState extends State<AppLockScreen>
       }
     } catch (e) {
       debugPrint('Authentication error: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isAuthenticating = false;
-        });
-      }
     }
   }
 

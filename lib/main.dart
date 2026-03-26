@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'data/settings_provider.dart';
 import 'data/transaction_category.dart';
 import 'services/sms_service.dart';
-import 'services/backup_service.dart';
 import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
 import 'screens/app_lock_screen.dart';

@@ -1,4 +1,4 @@
-# Flutter wrapper
+# General Flutter & Plugin Infrastructure
 -keep class io.flutter.app.** { *; }
 -keep class io.flutter.plugin.** { *; }
 -keep class io.flutter.util.** { *; }
@@ -7,66 +7,56 @@
 -keep class io.flutter.plugins.** { *; }
 -dontwarn io.flutter.embedding.**
 
-# Telephony plugin
-# Keep the entire telephony plugin namespace (BroadcastReceiver, Service, MethodHandler, etc.)
--keep class com.shounakmulay.telephony.** { *; }
--keepnames class com.shounakmulay.telephony.** { *; }
-# BroadcastReceiver must survive shrinking — Android instantiates it by name
--keep class com.shounakmulay.telephony.sms.IncomingSmsReceiver { *; }
-
-# permission_handler plugin
--keep class com.baseflow.permissionhandler.** { *; }
-
-# Dart background isolate entry-points are called by name; keep them
-# (The @pragma('vm:entry-point') annotation handles this at the Dart level,
-#  but keep the top-level JNI bridge just in case.)
--keep class * extends io.flutter.embedding.engine.plugins.FlutterPlugin
+# Keep all implementations of Flutter interfaces to ensure they are found via reflection
+-keep class * implements io.flutter.embedding.engine.plugins.FlutterPlugin
 -keep class * implements io.flutter.plugin.common.MethodChannel$MethodCallHandler
+-keep class * implements io.flutter.plugin.common.EventChannel$StreamHandler
 
-# sqflite — keeps sqlite JNI helpers
+# Pigeon-generated classes (used by shared_preferences, workmanager, etc.)
+-keep class **.Messages { *; }
+-keep class **.Messages$* { *; }
+-keep class dev.flutter.pigeon.** { *; }
+
+# sqflite & SQLCipher
 -keep class com.tekartik.sqflite.** { *; }
-
-# SQLCipher — keep all native classes and members
 -keep class net.sqlcipher.** { *; }
 -keep class net.sqlcipher.database.** { *; }
 -keep class net.sqlcipher.database.SQLiteDatabase { *; }
 -dontwarn net.sqlcipher.**
 
-# Suppress warnings for libraries that reference missing classes
--dontwarn com.shounakmulay.telephony.**
+# Shared Preferences
+-keep class io.flutter.plugins.sharedpreferences.** { *; }
+-keep class dev.flutter.pigeon.shared_preferences_android.** { *; }
 
-# WorkManager (background task scheduling)
--keep class androidx.work.** { *; }
--keep class be.tramckrijte.workmanager.** { *; }
--keep class com.example.note_taking_app.MainActivity { *; }
--keep class io.flutter.app.FlutterApplication { *; }
--keep class io.flutter.plugin.common.MethodChannel$MethodCallHandler { *; }
+# Package Info Plus
+-keep class dev.fluttercommunity.plus.packageinfo.** { *; }
+-keep class dev.fluttercommunity.plus.packageinfo_platform_interface.** { *; }
 
-# FFmpeg Kit - keep native methods
--keep class com.arthenica.ffmpegkit.** { *; }
--keepclassmembers class * { native <methods>; }
-
-# Local Auth
--keep class androidx.biometric.** { *; }
--keep class io.flutter.plugins.localauth.** { *; }
-
-# Image Picker
--keep class io.flutter.plugins.imagepicker.** { *; }
+# Receive Sharing Intent
+-keep class com.kasem.receive_sharing_intent.** { *; }
 
 # File Picker
 -keep class com.mr.flutter.plugin.filepicker.** { *; }
+-keep class miguelruivo.flutter.plugins.filepicker.** { *; }
 
-# Notifications
+# WorkManager
+-keep class be.tramckrijte.workmanager.** { *; }
+-keep class androidx.work.** { *; }
+
+# Telephony
+-keep class com.shounakmulay.telephony.** { *; }
+-dontwarn com.shounakmulay.telephony.**
+
+# Other Plugins
+-keep class com.baseflow.permissionhandler.** { *; }
+-keep class com.arthenica.ffmpegkit.** { *; }
+-keep class androidx.biometric.** { *; }
+-keep class io.flutter.plugins.localauth.** { *; }
+-keep class io.flutter.plugins.imagepicker.** { *; }
 -keep class com.dexterous.flutterlocalnotifications.** { *; }
-
-# URL Launcher
 -keep class io.flutter.plugins.urllauncher.** { *; }
-
-# Share Plus
 -keep class dev.fluttercommunity.plus.share.** { *; }
-
-# Gal (image saver)
 -keep class gal.** { *; }
 
-# General Flutter plugins
--keep class io.flutter.plugins.** { *; }
+# General JNI keep
+-keepclassmembers class * { native <methods>; }
