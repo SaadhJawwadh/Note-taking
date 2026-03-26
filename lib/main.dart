@@ -12,11 +12,27 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:workmanager/workmanager.dart';
 
+@pragma('vm:entry-point')
+void callbackDispatcher() {
+  Workmanager().executeTask((task, inputData) async {
+    return true;
+  });
+}
+
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Workmanager().initialize(callbackDispatcher);
-  await TransactionCategory.reload();
-  await SmsService.reloadSmsContacts();
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+    
+    // Initialize services but don't let them block the app if they fail
+    await Future.wait([
+      Workmanager().initialize(callbackDispatcher, isInDebugMode: false).catchError((e) => debugPrint('Workmanager error: $e')),
+      TransactionCategory.reload().catchError((e) => debugPrint('Category reload error: $e')),
+      SmsService.reloadSmsContacts().catchError((e) => debugPrint('SmsService reload error: $e')),
+    ]);
+  } catch (e) {
+    debugPrint('Critical initialization error: $e');
+  }
+
   runApp(
     ChangeNotifierProvider(
       create: (_) => SettingsProvider(),

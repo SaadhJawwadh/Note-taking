@@ -38,6 +38,9 @@
 # WorkManager (background task scheduling)
 -keep class androidx.work.** { *; }
 -keep class be.tramckrijte.workmanager.** { *; }
+-keep class com.example.note_taking_app.MainActivity { *; }
+-keep class io.flutter.app.FlutterApplication { *; }
+-keep class io.flutter.plugin.common.MethodChannel$MethodCallHandler { *; }
 
 # FFmpeg Kit - keep native methods
 -keep class com.arthenica.ffmpegkit.** { *; }
