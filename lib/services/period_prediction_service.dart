@@ -26,7 +26,13 @@ class PeriodPredictionService {
       final currentPeriod = logs[i].startDate;
       final previousPeriod = logs[i + 1].startDate;
 
-      final diff = currentPeriod.difference(previousPeriod).inDays;
+      // Ensure we compare midnight to midnight in UTC
+      final currentUtc =
+          DateTime.utc(currentPeriod.year, currentPeriod.month, currentPeriod.day);
+      final previousUtc = DateTime.utc(
+          previousPeriod.year, previousPeriod.month, previousPeriod.day);
+
+      final diff = currentUtc.difference(previousUtc).inDays;
       // Filter out unrealistic cycles (e.g. less than 15 days or more than 60 days) to prevent skewed averages
       if (diff >= 15 && diff <= 60) {
         totalDays += diff;
@@ -52,7 +58,9 @@ class PeriodPredictionService {
     final latestLog = logs.first; // newest first
     final avgCycleLength = await calculateAverageCycleLength();
 
-    return latestLog.startDate.add(Duration(days: avgCycleLength));
+    return DateTime.utc(latestLog.startDate.year, latestLog.startDate.month,
+            latestLog.startDate.day)
+        .add(Duration(days: avgCycleLength));
   }
 
   /// Calculates the estimated ovulation date for the *current* cycle
@@ -71,9 +79,9 @@ class PeriodPredictionService {
     if (nextPeriod == null) return null;
 
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
+    final today = DateTime.utc(now.year, now.month, now.day);
     final nextPeriodDay =
-        DateTime(nextPeriod.year, nextPeriod.month, nextPeriod.day);
+        DateTime.utc(nextPeriod.year, nextPeriod.month, nextPeriod.day);
 
     return nextPeriodDay.difference(today).inDays;
   }

@@ -1,4 +1,4 @@
-import 'dart:convert';
+
 
 class Note {
   final String id;
@@ -41,36 +41,25 @@ class Note {
       'isArchived': isArchived ? 1 : 0,
       'imagePath': imagePath,
       'category': category,
-      'tags': jsonEncode(tags), // Store as JSON string
       'deletedAt': deletedAt?.toIso8601String(),
     };
   }
 
   factory Note.fromMap(Map<String, dynamic> map) {
-    List<String> parsedTags = [];
-    if (map['tags'] != null) {
-      try {
-        parsedTags = List<String>.from(jsonDecode(map['tags']));
-      } catch (e) {
-        // Fallback for empty or invalid JSON
-        parsedTags = [];
-      }
-    }
-
     return Note(
       id: map['id'],
-      title: map['title'],
-      content: map['content'],
-      dateCreated: DateTime.parse(map['dateCreated']),
-      dateModified: DateTime.parse(map['dateModified']),
-      color: map['color'],
-      isPinned: map['isPinned'] == 1,
-      isArchived: (map['isArchived'] ?? 0) == 1,
+      title: map['title'] ?? '',
+      content: map['content'] ?? '',
+      dateCreated: map['dateCreated'] != null ? DateTime.tryParse(map['dateCreated'].toString()) ?? DateTime.now() : DateTime.now(),
+      dateModified: map['dateModified'] != null ? DateTime.tryParse(map['dateModified'].toString()) ?? DateTime.now() : DateTime.now(),
+      color: map['color'] ?? 0xFF252529,
+      isPinned: map['isPinned'] == 1 || map['isPinned'] == true,
+      isArchived: map['isArchived'] == 1 || map['isArchived'] == true,
       imagePath: map['imagePath'],
       category: map['category'] ?? 'All Notes',
-      tags: parsedTags,
+      tags: [], // Tags will be populated by DatabaseHelper
       deletedAt:
-          map['deletedAt'] != null ? DateTime.parse(map['deletedAt']) : null,
+          map['deletedAt'] != null ? DateTime.tryParse(map['deletedAt'].toString()) : null,
     );
   }
 

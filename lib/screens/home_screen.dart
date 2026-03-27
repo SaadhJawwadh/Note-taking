@@ -131,35 +131,51 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
 
     // 1. Fetch tags and colors (small tables)
-    final tags = await DatabaseHelper.instance.getAllTags();
-    final colors = await DatabaseHelper.instance.getAllTagColors();
+    try {
+      final tags = await DatabaseHelper.instance.getAllTags();
+      final colors = await DatabaseHelper.instance.getAllTagColors();
 
-    // 2. Fetch first page of notes
-    final fetchedNotes = await DatabaseHelper.instance.readAllNotes(
-      limit: _pageSize,
-      offset: 0,
-    );
+      // 2. Fetch first page of notes
+      final fetchedNotes = await DatabaseHelper.instance.readAllNotes(
+        limit: _pageSize,
+        offset: 0,
+      );
 
-    // 3. Optional: Still sort tags by MRU based on ALL active notes (lightweight query)
-    // For now, we'll just use the tags as fetched or from the first page if we want MRU.
-    // Let's assume tags are already somewhat ordered or order doesn't matter as much as performance.
-    
-    allTags = ['All', ...tags];
-    if (!allTags.contains(selectedTag)) {
-      selectedTag = 'All';
-    }
+      // 3. Optional: Still sort tags by MRU based on ALL active notes (lightweight query)
+      // For now, we'll just use the tags as fetched or from the first page if we want MRU.
+      // Let's assume tags are already somewhat ordered or order doesn't matter as much as performance.
+      
+      allTags = ['All', ...tags];
+      if (!allTags.contains(selectedTag)) {
+        selectedTag = 'All';
+      }
 
-    _tagColors = colors;
-    
-    if (mounted) {
-      setState(() {
-        notes = fetchedNotes;
-        filterNotes();
-        isLoading = false;
-        if (fetchedNotes.length < _pageSize) {
-          _hasMoreNotes = false;
-        }
-      });
+      _tagColors = colors;
+      
+      if (mounted) {
+        setState(() {
+          notes = fetchedNotes;
+          filterNotes();
+          isLoading = false;
+          if (fetchedNotes.length < _pageSize) {
+            _hasMoreNotes = false;
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Error refreshing notes: $e');
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load notes: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -547,9 +563,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildNotesView(BuildContext context, SettingsProvider settings) {
     return Scaffold(
-      body: CustomScrollView(
-        controller: _scrollController,
-        slivers: [
+      body: AnimationLimiter(
+        child: CustomScrollView(
+          controller: _scrollController,
+          slivers: [
           SliverAppBar(
             backgroundColor: Colors.transparent,
             floating: true,
@@ -765,12 +782,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           else
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
-              sliver: AnimationLimiter(
-                child: _buildSliverLayout(settings),
-              ),
+              sliver: _buildSliverLayout(settings),
             ),
         ],
       ),
+    ),
       floatingActionButton: OpenContainer<bool>(
         transitionType: ContainerTransitionType.fadeThrough,
         transitionDuration: const Duration(milliseconds: 300),

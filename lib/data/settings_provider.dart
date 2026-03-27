@@ -377,19 +377,19 @@ class SettingsProvider extends ChangeNotifier {
       if (map.containsKey('showFinancialManager')) {
         final show = map['showFinancialManager'];
         if (show is bool) {
-          _showFinancialManager = show;
+          await setShowFinancialManager(show);
         }
       }
       if (map.containsKey('showFileConverter')) {
         final show = map['showFileConverter'];
         if (show is bool) {
-          _showFileConverter = show;
+          await setShowFileConverter(show);
         }
       }
       if (map.containsKey('isConverterLite')) {
         final isLite = map['isConverterLite'];
         if (isLite is bool) {
-          _isConverterLite = isLite;
+          await setIsConverterLite(isLite);
         }
       }
       if (map.containsKey('currency')) {

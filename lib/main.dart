@@ -24,7 +24,7 @@ Future<void> main() async {
     
     // Initialize services but don't let them block the app if they fail
     await Future.wait([
-      Workmanager().initialize(callbackDispatcher, isInDebugMode: false).catchError((e) => debugPrint('Workmanager error: $e')),
+      Workmanager().initialize(callbackDispatcher).catchError((e) => debugPrint('Workmanager error: $e')),
       TransactionCategory.reload().catchError((e) => debugPrint('Category reload error: $e')),
       SmsService.reloadSmsContacts().catchError((e) => debugPrint('SmsService reload error: $e')),
     ]);

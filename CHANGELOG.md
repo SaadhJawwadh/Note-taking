@@ -2,6 +2,23 @@
 
 All notable changes to Note Book are documented here.
 
+## [1.20.0] - 2026-03-27
+
+### 🔒 Stability & Data Integrity (Critical Fixes)
+- **Database Self-Healing**: If the encrypted database file is corrupted from a prior bad run, the app now automatically detects the corruption (SQLCipher Code 26), removes the corrupt file and WAL/SHM artifacts, and rebuilds a fresh database on the same launch — eliminating permanent crash loops.
+- **Concurrent Initialization Lock**: Implemented a singleton Future lock in `DatabaseHelper.database` to guarantee `_initDB` runs exactly once per app session, preventing the race condition that caused SQLCipher HMAC page corruption.
+
+### ✨ Backup Engine Overhaul (v9)
+- **Complete Settings Export**: Backup export now captures **all** settings via `SettingsProvider.toBackupMap()`. Previous exports (v8 and earlier) were missing `noteViewMode`, `showFileConverter`, `customExpenseRules`, `customIncomeRules`, `preferredVideoFormat`, `preferredImageFormat`, `videoResolutionLimit`, and `keepMetadata`.
+- **Settings Restore Hardened**: `restoreFromBackupMap` now calls setter methods (not direct field writes) ensuring all restored settings are atomically persisted to SharedPreferences.
+- **Backup schema version → 9**. All v1–v8 backups import correctly.
+
+### 🛠 Improvements
+- **Animation Stability**: `AnimationLimiter` now correctly wraps the `CustomScrollView` (not slivers inside it) — resolving a `Hero._allHeroesFor` stack overflow during page transitions.
+- **Workmanager cleanup**: Removed deprecated `isInDebugMode` parameter. `flutter analyze` → zero errors/warnings.
+
+---
+
 ## [1.19.1] - 2026-03-26
 
 ### ✨ New Features

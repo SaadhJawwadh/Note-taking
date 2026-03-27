@@ -25,8 +25,9 @@ class SettingsScreen extends StatelessWidget {
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: Consumer<SettingsProvider>(
         builder: (context, settings, child) {
-          return CustomScrollView(
-            slivers: [
+          return AnimationLimiter(
+            child: CustomScrollView(
+              slivers: [
               SliverAppBar(
                 backgroundColor: Colors.transparent,
                 floating: true,
@@ -54,10 +55,9 @@ class SettingsScreen extends StatelessWidget {
               ),
               SliverPadding(
                 padding: const EdgeInsets.all(16),
-                sliver: AnimationLimiter(
-                  child: SliverList(
-                    delegate: SliverChildListDelegate(
-                      AnimationConfiguration.toStaggeredList(
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate(
+                    AnimationConfiguration.toStaggeredList(
                         duration: const Duration(milliseconds: 220),
                         childAnimationBuilder: (widget) => SlideAnimation(verticalOffset: 24.0, child: FadeInAnimation(child: widget)),
                         children: [
@@ -223,8 +223,8 @@ class SettingsScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),

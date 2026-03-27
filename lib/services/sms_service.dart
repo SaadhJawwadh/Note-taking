@@ -37,6 +37,8 @@ class SmsService {
       if (target != null) {
         await DatabaseHelper.instance.deleteTransaction(target.id!);
       }
+      // Always delete the reversal transaction itself to keep the DB clean
+      await DatabaseHelper.instance.deleteTransaction(inserted.id!);
     }
   }
 
@@ -112,6 +114,7 @@ class SmsService {
         if (target != null) {
           await DatabaseHelper.instance.deleteTransaction(target.id!);
         }
+        await DatabaseHelper.instance.deleteTransaction(inserted.id!);
       }
     }
     return count;
@@ -143,19 +146,40 @@ class SmsService {
 
 @pragma('vm:entry-point')
 Future<void> backgroundMessageHandler(SmsMessage message) async {
-  // We can't access SharedPreferences/DB config easily in background without reloading them, but for basic logging we can try.
-  // Ideally this would reload prefs in the isolate or just pass empty lists if not available.
+  // Setup SharedPreferences and database config for the isolate
+  final prefs = await SharedPreferences.getInstance();
+  final customExpenseRules = prefs.getStringList('customExpenseRules') ?? [];
+  final customIncomeRules = prefs.getStringList('customIncomeRules') ?? [];
+  
+  final contacts = await DatabaseHelper.instance.getAllSmsContacts();
+  final allowed = <String>{};
+  final blocked = <String>{};
+  for (final c in contacts) {
+    if (c.isBlocked) {
+      blocked.addAll(c.senderIds.map((s) => s.toLowerCase()));
+    } else {
+      allowed.addAll(c.senderIds.map((s) => s.toLowerCase()));
+    }
+  }
+
   final transaction = SmsParser.parseMessage(
     body: message.body ?? '',
     address: message.address ?? '',
     messageId: message.id,
     messageDate: message.date,
-    allowedSenderIds: {},
-    blockedSenderIds: {},
-    customExpenseRules: [],
-    customIncomeRules: [],
+    allowedSenderIds: allowed,
+    blockedSenderIds: blocked,
+    customExpenseRules: customExpenseRules,
+    customIncomeRules: customIncomeRules,
   );
   if (transaction != null) {
-    await DatabaseHelper.instance.createSmsTransaction(transaction);
+    final inserted = await DatabaseHelper.instance.createSmsTransaction(transaction);
+    if (inserted != null && transaction.category == SmsConstants.reversalSentinel) {
+      final target = await DatabaseHelper.instance.findReversalTarget(transaction.amount, transaction.date);
+      if (target != null) {
+        await DatabaseHelper.instance.deleteTransaction(target.id!);
+      }
+      await DatabaseHelper.instance.deleteTransaction(inserted.id!);
+    }
   }
 }

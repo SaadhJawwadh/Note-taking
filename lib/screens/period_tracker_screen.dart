@@ -15,7 +15,8 @@ class PeriodTrackerScreen extends StatefulWidget {
 }
 
 class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> {
-  DateTime _focusedDay = DateTime.now();
+  DateTime _focusedDay = DateTime.utc(
+      DateTime.now().year, DateTime.now().month, DateTime.now().day);
   DateTime? _selectedDay;
   List<PeriodLog> _logs = [];
   bool _isLoading = true;
@@ -42,15 +43,13 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> {
 
   // Helper to check if a specific day is part of any logged period
   PeriodLog? _getLogForDay(DateTime day) {
+    final targetDay = DateTime.utc(day.year, day.month, day.day);
     for (final log in _logs) {
       final startDate =
-          DateTime(log.startDate.year, log.startDate.month, log.startDate.day);
+          DateTime.utc(log.startDate.year, log.startDate.month, log.startDate.day);
       final endDate = log.endDate != null
-          ? DateTime(log.endDate!.year, log.endDate!.month, log.endDate!.day)
-          : DateTime
-              .now(); // If ongoing, consider today as end for highlighting purposes
-
-      final targetDay = DateTime(day.year, day.month, day.day);
+          ? DateTime.utc(log.endDate!.year, log.endDate!.month, log.endDate!.day)
+          : DateTime.utc(DateTime.now().year, DateTime.now().month, DateTime.now().day);
 
       if (targetDay.isAtSameMomentAs(startDate) ||
           targetDay.isAtSameMomentAs(endDate) ||
@@ -64,8 +63,8 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> {
 
   bool _isPredictedDay(DateTime day) {
     if (_predictedNextPeriod == null) return false;
-    final d = DateTime(day.year, day.month, day.day);
-    final p = DateTime(_predictedNextPeriod!.year, _predictedNextPeriod!.month,
+    final d = DateTime.utc(day.year, day.month, day.day);
+    final p = DateTime.utc(_predictedNextPeriod!.year, _predictedNextPeriod!.month,
         _predictedNextPeriod!.day);
     // Highlight a likely 5-day window for the next period
     return d.isAtSameMomentAs(p) ||
@@ -74,8 +73,8 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> {
 
   bool _isOvulationDay(DateTime day) {
     if (_predictedOvulation == null) return false;
-    final d = DateTime(day.year, day.month, day.day);
-    final p = DateTime(_predictedOvulation!.year, _predictedOvulation!.month,
+    final d = DateTime.utc(day.year, day.month, day.day);
+    final p = DateTime.utc(_predictedOvulation!.year, _predictedOvulation!.month,
         _predictedOvulation!.day);
     // highlight 3 day block around ovulation
     final start = p.subtract(const Duration(days: 1));
@@ -90,21 +89,47 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> {
   }
 
   Future<void> _togglePeriodStatus() async {
+    final now = DateTime.now();
+    final todayUtc = DateTime.utc(now.year, now.month, now.day);
+    
     final ongoing = _getCurrentOngoingPeriod();
     if (ongoing != null) {
       // Stop the period
-      final updated = ongoing.copyWith(endDate: DateTime.now());
+      final updated = ongoing.copyWith(endDate: todayUtc);
       await DatabaseHelper.instance.updatePeriodLog(updated);
     } else {
       // Start new period
       final newLog = PeriodLog(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        startDate: DateTime.now(),
+        startDate: todayUtc,
         intensity: 'Medium',
       );
       await DatabaseHelper.instance.createPeriodLog(newLog);
     }
     await _loadData(); // Re-fetch logs and predictions
+  }
+
+  Future<void> _deleteLog(PeriodLog log) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Log'),
+        content: const Text('Are you sure you want to delete this period log?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Delete', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await DatabaseHelper.instance.deletePeriodLog(log.id);
+      await _loadData();
+    }
   }
 
   Future<void> _updateIntensity(PeriodLog log, String newIntensity) async {
@@ -348,7 +373,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> {
               ),
             ),
 
-            // ── Today's Log Card (Start/Stop/Intensity) ───────────────────
+            // ── Selected Day Log Card (Start/Stop/Intensity/Delete) ────────
             SliverToBoxAdapter(
               child: AnimationConfiguration.staggeredList(
                 position: 2,
@@ -358,92 +383,128 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> {
                   child: FadeInAnimation(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-                      child: Card(
-                        elevation: 0,
-                        color: isPeriodActive
-                            ? periodColor
-                            : colorScheme.surfaceContainerHighest,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20)),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            children: [
-                              Text(
-                                isPeriodActive
-                                    ? 'End your period'
-                                    : 'Start your period',
-                                style: theme.textTheme.titleLarge?.copyWith(
-                                  color: isPeriodActive
-                                      ? onPeriodColor
-                                      : colorScheme.onSurface,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              FilledButton.icon(
-                                onPressed: _togglePeriodStatus,
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: isPeriodActive
-                                      ? onPeriodColor
-                                      : colorScheme.primary,
-                                  foregroundColor: isPeriodActive
-                                      ? periodColor
-                                      : colorScheme.onPrimary,
-                                  minimumSize: const Size(double.infinity, 56),
-                                ),
-                                icon: Icon(isPeriodActive
-                                    ? Icons.stop
-                                    : Icons.play_arrow),
-                                label: Text(
-                                  isPeriodActive ? 'Stop' : 'Start',
-                                  style: const TextStyle(fontSize: 18),
-                                ),
-                              ),
-                              if (isPeriodActive) ...[
-                                const SizedBox(height: 24),
+                      child: Builder(builder: (context) {
+                        final selectedLog =
+                            _selectedDay != null ? _getLogForDay(_selectedDay!) : null;
+                        final now = DateTime.now();
+                        final today = DateTime.utc(now.year, now.month, now.day);
+                        final isSelectedToday = _selectedDay != null &&
+                            isSameDay(_selectedDay, today);
+
+                        return Card(
+                          elevation: 0,
+                          color: isPeriodActive && isSelectedToday
+                              ? periodColor
+                              : (selectedLog != null
+                                  ? periodColor.withValues(alpha: 0.5)
+                                  : colorScheme.surfaceContainerHighest),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20)),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              children: [
                                 Text(
-                                  'Flow Intensity',
-                                  style: theme.textTheme.titleMedium
-                                      ?.copyWith(color: onPeriodColor),
-                                ),
-                                const SizedBox(height: 12),
-                                SegmentedButton<String>(
-                                  segments: const [
-                                    ButtonSegment(
-                                        value: 'Spotting',
-                                        label: Text('Spotting',
-                                            style: TextStyle(fontSize: 12))),
-                                    ButtonSegment(
-                                        value: 'Light',
-                                        label: Text('Light',
-                                            style: TextStyle(fontSize: 12))),
-                                    ButtonSegment(
-                                        value: 'Medium',
-                                        label: Text('Medium',
-                                            style: TextStyle(fontSize: 12))),
-                                    ButtonSegment(
-                                        value: 'Heavy',
-                                        label: Text('Heavy',
-                                            style: TextStyle(fontSize: 12))),
-                                  ],
-                                  selected: {ongoingPeriod.intensity},
-                                  onSelectionChanged:
-                                      (Set<String> newSelection) {
-                                    _updateIntensity(
-                                        ongoingPeriod, newSelection.first);
-                                  },
-                                  style: SegmentedButton.styleFrom(
-                                    backgroundColor: periodColor,
-                                    foregroundColor: onPeriodColor,
-                                    selectedForegroundColor: periodColor,
-                                    selectedBackgroundColor: onPeriodColor,
+                                  selectedLog != null
+                                      ? 'Logged Period'
+                                      : (isSelectedToday
+                                          ? (isPeriodActive
+                                              ? 'End your period'
+                                              : 'Start your period')
+                                          : 'No log for this day'),
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    color: (isPeriodActive && isSelectedToday) ||
+                                            selectedLog != null
+                                        ? onPeriodColor
+                                        : colorScheme.onSurface,
                                   ),
                                 ),
-                              ]
-                            ],
+                                if (isSelectedToday) ...[
+                                  const SizedBox(height: 16),
+                                  FilledButton.icon(
+                                    onPressed: _togglePeriodStatus,
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: isPeriodActive
+                                          ? onPeriodColor
+                                          : colorScheme.primary,
+                                      foregroundColor: isPeriodActive
+                                          ? periodColor
+                                          : colorScheme.onPrimary,
+                                      minimumSize: const Size(double.infinity, 56),
+                                    ),
+                                    icon: Icon(isPeriodActive
+                                        ? Icons.stop
+                                        : Icons.play_arrow),
+                                    label: Text(
+                                      isPeriodActive ? 'Stop' : 'Start',
+                                      style: const TextStyle(fontSize: 18),
+                                    ),
+                                  ),
+                                ],
+                                if (selectedLog != null) ...[
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Intensity: ${selectedLog.intensity}',
+                                    style: theme.textTheme.bodyLarge
+                                        ?.copyWith(color: onPeriodColor),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  OutlinedButton.icon(
+                                    onPressed: () => _deleteLog(selectedLog),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.red,
+                                      side: const BorderSide(color: Colors.red),
+                                    ),
+                                    icon: const Icon(Icons.delete_outline),
+                                    label: const Text('Delete Log'),
+                                  ),
+                                ],
+                                if (isPeriodActive && isSelectedToday) ...[
+                                  const SizedBox(height: 24),
+                                  Text(
+                                    'Flow Intensity',
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(color: onPeriodColor),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  SegmentedButton<String>(
+                                    segments: const [
+                                      ButtonSegment(
+                                          value: 'Spotting',
+                                          label: Text('Spotting',
+                                              style: TextStyle(fontSize: 12))),
+                                      ButtonSegment(
+                                          value: 'Light',
+                                          label: Text('Light',
+                                              style: TextStyle(fontSize: 12))),
+                                      ButtonSegment(
+                                          value: 'Medium',
+                                          label: Text('Medium',
+                                              style: TextStyle(fontSize: 12))),
+                                      ButtonSegment(
+                                          value: 'Heavy',
+                                          label: Text('Heavy',
+                                              style: TextStyle(fontSize: 12))),
+                                    ],
+                                    selected: {ongoingPeriod.intensity},
+                                    onSelectionChanged:
+                                        (Set<String> newSelection) {
+                                      _updateIntensity(
+                                          ongoingPeriod, newSelection.first);
+                                    },
+                                    style: SegmentedButton.styleFrom(
+                                      backgroundColor: periodColor,
+                                      foregroundColor: onPeriodColor,
+                                      selectedForegroundColor: periodColor,
+                                      selectedBackgroundColor: onPeriodColor,
+                                    ),
+                                  ),
+                                ]
+                              ],
+                            ),
                           ),
-                        ),
-                      ),
+                        );
+                      }),
                     ),
                   ),
                 ),

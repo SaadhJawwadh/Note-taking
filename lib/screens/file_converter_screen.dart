@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:gal/gal.dart';
 import '../services/ffmpeg_service.dart';
 import '../data/settings_provider.dart';
+import 'app_lock_screen.dart';
 
 class FileConverterScreen extends StatefulWidget {
   final List<String>? initialFilePaths;
@@ -35,7 +36,16 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
     }
   }
 
+  @override
+  void dispose() {
+    FfmpegService.instance.cancelAll();
+    super.dispose();
+  }
+
   void _pickAndConvertFiles() async {
+    // Unlock session so we don't get locked out after returning from file picker
+    AppLockScreen.unlockSession();
+
     final result = await FilePicker.platform.pickFiles(
       type: FileType.any,
       allowMultiple: true,
@@ -206,6 +216,9 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
 
   Future<void> _saveToGallery(String path) async {
     try {
+      // Unlock session to avoid locking after permission dialog/intent return
+      AppLockScreen.unlockSession();
+
       final hasAccess = await Gal.hasAccess();
       if (!hasAccess) {
         final granted = await Gal.requestAccess();

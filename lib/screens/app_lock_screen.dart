@@ -23,6 +23,7 @@ class AppLockScreenState extends State<AppLockScreen>
   
   // Static to persist across widget rebuilds in the same app session
   static bool _isSessionAuthenticated = false;
+  bool _isInBackground = false;
 
   @override
   void initState() {
@@ -41,9 +42,18 @@ class AppLockScreenState extends State<AppLockScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Only re-lock if the app is paused and we want to enforce strict locking.
-    // However, the requirement is "once per session until device is locked".
-    // We will keep the session authenticated while the app is alive.
+    setState(() {
+      _isInBackground = state != AppLifecycleState.resumed;
+      if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+        // App went to the background, so require authentication again on resume
+        _isSessionAuthenticated = false;
+      }
+    });
+
+    if (state == AppLifecycleState.resumed && !_isSessionAuthenticated) {
+      // Prompt for authentication immediately when coming back to foreground
+      _checkAuth(context);
+    }
   }
 
   Future<void> _checkAuth(BuildContext context) async {
@@ -82,30 +92,35 @@ class AppLockScreenState extends State<AppLockScreen>
   Widget build(BuildContext context) {
     final settings = Provider.of<SettingsProvider>(context);
 
-    if (!settings.appLockEnabled || _isSessionAuthenticated) {
+    if (!settings.appLockEnabled) {
       return widget.child;
     }
 
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.lock_outline,
-                size: 80, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(height: 24),
-            Text(
-              'App Locked',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => _checkAuth(context),
-              child: const Text('Unlock'),
-            ),
-          ],
+    if (_isInBackground || !_isSessionAuthenticated) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.lock_outline,
+                  size: 80, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(height: 24),
+              Text(
+                'App Locked',
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+              const SizedBox(height: 16),
+              if (!_isInBackground)
+                ElevatedButton(
+                  onPressed: () => _checkAuth(context),
+                  child: const Text('Unlock'),
+                ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    }
+
+    return widget.child;
   }
 }

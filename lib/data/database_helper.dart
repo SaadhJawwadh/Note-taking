@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path/path.dart';
@@ -16,6 +17,7 @@ import 'database_seed.dart';
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
+  static Future<Database>? _databaseFuture;
 
   static const _secureStorage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
@@ -25,10 +27,19 @@ class DatabaseHelper {
 
   DatabaseHelper._init();
 
-  Future<Database> get database async {
-    if (_database != null) return _database!;
-    _database = await _initDB('notes.db');
-    return _database!;
+  Future<Database> get database {
+    if (_database != null) return Future.value(_database!);
+    
+    // Prevent concurrent initialization calls which can corrupt SQLCipher
+    _databaseFuture ??= _initDB('notes.db').then((db) {
+      _database = db;
+      return db;
+    }).catchError((error) {
+      _databaseFuture = null; // Reset on failure so we can try again
+      throw error;
+    });
+    
+    return _databaseFuture!;
   }
 
   static Future<String> _getOrCreateEncryptionKey() async {
@@ -38,10 +49,13 @@ class DatabaseHelper {
     } catch (_) {}
 
     final prefs = await SharedPreferences.getInstance();
+    
     if (key == null || key.isEmpty) {
       key = prefs.getString('db_encryption_key_backup');
       if (key != null && key.isNotEmpty) {
-        await _secureStorage.write(key: _keyStorageKey, value: key);
+        try {
+          await _secureStorage.write(key: _keyStorageKey, value: key);
+        } catch (_) {}
       }
     }
 
@@ -50,7 +64,9 @@ class DatabaseHelper {
       final bytes = List<int>.generate(16, (_) => random.nextInt(256));
       key = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
       
-      await _secureStorage.write(key: _keyStorageKey, value: key);
+      try {
+        await _secureStorage.write(key: _keyStorageKey, value: key);
+      } catch (_) {}
       await prefs.setString('db_encryption_key_backup', key);
     } else {
       final existingFallback = prefs.getString('db_encryption_key_backup');
@@ -73,14 +89,43 @@ class DatabaseHelper {
       }
     }
 
-    return await openDatabase(
-      path,
-      password: password,
-      version: 13,
-      onCreate: _createDB,
-      onUpgrade: _upgradeDB,
-    );
+    try {
+      return await openDatabase(
+        path,
+        password: password,
+        version: 13,
+        onCreate: _createDB,
+        onUpgrade: _upgradeDB,
+      );
+    } catch (e) {
+      // If the database file is corrupted (e.g., Code 26 from a previous bad
+      // concurrent init), delete it and create a fresh one. This is a
+      // last-resort self-healing measure.
+      if (e.toString().contains('open_failed') || e.toString().contains('26')) {
+        debugPrint('DatabaseHelper: Corrupt database detected, resetting...');
+        try {
+          if (await dbFile.exists()) await dbFile.delete();
+          // Also delete WAL and SHM files if they exist
+          final walFile = File('$path-wal');
+          final shmFile = File('$path-shm');
+          if (await walFile.exists()) await walFile.delete();
+          if (await shmFile.exists()) await shmFile.delete();
+        } catch (deleteError) {
+          debugPrint('DatabaseHelper: Could not delete corrupt file: $deleteError');
+        }
+        // Retry once with a fresh database
+        return await openDatabase(
+          path,
+          password: password,
+          version: 13,
+          onCreate: _createDB,
+          onUpgrade: _upgradeDB,
+        );
+      }
+      rethrow;
+    }
   }
+
 
   static Future<bool> _isUnencryptedDb(String path) async {
     Database? db;
@@ -273,6 +318,30 @@ class DatabaseHelper {
     }
   }
 
+  Future<Note> _populateNoteTags(Note note) async {
+    final db = await instance.database;
+    final result = await db.query('note_tags', where: 'note_id = ?', whereArgs: [note.id]);
+    note.tags = result.map((row) => row['tag_name'] as String).toList();
+    return note;
+  }
+
+  Future<List<Note>> _populateNotesTags(List<Note> notes) async {
+    if (notes.isEmpty) return notes;
+    final db = await instance.database;
+    final ids = notes.map((n) => "'${n.id}'").join(',');
+    final results = await db.rawQuery('SELECT note_id, tag_name FROM note_tags WHERE note_id IN ($ids)');
+    final tagMap = <String, List<String>>{};
+    for (var row in results) {
+      final id = row['note_id'] as String;
+      final tag = row['tag_name'] as String;
+      tagMap.putIfAbsent(id, () => []).add(tag);
+    }
+    for (var note in notes) {
+      note.tags = tagMap[note.id] ?? [];
+    }
+    return notes;
+  }
+
   // Note CRUD
   Future<void> createNote(Note note) async {
     final db = await instance.database;
@@ -288,19 +357,26 @@ class DatabaseHelper {
   Future<Note?> readNote(String id) async {
     final db = await instance.database;
     final maps = await db.query(TableNames.notes, where: '${NoteFields.id} = ?', whereArgs: [id]);
-    return maps.isNotEmpty ? Note.fromMap(maps.first) : null;
+    if (maps.isEmpty) return null;
+    return await _populateNoteTags(Note.fromMap(maps.first));
   }
 
   Future<List<Note>> readAllNotes({int? limit, int? offset}) async {
     final db = await instance.database;
     final result = await db.query(TableNames.notes, where: '${NoteFields.deletedAt} IS NULL', orderBy: '${NoteFields.isPinned} DESC, ${NoteFields.dateModified} DESC', limit: limit, offset: offset);
-    return result.map((json) => Note.fromMap(json)).toList();
+    return await _populateNotesTags(result.map((json) => Note.fromMap(json)).toList());
   }
 
   Future<List<Note>> searchNotes(String keyword) async {
     final db = await instance.database;
-    final result = await db.query(TableNames.notes, where: '(${NoteFields.title} LIKE ? OR ${NoteFields.content} LIKE ? OR ${NoteFields.tags} LIKE ?) AND ${NoteFields.deletedAt} IS NULL', whereArgs: ['%$keyword%', '%$keyword%', '%$keyword%'], orderBy: '${NoteFields.dateModified} DESC');
-    return result.map((json) => Note.fromMap(json)).toList();
+    final result = await db.rawQuery('''
+      SELECT * FROM ${TableNames.notes} 
+      WHERE (${NoteFields.title} LIKE ? OR ${NoteFields.content} LIKE ? OR 
+             ${NoteFields.id} IN (SELECT note_id FROM note_tags WHERE tag_name LIKE ?))
+      AND ${NoteFields.deletedAt} IS NULL
+      ORDER BY ${NoteFields.dateModified} DESC
+    ''', ['%$keyword%', '%$keyword%', '%$keyword%']);
+    return await _populateNotesTags(result.map((json) => Note.fromMap(json)).toList());
   }
 
   Future<int> updateNote(Note note) async {
@@ -341,13 +417,13 @@ class DatabaseHelper {
   Future<List<Note>> readTrashedNotes() async {
     final db = await instance.database;
     final result = await db.query(TableNames.notes, where: '${NoteFields.deletedAt} IS NOT NULL', orderBy: '${NoteFields.deletedAt} DESC');
-    return result.map((json) => Note.fromMap(json)).toList();
+    return await _populateNotesTags(result.map((json) => Note.fromMap(json)).toList());
   }
 
   Future<List<Note>> readNotesByCategory(String category) async {
     final db = await instance.database;
     final result = await db.query(TableNames.notes, where: '${NoteFields.category} = ? AND ${NoteFields.deletedAt} IS NULL AND ${NoteFields.isArchived} = 0', whereArgs: [category], orderBy: '${NoteFields.dateModified} DESC');
-    return result.map((json) => Note.fromMap(json)).toList();
+    return await _populateNotesTags(result.map((json) => Note.fromMap(json)).toList());
   }
 
   // Tag Operations
@@ -377,18 +453,17 @@ class DatabaseHelper {
   Future<void> renameTag(String oldTag, String newTag) async {
     final db = await instance.database;
     await db.transaction((txn) async {
+      // 1. Delete oldTag for notes that already have newTag to avoid PK conflict
+      await txn.rawDelete('''
+        DELETE FROM note_tags 
+        WHERE tag_name = ? 
+        AND note_id IN (SELECT note_id FROM note_tags WHERE tag_name = ?)
+      ''', [oldTag, newTag]);
+
+      // 2. Rename remaining oldTag entries to newTag
       await txn.update('note_tags', {'tag_name': newTag}, where: 'tag_name = ?', whereArgs: [oldTag]);
-      final notes = await txn.query(TableNames.notes, where: '${NoteFields.tags} LIKE ?', whereArgs: ['%$oldTag%']);
-      for (var row in notes) {
-        final id = row[NoteFields.id] as String;
-        final tags = List<String>.from(jsonDecode(row[NoteFields.tags] as String));
-        final index = tags.indexOf(oldTag);
-        if (index != -1) {
-          tags[index] = newTag;
-          tags.sort();
-          await txn.update(TableNames.notes, {NoteFields.tags: jsonEncode(tags)}, where: '${NoteFields.id} = ?', whereArgs: [id]);
-        }
-      }
+
+      // 3. Update the tag metadata in the tags table
       final colorRows = await txn.query(TableNames.tags, columns: [TagFields.color], where: '${TagFields.name} = ?', whereArgs: [oldTag]);
       if (colorRows.isNotEmpty) {
         await txn.insert(TableNames.tags, {TagFields.name: newTag, TagFields.color: colorRows.first[TagFields.color] as int}, conflictAlgorithm: ConflictAlgorithm.replace);
@@ -401,12 +476,6 @@ class DatabaseHelper {
     final db = await instance.database;
     await db.transaction((txn) async {
       await txn.delete('note_tags', where: 'tag_name = ?', whereArgs: [tag]);
-      final notes = await txn.query(TableNames.notes, where: '${NoteFields.tags} LIKE ?', whereArgs: ['%$tag%']);
-      for (var row in notes) {
-        final id = row[NoteFields.id] as String;
-        final tags = List<String>.from(jsonDecode(row[NoteFields.tags] as String))..remove(tag);
-        await txn.update(TableNames.notes, {NoteFields.tags: jsonEncode(tags)}, where: '${NoteFields.id} = ?', whereArgs: [id]);
-      }
       await txn.delete(TableNames.tags, where: '${TagFields.name} = ?', whereArgs: [tag]);
     });
   }
@@ -473,16 +542,37 @@ class DatabaseHelper {
     for (int i = months - 1; i >= 0; i--) {
       final periodStart = DateTime(now.year, now.month - i, 1);
       final periodEnd = DateTime(now.year, now.month - i + 1, 1);
-      final rows = await db.rawQuery('SELECT SUM(CASE WHEN isExpense = 0 THEN amount ELSE 0.0 END) AS totalIncome, SUM(CASE WHEN isExpense = 1 THEN amount ELSE 0.0 END) AS totalExpense FROM ${TableNames.transactions} WHERE date >= ? AND date < ?', [periodStart.toIso8601String(), periodEnd.toIso8601String()]);
-      result.add({'month': periodStart, 'totalIncome': (rows.first['totalIncome'] as num?)?.toDouble() ?? 0.0, 'totalExpense': (rows.first['totalExpense'] as num?)?.toDouble() ?? 0.0});
+      final rows = await db.rawQuery(
+          'SELECT SUM(CASE WHEN isExpense = 0 THEN amount ELSE 0.0 END) AS totalIncome, '
+          'SUM(CASE WHEN isExpense = 1 THEN amount ELSE 0.0 END) AS totalExpense '
+          'FROM ${TableNames.transactions} '
+          'WHERE date >= ? AND date < ? AND category != ?',
+          [
+            periodStart.toIso8601String(),
+            periodEnd.toIso8601String(),
+            '__reversal__'
+          ]);
+      result.add({
+        'month': periodStart,
+        'totalIncome': (rows.first['totalIncome'] as num?)?.toDouble() ?? 0.0,
+        'totalExpense': (rows.first['totalExpense'] as num?)?.toDouble() ?? 0.0
+      });
     }
     return result;
   }
 
   Future<Map<String, double>> getAllTimeSummary() async {
     final db = await instance.database;
-    final rows = await db.rawQuery('SELECT SUM(CASE WHEN isExpense = 0 THEN amount ELSE 0.0 END) AS totalIncome, SUM(CASE WHEN isExpense = 1 THEN amount ELSE 0.0 END) AS totalExpense FROM ${TableNames.transactions}');
-    return {'totalIncome': (rows.first['totalIncome'] as num?)?.toDouble() ?? 0.0, 'totalExpense': (rows.first['totalExpense'] as num?)?.toDouble() ?? 0.0};
+    final rows = await db.rawQuery(
+        'SELECT SUM(CASE WHEN isExpense = 0 THEN amount ELSE 0.0 END) AS totalIncome, '
+        'SUM(CASE WHEN isExpense = 1 THEN amount ELSE 0.0 END) AS totalExpense '
+        'FROM ${TableNames.transactions} '
+        'WHERE category != ?',
+        ['__reversal__']);
+    return {
+      'totalIncome': (rows.first['totalIncome'] as num?)?.toDouble() ?? 0.0,
+      'totalExpense': (rows.first['totalExpense'] as num?)?.toDouble() ?? 0.0
+    };
   }
 
   // Category Definition CRUD

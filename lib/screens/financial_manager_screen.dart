@@ -44,23 +44,9 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     _refreshTransactions();
     SmsService.listenForSms(onNew: (t) async {
       if (!mounted) return;
-      // Cross-sender dedup: skip if same amount exists within ±5 min
-      if (await DatabaseHelper.instance
-          .hasCrossSenderDuplicate(t.amount, t.date)) {
-        return;
-      }
-      final inserted = await DatabaseHelper.instance.createSmsTransaction(t);
-      if (inserted == null) return;
-      // Handle reversal sentinel — delete original expense if found
-      if (inserted.category == SmsConstants.reversalSentinel) {
-        final target = await DatabaseHelper.instance
-            .findReversalTarget(inserted.amount, inserted.date);
-        if (target != null) {
-          await DatabaseHelper.instance.deleteTransaction(target.id!);
-        }
-        await DatabaseHelper.instance.deleteTransaction(inserted.id!);
-      }
-      if (mounted) await _refreshTransactions();
+      // Logic for DB insertion and reversal handling is now internal to SmsService.
+      // We just need to refresh the UI when a new valid transaction is processed.
+      await _refreshTransactions();
     });
   }
 
@@ -232,6 +218,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
       }
     }
 
+    setState(() => _isLoading = true);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Scanning recent messages...'),
