@@ -19,6 +19,9 @@ When instructed to use the Tester skill, you must execute the following roles an
 - Go through the entire codebase systematically, regardless of which files were edited most recently.
 - Test all existing files for any potential issues, bugs, logical flaws, or unhandled states.
 - If any issues are found, trigger a fix for them before proceeding to the next steps.
+- **Backup Completeness Audit**: Always verify that `backup_service.dart → generateBackupJson` uses `SettingsProvider.toBackupMap()` and NOT a hardcoded list of `SharedPreferences` keys. Hardcoded keys silently become incomplete each time a new setting is added to `SettingsProvider`. The canonical pattern is: `exportBackup(BuildContext)` calls `Provider.of<SettingsProvider>(...).toBackupMap()` and passes it as `settingsOverride` to `generateBackupJson`. The auto-backup isolate fallback path reads all keys from `SharedPreferences` directly; ensure this fallback list is also kept in sync with all settings fields.
+- **Settings Restore Audit**: Verify `SettingsProvider.restoreFromBackupMap` calls **setter methods** (e.g. `await setShowFinancialManager(show)`) and NOT direct private field assignments (e.g. `_showFinancialManager = show`). Direct field assignments skip `SharedPreferences` writes, causing all restored settings to be lost on the next app restart.
+
 
 ## Phase 3: Software Security Tester
 - Thoroughly check the system for vulnerabilities.

@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path/path.dart' as p;
 import 'package:gal/gal.dart';
 import '../services/ffmpeg_service.dart';
+import '../services/ffmpeg_install_service.dart';
 import '../data/settings_provider.dart';
 import 'app_lock_screen.dart';
 
@@ -31,7 +32,11 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
     if (widget.initialFilePaths != null && widget.initialFilePaths!.isNotEmpty) {
       _selectedFilePaths = widget.initialFilePaths!;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showPresetSheet();
+        if (!mounted) return;
+        final settings = Provider.of<SettingsProvider>(context, listen: false);
+        if (settings.isFfmpegInstalled) {
+          _showPresetSheet(context);
+        }
       });
     }
   }
@@ -43,6 +48,12 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
   }
 
   void _pickAndConvertFiles() async {
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
+    if (!settings.isConverterLite && !settings.isFfmpegInstalled) {
+       _showSetupDialog();
+       return;
+    }
+
     // Unlock session so we don't get locked out after returning from file picker
     AppLockScreen.unlockSession();
 
@@ -51,16 +62,63 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
       allowMultiple: true,
     );
 
+    if (!mounted) return;
+
     if (result != null && result.paths.isNotEmpty) {
       setState(() {
         _selectedFilePaths = result.paths.whereType<String>().toList();
         _results = [];
       });
-      _showPresetSheet();
+      _showPresetSheet(context);
     }
   }
 
-  void _showPresetSheet() {
+  void _showSetupDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        final installService = FfmpegInstallService.instance;
+        return Consumer<SettingsProvider>(
+          builder: (context, settings, child) {
+            return AlertDialog(
+              title: const Text('FFmpeg Engine Required'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('High-performance compression requires the FFmpeg engine (approx. 45MB).'),
+                  if (installService.isDownloading) ...[
+                    const SizedBox(height: 16),
+                    LinearProgressIndicator(value: installService.downloadProgress),
+                    const SizedBox(height: 8),
+                    const Text('Downloading…'),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                if (!installService.isDownloading)
+                  FilledButton(
+                    onPressed: () async {
+                      await installService.installEngine(settings);
+                      if (settings.isFfmpegInstalled && context.mounted) {
+                        Navigator.pop(context);
+                      }
+                    },
+                    child: const Text('Install Engine'),
+                  ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showPresetSheet(BuildContext context) {
     if (_selectedFilePaths.isEmpty) return;
     
     final service = FfmpegService.instance;
@@ -166,7 +224,7 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
         inputPath: inputPath,
         preset: preset,
         settings: settings,
-        onProgress: settings.isConverterLite ? null : (p) {
+        onProgress: (p) {
           if (mounted) {
             setState(() => _progress = p.clamp(0.0, 1.0));
           }
@@ -272,8 +330,6 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    final settings = Provider.of<SettingsProvider>(context);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('File Converter'),
@@ -294,7 +350,7 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  settings.isConverterLite ? Icons.bolt_rounded : Icons.compress_rounded,
+                  Icons.compress_rounded,
                   size: 56,
                   color: cs.primary,
                 ),
@@ -302,7 +358,7 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
               const SizedBox(height: 24),
 
               Text(
-                settings.isConverterLite ? 'Lite Compressor' : 'FFmpeg Engine',
+                'FFmpeg Engine',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -367,7 +423,7 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
                 if (_selectedFilePaths.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   TextButton.icon(
-                    onPressed: _showPresetSheet,
+                    onPressed: () => _showPresetSheet(context),
                     icon: const Icon(Icons.refresh_rounded),
                     label: const Text('Restart with Different Preset'),
                   ),

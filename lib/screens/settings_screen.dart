@@ -13,6 +13,7 @@ import '../utils/app_constants.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/backup_service.dart';
+import '../services/ffmpeg_install_service.dart';
 import '../widgets/settings_widgets.dart';
 import '../widgets/sms_import_sheet.dart';
 
@@ -21,6 +22,7 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final installService = FfmpegInstallService.instance;
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: Consumer<SettingsProvider>(
@@ -89,12 +91,54 @@ class SettingsScreen extends StatelessWidget {
                                 SettingsSwitchTile(
                                   icon: Icons.bolt_outlined, 
                                   title: 'Converter Lite Mode', 
-                                  subtitle: settings.isConverterLite 
-                                    ? 'Using lightweight native tools (No FFmpeg needed)' 
-                                    : 'Using high-performance FFmpeg engine', 
+                                  subtitle: 'Use native tools instead of FFmpeg (Fast, limited formats)', 
                                   value: settings.isConverterLite, 
-                                  onChanged: settings.setIsConverterLite,
+                                  onChanged: settings.setIsConverterLite
                                 ),
+                                if (!settings.isConverterLite) ...[
+                                  const _Divider(),
+                                  ListTile(
+                                    leading: const Icon(Icons.download_for_offline_outlined),
+                                    title: Text(settings.isFfmpegInstalled ? 'Engine Installed' : 'Install FFmpeg Engine'),
+                                    subtitle: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(settings.isFfmpegInstalled 
+                                          ? 'Engine binaries are ready (approx. 45MB)' 
+                                          : 'Download engine for high-quality compression (approx. 45MB)'),
+                                        if (installService.isDownloading) ...[
+                                          const SizedBox(height: 8),
+                                          LinearProgressIndicator(value: installService.downloadProgress),
+                                        ],
+                                      ],
+                                    ),
+                                    trailing: installService.isDownloading
+                                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                                      : IconButton(
+                                          icon: Icon(settings.isFfmpegInstalled ? Icons.delete_outline : Icons.download_rounded),
+                                          onPressed: () async {
+                                            if (settings.isFfmpegInstalled) {
+                                              final confirm = await showDialog<bool>(
+                                                context: context,
+                                                builder: (context) => AlertDialog(
+                                                  title: const Text('Uninstall Engine?'),
+                                                  content: const Text('This will remove the FFmpeg binaries from your device to save space.'),
+                                                  actions: [
+                                                    TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                                                    TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Uninstall')),
+                                                  ],
+                                                ),
+                                              );
+                                              if (confirm == true) {
+                                                await installService.uninstallEngine(settings);
+                                              }
+                                            } else {
+                                              await installService.installEngine(settings);
+                                            }
+                                          },
+                                        ),
+                                  ),
+                                ],
                               ],
                             ],
                           ),
@@ -183,16 +227,6 @@ class SettingsScreen extends StatelessWidget {
                             title: 'File Converter Settings',
                             icon: Icons.transform_rounded,
                             children: [
-                              if (settings.isConverterLite) ...[
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  child: Text(
-                                    'Lite Mode uses native tools. Video compression is restricted to format conversion only.',
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary),
-                                  ),
-                                ),
-                                const _Divider(),
-                              ],
                               SettingsTile(icon: Icons.video_collection_outlined, title: 'Preferred Video Format', subtitle: settings.preferredVideoFormat.toUpperCase(), onTap: () => _showFormatPicker(context, settings, 'Video', ['mp4', 'mkv', 'gif'], settings.preferredVideoFormat, settings.setPreferredVideoFormat)),
                               const _Divider(),
                               SettingsTile(icon: Icons.image_outlined, title: 'Preferred Image Format', subtitle: settings.preferredImageFormat.toUpperCase(), onTap: () => _showFormatPicker(context, settings, 'Image', ['jpg', 'png', 'webp'], settings.preferredImageFormat, settings.setPreferredImageFormat)),

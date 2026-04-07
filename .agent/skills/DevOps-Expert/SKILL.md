@@ -29,3 +29,10 @@ Specialist in Flutter CI/CD, Android release optimization, and Play Store delive
     - Always generate SHA256 checksums for all release artifacts.
     - Automate the creation of GitHub Releases with attached `.aab` and `.apk` files.
 - **Clean Builds**: Always run `flutter clean` before a final production build to avoid stale artifact issues.
+- **Static Analysis Gate**: Run `flutter analyze` before every release build. Zero errors/warnings is a hard requirement. CI/CD will fail on any lint issue.
+- **Version Bump Convention (this project)**:
+  - Minor version (new features or critical fixes): `1.X.0+Y` where `Y = X * 100 * 100` — e.g. `1.20.0+12000`
+  - Patch version (small fixes): `1.X.Y+Z` — e.g. `1.19.6+11906`
+  - Always bump both `pubspec.yaml` AND the git tag consistently.
+- **Database Self-Healing in Release Builds**: If SQLCipher throws Code 26 (`file is not a database`) in production, the DB file may be corrupted from a prior crash. Ensure `_initDB` wraps `openDatabase` in a try/catch that deletes the corrupt file and its WAL/SHM siblings and retries once. This prevents a corrupted device from being permanently stuck.
+

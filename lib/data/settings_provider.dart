@@ -35,6 +35,9 @@ class SettingsProvider extends ChangeNotifier {
   bool _isConverterLite = true;
   bool get isConverterLite => _isConverterLite;
 
+  bool _isFfmpegInstalled = false;
+  bool get isFfmpegInstalled => _isFfmpegInstalled;
+
   String _currency = 'LKR';
   String get currency => _currency;
 
@@ -84,10 +87,10 @@ class SettingsProvider extends ChangeNotifier {
   bool get keepMetadata => _keepMetadata;
 
   SettingsProvider() {
-    _loadSettings();
+    loadSettings();
   }
 
-  Future<void> _loadSettings() async {
+  Future<void> loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     _textSize = prefs.getDouble('textSize') ?? 16.0;
     _fontFamily = prefs.getString('fontFamily') ?? 'Rubik';
@@ -101,6 +104,7 @@ class SettingsProvider extends ChangeNotifier {
     _showFinancialManager = prefs.getBool('showFinancialManager') ?? false;
     _showFileConverter = prefs.getBool('showFileConverter') ?? false;
     _isConverterLite = prefs.getBool('isConverterLite') ?? true;
+    _isFfmpegInstalled = prefs.getBool('isFfmpegInstalled') ?? false;
     _currency = prefs.getString('currency') ?? 'LKR';
 
     _autoBackupEnabled = prefs.getBool('autoBackupEnabled') ?? false;
@@ -170,10 +174,17 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setIsConverterLite(bool isLite) async {
-    _isConverterLite = isLite;
+  Future<void> setIsConverterLite(bool lite) async {
+    _isConverterLite = lite;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isConverterLite', isLite);
+    await prefs.setBool('isConverterLite', lite);
+    notifyListeners();
+  }
+
+  Future<void> setIsFfmpegInstalled(bool installed) async {
+    _isFfmpegInstalled = installed;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isFfmpegInstalled', installed);
     notifyListeners();
   }
 
@@ -340,6 +351,7 @@ class SettingsProvider extends ChangeNotifier {
         'showFinancialManager': _showFinancialManager,
         'showFileConverter': _showFileConverter,
         'isConverterLite': _isConverterLite,
+        'isFfmpegInstalled': _isFfmpegInstalled,
         'currency': _currency,
         'isPeriodTrackerEnabled': _isPeriodTrackerEnabled,
         'appLockEnabled': _appLockEnabled,
@@ -387,9 +399,15 @@ class SettingsProvider extends ChangeNotifier {
         }
       }
       if (map.containsKey('isConverterLite')) {
-        final isLite = map['isConverterLite'];
-        if (isLite is bool) {
-          await setIsConverterLite(isLite);
+        final lite = map['isConverterLite'];
+        if (lite is bool) {
+          await setIsConverterLite(lite);
+        }
+      }
+      if (map.containsKey('isFfmpegInstalled')) {
+        final installed = map['isFfmpegInstalled'];
+        if (installed is bool) {
+          await setIsFfmpegInstalled(installed);
         }
       }
       if (map.containsKey('currency')) {
