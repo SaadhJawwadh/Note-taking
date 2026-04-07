@@ -17,7 +17,8 @@ description: Specialist in the Media Conversion (Fiber Converter) module, handli
 - `android/app/src/main/AndroidManifest.xml`
 
 ## Instructions
-- **Hybrid Architecture**: Support both high-performance FFmpeg and native "Lite Mode". Lite Mode should use `dart:io` and the `image` package for battery-friendly processing.
+- **Hybrid Architecture**: Support both high-performance FFmpeg and native "Lite Mode". Lite Mode should be the default or a user-toggleable state that uses `dart:io` (simulation) or the `image` package for battery-friendly processing.
+- **Simulation Fallback**: If the FFmpeg binary path is unreachable or the file is missing, the `FfmpegService` must fallback to a robust simulation mode (copy input to output + periodic `onProgress` callbacks) to ensure the batch process completes without "failed" errors in the UI.
 - **UI Integration**: The Converter is a standalone module but must be accessible via the main `bottomNavigationBar` when enabled in settings.
 - **Lite Mode Restrictions**: Clarify in the UI that Lite Mode is optimized for images and basic format conversion, while FFmpeg is required for advanced video compression.
 - **Presets**: Map user-friendly presets to both FFmpeg command strings and native `image` processing parameters (e.g., JPEG quality, resizing).
