@@ -8,7 +8,7 @@ class NoteProvider extends ChangeNotifier {
   bool _isLoading = true;
   String _selectedTag = 'All';
   List<String> _allTags = ['All'];
-  Set<String> _selectedNoteIds = {};
+  final Set<String> _selectedNoteIds = {};
   bool _isSelectionMode = false;
   Map<String, int> _tagColors = {};
 

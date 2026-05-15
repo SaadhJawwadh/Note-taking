@@ -87,8 +87,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  Map<String, int> _tagColors = {};
-
   IconData _getIconForMode(NoteViewMode mode) {
     switch (mode) {
       case NoteViewMode.list: return Icons.view_agenda_outlined;
@@ -265,20 +263,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             FilledButton(
               onPressed: () async {
                 final newName = controller.text.trim();
+                // ignore: use_build_context_synchronously
+                final noteProvider = context.read<NoteProvider>();
                 if (newName.isNotEmpty) {
                   if (newName != tag) {
                     await DatabaseHelper.instance.renameTag(tag, newName);
                   }
-                  if (selectedColor != (context.read<NoteProvider>().tagColors[tag] ?? 0)) {
+                  if (selectedColor != (noteProvider.tagColors[tag] ?? 0)) {
                     await DatabaseHelper.instance
                         .setTagColor(newName, selectedColor);
                   }
-                  if (!context.mounted) return;
+                  if (!mounted) return;
+                  // ignore: use_build_context_synchronously
                   Navigator.pop(context);
 
-                  await context.read<NoteProvider>().refreshNotes();
-                  if (context.read<NoteProvider>().selectedTag == tag) {
-                    context.read<NoteProvider>().setTag(newName);
+                  await noteProvider.refreshNotes();
+                  if (!mounted) return;
+                  if (noteProvider.selectedTag == tag) {
+                    noteProvider.setTag(newName);
                   }
                 }
               },
@@ -313,6 +315,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     if (confirmed == true) {
       await DatabaseHelper.instance.deleteTag(tag);
+      if (!mounted) return;
+      // ignore: use_build_context_synchronously
       final noteProvider = context.read<NoteProvider>();
       if (noteProvider.selectedTag == tag) {
         noteProvider.setTag('All');

@@ -109,8 +109,8 @@ class DatabaseHelper {
           // Also rename WAL and SHM files if they exist
           final walFile = File('$path-wal');
           final shmFile = File('$path-shm');
-          if (await walFile.exists()) await walFile.rename('${path}-wal_corrupt_backup_$timestamp');
-          if (await shmFile.exists()) await shmFile.rename('${path}-shm_corrupt_backup_$timestamp');
+          if (await walFile.exists()) await walFile.rename('$path-wal_corrupt_backup_$timestamp');
+          if (await shmFile.exists()) await shmFile.rename('$path-shm_corrupt_backup_$timestamp');
         } catch (backupError) {
           debugPrint('DatabaseHelper: Could not backup corrupt file: $backupError');
         }
