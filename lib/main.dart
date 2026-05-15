@@ -10,6 +10,7 @@ import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:workmanager/workmanager.dart';
+import 'providers/note_provider.dart';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
@@ -33,8 +34,11 @@ Future<void> main() async {
   }
 
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => SettingsProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        ChangeNotifierProvider(create: (_) => NoteProvider()),
+      ],
       child: const NoteApp(),
     ),
   );

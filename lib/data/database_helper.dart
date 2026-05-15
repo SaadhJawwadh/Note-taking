@@ -102,16 +102,17 @@ class DatabaseHelper {
       // concurrent init), delete it and create a fresh one. This is a
       // last-resort self-healing measure.
       if (e.toString().contains('open_failed') || e.toString().contains('26')) {
-        debugPrint('DatabaseHelper: Corrupt database detected, resetting...');
+        debugPrint('DatabaseHelper: Corrupt database detected, backing up...');
         try {
-          if (await dbFile.exists()) await dbFile.delete();
-          // Also delete WAL and SHM files if they exist
+          final timestamp = DateTime.now().millisecondsSinceEpoch;
+          if (await dbFile.exists()) await dbFile.rename('${path}_corrupt_backup_$timestamp');
+          // Also rename WAL and SHM files if they exist
           final walFile = File('$path-wal');
           final shmFile = File('$path-shm');
-          if (await walFile.exists()) await walFile.delete();
-          if (await shmFile.exists()) await shmFile.delete();
-        } catch (deleteError) {
-          debugPrint('DatabaseHelper: Could not delete corrupt file: $deleteError');
+          if (await walFile.exists()) await walFile.rename('${path}-wal_corrupt_backup_$timestamp');
+          if (await shmFile.exists()) await shmFile.rename('${path}-shm_corrupt_backup_$timestamp');
+        } catch (backupError) {
+          debugPrint('DatabaseHelper: Could not backup corrupt file: $backupError');
         }
         // Retry once with a fresh database
         return await openDatabase(

@@ -27,43 +27,43 @@ class CategoryConstants {
 
   static const Map<String, List<String>> keywords = {
     transport: [
-      'pickme ride', 'pickme express', 'pickme', 'uber', 'ola', 'taxi', 'cab',
-      'bus', 'train', 'tuk', 'fuel', 'petrol', 'toll', 'parking', 'grab'
+      'pickme ride', 'pickme express', 'pickme flash', 'pickme', 'uber', 'ola', 'taxi', 'cab',
+      'bus', 'train', 'tuk', 'fuel', 'petrol', 'toll', 'parking', 'grab', 'highway', 'expressway'
     ],
     food: [
       'pickme food', 'pickme eats', 'uber eats', 'food delivery', 'kfc',
       'mcd', 'mcdonalds', 'pizza', 'dominos', 'domino', 'café', 'cafe',
       'coffee', 'restaurant', 'groceries', 'grocery', 'food', 'keells',
-      'arpico', 'cargills', 'burger', 'noodles', 'rice', 'bakery', 'pastry',
-      'icecream', 'sushi', 'biryani', 'kottu', 'supermarket'
+      'arpico', 'cargills', 'foodcity', 'burger', 'noodles', 'rice', 'bakery', 'pastry',
+      'icecream', 'sushi', 'biryani', 'kottu', 'supermarket', 'laughfs', 'glomark', 'spar'
     ],
     subscriptions: [
       'amazon prime', 'netflix', 'spotify', 'youtube', 'apple', 'adobe',
       'canva', 'hulu', 'disney', 'microsoft', 'office365', 'chatgpt',
-      'openai', 'icloud', 'subscription'
+      'openai', 'icloud', 'subscription', 'patreon', 'github'
     ],
     shopping: [
       'online shopping', 'amazon', 'daraz', 'kapruka', 'ebay', 'aliexpress',
-      'fabric', 'clothing'
+      'fabric', 'clothing', 'fashion', 'shoes', 'apparel', 'mall', 'store'
     ],
     utilities: [
-      'mobile bill', 'phone bill', 'electricity', 'ceb', 'leco', 'water',
-      'dialog', 'airtel', 'mobitel', 'slt', 'broadband', 'internet', 'utility'
+      'mobile bill', 'phone bill', 'electricity', 'ceb', 'leco', 'water', 'nwsdb',
+      'dialog', 'airtel', 'mobitel', 'slt', 'hutch', 'broadband', 'internet', 'utility', 'recharge', 'topup', 'reload'
     ],
     health: [
       'lab test', 'pharmacy', 'hospital', 'doctor', 'medical', 'nawaloka',
-      'asiri', 'channel', 'clinic', 'diagnostic', 'medicine'
+      'asiri', 'lanka hospitals', 'durdans', 'hemase', 'channel', 'clinic', 'diagnostic', 'medicine', 'health'
     ],
     entertainment: [
-      'cinema', 'cinemax', 'scope', 'movie', 'concert', 'event', 'ticket'
+      'cinema', 'cinemax', 'scope', 'movie', 'concert', 'event', 'ticket', 'pvr', 'savoy', 'majestic'
     ],
     payments: [
       'koko instalment', 'koko installment', 'instalment', 'installment',
       'emi', 'koko', 'loan', 'repayment', 'credit card', 'card payment',
-      'hire purchase'
+      'hire purchase', 'mintpay'
     ],
     deposit: [
-      'crm deposit', 'cash deposit', 'deposit', 'credited', 'salary', 'income'
+      'crm deposit', 'cash deposit', 'deposit', 'credited', 'salary', 'income', 'inward remittance', 'interest'
     ],
   };
 

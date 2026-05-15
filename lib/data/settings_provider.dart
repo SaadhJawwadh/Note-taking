@@ -357,6 +357,8 @@ class SettingsProvider extends ChangeNotifier {
         'appLockEnabled': _appLockEnabled,
         'useBiometrics': _useBiometrics,
         'discreetNotificationText': _discreetNotificationText,
+        'customExpenseRules': _customExpenseRules,
+        'customIncomeRules': _customIncomeRules,
         'preferredVideoFormat': _preferredVideoFormat,
         'preferredImageFormat': _preferredImageFormat,
         'videoResolutionLimit': _videoResolutionLimit,
@@ -443,6 +445,23 @@ class SettingsProvider extends ChangeNotifier {
         final val = map['keepMetadata'];
         if (val is bool) await setKeepMetadata(val);
       }
+      if (map.containsKey('customExpenseRules')) {
+        final rules = map['customExpenseRules'];
+        if (rules is List) {
+          final prefs = await SharedPreferences.getInstance();
+          _customExpenseRules = List<String>.from(rules);
+          await prefs.setStringList('customExpenseRules', _customExpenseRules);
+        }
+      }
+      if (map.containsKey('customIncomeRules')) {
+        final rules = map['customIncomeRules'];
+        if (rules is List) {
+          final prefs = await SharedPreferences.getInstance();
+          _customIncomeRules = List<String>.from(rules);
+          await prefs.setStringList('customIncomeRules', _customIncomeRules);
+        }
+      }
+      notifyListeners();
     } catch (_) {
       // Silently ignore malformed backup settings; existing values are kept.
     }

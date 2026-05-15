@@ -11,6 +11,10 @@ class TransactionCategory {
   static const Map<String, List<String>> keywords = CategoryConstants.keywords;
   static const Map<String, Color> badgeColors = CategoryConstants.badgeColors;
 
+  static bool _matches(String desc, String kw) {
+    return RegExp(r'\b' + RegExp.escape(kw) + r'\b', caseSensitive: false).hasMatch(desc);
+  }
+
   static String fromDescription(String description) {
     final desc = description.toLowerCase();
     final compounds = <(String, String)>[];
@@ -21,11 +25,11 @@ class TransactionCategory {
     }
     compounds.sort((a, b) => b.$1.length.compareTo(a.$1.length));
     for (final (kw, cat) in compounds) {
-      if (desc.contains(kw)) return cat;
+      if (_matches(desc, kw)) return cat;
     }
     for (final entry in keywords.entries) {
       for (final kw in entry.value) {
-        if (!kw.contains(' ') && desc.contains(kw)) return entry.key;
+        if (!kw.contains(' ') && _matches(desc, kw)) return entry.key;
       }
     }
     return other;
@@ -50,11 +54,11 @@ class TransactionCategory {
     }
     compounds.sort((a, b) => b.$1.length.compareTo(a.$1.length));
     for (final (kw, name) in compounds) {
-      if (desc.contains(kw)) return name;
+      if (_matches(desc, kw)) return name;
     }
     for (final cat in _cache) {
       for (final kw in cat.keywords) {
-        if (!kw.contains(' ') && desc.contains(kw)) return cat.name;
+        if (!kw.contains(' ') && _matches(desc, kw)) return cat.name;
       }
     }
     return other;

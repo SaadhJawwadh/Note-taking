@@ -20,6 +20,8 @@ import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'dart:async';
 import 'file_converter_screen.dart';
 import 'app_lock_screen.dart';
+import '../providers/note_provider.dart';
+import '../widgets/tag_filter_bar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,21 +31,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
-  List<Note> notes = [];
-  List<Note> filteredNotes = [];
-  bool isLoading = true;
-  String selectedTag = 'All';
-  List<String> allTags = ['All'];
   int _currentIndex = 0;
-  Set<String> selectedNoteIds = {};
-  bool isSelectionMode = false;
-  
   final ScrollController _scrollController = ScrollController();
-  static const int _pageSize = 20;
-  int _currentPage = 0;
-  bool _isLoadingMore = false;
-  bool _hasMoreNotes = true;
-  
   late StreamSubscription _intentDataStreamSubscription;
 
   @override
@@ -51,7 +40,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _scrollController.addListener(_scrollListener);
-    refreshNotes();
+    // NoteProvider automatically fetches notes on creation.
     
     // For sharing images coming from outside the app while the app is in the memory
     _intentDataStreamSubscription = ReceiveSharingIntent.instance.getMediaStream().listen((List<SharedMediaFile> value) {
@@ -74,7 +63,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      refreshNotes();
+      context.read<NoteProvider>().refreshNotes();
     }
   }
 
@@ -124,90 +113,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future refreshNotes() async {
     if (!mounted) return;
-    setState(() {
-      isLoading = true;
-      _currentPage = 0;
-      _hasMoreNotes = true;
-    });
-
-    // 1. Fetch tags and colors (small tables)
-    try {
-      final tags = await DatabaseHelper.instance.getAllTags();
-      final colors = await DatabaseHelper.instance.getAllTagColors();
-
-      // 2. Fetch first page of notes
-      final fetchedNotes = await DatabaseHelper.instance.readAllNotes(
-        limit: _pageSize,
-        offset: 0,
-      );
-
-      // 3. Optional: Still sort tags by MRU based on ALL active notes (lightweight query)
-      // For now, we'll just use the tags as fetched or from the first page if we want MRU.
-      // Let's assume tags are already somewhat ordered or order doesn't matter as much as performance.
-      
-      allTags = ['All', ...tags];
-      if (!allTags.contains(selectedTag)) {
-        selectedTag = 'All';
-      }
-
-      _tagColors = colors;
-      
-      if (mounted) {
-        setState(() {
-          notes = fetchedNotes;
-          filterNotes();
-          isLoading = false;
-          if (fetchedNotes.length < _pageSize) {
-            _hasMoreNotes = false;
-          }
-        });
-      }
-    } catch (e) {
-      debugPrint('Error refreshing notes: $e');
-      if (mounted) {
-        setState(() {
-          isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load notes: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
+    await context.read<NoteProvider>().refreshNotes();
   }
 
   void filterNotes() {
-    if (selectedTag == 'All') {
-      filteredNotes =
-          notes.where((n) => !n.isArchived && n.deletedAt == null).toList();
-    } else if (selectedTag == 'Archived') {
-      filteredNotes =
-          notes.where((n) => n.isArchived && n.deletedAt == null).toList();
-    } else if (selectedTag == 'Trash') {
-      filteredNotes = notes.where((n) => n.deletedAt != null).toList();
-    } else {
-      // Filter by Tag
-      filteredNotes = notes
-          .where((note) =>
-              note.tags.contains(selectedTag) &&
-              !note.isArchived &&
-              note.deletedAt == null)
-          .toList();
-    }
-    // Sort by Pinned DESC (pinned=1, unpinned=0) then Modification Date DESC
-    filteredNotes.sort((a, b) {
-      if (a.isPinned != b.isPinned) {
-        return a.isPinned ? -1 : 1; // Pinned first
-      }
-      return b.dateModified.compareTo(a.dateModified);
-    });
+    // Handled by NoteProvider
   }
 
   void onNoteTap(Note note, VoidCallback openContainer) {
-    if (isSelectionMode) {
+    if (context.read<NoteProvider>().isSelectionMode) {
       toggleSelection(note.id);
     } else {
       openContainer();
@@ -219,43 +133,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void toggleSelection(String id) {
-    setState(() {
-      if (selectedNoteIds.contains(id)) {
-        selectedNoteIds.remove(id);
-        if (selectedNoteIds.isEmpty) isSelectionMode = false;
-      } else {
-        selectedNoteIds.add(id);
-        isSelectionMode = true;
-      }
-    });
+    context.read<NoteProvider>().toggleSelection(id);
   }
 
   void clearSelection() {
-    setState(() {
-      selectedNoteIds.clear();
-      isSelectionMode = false;
-    });
+    context.read<NoteProvider>().clearSelection();
   }
 
   Future<void> bulkArchive() async {
-    for (final id in selectedNoteIds) {
-      final note = notes.firstWhere((n) => n.id == id);
-      await DatabaseHelper.instance.updateNote(note.copyWith(isArchived: true));
-    }
-    clearSelection();
-    await refreshNotes();
+    await context.read<NoteProvider>().bulkArchive();
   }
 
   Future<void> bulkDelete() async {
-    for (final id in selectedNoteIds) {
-      await DatabaseHelper.instance.softDeleteNote(id);
-    }
-    clearSelection();
-    await refreshNotes();
+    await context.read<NoteProvider>().bulkDelete();
   }
 
   Future<void> bulkTag() async {
-    final availableTags = allTags.where((t) => t != 'All').toList();
+    final noteProvider = context.read<NoteProvider>();
+    final availableTags = noteProvider.allTags.where((t) => t != 'All').toList();
     if (availableTags.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No tags available. Create a tag first.')),
@@ -290,33 +185,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
 
     if (selectedNewTag != null) {
-      for (final id in selectedNoteIds) {
-        final note = notes.firstWhere((n) => n.id == id);
-        if (!note.tags.contains(selectedNewTag)) {
-          final newTags = [...note.tags, selectedNewTag];
-          await DatabaseHelper.instance
-              .updateNote(note.copyWith(tags: newTags));
-        }
-      }
-      clearSelection();
-      await refreshNotes();
+      await noteProvider.bulkTag([selectedNewTag]);
     }
   }
 
   void onTagSelected(String tag) {
-    setState(() {
-      if (selectedTag == tag) {
-        selectedTag = 'All';
-      } else {
-        selectedTag = tag;
-      }
-      filterNotes();
-    });
+    context.read<NoteProvider>().setTag(tag);
   }
 
   Future<void> _editTag(String tag) async {
     final controller = TextEditingController(text: tag);
-    int selectedColor = _tagColors[tag] ?? 0;
+    int selectedColor = context.read<NoteProvider>().tagColors[tag] ?? 0;
 
     await showDialog(
       context: context,
@@ -390,19 +269,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   if (newName != tag) {
                     await DatabaseHelper.instance.renameTag(tag, newName);
                   }
-                  if (selectedColor != (_tagColors[tag] ?? 0)) {
+                  if (selectedColor != (context.read<NoteProvider>().tagColors[tag] ?? 0)) {
                     await DatabaseHelper.instance
                         .setTagColor(newName, selectedColor);
                   }
                   if (!context.mounted) return;
                   Navigator.pop(context);
 
-                  // Update selected tag if it was the one modified
-                  if (selectedTag == tag) {
-                    selectedTag = newName;
+                  await context.read<NoteProvider>().refreshNotes();
+                  if (context.read<NoteProvider>().selectedTag == tag) {
+                    context.read<NoteProvider>().setTag(newName);
                   }
-
-                  await refreshNotes();
                 }
               },
               child: const Text('Save'),
@@ -436,10 +313,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     if (confirmed == true) {
       await DatabaseHelper.instance.deleteTag(tag);
-      if (selectedTag == tag) {
-        selectedTag = 'All';
+      final noteProvider = context.read<NoteProvider>();
+      if (noteProvider.selectedTag == tag) {
+        noteProvider.setTag('All');
       }
-      await refreshNotes();
+      await noteProvider.refreshNotes();
     }
   }
 
@@ -562,6 +440,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildNotesView(BuildContext context, SettingsProvider settings) {
+    final noteProvider = context.watch<NoteProvider>();
+    
     return Scaffold(
       body: AnimationLimiter(
         child: CustomScrollView(
@@ -579,7 +459,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               padding: const EdgeInsets.symmetric(horizontal: 8),
               height: 64,
               decoration: BoxDecoration(
-                color: isSelectionMode
+                color: noteProvider.isSelectionMode
                     ? Theme.of(context).colorScheme.primaryContainer
                     : Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(32),
@@ -591,7 +471,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ),
                 ],
               ),
-              child: isSelectionMode
+              child: noteProvider.isSelectionMode
                   ? Row(
                       children: [
                         const SizedBox(width: 8),
@@ -601,7 +481,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          '${selectedNoteIds.length} selected',
+                          '${noteProvider.selectedNoteIds.length} selected',
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: Theme.of(context).colorScheme.onPrimaryContainer,
@@ -670,84 +550,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
           // Tag Selector
           SliverToBoxAdapter(
-            child: Container(
-              height: 50,
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: allTags.length,
-                itemBuilder: (context, index) {
-                  final tag = allTags[index];
-                  final isSelected = tag == selectedTag;
-                  final tagColorValue = _tagColors[tag];
-
-                  Color? chipBg;
-                  Color? chipFg;
-                  BorderSide? chipSide;
-
-                  if (isSelected) {
-                    if (tagColorValue != null && tagColorValue != 0) {
-                      final scheme = ColorScheme.fromSeed(
-                          seedColor: Color(tagColorValue),
-                          brightness: Theme.of(context).brightness);
-                      chipBg = scheme.primary;
-                      chipFg = scheme.onPrimary;
-                    } else {
-                      chipBg = Theme.of(context).colorScheme.primary;
-                      chipFg = Theme.of(context).colorScheme.onPrimary;
-                    }
-                    chipSide = BorderSide.none;
-                  } else {
-                    if (tagColorValue != null && tagColorValue != 0) {
-                      final scheme = ColorScheme.fromSeed(
-                          seedColor: Color(tagColorValue),
-                          brightness: Theme.of(context).brightness);
-                      chipBg = Colors.transparent;
-                      chipFg = scheme.primary;
-                      chipSide = BorderSide(color: scheme.primary);
-                    } else {
-                      chipBg = Colors.transparent;
-                      chipFg = Theme.of(context).colorScheme.onSurfaceVariant;
-                      chipSide = BorderSide(
-                        color: Theme.of(context).colorScheme.outline,
-                      );
-                    }
-                  }
-
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: GestureDetector(
-                      onLongPress: () => _showTagOptions(tag),
-                      child: FilterChip(
-                        label: Text(tag),
-                        selected: isSelected,
-                        onSelected: (selected) {
-                          if (selected) onTagSelected(tag);
-                        },
-                        backgroundColor: chipBg,
-                        selectedColor: chipBg,
-                        labelStyle: TextStyle(
-                          color: chipFg,
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.normal,
-                        ),
-                        shape: const StadiumBorder(),
-                        side: chipSide,
-                        showCheckmark: false,
-                      ),
-                    ),
-                  );
-                },
-              ),
+            child: TagFilterBar(
+              onTagLongPress: _showTagOptions,
             ),
           ),
           // Content
-          if (isLoading)
+          if (noteProvider.isLoading)
             const SliverFillRemaining(
               child: Center(child: CircularProgressIndicator()),
             )
-          else if (filteredNotes.isEmpty)
+          else if (noteProvider.filteredNotes.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
               child: Center(
@@ -819,11 +631,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildSliverLayout(SettingsProvider settings) {
+    final noteProvider = context.read<NoteProvider>();
     if (settings.noteViewMode == NoteViewMode.list) {
       return SliverList(
         delegate: SliverChildBuilderDelegate(
           (context, index) {
-            final note = filteredNotes[index];
+            final note = noteProvider.filteredNotes[index];
             return AnimationConfiguration.staggeredList(
               position: index,
               duration: const Duration(milliseconds: 220),
@@ -838,7 +651,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             );
           },
-          childCount: filteredNotes.length,
+          childCount: noteProvider.filteredNotes.length,
         ),
       );
     } else if (settings.noteViewMode == NoteViewMode.uniformGrid) {
@@ -851,7 +664,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
         delegate: SliverChildBuilderDelegate(
           (context, index) {
-            final note = filteredNotes[index];
+            final note = noteProvider.filteredNotes[index];
             return AnimationConfiguration.staggeredGrid(
               position: index,
               duration: const Duration(milliseconds: 220),
@@ -863,7 +676,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             );
           },
-          childCount: filteredNotes.length,
+          childCount: noteProvider.filteredNotes.length,
         ),
       );
     } else {
@@ -872,9 +685,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         crossAxisCount: 2,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childCount: filteredNotes.length,
+        childCount: noteProvider.filteredNotes.length,
         itemBuilder: (context, index) {
-          final note = filteredNotes[index];
+          final note = noteProvider.filteredNotes[index];
           return AnimationConfiguration.staggeredGrid(
             position: index,
             duration: const Duration(milliseconds: 220),
@@ -973,8 +786,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         return NoteCard(
           note: note,
           onTap: () => onNoteTap(note, openContainer),
-          isSelected: selectedNoteIds.contains(note.id),
-          tagColors: _tagColors,
+          isSelected: context.read<NoteProvider>().selectedNoteIds.contains(note.id),
+          tagColors: context.read<NoteProvider>().tagColors,
           onLongPress: () => onNoteLongPress(note),
         );
       },
@@ -984,36 +797,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void _scrollListener() {
     if (_scrollController.hasClients &&
         _scrollController.position.pixels >=
-            _scrollController.position.maxScrollExtent - 500 &&
-        !_isLoadingMore &&
-        _hasMoreNotes &&
-        selectedTag == 'All') {
-      _loadMoreNotes();
-    }
-  }
-
-  Future<void> _loadMoreNotes() async {
-    if (_isLoadingMore || !_hasMoreNotes) return;
-
-    setState(() {
-      _isLoadingMore = true;
-    });
-
-    _currentPage++;
-    final moreNotes = await DatabaseHelper.instance.readAllNotes(
-      limit: _pageSize,
-      offset: _currentPage * _pageSize,
-    );
-
-    if (mounted) {
-      setState(() {
-        notes.addAll(moreNotes);
-        filterNotes();
-        _isLoadingMore = false;
-        if (moreNotes.length < _pageSize) {
-          _hasMoreNotes = false;
-        }
-      });
+            _scrollController.position.maxScrollExtent - 500) {
+      context.read<NoteProvider>().loadMoreNotes();
     }
   }
 }
