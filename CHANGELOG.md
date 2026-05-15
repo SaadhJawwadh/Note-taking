@@ -2,6 +2,20 @@
 
 All notable changes to Note Book are documented here.
 
+## [1.22.0] - 2026-05-15
+
+### ✨ Architecture & Refactoring
+- **Provider State Management**: Transitioned the core Home Screen from a stateful monolith to a highly decoupled architecture backed by `NoteProvider` and `ChangeNotifier`.
+
+### 🛠 Improvements
+- **Smarter SMS Categorization**: Upgraded transaction parsing to use regex word-boundary (`\b`) matching, preventing false-positive category assignments (e.g., matching "cab" inside "cabbage").
+- **Expanded SMS Constants**: Added more granular keywords for Sri Lankan banking and commerce services.
+
+### 🔒 Stability & Data Integrity
+- **Non-Destructive DB Recovery**: The `DatabaseHelper` now handles corrupt SQLCipher databases by renaming them to `_corrupt_backup_<timestamp>` rather than deleting them, preserving raw encrypted data for potential manual recovery.
+
+---
+
 ## [1.21.0] - 2026-04-07
 
 ### 🐛 File Converter Fixes (Critical)
