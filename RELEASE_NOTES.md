@@ -1,4 +1,4 @@
-# Note Book — Release v1.22.0
+# Note Book — Release v1.22.1
 
 This release focuses on architectural refinements, critical stability fixes, and a premium "Expressive Material" UI update.
 
