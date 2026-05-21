@@ -19,6 +19,7 @@ Release Management ensures that any code being pushed to production is functiona
 ### Step 1: Pre-Release Checklist
 Before bumping the version, ensure all of the following are done:
 - `flutter analyze` → **zero errors/warnings**. Fix any issues first.
+- `flutter test` → **all tests passing**. Running the full test suite locally is mandatory to catch regressions (e.g. SMS parser custom rule matching regressions) before tagging.
 - All changed files are reviewed (run `git status --short` to enumerate them).
 - `CHANGELOG.md` entry is written with the correct date (`YYYY-MM-DD`) and clear categorized notes: `✨ New Features`, `🛠 Improvements`, `🐛 Bug Fixes`, `🔒 Security`.
 - `pubspec.yaml` version is bumped using the project convention:
@@ -59,5 +60,6 @@ git push origin vX.Y.Z   # triggers GitHub Actions CI/CD
   git tag vX.Y.Z
   git push origin vX.Y.Z
   ```
+- **Preventing Parser Regressions on Custom Senders**: When working with custom/whitelisted SMS senders, verify that default bank filters (like `debitRegex` or `creditRegex` in `SmsConstants`) do not match these messages in the absence of custom rules. Restrict default bank regexes to recognized bank senders (in `SmsConstants.bankSenders`) so that custom senders rely strictly on custom rules. Always run the `sms_rules_test.dart` suite to ensure whitelisted custom senders correctly return `null` without custom rules.
 
 
