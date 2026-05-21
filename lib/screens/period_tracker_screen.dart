@@ -442,24 +442,6 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> {
                                   ),
                                 ],
                                 if (selectedLog != null) ...[
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'Intensity: ${selectedLog.intensity}',
-                                    style: theme.textTheme.bodyLarge
-                                        ?.copyWith(color: onPeriodColor),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  OutlinedButton.icon(
-                                    onPressed: () => _deleteLog(selectedLog),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: Colors.red,
-                                      side: const BorderSide(color: Colors.red),
-                                    ),
-                                    icon: const Icon(Icons.delete_outline),
-                                    label: const Text('Delete Log'),
-                                  ),
-                                ],
-                                if (isPeriodActive && isSelectedToday) ...[
                                   const SizedBox(height: 24),
                                   Text(
                                     'Flow Intensity',
@@ -486,11 +468,11 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> {
                                           label: Text('Heavy',
                                               style: TextStyle(fontSize: 12))),
                                     ],
-                                    selected: {ongoingPeriod.intensity},
+                                    selected: {selectedLog.intensity},
                                     onSelectionChanged:
                                         (Set<String> newSelection) {
                                       _updateIntensity(
-                                          ongoingPeriod, newSelection.first);
+                                          selectedLog, newSelection.first);
                                     },
                                     style: SegmentedButton.styleFrom(
                                       backgroundColor: periodColor,
@@ -499,7 +481,17 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> {
                                       selectedBackgroundColor: onPeriodColor,
                                     ),
                                   ),
-                                ]
+                                  const SizedBox(height: 16),
+                                  OutlinedButton.icon(
+                                    onPressed: () => _deleteLog(selectedLog),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.red,
+                                      side: const BorderSide(color: Colors.red),
+                                    ),
+                                    icon: const Icon(Icons.delete_outline),
+                                    label: const Text('Delete Log'),
+                                  ),
+                                ],
                               ],
                             ),
                           ),

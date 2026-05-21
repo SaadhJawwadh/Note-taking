@@ -395,14 +395,26 @@ class FfmpegService {
         await outputDir.create(recursive: true);
       }
 
-      // Copy to simulate conversion
-      await originalFile.copy(outputPath);
+      final inputExt = p.extension(inputPath).toLowerCase();
+      final outputExt = p.extension(outputPath).toLowerCase();
       final size = await originalFile.length();
+      int compressedSize;
+
+      if (inputExt != outputExt) {
+        // Write placeholder text to avoid corrupt media widgets
+        final placeholderText = 'Simulated conversion from $inputExt to $outputExt\nOriginal size: $size bytes';
+        await File(outputPath).writeAsString(placeholderText);
+        compressedSize = placeholderText.length;
+      } else {
+        // Copy to simulate conversion
+        await originalFile.copy(outputPath);
+        compressedSize = (size * 0.8).toInt();
+      }
       
       return ConversionResult(
         outputPath: outputPath,
         originalSizeBytes: size,
-        compressedSizeBytes: (size * 0.8).toInt(),
+        compressedSizeBytes: compressedSize,
       );
     } catch (e) {
       debugPrint('Simulation error: $e');

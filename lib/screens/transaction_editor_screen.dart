@@ -28,6 +28,8 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
   bool _isLoading = false;
   String _category = TransactionCategory.other;
 
+  late String _initialCategory;
+
   @override
   void initState() {
     super.initState();
@@ -39,6 +41,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
       _isExpense = widget.transaction!.isExpense;
       _category = widget.transaction!.category;
     }
+    _initialCategory = _category;
   }
 
   @override
@@ -101,6 +104,30 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
            } catch (_) {}
         }
       }
+
+      // Category Training Prompt logic
+      if (widget.transaction!.smsId != null &&
+          _initialCategory != _category) {
+        final rule = await _showCategoryTrainingDialog(description, _category);
+        if (rule != null && rule.isNotEmpty) {
+          final db = DatabaseHelper.instance;
+          final defs = await db.getAllCategoryDefinitions();
+          CategoryDefinition? targetDef;
+          for (final d in defs) {
+            if (d.name == _category) {
+              targetDef = d;
+              break;
+            }
+          }
+          if (targetDef != null) {
+            if (!targetDef.keywords.contains(rule)) {
+              final updatedKeywords = List<String>.from(targetDef.keywords)..add(rule.toLowerCase());
+              await db.upsertCategoryDefinition(targetDef.copyWith(keywords: updatedKeywords));
+              await TransactionCategory.reload();
+            }
+          }
+        }
+      }
     }
 
     setState(() => _isLoading = false);
@@ -143,9 +170,6 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
 
   Future<String?> _showTrainingDialog(String initialKeyword) async {
     String keyword = initialKeyword.replaceAll(RegExp(r'(?:Debit|Credit|Payment at|Purchase at|Transfer to)\s*', caseSensitive: false), '').trim();
-    if (keyword.contains(' ')) {
-      keyword = keyword.split(' ').first; // Take just the most prominent word for robustness
-    }
 
     return showDialog<String>(
       context: context,
@@ -177,6 +201,46 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
             FilledButton(
               onPressed: () => Navigator.pop(context, input),
               child: const Text('Train Parser'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<String?> _showCategoryTrainingDialog(String initialKeyword, String category) async {
+    String keyword = initialKeyword.replaceAll(RegExp(r'(?:Debit|Credit|Payment at|Purchase at|Transfer to)\s*', caseSensitive: false), '').trim();
+
+    return showDialog<String>(
+      context: context,
+      builder: (context) {
+        String input = keyword;
+        return AlertDialog(
+          title: const Text('Train Category Parser?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Would you like the app to remember this? Future SMS messages containing the keyword below will automatically be categorized as "$category".'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: TextEditingController(text: keyword),
+                decoration: const InputDecoration(
+                  labelText: 'Matching Keyword/Phrase',
+                  border: OutlineInputBorder(),
+                  hintText: 'e.g., Uber, Keells, Mc',
+                ),
+                onChanged: (v) => input = v.trim(),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, null),
+              child: const Text('No, just this once'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, input),
+              child: const Text('Train Category'),
             ),
           ],
         );
