@@ -45,10 +45,6 @@ void main() {
       await settings.setAppLockTimeout(30);
       expect(settings.appLockTimeout, 30);
 
-      final prefsBefore = await SharedPreferences.getInstance();
-      print('Mock prefs keys: ${prefsBefore.getKeys()}');
-      print('Mock prefs appLockTimeout value: ${prefsBefore.getInt('appLockTimeout')}');
-
       // Reload settings to verify persistence
       final newSettings = SettingsProvider();
       await Future.delayed(const Duration(milliseconds: 100)); // wait for constructor loadSettings

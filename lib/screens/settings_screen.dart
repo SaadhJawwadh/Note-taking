@@ -526,11 +526,12 @@ class SettingsScreen extends StatelessWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: options.entries.map((entry) {
-            // ignore: deprecated_member_use
             return RadioListTile<int>(
               title: Text(entry.value),
               value: entry.key,
+              // ignore: deprecated_member_use
               groupValue: settings.appLockTimeout,
+              // ignore: deprecated_member_use
               onChanged: (v) {
                 settings.setAppLockTimeout(v!);
                 Navigator.pop(context);
