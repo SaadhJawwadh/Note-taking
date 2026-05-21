@@ -55,6 +55,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
     await showDialog<void>(
       context: context,
       builder: (ctx) => _AddCategoryDialog(
+        existingCategories: _categories,
         onSave: (newDef) async {
           await DatabaseHelper.instance.upsertCategoryDefinition(newDef);
           await _saveAndReload();
@@ -430,8 +431,12 @@ class _EditKeywordsDialogState extends State<_EditKeywordsDialog> {
 
 class _AddCategoryDialog extends StatefulWidget {
   final Future<void> Function(CategoryDefinition) onSave;
+  final List<CategoryDefinition> existingCategories;
 
-  const _AddCategoryDialog({required this.onSave});
+  const _AddCategoryDialog({
+    required this.onSave,
+    required this.existingCategories,
+  });
 
   @override
   State<_AddCategoryDialog> createState() => _AddCategoryDialogState();
@@ -478,6 +483,13 @@ class _AddCategoryDialogState extends State<_AddCategoryDialog> {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       setState(() => _nameError = 'Name is required');
+      return;
+    }
+    final exists = widget.existingCategories.any(
+      (c) => c.name.toLowerCase() == name.toLowerCase()
+    );
+    if (exists) {
+      setState(() => _nameError = 'Category already exists');
       return;
     }
     setState(() {

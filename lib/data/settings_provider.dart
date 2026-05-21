@@ -435,6 +435,12 @@ class SettingsProvider extends ChangeNotifier {
       // Security settings (appLockEnabled, useBiometrics) are intentionally
       // excluded from restore to prevent bypass via crafted backup files.
       // Users must configure these manually after a restore.
+      if (map.containsKey('appLockTimeout')) {
+        final timeout = (map['appLockTimeout'] as num?)?.toInt();
+        if (timeout != null) {
+          await setAppLockTimeout(timeout);
+        }
+      }
       if (map.containsKey('discreetNotificationText')) {
         final txt = map['discreetNotificationText'];
         if (txt is String && txt.isNotEmpty) {

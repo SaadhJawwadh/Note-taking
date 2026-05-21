@@ -80,7 +80,7 @@ void main() {
       // Security configurations must remain unchanged (ignored from restore)
       expect(settings.appLockEnabled, isFalse);
       expect(settings.useBiometrics, isFalse);
-      expect(settings.appLockTimeout, 0);
+      expect(settings.appLockTimeout, 300);
 
       // Non-security settings must be restored
       expect(settings.textSize, 24.0);

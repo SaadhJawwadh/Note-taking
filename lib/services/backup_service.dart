@@ -56,6 +56,7 @@ Future<String> generateBackupJson({Map<String, dynamic>? settingsOverride}) asyn
       'isPeriodTrackerEnabled': prefs.getBool('isPeriodTrackerEnabled') ?? false,
       'appLockEnabled': prefs.getBool('appLockEnabled') ?? false,
       'useBiometrics': prefs.getBool('useBiometrics') ?? false,
+      'appLockTimeout': prefs.getInt('appLockTimeout') ?? 0,
       'discreetNotificationText': prefs.getString('discreetNotificationText') ?? 'Check the app',
       'customExpenseRules': prefs.getStringList('customExpenseRules') ?? [],
       'customIncomeRules': prefs.getStringList('customIncomeRules') ?? [],

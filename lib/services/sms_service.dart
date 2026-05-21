@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../data/database_helper.dart';
 import '../data/transaction_model.dart';
+import '../data/transaction_category.dart';
 import 'sms_parser.dart';
 import 'sms_constants.dart';
 
@@ -10,6 +11,7 @@ class SmsService {
   static final Telephony telephony = Telephony.instance;
 
   static Future<void> _handleNewSms(SmsMessage sms) async {
+    await TransactionCategory.reload();
     final transaction = SmsParser.parseMessage(
       body: sms.body ?? '',
       address: sms.address ?? '',
@@ -76,6 +78,7 @@ class SmsService {
       return 0;
     }
     await reloadSmsContacts();
+    await TransactionCategory.reload();
 
     final start = from.millisecondsSinceEpoch;
 
@@ -124,6 +127,7 @@ class SmsService {
     telephony.listenIncomingSms(
       onNewMessage: (SmsMessage message) async {
         await reloadSmsContacts();
+        await TransactionCategory.reload();
         await _handleNewSms(message);
         final t = SmsParser.parseMessage(
           body: message.body ?? '',
@@ -162,6 +166,8 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
     }
   }
 
+  await TransactionCategory.reload();
+
   final transaction = SmsParser.parseMessage(
     body: message.body ?? '',
     address: message.address ?? '',
@@ -173,6 +179,9 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
     customIncomeRules: customIncomeRules,
   );
   if (transaction != null) {
+    if (await DatabaseHelper.instance.hasCrossSenderDuplicate(transaction.amount, transaction.date)) {
+      return;
+    }
     final inserted = await DatabaseHelper.instance.createSmsTransaction(transaction);
     if (inserted != null && transaction.category == SmsConstants.reversalSentinel) {
       final target = await DatabaseHelper.instance.findReversalTarget(transaction.amount, transaction.date);
