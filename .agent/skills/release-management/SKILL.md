@@ -51,4 +51,13 @@ git push origin vX.Y.Z   # triggers GitHub Actions CI/CD
 - **Tag Conflicts**: If a tag already exists, ensure the version is bumped correctly in both `pubspec.yaml` and the git tag command.
 - **Backup completeness**: Before releasing any version that changes `SettingsProvider`, verify `generateBackupJson` in `backup_service.dart` uses `SettingsProvider.toBackupMap()` — NOT hardcoded SharedPreferences keys. Hardcoded keys go stale silently as new settings are added.
 - **`flutter analyze` not run before release**: Always run static analysis before building the release APK. Lint warnings that slip through can indicate real logic bugs.
+- **Git Worktree Branch Locking**: If the target branch (e.g. `main`) cannot be checked out directly locally because it is checked out in another worktree, push the target branch to the remote using `git push origin <local-branch>:main` instead of checking it out locally.
+- **Replacing/Re-tagging Existing Tags**: If a tag already exists and needs to be updated or replaced on a new commit (e.g., if a prior run failed or tag needs adjustment), delete the tag locally and remotely before re-creating and pushing it:
+  ```bash
+  git tag -d vX.Y.Z
+  git push origin :refs/tags/vX.Y.Z
+  git tag vX.Y.Z
+  git push origin vX.Y.Z
+  ```
+
 

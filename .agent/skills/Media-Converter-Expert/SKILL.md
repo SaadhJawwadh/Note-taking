@@ -23,3 +23,5 @@ description: Specialist in the Media Conversion (Fiber Converter) module, handli
 - **Lite Mode Restrictions**: Clarify in the UI that Lite Mode is optimized for images and basic format conversion, while FFmpeg is required for advanced video compression.
 - **Presets**: Map user-friendly presets to both FFmpeg command strings and native `image` processing parameters (e.g., JPEG quality, resizing).
 - **Cleanup**: Always use `FfmpegService.instance.cancelAll()` on screen disposal to prevent ghost processes.
+- **Simulation Mismatched Extensions**: When simulating conversion, if the input file extension differs from the output file extension, do not copy the raw input bytes directly to the output. Instead, write descriptive placeholder text (detailing the simulated conversion, settings/presets, and format transition) so that target apps trying to parse the output file extension do not crash on invalid format bytes.
+

@@ -7,6 +7,7 @@ All notable changes to Note Book are documented here.
 ### 🔒 Stability & Fixes
 - **App Lock Screen Deadlock**: Resolved a blank screen lock/interaction blockade by updating state visibility immediately on resume.
 - **Home Navigation Clamping**: Prevented index out-of-bounds assertions when features are dynamically disabled in settings.
+- **SMS Parser Bank Filters**: Restricted default bank filters to recognized bank senders to prevent false-positive classifications on whitelisted non-bank senders.
 
 ### 🔒 Data Integrity
 - **Cross-Sender Duplicate Check**: Prevented parallel/duplicate transactions from bank app notifications via a new database check.

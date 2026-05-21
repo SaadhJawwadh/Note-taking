@@ -24,3 +24,7 @@ description: Specialist in the Financial Management module, handling transaction
 - **Categorization**: Prefer user-defined rules over default keyword matching.
 - **UI Architecture**: Financial components must integrate with the main `NavigationBar` if enabled.
 - **Performance**: Use in-memory filtering for categories and search to ensure a "zero-lag" experience.
+- **SMS Deduplication**: Implement duplicate checks for incoming SMS (checking if a message with the exact same body and timestamp already exists, even if from a different address/sender) inside background isolates and foreground receivers to avoid duplicate transaction entries.
+- **Category Validation**: Ensure category names are validated in a case-insensitive manner to prevent name collisions when users create or edit transaction categories.
+- **Merchant Rules**: Allow multi-word keyword matching in rules rather than truncating/splitting keywords to the first word (e.g. support matching full strings like "Google Play Store").
+

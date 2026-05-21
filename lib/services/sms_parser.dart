@@ -26,13 +26,14 @@ class SmsParser {
     final matchesExpenseRule = customExpenseRules.any((r) => bodyLower.contains(r.toLowerCase()));
     final matchesIncomeRule = customIncomeRules.any((r) => bodyLower.contains(r.toLowerCase()));
 
-    final isKnownSender = SmsConstants.bankSenders.any((s) => address.contains(s)) ||
+    final isBank = SmsConstants.bankSenders.any((s) => address.contains(s));
+    final isKnownSender = isBank ||
         allowedSenderIds.any((s) => senderLower.contains(s));
     
-    final isDebit = matchesExpenseRule || SmsConstants.debitRegex.hasMatch(body);
-    final isCredit = matchesIncomeRule || (!matchesExpenseRule && SmsConstants.creditRegex.hasMatch(body));
-    final hasInstalment = SmsConstants.instalmentRegex.hasMatch(body);
-    final isTransfer = SmsConstants.transferRegex.hasMatch(body);
+    final isDebit = matchesExpenseRule || (isBank && SmsConstants.debitRegex.hasMatch(body));
+    final isCredit = matchesIncomeRule || (isBank && !matchesExpenseRule && SmsConstants.creditRegex.hasMatch(body));
+    final hasInstalment = isBank && SmsConstants.instalmentRegex.hasMatch(body);
+    final isTransfer = isBank && SmsConstants.transferRegex.hasMatch(body);
 
     if (!isKnownSender && !isDebit && !isCredit && !hasInstalment && !isTransfer) return null;
 
