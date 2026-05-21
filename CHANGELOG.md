@@ -2,6 +2,24 @@
 
 All notable changes to Note Book are documented here.
 
+## [1.22.1] - 2026-05-21
+
+### 🔒 Stability & Fixes
+- **App Lock Screen Deadlock**: Resolved a blank screen lock/interaction blockade by updating state visibility immediately on resume.
+- **Home Navigation Clamping**: Prevented index out-of-bounds assertions when features are dynamically disabled in settings.
+
+### 🔒 Data Integrity
+- **Cross-Sender Duplicate Check**: Prevented parallel/duplicate transactions from bank app notifications via a new database check.
+- **Category Creation Collision**: Added case-insensitive name validation in the Category editor dialog to block duplicate creation.
+- **Settings Backup & Recovery**: Included the `appLockTimeout` option in backup profiles and restored it successfully during backup imports.
+
+### ✨ UX Polish
+- **Multi-Word Merchant Training**: Enabled training full compound merchant names/phrases for transaction categories.
+- **Retrospective Period Intensity**: Allowed editing flow intensity directly on the Selected Day Log Card for past period entries.
+- **Simulated Conversion Placeholder**: Enabled writing descriptive text placeholders when file converter simulation output extensions differ.
+
+---
+
 ## [1.22.0] - 2026-05-15
 
 ### ✨ Architecture & Refactoring

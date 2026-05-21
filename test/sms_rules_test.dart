@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:note_taking_app/services/sms_parser.dart';
-import 'package:note_taking_app/data/transaction_model.dart';
 import 'package:telephony/telephony.dart';
 
 void main() {
@@ -24,6 +23,7 @@ void main() {
         customExpenseRules: [],
         customIncomeRules: [],
       );
+      expect(tNoRules, isNull);
       
       // Parse with custom rules
       final tWithRules = SmsParser.parseMessage(
