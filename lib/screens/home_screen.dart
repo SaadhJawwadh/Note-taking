@@ -367,6 +367,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         return _buildNotesView(context, settings);
       }
 
+      int destinationsCount = 1;
+      if (settings.showFileConverter) destinationsCount++;
+      if (settings.showFinancialManager) destinationsCount++;
+      if (settings.isPeriodTrackerEnabled) destinationsCount++;
+
+      if (_currentIndex >= destinationsCount) {
+        _currentIndex = destinationsCount - 1;
+      }
+
       // Return Bottom Nav View if any feature is enabled
       return Scaffold(
         body: PageTransitionSwitcher(

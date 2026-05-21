@@ -9,6 +9,7 @@ import 'manage_tags_screen.dart';
 import 'filtered_notes_screen.dart';
 import 'category_management_screen.dart';
 import 'sms_contacts_screen.dart';
+import 'sms_rules_screen.dart';
 import '../utils/app_constants.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -57,13 +58,71 @@ class SettingsScreen extends StatelessWidget {
               ),
               SliverPadding(
                 padding: const EdgeInsets.all(16),
-                sliver: SliverList(
-                  delegate: SliverChildListDelegate(
-                    AnimationConfiguration.toStaggeredList(
-                        duration: const Duration(milliseconds: 220),
-                        childAnimationBuilder: (widget) => SlideAnimation(verticalOffset: 24.0, child: FadeInAnimation(child: widget)),
-                        children: [
-                          SettingsSection(
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate(
+                        AnimationConfiguration.toStaggeredList(
+                            duration: const Duration(milliseconds: 220),
+                            childAnimationBuilder: (widget) => SlideAnimation(verticalOffset: 24.0, child: FadeInAnimation(child: widget)),
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: Container(
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.8),
+                                        Theme.of(context).colorScheme.secondaryContainer.withValues(alpha: 0.4),
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(24),
+                                    border: Border.all(
+                                      color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Theme.of(context).colorScheme.primary,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          Icons.settings_suggest_rounded,
+                                          size: 28,
+                                          color: Theme.of(context).colorScheme.onPrimary,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'System Settings',
+                                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                                  ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              'Customize note styling, automated SMS rules, app security, and formats.',
+                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              SettingsSection(
                             title: 'Finances & Features',
                             icon: Icons.account_balance_wallet_outlined,
                             initiallyExpanded: true,
@@ -78,6 +137,8 @@ class SettingsScreen extends StatelessWidget {
                                 SettingsTile(icon: Icons.category_outlined, title: 'Manage Categories', subtitle: 'Customise keywords and create new categories', showArrow: true, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryManagementScreen()))),
                                 const _Divider(),
                                 SettingsTile(icon: Icons.contacts_outlined, title: 'SMS Contacts', subtitle: 'Manage bank & custom senders for auto-import', showArrow: true, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SmsContactsScreen()))),
+                                const _Divider(),
+                                SettingsTile(icon: Icons.rule_folder_outlined, title: 'SMS Import Rules', subtitle: 'Manage auto-categorization and transaction type rules', showArrow: true, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SmsRulesScreen()))),
                               ]
                             ],
                           ),
@@ -163,8 +224,9 @@ class SettingsScreen extends StatelessWidget {
                             ],
                           ),
                           SettingsSection(
-                            title: 'Privacy & Personal',
+                            title: 'Privacy & Security',
                             icon: Icons.security_outlined,
+                            initiallyExpanded: true,
                             children: [
                               SettingsSwitchTile(icon: Icons.calendar_month_outlined, title: 'Period Tracker', subtitle: 'Optional cycle tracking', value: settings.isPeriodTrackerEnabled, onChanged: settings.setIsPeriodTrackerEnabled),
                               if (settings.isPeriodTrackerEnabled) ...[
@@ -173,6 +235,24 @@ class SettingsScreen extends StatelessWidget {
                               ],
                               const _Divider(),
                               SettingsSwitchTile(icon: Icons.lock_outline, title: 'App Lock', subtitle: 'Require authentication to open app', value: settings.appLockEnabled, onChanged: settings.setAppLockEnabled),
+                              if (settings.appLockEnabled) ...[
+                                const _Divider(),
+                                SettingsSwitchTile(
+                                  icon: Icons.fingerprint_outlined,
+                                  title: 'Use Biometrics',
+                                  subtitle: 'Require biometric scan specifically',
+                                  value: settings.useBiometrics,
+                                  onChanged: settings.setUseBiometrics,
+                                ),
+                                const _Divider(),
+                                SettingsTile(
+                                  icon: Icons.timer_outlined,
+                                  title: 'Auto-Lock Timeout',
+                                  subtitle: _getTimeoutLabel(settings.appLockTimeout),
+                                  showArrow: true,
+                                  onTap: () => _showTimeoutPicker(context, settings),
+                                ),
+                              ],
                             ],
                           ),
                           SettingsSection(
@@ -418,6 +498,45 @@ class SettingsScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           // ignore: deprecated_member_use
           children: options.map((option) => RadioListTile<String>(title: Text(option.toUpperCase()), value: option, groupValue: currentValue, onChanged: (v) { onSelected(v!); Navigator.pop(context); })).toList(),
+        ),
+      ),
+    );
+  }
+
+  String _getTimeoutLabel(int seconds) {
+    if (seconds == 0) return 'Immediately';
+    if (seconds < 60) return '$seconds seconds';
+    return '${seconds ~/ 60} minute${seconds >= 120 ? "s" : ""}';
+  }
+
+  void _showTimeoutPicker(BuildContext context, SettingsProvider settings) {
+    final options = {
+      0: 'Immediately',
+      10: '10 seconds',
+      30: '30 seconds',
+      60: '1 minute',
+      300: '5 minutes',
+    };
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+        title: const Text('Auto-Lock Timeout'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: options.entries.map((entry) {
+            // ignore: deprecated_member_use
+            return RadioListTile<int>(
+              title: Text(entry.value),
+              value: entry.key,
+              groupValue: settings.appLockTimeout,
+              onChanged: (v) {
+                settings.setAppLockTimeout(v!);
+                Navigator.pop(context);
+              },
+            );
+          }).toList(),
         ),
       ),
     );

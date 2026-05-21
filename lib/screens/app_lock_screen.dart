@@ -24,6 +24,8 @@ class AppLockScreenState extends State<AppLockScreen>
   // Static to persist across widget rebuilds in the same app session
   static bool _isSessionAuthenticated = false;
   bool _isInBackground = false;
+  bool _isAuthenticating = false;
+  DateTime? _backgroundTime;
 
   @override
   void initState() {
@@ -42,11 +44,32 @@ class AppLockScreenState extends State<AppLockScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    final isBackground = state != AppLifecycleState.resumed;
+    if (mounted) {
+      setState(() {
+        _isInBackground = isBackground;
+      });
+    }
+
+    if (_isAuthenticating) {
+      // Ignore lifecycle changes caused by the biometric authentication dialog itself
+      return;
+    }
+
     setState(() {
-      _isInBackground = state != AppLifecycleState.resumed;
-      if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-        // App went to the background, so require authentication again on resume
-        _isSessionAuthenticated = false;
+      if (isBackground) {
+        // Record when the app went to the background
+        _backgroundTime ??= DateTime.now();
+      } else {
+        // App is resuming
+        if (_backgroundTime != null) {
+          final settings = Provider.of<SettingsProvider>(context, listen: false);
+          final elapsed = DateTime.now().difference(_backgroundTime!).inSeconds;
+          if (elapsed >= settings.appLockTimeout) {
+            _isSessionAuthenticated = false;
+          }
+        }
+        _backgroundTime = null;
       }
     });
 
@@ -69,12 +92,18 @@ class AppLockScreenState extends State<AppLockScreen>
       return;
     }
 
+    if (_isAuthenticating) return;
+
+    setState(() {
+      _isAuthenticating = true;
+    });
+
     try {
       final bool didAuthenticate = await auth.authenticate(
         localizedReason: 'Please authenticate to access the app',
-        options: const AuthenticationOptions(
+        options: AuthenticationOptions(
           stickyAuth: true,
-          biometricOnly: false,
+          biometricOnly: settings.useBiometrics,
         ),
       );
 
@@ -85,6 +114,12 @@ class AppLockScreenState extends State<AppLockScreen>
       }
     } catch (e) {
       debugPrint('Authentication error: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAuthenticating = false;
+        });
+      }
     }
   }
 

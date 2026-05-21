@@ -64,6 +64,9 @@ class SettingsProvider extends ChangeNotifier {
   bool _useBiometrics = false;
   bool get useBiometrics => _useBiometrics;
 
+  int _appLockTimeout = 0; // in seconds
+  int get appLockTimeout => _appLockTimeout;
+
   String _discreetNotificationText = 'Check the app';
   String get discreetNotificationText => _discreetNotificationText;
 
@@ -115,6 +118,7 @@ class SettingsProvider extends ChangeNotifier {
     _isPeriodTrackerEnabled = prefs.getBool('isPeriodTrackerEnabled') ?? false;
     _appLockEnabled = prefs.getBool('appLockEnabled') ?? false;
     _useBiometrics = prefs.getBool('useBiometrics') ?? false;
+    _appLockTimeout = prefs.getInt('appLockTimeout') ?? 0;
     _discreetNotificationText =
         prefs.getString('discreetNotificationText') ?? 'Check the app';
 
@@ -285,6 +289,13 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setAppLockTimeout(int timeout) async {
+    _appLockTimeout = timeout;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('appLockTimeout', timeout);
+    notifyListeners();
+  }
+
   Future<void> setDiscreetNotificationText(String text) async {
     _discreetNotificationText = text;
     final prefs = await SharedPreferences.getInstance();
@@ -356,6 +367,7 @@ class SettingsProvider extends ChangeNotifier {
         'isPeriodTrackerEnabled': _isPeriodTrackerEnabled,
         'appLockEnabled': _appLockEnabled,
         'useBiometrics': _useBiometrics,
+        'appLockTimeout': _appLockTimeout,
         'discreetNotificationText': _discreetNotificationText,
         'customExpenseRules': _customExpenseRules,
         'customIncomeRules': _customIncomeRules,
