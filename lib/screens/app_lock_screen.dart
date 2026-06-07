@@ -14,10 +14,16 @@ class AppLockScreen extends StatefulWidget {
   const AppLockScreen({super.key, required this.child});
   
   static final ValueNotifier<bool> sessionAuthenticated = ValueNotifier<bool>(false);
+  static bool _ignoreNextResumeLock = false;
 
   // Static helper to manually unlock the session (useful for sharing)
   static void unlockSession() {
     sessionAuthenticated.value = true;
+  }
+
+  // Static helper to ignore the next lock check when resuming
+  static void ignoreNextResumeLock() {
+    _ignoreNextResumeLock = true;
   }
 
   @override
@@ -110,7 +116,9 @@ class AppLockScreenState extends State<AppLockScreen>
         _backgroundTime ??= DateTime.now();
       } else {
         // App is resuming
-        if (_backgroundTime != null) {
+        if (AppLockScreen._ignoreNextResumeLock) {
+          AppLockScreen._ignoreNextResumeLock = false;
+        } else if (_backgroundTime != null) {
           final settings = Provider.of<SettingsProvider>(context, listen: false);
           final elapsed = DateTime.now().difference(_backgroundTime!).inSeconds;
           if (elapsed >= settings.appLockTimeout) {
@@ -217,7 +225,7 @@ class AppLockScreenState extends State<AppLockScreen>
       return widget.child;
     }
 
-    if (_isInBackground || !_isSessionAuthenticated) {
+    if (!_isSessionAuthenticated) {
       return Scaffold(
         body: Center(
           child: Column(
@@ -239,6 +247,32 @@ class AppLockScreenState extends State<AppLockScreen>
             ],
           ),
         ),
+      );
+    }
+
+    if (_isInBackground) {
+      return Stack(
+        children: [
+          widget.child,
+          Positioned.fill(
+            child: Scaffold(
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.lock_outline,
+                        size: 80, color: Theme.of(context).colorScheme.primary),
+                    const SizedBox(height: 24),
+                    Text(
+                      'App Locked',
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       );
     }
 

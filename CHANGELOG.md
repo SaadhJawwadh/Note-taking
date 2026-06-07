@@ -2,6 +2,27 @@
 
 All notable changes to Note Book are documented here.
 
+## [1.31.0] - 2026-06-08
+
+### 🐛 Bug Fixes (Critical)
+- **File Converter Locking on Picker Return**: Fixed a critical regression where the File Converter stopped working after the v1.30.0 UI changes. Opening a native file picker (`FilePicker`) caused the app to background, which triggered the biometric lock screen, unmounting the entire converter widget tree and aborting the picker result handling.
+- **Home Screen Lifecycle Crash**: Fixed an unmounted state exception in `HomeScreen.didChangeAppLifecycleState` where `context.read<NoteProvider>()` was accessed after the widget was disposed, causing a crash on app close.
+
+### 🔒 App Lock Improvements
+- **Picker-Aware Lock Bypass**: Introduced `AppLockScreen.ignoreNextResumeLock()` — a one-shot flag that prevents the biometric timeout lock from triggering when returning from platform-level pickers (FilePicker, ImagePicker, directory pickers).
+- **State-Preserving Background Overlay**: Changed the lock screen's background behavior from unmounting the child tree to overlaying a secure screen via `Stack`. This preserves the state of all child widgets (e.g., FileConverterScreen, NoteEditorScreen) while the app is momentarily backgrounded by native pickers.
+- **Comprehensive Picker Coverage**: Applied the `ignoreNextResumeLock()` bypass to all native picker entry points:
+  - File Converter screen (file picking)
+  - Note Editor screen (image picking)
+  - Settings screen (backup directory selection)
+  - Backup Service (export directory and import file selection)
+  - Gallery save (permission dialog)
+
+### 🛠 Improvements
+- **Zero-Regression Test Suite**: All existing widget tests (app lock lifecycle, SMS parsing, system integrity) pass without modification, confirming backwards compatibility.
+
+---
+
 ## [1.30.0] - 2026-06-07
 
 ### ✨ Standalone Utilities & UI Refinements

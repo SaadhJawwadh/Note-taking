@@ -210,6 +210,8 @@ Expert Flutter developer specializing in Flutter 3.x+, Dart 3.x, and comprehensi
     },
   );
   ```
+- **Platform Pickers + AppLockScreen State Destruction**: When an `AppLockScreen` widget unmounts its `widget.child` on lock (replacing it with a lock-screen Scaffold), any in-flight native picker (`FilePicker`, `ImagePicker`, directory picker) loses its calling widget's state because the picker puts the app into background → triggers lock timeout → child is unmounted. **Fix**: (1) Use a `Stack` overlay for the background state so the child widget tree stays mounted. (2) Add a static `ignoreNextResumeLock()` one-shot flag that is consumed on the next `AppLifecycleState.resumed` event to skip the timeout check. (3) Call `ignoreNextResumeLock()` immediately before every `await FilePicker.platform.pickFiles(...)`, `await ImagePicker().pickImage(...)`, or `await FilePicker.platform.getDirectoryPath()`. This pattern must be applied in ALL screens/services that invoke native pickers: `FileConverterScreen`, `NoteEditorScreen`, `SettingsScreen`, and `BackupService`.
+- **`WidgetsBindingObserver` + Unmounted Context Access**: Any `State` that mixes in `WidgetsBindingObserver` will still receive `didChangeAppLifecycleState` callbacks even **after** `dispose()` if the observer isn't removed promptly. Accessing `context` (e.g., `context.read<Provider>()`) in the callback without a `mounted` guard throws a "widget has been unmounted" assertion. **Fix**: Always gate lifecycle callbacks with `if (!mounted) return;` or `if (state == AppLifecycleState.resumed && mounted)` before any `context` access.
 
 ## Example Interactions
 - "Architect a Flutter app with clean architecture and Riverpod"

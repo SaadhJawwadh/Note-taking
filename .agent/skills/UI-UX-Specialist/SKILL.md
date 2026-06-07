@@ -23,6 +23,8 @@ metadata:
 - **Session-Based Lock**: Implement app locks that persist for the duration of the app session (until the process is killed). This avoids frustrating re-authentications during quick task switches.
 - **Utility Bypasses**: High-value utility modules (like Share Intent handlers or File Converters) should bypass the lock screen entirely if triggered externally. This ensures "zero-friction" for quick actions outside the app's main flow.
 - **Manual Session Management**: Provide static `unlockSession()` helpers to allow cross-module authentication states.
+- **State-Preserving Lock Overlay**: When the app goes to background, use a `Stack` overlay (lock screen on top of the child) instead of unmounting the child widget tree. Unmounting destroys in-progress async operations (e.g., native file pickers returning results). The child tree should only be unmounted when the session is fully locked out (`!_isSessionAuthenticated`).
+- **Picker-Aware Lock Bypass**: Add a static `ignoreNextResumeLock()` one-shot flag pattern to the lock screen. Call it before every native picker invocation (`FilePicker`, `ImagePicker`, directory pickers). The flag is consumed on the next `AppLifecycleState.resumed` event, preventing the timeout from triggering a lock when the user is simply returning from a platform dialog.
 
 ## Instructions
 

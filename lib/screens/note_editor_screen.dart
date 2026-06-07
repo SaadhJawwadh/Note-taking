@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:image_picker/image_picker.dart';
+import 'app_lock_screen.dart';
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
 import 'dart:async';
 import '../data/database_helper.dart';
@@ -323,6 +324,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
     try {
+      AppLockScreen.ignoreNextResumeLock();
       final pickedFile = await picker.pickImage(source: source);
       if (pickedFile != null) {
         final index = _quillController.selection.baseOffset;

@@ -57,6 +57,7 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
 
     // Unlock session so we don't get locked out after returning from file picker
     AppLockScreen.unlockSession();
+    AppLockScreen.ignoreNextResumeLock();
 
     final result = await FilePicker.platform.pickFiles(
       type: FileType.any,

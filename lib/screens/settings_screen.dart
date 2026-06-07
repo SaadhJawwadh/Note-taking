@@ -13,6 +13,7 @@ import 'sms_contacts_screen.dart';
 import 'sms_rules_screen.dart';
 import '../utils/app_constants.dart';
 import 'package:file_picker/file_picker.dart';
+import 'app_lock_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/backup_service.dart';
 import '../services/ffmpeg_install_service.dart';
@@ -316,6 +317,7 @@ class SettingsScreen extends StatelessWidget {
                                   value: settings.autoBackupEnabled,
                                   onChanged: (value) async {
                                     if (value) {
+                                      AppLockScreen.ignoreNextResumeLock();
                                       final dir = await FilePicker.platform.getDirectoryPath();
                                       if (dir == null) return;
                                       await settings.setAutoBackupPath(dir);
@@ -333,6 +335,7 @@ class SettingsScreen extends StatelessWidget {
                                     title: 'Backup Location',
                                     subtitle: settings.autoBackupPath ?? 'App default directory',
                                     onTap: () async {
+                                      AppLockScreen.ignoreNextResumeLock();
                                       final dir = await FilePicker.platform.getDirectoryPath();
                                       if (dir != null) {
                                         await settings.setAutoBackupPath(dir);

@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 import '../data/database_helper.dart';
 import 'package:file_picker/file_picker.dart';
+import '../screens/app_lock_screen.dart';
 import 'package:provider/provider.dart';
 import '../data/settings_provider.dart';
 import '../data/transaction_category.dart';
@@ -160,6 +161,7 @@ class BackupService {
           ? Provider.of<SettingsProvider>(context, listen: false).toBackupMap()
           : null;
       final json = await generateBackupJson(settingsOverride: settingsMap);
+      AppLockScreen.ignoreNextResumeLock();
       final dir = await FilePicker.platform.getDirectoryPath();
       if (dir != null) {
         final dateStr = DateTime.now().toString().replaceAll(RegExp(r'[: ]'), '_').split('.')[0];
@@ -174,6 +176,7 @@ class BackupService {
 
   static Future<void> importBackup(BuildContext context) async {
     try {
+      AppLockScreen.ignoreNextResumeLock();
       final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['json']);
       if (result == null || result.files.single.path == null) return;
       final content = await File(result.files.single.path!).readAsString();
