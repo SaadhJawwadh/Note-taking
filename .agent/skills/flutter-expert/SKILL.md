@@ -198,6 +198,18 @@ Expert Flutter developer specializing in Flutter 3.x+, Dart 3.x, and comprehensi
 - **`AnimationLimiter` + `CustomScrollView` causing `Hero._allHeroesFor` StackOverflow**: Placing `AnimationLimiter` as an ancestor of slivers inside a `CustomScrollView` (e.g., wrapping the `SliverList`/`SliverGrid` directly) creates unbounded widget tree recursion during Hero transitions. **Fix**: Always wrap the `CustomScrollView` **itself** with `AnimationLimiter`, not its children. The working hierarchy is: `AnimationLimiter > CustomScrollView > Slivers`.
 - **SettingsProvider Backup Restore Not Persisting**: Directly assigning to private fields in `SettingsProvider.restoreFromBackupMap` (e.g., `_showFinancialManager = value`) updates memory but **skips disk persistence**. After an app restart, all restored settings are lost because `SharedPreferences` was never written. **Fix**: Always call the public setter methods (e.g., `await setShowFinancialManager(show)`) inside `restoreFromBackupMap` — they handle both in-memory state and `SharedPreferences` writes atomically.
 - **`flutter_secure_storage` Key Loss vs. Concurrent Init**: When debugging encrypted DB failures, add diagnostic prints to confirm whether the encryption key is being retrieved or regenerated on each launch. In this project's case, the key was *always* present — the bug was concurrent DB initialization, not key loss. Use `SharedPreferences` as a fallback/backup for the key as belt-and-suspenders protection.
+- **App Lock screen lifecycle deadlocks**: When implementing a background-locking overlay widget, ensure that the internal background state flag is updated instantly inside the widget's `didChangeAppLifecycleState` observer (upon transitioning to both `paused` and `resumed`). Avoid blocking, conditional, or delayed state updates that could cause the lock screen overlay to remain visible or fail to lock/unlock.
+- **Home Navigation Index Out-of-Bounds**: Dynamic feature toggles can change the total active tab count. Always clamp the navigation index to `[0, activeTabsCount - 1]` when changing navigation tabs or features to prevent indexing out of bounds.
+- **`path_provider` Mocking in Widget/Unit Tests**: Widget/unit tests using plugins like `path_provider` (e.g. calling `getTemporaryDirectory` or `getApplicationDocumentsDirectory`) require mocking the method channel. Mock `plugins.flutter.io/path_provider` inside `setUp` or test helper blocks:
+  ```dart
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(
+    const MethodChannel('plugins.flutter.io/path_provider'),
+    (MethodCall methodCall) async {
+      return '.'; // Or a mock path
+    },
+  );
+  ```
 
 ## Example Interactions
 - "Architect a Flutter app with clean architecture and Riverpod"

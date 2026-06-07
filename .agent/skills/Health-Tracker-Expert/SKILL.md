@@ -20,3 +20,5 @@ description: Specialist in the Health Tracker (Period Tracker) module, handling 
 - Symptom logging UI should be tactile and use "Material You" seeds for visual comfort.
 - Global search results for health logs should be descriptive yet discreet.
 - Use `TableCalendar` or similar widgets for intuitive date selection.
+- **Retrospective Logging**: Allow users to perform retrospective symptom and flow intensity updates on any selected past log, rather than limiting responsive/interactive controls (such as SegmentedButton and symptom selection states) only to today's date.
+

@@ -3,6 +3,7 @@ description: A fully local offline-first note-taking and financial manager app w
 publish_to: "none"
 version: 1.30.0+13000
 
+
 environment:
   sdk: ">=3.6.0 <4.0.0"
   flutter: ">=3.27.0"

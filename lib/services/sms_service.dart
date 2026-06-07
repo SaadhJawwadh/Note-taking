@@ -14,6 +14,7 @@ class SmsService {
   static final Telephony telephony = Telephony.instance;
 
   static Future<void> _handleNewSms(SmsMessage sms) async {
+    await TransactionCategory.reload();
     final transaction = await _parseWithAiFallback(
       body: sms.body ?? '',
       address: sms.address ?? '',
@@ -80,6 +81,7 @@ class SmsService {
       return 0;
     }
     await reloadSmsContacts();
+    await TransactionCategory.reload();
 
     final start = from.millisecondsSinceEpoch;
 
@@ -139,6 +141,7 @@ class SmsService {
     telephony.listenIncomingSms(
       onNewMessage: (SmsMessage message) async {
         await reloadSmsContacts();
+        await TransactionCategory.reload();
         await _handleNewSms(message);
         final t = await _parseWithAiFallback(
           body: message.body ?? '',
@@ -244,6 +247,8 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
     }
   }
 
+  await TransactionCategory.reload();
+
   final transaction = SmsParser.parseMessage(
     body: message.body ?? '',
     address: message.address ?? '',
@@ -255,6 +260,9 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
     customIncomeRules: customIncomeRules,
   );
   if (transaction != null) {
+    if (await DatabaseHelper.instance.hasCrossSenderDuplicate(transaction.amount, transaction.date)) {
+      return;
+    }
     final inserted = await DatabaseHelper.instance.createSmsTransaction(transaction);
     if (inserted != null && transaction.category == SmsConstants.reversalSentinel) {
       final target = await DatabaseHelper.instance.findReversalTarget(transaction.amount, transaction.date);
