@@ -260,8 +260,7 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
 
   void _shareResults() {
     if (_results.isEmpty) return;
-    // ignore: deprecated_member_use
-    Share.shareXFiles(_results.map((r) => XFile(r.outputPath)).toList());
+    SharePlus.instance.share(ShareParams(files: _results.map((r) => XFile(r.outputPath)).toList()));
   }
 
   void _cancelConversion() {
@@ -329,171 +328,216 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final canPop = Navigator.canPop(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('File Converter'),
-        centerTitle: true,
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            children: [
-              const SizedBox(height: 32),
-
-              // ── Hero Icon ──
-              Container(
-                padding: const EdgeInsets.all(28.0),
-                decoration: BoxDecoration(
-                  color: cs.primaryContainer.withValues(alpha: 0.3),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.compress_rounded,
-                  size: 56,
-                  color: cs.primary,
-                ),
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            backgroundColor: Colors.transparent,
+            floating: true,
+            snap: true,
+            toolbarHeight: 84,
+            titleSpacing: 16,
+            automaticallyImplyLeading: false,
+            title: Container(
+              margin: const EdgeInsets.only(top: 8),
+              padding: EdgeInsets.symmetric(horizontal: canPop ? 4 : 8),
+              height: 64,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(32),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  )
+                ],
               ),
-              const SizedBox(height: 24),
-
-              Text(
-                'FFmpeg Engine',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
+              child: Row(
+                children: [
+                  if (canPop) ...[
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: () => Navigator.pop(context),
                     ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _statusMessage,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: cs.onSurfaceVariant,
-                    ),
-                textAlign: TextAlign.center,
-              ),
-
-              const SizedBox(height: 32),
-
-              // ── Progress / Action ──
-              if (_isProcessing) ...[
-                Text(
-                  'Processing ${_currentIndex + 1} of ${_selectedFilePaths.length}',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: _progress > 0 ? _progress : null,
-                    minHeight: 8,
-                    backgroundColor: cs.surfaceContainerHighest,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  _progress > 0
-                      ? '${(_progress * 100).toInt()}%'
-                      : 'Working…',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: cs.primary,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                OutlinedButton.icon(
-                  onPressed: _cancelConversion,
-                  icon: const Icon(Icons.stop_circle_outlined),
-                  label: const Text('Stop All'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: cs.error,
-                    side: BorderSide(color: cs.error),
-                  ),
-                ),
-              ] else ...[
-                FilledButton.icon(
-                  onPressed: _pickAndConvertFiles,
-                  icon: const Icon(Icons.add_to_photos_rounded),
-                  label: const Text('Pick Files'),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 32, vertical: 16),
-                  ),
-                ),
-                if (_selectedFilePaths.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  TextButton.icon(
-                    onPressed: () => _showPresetSheet(context),
-                    icon: const Icon(Icons.refresh_rounded),
-                    label: const Text('Restart with Different Preset'),
+                    const SizedBox(width: 8),
+                  ] else ...[
+                    const SizedBox(width: 16),
+                  ],
+                  Text(
+                    'File Converter',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                 ],
-              ],
-
-              // ── Result Section ──
-              if (_results.isNotEmpty) ...[
-                const SizedBox(height: 32),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Results (${_results.length})',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    if (_results.length > 1)
-                      FilledButton.icon(
-                        onPressed: _shareResults,
-                        icon: const Icon(Icons.reply_all_rounded),
-                        label: const Text('Share All'),
-                        style: FilledButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                ..._results.map((res) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12.0),
-                  child: _ResultCard(
-                    result: res,
-                    // ignore: deprecated_member_use
-                    onShare: () => Share.shareXFiles([XFile(res.outputPath)]),
-                    onSave: () => _saveToGallery(res.outputPath),
-                  ),
-                )),
-              ],
-
-              const SizedBox(height: 32),
-
-              // ── Info Chip ──
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0, vertical: 12.0),
-                decoration: BoxDecoration(
-                  color: cs.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline,
-                        size: 20, color: cs.onSurfaceVariant),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Share any video, image, or audio directly from your Gallery — Note Book will appear in the share sheet.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: cs.onSurfaceVariant,
-                            ),
-                      ),
-                    ),
-                  ],
-                ),
               ),
-            ],
+            ),
           ),
-        ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                children: [
+                  const SizedBox(height: 32),
+
+                  // ── Hero Icon ──
+                  Container(
+                    padding: const EdgeInsets.all(28.0),
+                    decoration: BoxDecoration(
+                      color: cs.primaryContainer.withValues(alpha: 0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.compress_rounded,
+                      size: 56,
+                      color: cs.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  Text(
+                    'FFmpeg Engine',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _statusMessage,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // ── Progress / Action ──
+                  if (_isProcessing) ...[
+                    Text(
+                      'Processing ${_currentIndex + 1} of ${_selectedFilePaths.length}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        value: _progress > 0 ? _progress : null,
+                        minHeight: 8,
+                        backgroundColor: cs.surfaceContainerHighest,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      _progress > 0
+                          ? '${(_progress * 100).toInt()}%'
+                          : 'Working…',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: cs.primary,
+                          ),
+                    ),
+                    const SizedBox(height: 24),
+                    OutlinedButton.icon(
+                      onPressed: _cancelConversion,
+                      icon: const Icon(Icons.stop_circle_outlined),
+                      label: const Text('Stop All'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: cs.error,
+                        side: BorderSide(color: cs.error),
+                      ),
+                    ),
+                  ] else ...[
+                    FilledButton.icon(
+                      onPressed: _pickAndConvertFiles,
+                      icon: const Icon(Icons.add_to_photos_rounded),
+                      label: const Text('Pick Files'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 32, vertical: 16),
+                      ),
+                    ),
+                    if (_selectedFilePaths.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      TextButton.icon(
+                        onPressed: () => _showPresetSheet(context),
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('Restart with Different Preset'),
+                      ),
+                    ],
+                  ],
+
+                  // ── Result Section ──
+                  if (_results.isNotEmpty) ...[
+                    const SizedBox(height: 32),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Results (${_results.length})',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        if (_results.length > 1)
+                          FilledButton.icon(
+                            onPressed: _shareResults,
+                            icon: const Icon(Icons.reply_all_rounded),
+                            label: const Text('Share All'),
+                            style: FilledButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    ..._results.map((res) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: _ResultCard(
+                            result: res,
+                            onShare: () =>
+                                SharePlus.instance.share(ShareParams(files: [XFile(res.outputPath)])),
+                            onSave: () => _saveToGallery(res.outputPath),
+                          ),
+                        )),
+                  ],
+
+                  const SizedBox(height: 32),
+
+                  // ── Info Chip ──
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0, vertical: 12.0),
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline,
+                            size: 20, color: cs.onSurfaceVariant),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Share any video, image, or audio directly from your Gallery — Note Book will appear in the share sheet.',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: cs.onSurfaceVariant,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

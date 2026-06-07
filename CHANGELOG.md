@@ -2,6 +2,25 @@
 
 All notable changes to Note Book are documented here.
 
+## [1.23.0] - 2026-06-07
+
+### ✨ Standalone Utilities & UI Refinements
+- **Dynamic File Converter Top Bar**: Updated the `FileConverterScreen` to use a floating card-style `SliverAppBar`. It dynamically detects if it is nested as a home screen navigation tab (removing the back button and matching start paddings) or pushed as a standalone route (showing the back button), aligning perfectly with other application pages.
+- **Modernized Share API**: Upgraded all deprecated static `Share.shareXFiles` calls to use the newer, more robust `SharePlus.instance.share` API.
+
+### 🔒 App Lock & Intent Bypasses
+- **Zero-Friction Sharesheet**: Integrated a 150ms verification delay and pre-auth media check in the lock overlay to prevent biometric lockouts when sharing media files from external applications.
+- **Intent Caching**: Resolved "batch compression failed" errors by copying external `content://` URIs to the app's cache directory via native `ContentResolver` before processing.
+
+### 🎨 Material You Dynamic Launcher Icon
+- **Adaptive Monochrome Icon**: Added a clean single-color vector representation of the notebook pen-nib ribbon logo at `ic_launcher_monochrome.xml`. Configured launcher configurations to support Google and Samsung dynamic themed home icons.
+
+### 🧠 Gemini Nano Localization
+- **Tamil & English Optimization**: Constrained the title, summary, and proofread prompts to generate output in the same language as the note (Tamil if Tamil, otherwise default to English).
+
+### 💾 Backup Integrity
+- **Settings Preservation**: Integrated the `useOnDeviceAi` configuration into the v9 backup serialization and fallback isolate parser.
+
 ## [1.22.0] - 2026-05-15
 
 ### ✨ Architecture & Refactoring

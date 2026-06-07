@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:flutter/services.dart';
+import 'dart:io';
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
+import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import '../data/settings_provider.dart';
 
 class AppLockScreen extends StatefulWidget {
@@ -8,9 +13,11 @@ class AppLockScreen extends StatefulWidget {
 
   const AppLockScreen({super.key, required this.child});
   
+  static final ValueNotifier<bool> sessionAuthenticated = ValueNotifier<bool>(false);
+
   // Static helper to manually unlock the session (useful for sharing)
   static void unlockSession() {
-    AppLockScreenState._isSessionAuthenticated = true;
+    sessionAuthenticated.value = true;
   }
 
   @override
@@ -21,22 +28,57 @@ class AppLockScreenState extends State<AppLockScreen>
     with WidgetsBindingObserver {
   final LocalAuthentication auth = LocalAuthentication();
   
-  // Static to persist across widget rebuilds in the same app session
-  static bool _isSessionAuthenticated = false;
   bool _isInBackground = false;
+
+  bool get _isSessionAuthenticated => AppLockScreen.sessionAuthenticated.value;
+  set _isSessionAuthenticated(bool val) => AppLockScreen.sessionAuthenticated.value = val;
+
+  static const MethodChannel _channel = MethodChannel('com.example.note_taking_app/device_lock');
+
+  Future<bool> _isDeviceLockedNative() async {
+    if (kIsWeb) return false;
+    if (Platform.isAndroid) {
+      try {
+        final bool isLocked = await _channel.invokeMethod('isDeviceLocked');
+        return isLocked;
+      } catch (e) {
+        debugPrint('Error checking device lock status: $e');
+        return false;
+      }
+    }
+    return false;
+  }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkAuth(context);
+    AppLockScreen.sessionAuthenticated.addListener(_onAuthChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        final media = await ReceiveSharingIntent.instance.getInitialMedia();
+        if (media.isNotEmpty) {
+          AppLockScreen.unlockSession();
+        }
+      } catch (e) {
+        debugPrint('Error checking initial media on lock screen start: $e');
+      }
+      if (mounted) {
+        await _checkAuth(context);
+      }
     });
+  }
+
+  void _onAuthChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    AppLockScreen.sessionAuthenticated.removeListener(_onAuthChanged);
     super.dispose();
   }
 
@@ -44,15 +86,39 @@ class AppLockScreenState extends State<AppLockScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     setState(() {
       _isInBackground = state != AppLifecycleState.resumed;
-      if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-        // App went to the background, so require authentication again on resume
-        _isSessionAuthenticated = false;
-      }
     });
 
-    if (state == AppLifecycleState.resumed && !_isSessionAuthenticated) {
-      // Prompt for authentication immediately when coming back to foreground
-      _checkAuth(context);
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      unawaited(_checkDeviceLockOnBackground());
+    } else if (state == AppLifecycleState.resumed) {
+      unawaited(_checkAuthOnResume());
+    }
+  }
+
+  Future<void> _checkDeviceLockOnBackground() async {
+    final isLocked = await _isDeviceLockedNative();
+    if (isLocked) {
+      setState(() {
+        _isSessionAuthenticated = false;
+      });
+    }
+  }
+
+  Future<void> _checkAuthOnResume() async {
+    // Wait 150ms to allow incoming sharing intents to fire and call unlockSession()
+    await Future.delayed(const Duration(milliseconds: 150));
+
+    final isLocked = await _isDeviceLockedNative();
+    if (isLocked) {
+      setState(() {
+        _isSessionAuthenticated = false;
+      });
+    }
+
+    if (!_isSessionAuthenticated) {
+      if (mounted) {
+        await _checkAuth(context);
+      }
     }
   }
 
@@ -78,6 +144,16 @@ class AppLockScreenState extends State<AppLockScreen>
         ),
       );
 
+      if (didAuthenticate) {
+        if (!kIsWeb && Platform.isAndroid) {
+          try {
+            await _channel.invokeMethod('resetLockFlag');
+          } catch (e) {
+            debugPrint('Error invoking resetLockFlag: $e');
+          }
+        }
+      }
+
       if (mounted) {
         setState(() {
           _isSessionAuthenticated = didAuthenticate;
@@ -96,31 +172,37 @@ class AppLockScreenState extends State<AppLockScreen>
       return widget.child;
     }
 
-    if (_isInBackground || !_isSessionAuthenticated) {
-      return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.lock_outline,
-                  size: 80, color: Theme.of(context).colorScheme.primary),
-              const SizedBox(height: 24),
-              Text(
-                'App Locked',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-              const SizedBox(height: 16),
-              if (!_isInBackground)
-                ElevatedButton(
-                  onPressed: () => _checkAuth(context),
-                  child: const Text('Unlock'),
-                ),
-            ],
-          ),
-        ),
-      );
-    }
+    final isLocked = _isInBackground || !_isSessionAuthenticated;
 
-    return widget.child;
+    return Stack(
+      children: [
+        widget.child,
+        if (isLocked)
+          Positioned.fill(
+            child: Scaffold(
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.lock_outline,
+                        size: 80, color: Theme.of(context).colorScheme.primary),
+                    const SizedBox(height: 24),
+                    Text(
+                      'App Locked',
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                    const SizedBox(height: 16),
+                    if (!_isInBackground)
+                      ElevatedButton(
+                        onPressed: () => _checkAuth(context),
+                        child: const Text('Unlock'),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 }

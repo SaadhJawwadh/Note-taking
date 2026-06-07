@@ -12,6 +12,7 @@ import '../theme/app_theme.dart';
 import '../utils/rich_text_utils.dart';
 import 'dart:io';
 import 'package:any_link_preview/any_link_preview.dart';
+import '../services/local_ai_service.dart';
 
 class NoteEditorScreen extends StatefulWidget {
   final Note? note;
@@ -141,19 +142,18 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   void _onContentChanged() {
     if (_debounce?.isActive ?? false) _debounce?.cancel();
 
-    final plainText = _quillController.document.toPlainText();
-    final urlRegExp = RegExp(r'https?:\/\/[^\s]+');
-    final match = urlRegExp.firstMatch(plainText);
-    String? url = match?.group(0);
-    // Remove trailing punctuation
-    if (url != null && RegExp(r'[.,;:]$').hasMatch(url)) {
-      url = url.substring(0, url.length - 1);
-    }
-    if (_firstUrl != url) {
-      if (mounted) setState(() => _firstUrl = url);
-    }
-
     _debounce = Timer(const Duration(seconds: 2), () {
+      final plainText = _quillController.document.toPlainText();
+      final urlRegExp = RegExp(r'https?:\/\/[^\s]+');
+      final match = urlRegExp.firstMatch(plainText);
+      String? url = match?.group(0);
+      // Remove trailing punctuation
+      if (url != null && RegExp(r'[.,;:]$').hasMatch(url)) {
+        url = url.substring(0, url.length - 1);
+      }
+      if (_firstUrl != url) {
+        if (mounted) setState(() => _firstUrl = url);
+      }
       saveNote();
     });
   }
@@ -443,6 +443,306 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     }
   }
 
+  void _showAiOptionsSheet() {
+    final aiService = Provider.of<LocalAiService>(context, listen: false);
+    bool isLoading = false;
+    String? statusText;
+
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final theme = Theme.of(context);
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 24,
+                  right: 24,
+                  top: 8,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'On-Device Gemini AI',
+                      style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Powered by Android AI Core • 100% Offline & Private',
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    if (statusText != null) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Text(
+                          statusText!,
+                          style: TextStyle(
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 14,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    if (isLoading)
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 32),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: const Column(
+                          children: [
+                            CircularProgressIndicator(strokeWidth: 3),
+                            SizedBox(height: 16),
+                            Text('Processing…', style: TextStyle(fontWeight: FontWeight.w500)),
+                          ],
+                        ),
+                      )
+                    else ...[
+                      _buildAiTile(
+                        context: context,
+                        icon: Icons.title_rounded,
+                        title: 'Suggest Title',
+                        subtitle: 'Generate a clean title from note content',
+                        onTap: () async {
+                          final navigator = Navigator.of(context);
+                          setModalState(() {
+                            isLoading = true;
+                            statusText = 'Analyzing content...';
+                          });
+                          final content = _quillController.document.toPlainText().trim();
+                          if (content.isEmpty) {
+                            setModalState(() {
+                              isLoading = false;
+                              statusText = 'Note is empty. Add content first!';
+                            });
+                            return;
+                          }
+                          final prompt = "Generate a short, concise title (maximum 4-5 words) for the following text. If the text is in Tamil, write the title in Tamil. Otherwise, write the title in English. Respond with ONLY the title, no quotes, no explanation, no period:\n\n$content";
+                          final suggested = await aiService.generateText(prompt);
+                          if (suggested != null && suggested.trim().isNotEmpty) {
+                            if (mounted) {
+                              setState(() {
+                                _titleController.text = suggested.trim().replaceAll('"', '');
+                              });
+                              _onContentChanged();
+                              navigator.pop();
+                            }
+                          } else {
+                            setModalState(() {
+                              isLoading = false;
+                              statusText = 'Failed to generate title.';
+                            });
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _buildAiTile(
+                        context: context,
+                        icon: Icons.label_outline_rounded,
+                        title: 'Suggest Tags',
+                        subtitle: 'Auto-detect topics and apply tags',
+                        onTap: () async {
+                          final navigator = Navigator.of(context);
+                          setModalState(() {
+                            isLoading = true;
+                            statusText = 'Identifying topics...';
+                          });
+                          final content = _quillController.document.toPlainText().trim();
+                          if (content.isEmpty) {
+                            setModalState(() {
+                              isLoading = false;
+                              statusText = 'Note is empty.';
+                            });
+                            return;
+                          }
+                          final suggested = await aiService.suggestTags(content, _allTags);
+                          if (suggested.isNotEmpty) {
+                            if (mounted) {
+                              setState(() {
+                                for (final tag in suggested) {
+                                  if (!tags.contains(tag)) {
+                                    tags.add(tag);
+                                  }
+                                }
+                              });
+                              _onContentChanged();
+                              navigator.pop();
+                            }
+                          } else {
+                            setModalState(() {
+                              isLoading = false;
+                              statusText = 'No new tags suggested.';
+                            });
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _buildAiTile(
+                        context: context,
+                        icon: Icons.short_text_rounded,
+                        title: 'Summarize Note',
+                        subtitle: 'Append a bulleted summary to the note',
+                        onTap: () async {
+                          final navigator = Navigator.of(context);
+                          setModalState(() {
+                            isLoading = true;
+                            statusText = 'Generating summary...';
+                          });
+                          final content = _quillController.document.toPlainText().trim();
+                          if (content.isEmpty) {
+                            setModalState(() {
+                              isLoading = false;
+                              statusText = 'Note is empty.';
+                            });
+                            return;
+                          }
+                          final summary = await aiService.summarize(content);
+                          if (summary != null && summary.trim().isNotEmpty) {
+                            if (mounted) {
+                              final currentLength = _quillController.document.length;
+                              _quillController.replaceText(
+                                currentLength - 1, 
+                                0, 
+                                '\n\n=== AI SUMMARY ===\n${summary.trim()}\n', 
+                                null
+                              );
+                              _onContentChanged();
+                              navigator.pop();
+                            }
+                          } else {
+                            setModalState(() {
+                              isLoading = false;
+                              statusText = 'Failed to generate summary.';
+                            });
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _buildAiTile(
+                        context: context,
+                        icon: Icons.auto_awesome_outlined,
+                        title: 'Proofread & Polish',
+                        subtitle: 'Correct grammar and spelling errors',
+                        onTap: () async {
+                          final navigator = Navigator.of(context);
+                          setModalState(() {
+                            isLoading = true;
+                            statusText = 'Polishing text...';
+                          });
+                          final content = _quillController.document.toPlainText().trim();
+                          if (content.isEmpty) {
+                            setModalState(() {
+                              isLoading = false;
+                              statusText = 'Note is empty.';
+                            });
+                            return;
+                          }
+                          final prompt = """
+Act as a professional editor. Correct any grammar, spelling, punctuation, and style issues in the following text. 
+If the text is in Tamil, correct it in Tamil. Otherwise, correct it in English.
+Maintain the original meaning, format, and structure.
+Respond ONLY with the edited version, with no explanations, introductions, or quotes.
+
+Text to edit:
+$content
+""";
+                          final polished = await aiService.generateText(prompt);
+                          if (polished != null && polished.trim().isNotEmpty) {
+                            if (mounted) {
+                              _quillController.replaceText(
+                                0, 
+                                _quillController.document.length - 1, 
+                                polished.trim(), 
+                                null
+                              );
+                              _onContentChanged();
+                              navigator.pop();
+                            }
+                          } else {
+                            setModalState(() {
+                              isLoading = false;
+                              statusText = 'Failed to proofread.';
+                            });
+                          }
+                        },
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildAiTile({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
+        ),
+      ),
+      child: ListTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primaryContainer.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, size: 20, color: theme.colorScheme.primary),
+        ),
+        title: Text(
+          title,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        trailing: Icon(Icons.chevron_right_rounded, size: 20, color: theme.colorScheme.primary.withValues(alpha: 0.8)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        onTap: onTap,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<SettingsProvider>(builder: (context, settings, child) {
@@ -542,6 +842,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                           foregroundColor: textColor)))),
                         ),
                         const Spacer(),
+                        if (settings.useOnDeviceAi)
+                          IconButton(
+                            icon: const Icon(Icons.auto_awesome_outlined),
+                            tooltip: 'Gemini AI',
+                            color: textColor,
+                            onPressed: _showAiOptionsSheet,
+                          ),
                         IconButton(
                           icon: const Icon(Icons.label_outline),
                           tooltip: 'Tags',

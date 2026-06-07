@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'data/settings_provider.dart';
@@ -12,12 +13,12 @@ import 'package:flutter_quill/flutter_quill.dart';
 import 'package:workmanager/workmanager.dart';
 import 'providers/note_provider.dart';
 
-@pragma('vm:entry-point')
-void callbackDispatcher() {
-  Workmanager().executeTask((task, inputData) async {
-    return true;
-  });
-}
+import 'package:flutter/foundation.dart';
+import 'services/notification_service.dart';
+import 'services/backup_service.dart' as backup;
+
+import 'services/local_ai_service.dart';
+import 'services/gemini_nano_service.dart';
 
 Future<void> main() async {
   try {
@@ -25,9 +26,12 @@ Future<void> main() async {
     
     // Initialize services but don't let them block the app if they fail
     await Future.wait([
-      Workmanager().initialize(callbackDispatcher).catchError((e) => debugPrint('Workmanager error: $e')),
+      if (!kIsWeb && (Platform.isAndroid || Platform.isIOS))
+        Workmanager().initialize(backup.callbackDispatcher).catchError((e) => debugPrint('Workmanager error: $e')),
       TransactionCategory.reload().catchError((e) => debugPrint('Category reload error: $e')),
       SmsService.reloadSmsContacts().catchError((e) => debugPrint('SmsService reload error: $e')),
+      if (!kIsWeb)
+        NotificationService.initialize().catchError((e) => debugPrint('NotificationService error: $e')),
     ]);
   } catch (e) {
     debugPrint('Critical initialization error: $e');
@@ -36,7 +40,15 @@ Future<void> main() async {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        Provider<LocalAiService>(create: (_) => GeminiNanoService()),
+        ChangeNotifierProvider(
+          create: (context) {
+            final settings = SettingsProvider();
+            final aiService = Provider.of<LocalAiService>(context, listen: false);
+            settings.checkAiCoreSupport(aiService);
+            return settings;
+          },
+        ),
         ChangeNotifierProvider(create: (_) => NoteProvider()),
       ],
       child: const NoteApp(),
@@ -70,7 +82,10 @@ class NoteApp extends StatelessWidget {
             settings.fontFamily,
           ),
           themeMode: settings.themeMode,
-          home: const AppLockScreen(child: HomeScreen()),
+          home: const HomeScreen(),
+          builder: (context, child) {
+            return AppLockScreen(child: child!);
+          },
           locale: const Locale('en', 'US'),
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,

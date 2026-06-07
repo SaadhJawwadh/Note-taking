@@ -1,4 +1,5 @@
 // ignore_for_file: deprecated_member_use
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:animations/animations.dart';
@@ -38,20 +39,21 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
+  StreamSubscription<TransactionModel>? _smsSubscription;
+
   @override
   void initState() {
     super.initState();
     _refreshTransactions();
-    SmsService.listenForSms(onNew: (t) async {
+    _smsSubscription = SmsService.incomingTransactions.listen((t) async {
       if (!mounted) return;
-      // Logic for DB insertion and reversal handling is now internal to SmsService.
-      // We just need to refresh the UI when a new valid transaction is processed.
       await _refreshTransactions();
     });
   }
 
   @override
   void dispose() {
+    _smsSubscription?.cancel();
     _searchController.dispose();
     super.dispose();
   }

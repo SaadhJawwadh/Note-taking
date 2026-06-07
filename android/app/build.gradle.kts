@@ -32,7 +32,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.note_taking_app"
-        minSdk = flutter.minSdkVersion
+        minSdk = 26
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

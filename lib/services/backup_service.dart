@@ -1,6 +1,7 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,10 +17,15 @@ const kAutoBackupTaskName = 'com.example.note_taking_app.autoBackup';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
-  Workmanager().executeTask((task, inputData) async {
-    if (task == kAutoBackupTaskName) return await performAutoBackup();
-    return Future.value(true);
-  });
+  if (kIsWeb || !(Platform.isAndroid || Platform.isIOS)) return;
+  try {
+    Workmanager().executeTask((task, inputData) async {
+      if (task == kAutoBackupTaskName) return await performAutoBackup();
+      return Future.value(true);
+    });
+  } catch (e) {
+    debugPrint('Workmanager executeTask error: $e');
+  }
 }
 
 /// Generate backup JSON. Optionally pass [settingsOverride] from
@@ -63,6 +69,7 @@ Future<String> generateBackupJson({Map<String, dynamic>? settingsOverride}) asyn
       'preferredImageFormat': prefs.getString('preferredImageFormat') ?? 'jpg',
       'videoResolutionLimit': prefs.getString('videoResolutionLimit') ?? 'Original',
       'keepMetadata': prefs.getBool('keepMetadata') ?? false,
+      'useOnDeviceAi': prefs.getBool('useOnDeviceAi') ?? false,
     };
   }
 
@@ -119,23 +126,28 @@ Future<void> _rotateBackups(String directoryPath) async {
 }
 
 Future<void> syncAutoBackupSchedule() async {
-  final prefs = await SharedPreferences.getInstance();
-  if (!(prefs.getBool('autoBackupEnabled') ?? false)) {
-    await Workmanager().cancelByUniqueName(kAutoBackupTaskName);
-    return;
+  if (kIsWeb || !(Platform.isAndroid || Platform.isIOS)) return;
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    if (!(prefs.getBool('autoBackupEnabled') ?? false)) {
+      await Workmanager().cancelByUniqueName(kAutoBackupTaskName);
+      return;
+    }
+    final frequency = prefs.getString('autoBackupFrequency') ?? 'daily';
+    final interval = frequency == 'weekly' ? const Duration(days: 7) : (frequency == 'monthly' ? const Duration(days: 30) : const Duration(hours: 24));
+    await Workmanager().registerPeriodicTask(
+      kAutoBackupTaskName,
+      kAutoBackupTaskName,
+      frequency: interval,
+      constraints: Constraints(
+        networkType: NetworkType.notRequired,
+        requiresBatteryNotLow: true,
+      ),
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.replace,
+    );
+  } catch (e) {
+    debugPrint('Workmanager syncAutoBackupSchedule error: $e');
   }
-  final frequency = prefs.getString('autoBackupFrequency') ?? 'daily';
-  final interval = frequency == 'weekly' ? const Duration(days: 7) : (frequency == 'monthly' ? const Duration(days: 30) : const Duration(hours: 24));
-  await Workmanager().registerPeriodicTask(
-    kAutoBackupTaskName,
-    kAutoBackupTaskName,
-    frequency: interval,
-    constraints: Constraints(
-      networkType: NetworkType.notRequired,
-      requiresBatteryNotLow: true,
-    ),
-    existingWorkPolicy: ExistingPeriodicWorkPolicy.replace,
-  );
 }
 
 class BackupService {

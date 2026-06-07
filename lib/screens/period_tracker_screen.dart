@@ -6,6 +6,8 @@ import '../services/period_prediction_service.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'settings_screen.dart';
+import 'package:flutter/foundation.dart';
+import '../services/notification_service.dart';
 
 class PeriodTrackerScreen extends StatefulWidget {
   const PeriodTrackerScreen({super.key});
@@ -38,6 +40,9 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> {
     _predictedNextPeriod = await PeriodPredictionService.estimateNextPeriod();
     _predictedOvulation = await PeriodPredictionService.estimateOvulationDate();
     _daysUntilNext = await PeriodPredictionService.daysUntilNextPeriod();
+    if (!kIsWeb) {
+      await NotificationService.schedulePeriodNotifications();
+    }
     if (mounted) setState(() => _isLoading = false);
   }
 
@@ -96,9 +101,28 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> {
     if (ongoing != null) {
       // Stop the period
       final updated = ongoing.copyWith(endDate: todayUtc);
+      if (_checkOverlap(ongoing.startDate, todayUtc, ongoing.id)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Overlap detected when stopping period.')),
+        );
+        return;
+      }
       await DatabaseHelper.instance.updatePeriodLog(updated);
     } else {
       // Start new period
+      if (_checkOverlap(todayUtc, null)) {
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Overlap Detected'),
+            content: const Text('Starting a period today would overlap with an existing logged period. Please edit the logs instead.'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
+            ],
+          ),
+        );
+        return;
+      }
       final newLog = PeriodLog(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         startDate: todayUtc,
@@ -136,6 +160,215 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> {
     final updated = log.copyWith(intensity: newIntensity);
     await DatabaseHelper.instance.updatePeriodLog(updated);
     await _loadData();
+  }
+
+  bool _checkOverlap(DateTime start, DateTime? end, [String? excludeId]) {
+    final s1 = DateTime.utc(start.year, start.month, start.day);
+    final e1 = end != null ? DateTime.utc(end.year, end.month, end.day) : DateTime.utc(2999, 12, 31);
+    
+    for (final log in _logs) {
+      if (excludeId != null && log.id == excludeId) continue;
+      final s2 = DateTime.utc(log.startDate.year, log.startDate.month, log.startDate.day);
+      final e2 = log.endDate != null ? DateTime.utc(log.endDate!.year, log.endDate!.month, log.endDate!.day) : DateTime.utc(2999, 12, 31);
+      
+      if (s1.isBefore(e2.add(const Duration(days: 1))) && e1.isAfter(s2.subtract(const Duration(days: 1)))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Future<void> _showLogEditor(PeriodLog? log, [DateTime? defaultStartDate]) async {
+    final theme = Theme.of(context);
+    
+    DateTime tempStart = log?.startDate ?? defaultStartDate ?? _selectedDay ?? DateTime.now();
+    tempStart = DateTime.utc(tempStart.year, tempStart.month, tempStart.day);
+    
+    DateTime? tempEnd = log?.endDate;
+    if (tempEnd != null) {
+      tempEnd = DateTime.utc(tempEnd.year, tempEnd.month, tempEnd.day);
+    }
+    
+    String tempIntensity = log?.intensity ?? 'Medium';
+    bool isOngoing = tempEnd == null;
+    
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                24, 24, 24,
+                24 + MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        log != null ? 'Edit Period Log' : 'Add Period Log',
+                        style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  ListTile(
+                    leading: const Icon(Icons.calendar_today),
+                    title: const Text('Start Date'),
+                    subtitle: Text(DateFormat.yMMMMd().format(tempStart)),
+                    trailing: const Icon(Icons.edit_outlined),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: tempStart,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2030),
+                      );
+                      if (picked != null) {
+                        setModalState(() {
+                          tempStart = DateTime.utc(picked.year, picked.month, picked.day);
+                          if (tempEnd != null && tempStart.isAfter(tempEnd!)) {
+                            tempEnd = null;
+                            isOngoing = true;
+                          }
+                        });
+                      }
+                    },
+                  ),
+                  const Divider(),
+                  
+                  SwitchListTile(
+                    title: const Text('Ongoing Period'),
+                    subtitle: const Text('Still active/no end date yet'),
+                    value: isOngoing,
+                    onChanged: (val) {
+                      setModalState(() {
+                        isOngoing = val;
+                        if (val) {
+                          tempEnd = null;
+                        } else {
+                          tempEnd = tempStart.add(const Duration(days: 4));
+                        }
+                      });
+                    },
+                  ),
+                  if (!isOngoing) ...[
+                    ListTile(
+                      leading: const Icon(Icons.calendar_today_outlined),
+                      title: const Text('End Date'),
+                      subtitle: Text(tempEnd != null ? DateFormat.yMMMMd().format(tempEnd!) : 'Select end date'),
+                      trailing: const Icon(Icons.edit_outlined),
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: tempEnd ?? tempStart.add(const Duration(days: 4)),
+                          firstDate: tempStart,
+                          lastDate: DateTime(2030),
+                        );
+                        if (picked != null) {
+                          setModalState(() {
+                            tempEnd = DateTime.utc(picked.year, picked.month, picked.day);
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                  const Divider(),
+                  
+                  const SizedBox(height: 16),
+                  Text('Flow Intensity', style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 12),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: 'Spotting', label: Text('Spotting')),
+                      ButtonSegment(value: 'Light', label: Text('Light')),
+                      ButtonSegment(value: 'Medium', label: Text('Medium')),
+                      ButtonSegment(value: 'Heavy', label: Text('Heavy')),
+                    ],
+                    selected: {tempIntensity},
+                    onSelectionChanged: (Set<String> selection) {
+                      setModalState(() {
+                        tempIntensity = selection.first;
+                      });
+                    },
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  FilledButton(
+                    onPressed: () {
+                      if (!isOngoing && tempEnd != null && tempStart.isAfter(tempEnd!)) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Start date cannot be after end date')),
+                        );
+                        return;
+                      }
+                      
+                      if (_checkOverlap(tempStart, tempEnd, log?.id)) {
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Overlap Detected'),
+                            content: const Text('The selected dates overlap with an existing logged period. Please adjust the dates.'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('OK'),
+                              ),
+                            ],
+                          ),
+                        );
+                        return;
+                      }
+                      
+                      Navigator.pop(context, true);
+                    },
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 54),
+                    ),
+                    child: const Text('Save Log'),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+    
+    if (result == true) {
+      if (log != null) {
+        final updated = log.copyWith(
+          startDate: tempStart,
+          endDate: isOngoing ? null : tempEnd,
+          intensity: tempIntensity,
+        );
+        await DatabaseHelper.instance.updatePeriodLog(updated);
+      } else {
+        final newLog = PeriodLog(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          startDate: tempStart,
+          endDate: isOngoing ? null : tempEnd,
+          intensity: tempIntensity,
+        );
+        await DatabaseHelper.instance.createPeriodLog(newLog);
+      }
+      await _loadData();
+    }
   }
 
   @override
@@ -408,65 +641,80 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> {
                                   selectedLog != null
                                       ? 'Logged Period'
                                       : (isSelectedToday
-                                          ? (isPeriodActive
-                                              ? 'End your period'
-                                              : 'Start your period')
+                                          ? 'Start your period'
                                           : 'No log for this day'),
                                   style: theme.textTheme.titleLarge?.copyWith(
-                                    color: (isPeriodActive && isSelectedToday) ||
-                                            selectedLog != null
+                                    color: selectedLog != null
                                         ? onPeriodColor
                                         : colorScheme.onSurface,
                                   ),
                                 ),
-                                if (isSelectedToday) ...[
+                                if (selectedLog == null && isSelectedToday) ...[
                                   const SizedBox(height: 16),
                                   FilledButton.icon(
                                     onPressed: _togglePeriodStatus,
                                     style: FilledButton.styleFrom(
-                                      backgroundColor: isPeriodActive
-                                          ? onPeriodColor
-                                          : colorScheme.primary,
-                                      foregroundColor: isPeriodActive
-                                          ? periodColor
-                                          : colorScheme.onPrimary,
+                                      backgroundColor: colorScheme.primary,
+                                      foregroundColor: colorScheme.onPrimary,
                                       minimumSize: const Size(double.infinity, 56),
                                     ),
-                                    icon: Icon(isPeriodActive
-                                        ? Icons.stop
-                                        : Icons.play_arrow),
-                                    label: Text(
-                                      isPeriodActive ? 'Stop' : 'Start',
-                                      style: const TextStyle(fontSize: 18),
+                                    icon: const Icon(Icons.play_arrow),
+                                    label: const Text(
+                                      'Start Period',
+                                      style: TextStyle(fontSize: 18),
+                                    ),
+                                  ),
+                                ],
+                                if (selectedLog == null && !isSelectedToday) ...[
+                                  const SizedBox(height: 16),
+                                  FilledButton.icon(
+                                    onPressed: () => _showLogEditor(null, _selectedDay),
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: colorScheme.primary,
+                                      foregroundColor: colorScheme.onPrimary,
+                                      minimumSize: const Size(double.infinity, 56),
+                                    ),
+                                    icon: const Icon(Icons.add),
+                                    label: const Text(
+                                      'Add Period Log',
+                                      style: TextStyle(fontSize: 18),
                                     ),
                                   ),
                                 ],
                                 if (selectedLog != null) ...[
                                   const SizedBox(height: 16),
                                   Text(
-                                    'Intensity: ${selectedLog.intensity}',
-                                    style: theme.textTheme.bodyLarge
-                                        ?.copyWith(color: onPeriodColor),
+                                    'Start: ${DateFormat.yMMMMd().format(selectedLog.startDate)}',
+                                    style: theme.textTheme.bodyLarge?.copyWith(color: onPeriodColor),
                                   ),
-                                  const SizedBox(height: 12),
-                                  OutlinedButton.icon(
-                                    onPressed: () => _deleteLog(selectedLog),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: Colors.red,
-                                      side: const BorderSide(color: Colors.red),
+                                  Text(
+                                    selectedLog.endDate != null
+                                        ? 'End: ${DateFormat.yMMMMd().format(selectedLog.endDate!)}'
+                                        : 'Status: Ongoing',
+                                    style: theme.textTheme.bodyLarge?.copyWith(color: onPeriodColor),
+                                  ),
+                                  if (selectedLog.endDate == null && isSelectedToday) ...[
+                                    const SizedBox(height: 16),
+                                    FilledButton.icon(
+                                      onPressed: _togglePeriodStatus,
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: onPeriodColor,
+                                        foregroundColor: periodColor,
+                                        minimumSize: const Size(double.infinity, 56),
+                                      ),
+                                      icon: const Icon(Icons.stop),
+                                      label: const Text(
+                                        'Stop Period',
+                                        style: TextStyle(fontSize: 18),
+                                      ),
                                     ),
-                                    icon: const Icon(Icons.delete_outline),
-                                    label: const Text('Delete Log'),
-                                  ),
-                                ],
-                                if (isPeriodActive && isSelectedToday) ...[
-                                  const SizedBox(height: 24),
+                                  ],
+                                  const SizedBox(height: 16),
                                   Text(
                                     'Flow Intensity',
-                                    style: theme.textTheme.titleMedium
-                                        ?.copyWith(color: onPeriodColor),
+                                    style: theme.textTheme.titleMedium?.copyWith(color: onPeriodColor),
                                   ),
-                                  const SizedBox(height: 12),
+                                  const SizedBox(height: 8),
                                   SegmentedButton<String>(
                                     segments: const [
                                       ButtonSegment(
@@ -486,11 +734,11 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> {
                                           label: Text('Heavy',
                                               style: TextStyle(fontSize: 12))),
                                     ],
-                                    selected: {ongoingPeriod.intensity},
+                                    selected: {selectedLog.intensity},
                                     onSelectionChanged:
                                         (Set<String> newSelection) {
                                       _updateIntensity(
-                                          ongoingPeriod, newSelection.first);
+                                          selectedLog, newSelection.first);
                                     },
                                     style: SegmentedButton.styleFrom(
                                       backgroundColor: periodColor,
@@ -499,7 +747,31 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> {
                                       selectedBackgroundColor: onPeriodColor,
                                     ),
                                   ),
-                                ]
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    children: [
+                                      OutlinedButton.icon(
+                                        onPressed: () => _showLogEditor(selectedLog),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: onPeriodColor,
+                                          side: BorderSide(color: onPeriodColor),
+                                        ),
+                                        icon: const Icon(Icons.edit_outlined),
+                                        label: const Text('Edit Dates'),
+                                      ),
+                                      OutlinedButton.icon(
+                                        onPressed: () => _deleteLog(selectedLog),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: Colors.red.shade900,
+                                          side: BorderSide(color: Colors.red.shade900),
+                                        ),
+                                        icon: const Icon(Icons.delete_outline),
+                                        label: const Text('Delete Log'),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ],
                             ),
                           ),

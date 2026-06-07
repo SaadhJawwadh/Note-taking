@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/notification_service.dart';
+import '../services/local_ai_service.dart';
 
 enum NoteViewMode { list, masonryGrid, uniformGrid }
 
@@ -86,6 +89,12 @@ class SettingsProvider extends ChangeNotifier {
   bool _keepMetadata = false;
   bool get keepMetadata => _keepMetadata;
 
+  bool _useOnDeviceAi = false;
+  bool get useOnDeviceAi => _useOnDeviceAi;
+
+  bool _isDeviceAiSupported = false;
+  bool get isDeviceAiSupported => _isDeviceAiSupported;
+
   SettingsProvider() {
     loadSettings();
   }
@@ -125,6 +134,7 @@ class SettingsProvider extends ChangeNotifier {
     _preferredImageFormat = prefs.getString('preferredImageFormat') ?? 'jpg';
     _videoResolutionLimit = prefs.getString('videoResolutionLimit') ?? 'Original';
     _keepMetadata = prefs.getBool('keepMetadata') ?? false;
+    _useOnDeviceAi = prefs.getBool('useOnDeviceAi') ?? false;
 
     final themeIndex = prefs.getInt('themeMode') ?? 0;
     _themeMode = _getThemeModeFromInt(themeIndex);
@@ -268,6 +278,12 @@ class SettingsProvider extends ChangeNotifier {
     _isPeriodTrackerEnabled = enabled;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isPeriodTrackerEnabled', enabled);
+    if (!kIsWeb) {
+      if (enabled) {
+        await NotificationService.requestPermissions();
+      }
+      await NotificationService.schedulePeriodNotifications();
+    }
     notifyListeners();
   }
 
@@ -289,6 +305,9 @@ class SettingsProvider extends ChangeNotifier {
     _discreetNotificationText = text;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('discreetNotificationText', text);
+    if (!kIsWeb) {
+      await NotificationService.schedulePeriodNotifications();
+    }
     notifyListeners();
   }
 
@@ -363,6 +382,7 @@ class SettingsProvider extends ChangeNotifier {
         'preferredImageFormat': _preferredImageFormat,
         'videoResolutionLimit': _videoResolutionLimit,
         'keepMetadata': _keepMetadata,
+        'useOnDeviceAi': _useOnDeviceAi,
       };
 
   Future<void> restoreFromBackupMap(Map<String, dynamic> map) async {
@@ -445,6 +465,10 @@ class SettingsProvider extends ChangeNotifier {
         final val = map['keepMetadata'];
         if (val is bool) await setKeepMetadata(val);
       }
+      if (map.containsKey('useOnDeviceAi')) {
+        final val = map['useOnDeviceAi'];
+        if (val is bool) await setUseOnDeviceAi(val);
+      }
       if (map.containsKey('customExpenseRules')) {
         final rules = map['customExpenseRules'];
         if (rules is List) {
@@ -465,5 +489,21 @@ class SettingsProvider extends ChangeNotifier {
     } catch (_) {
       // Silently ignore malformed backup settings; existing values are kept.
     }
+  }
+
+  Future<void> checkAiCoreSupport(LocalAiService aiService) async {
+    try {
+      _isDeviceAiSupported = await aiService.isSupported();
+    } catch (_) {
+      _isDeviceAiSupported = false;
+    }
+    notifyListeners();
+  }
+
+  Future<void> setUseOnDeviceAi(bool enabled) async {
+    _useOnDeviceAi = enabled;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('useOnDeviceAi', enabled);
+    notifyListeners();
   }
 }

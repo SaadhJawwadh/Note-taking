@@ -22,6 +22,7 @@ import 'file_converter_screen.dart';
 import 'app_lock_screen.dart';
 import '../providers/note_provider.dart';
 import '../widgets/tag_filter_bar.dart';
+import 'package:flutter/services.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -68,14 +69,40 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
 
-  void _navigateToConverter(List<String> paths) {
+  static const MethodChannel _lockChannel = MethodChannel('com.example.note_taking_app/device_lock');
+
+  Future<void> _navigateToConverter(List<String> paths) async {
     // Unlock session for sharing utility to avoid interrupting the user
     AppLockScreen.unlockSession();
-    
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => FileConverterScreen(initialFilePaths: paths),
+
+    final resolvedPaths = <String>[];
+    for (final path in paths) {
+      if (path.startsWith('content://')) {
+        try {
+          final String? localPath = await _lockChannel.invokeMethod('copyContentUriToTempFile', {'uri': path});
+          if (localPath != null) {
+            resolvedPaths.add(localPath);
+          } else {
+            resolvedPaths.add(path);
+          }
+        } catch (e) {
+          debugPrint('Error copying content URI: $e');
+          resolvedPaths.add(path);
+        }
+      } else {
+        resolvedPaths.add(path);
+      }
+    }
+
+    if (!mounted) return;
+
+    unawaited(
+      Navigator.push(
+        // ignore: use_build_context_synchronously
+        context,
+        MaterialPageRoute(
+          builder: (context) => FileConverterScreen(initialFilePaths: resolvedPaths),
+        ),
       ),
     );
   }

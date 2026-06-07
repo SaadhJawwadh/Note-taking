@@ -1,0 +1,17 @@
+abstract class LocalAiService {
+  /// Checks if the device's hardware supports Gemini Nano and AI Core is ready.
+  Future<bool> isSupported();
+
+  /// Generates a response based on a prompt.
+  Future<String?> generateText(String prompt);
+
+  /// Summarizes a block of text.
+  Future<String?> summarize(String text);
+
+  /// Suggests a list of tags for a note.
+  Future<List<String>> suggestTags(String noteContent, List<String> existingTags);
+
+  /// Parses transaction details from a bank SMS using the active list of categories.
+  /// Returns a map with keys: 'amount' (double), 'merchant' (string), 'category' (string), and 'isExpense' (bool).
+  Future<Map<String, dynamic>?> parseSmsTransaction(String smsBody, List<String> categories);
+}

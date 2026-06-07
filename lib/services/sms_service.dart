@@ -1,16 +1,20 @@
+import 'dart:async';
 import 'package:telephony/telephony.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../data/database_helper.dart';
 import '../data/transaction_model.dart';
+import '../data/transaction_category.dart';
 import 'sms_parser.dart';
 import 'sms_constants.dart';
+import 'gemini_nano_service.dart';
+import 'package:flutter/foundation.dart';
 
 class SmsService {
   static final Telephony telephony = Telephony.instance;
 
   static Future<void> _handleNewSms(SmsMessage sms) async {
-    final transaction = SmsParser.parseMessage(
+    final transaction = await _parseWithAiFallback(
       body: sms.body ?? '',
       address: sms.address ?? '',
       messageId: sms.id,
@@ -86,7 +90,7 @@ class SmsService {
 
     int count = 0;
     for (var m in messages) {
-      final t = SmsParser.parseMessage(
+      final t = await _parseWithAiFallback(
         body: m.body ?? '',
         address: m.address ?? '',
         messageId: m.id,
@@ -120,12 +124,23 @@ class SmsService {
     return count;
   }
 
-  static void listenForSms({required Function(TransactionModel) onNew}) {
+  static final StreamController<TransactionModel> _smsStreamController = StreamController<TransactionModel>.broadcast();
+  static bool _isListeningToTelephony = false;
+
+  static Stream<TransactionModel> get incomingTransactions {
+    _startTelephonyListening();
+    return _smsStreamController.stream;
+  }
+
+  static void _startTelephonyListening() {
+    if (_isListeningToTelephony) return;
+    _isListeningToTelephony = true;
+    
     telephony.listenIncomingSms(
       onNewMessage: (SmsMessage message) async {
         await reloadSmsContacts();
         await _handleNewSms(message);
-        final t = SmsParser.parseMessage(
+        final t = await _parseWithAiFallback(
           body: message.body ?? '',
           address: message.address ?? '',
           messageId: message.id,
@@ -136,11 +151,78 @@ class SmsService {
           customIncomeRules: _customIncomeRules,
         );
         if (t != null) {
-          onNew(t);
+          _smsStreamController.add(t);
         }
       },
       onBackgroundMessage: backgroundMessageHandler,
     );
+  }
+
+  @Deprecated('Use incomingTransactions instead to avoid memory leaks')
+  static void listenForSms({required Function(TransactionModel) onNew}) {
+    incomingTransactions.listen(onNew);
+  }
+
+  static Future<TransactionModel?> _parseWithAiFallback({
+    required String body,
+    required String address,
+    required int? messageId,
+    required int? messageDate,
+    required Set<String> allowedSenderIds,
+    required Set<String> blockedSenderIds,
+    required List<String> customExpenseRules,
+    required List<String> customIncomeRules,
+  }) async {
+    var transaction = SmsParser.parseMessage(
+      body: body,
+      address: address,
+      messageId: messageId,
+      messageDate: messageDate,
+      allowedSenderIds: allowedSenderIds,
+      blockedSenderIds: blockedSenderIds,
+      customExpenseRules: customExpenseRules,
+      customIncomeRules: customIncomeRules,
+    );
+
+    if (transaction == null && body.trim().isNotEmpty) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final useAi = prefs.getBool('useOnDeviceAi') ?? false;
+        if (useAi) {
+          final aiService = GeminiNanoService();
+          if (await aiService.isSupported()) {
+            await TransactionCategory.reload();
+            final activeCategories = TransactionCategory.allNames;
+            final aiParsed = await aiService.parseSmsTransaction(body, activeCategories);
+            if (aiParsed != null && aiParsed['amount'] != null && aiParsed['amount'] > 0) {
+              final date = messageDate != null
+                  ? DateTime.fromMillisecondsSinceEpoch(messageDate)
+                  : DateTime.now();
+              final smsId = messageId != null
+                  ? '${messageId}_$messageDate'
+                  : 'hash_${body.hashCode}_$messageDate';
+
+              String category = aiParsed['category'] ?? 'Other';
+              if (!activeCategories.contains(category)) {
+                category = TransactionCategory.fromDescriptionCached(aiParsed['merchant'] ?? body);
+              }
+
+              transaction = TransactionModel(
+                amount: aiParsed['amount'],
+                description: aiParsed['merchant'] ?? 'AI Parsed Transaction',
+                date: date,
+                isExpense: aiParsed['isExpense'] ?? true,
+                category: category,
+                smsId: smsId,
+              );
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('On-device AI SMS parsing failed: $e');
+      }
+    }
+    return transaction;
   }
 }
 

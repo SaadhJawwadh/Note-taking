@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -97,46 +98,51 @@ class SettingsScreen extends StatelessWidget {
                                 ),
                                 if (!settings.isConverterLite) ...[
                                   const _Divider(),
-                                  ListTile(
-                                    leading: const Icon(Icons.download_for_offline_outlined),
-                                    title: Text(settings.isFfmpegInstalled ? 'Engine Installed' : 'Install FFmpeg Engine'),
-                                    subtitle: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(settings.isFfmpegInstalled 
-                                          ? 'Engine binaries are ready (approx. 45MB)' 
-                                          : 'Download engine for high-quality compression (approx. 45MB)'),
-                                        if (installService.isDownloading) ...[
-                                          const SizedBox(height: 8),
-                                          LinearProgressIndicator(value: installService.downloadProgress),
-                                        ],
-                                      ],
-                                    ),
-                                    trailing: installService.isDownloading
-                                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
-                                      : IconButton(
-                                          icon: Icon(settings.isFfmpegInstalled ? Icons.delete_outline : Icons.download_rounded),
-                                          onPressed: () async {
-                                            if (settings.isFfmpegInstalled) {
-                                              final confirm = await showDialog<bool>(
-                                                context: context,
-                                                builder: (context) => AlertDialog(
-                                                  title: const Text('Uninstall Engine?'),
-                                                  content: const Text('This will remove the FFmpeg binaries from your device to save space.'),
-                                                  actions: [
-                                                    TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-                                                    TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Uninstall')),
-                                                  ],
-                                                ),
-                                              );
-                                              if (confirm == true) {
-                                                await installService.uninstallEngine(settings);
-                                              }
-                                            } else {
-                                              await installService.installEngine(settings);
-                                            }
-                                          },
+                                  ListenableBuilder(
+                                    listenable: installService,
+                                    builder: (context, _) {
+                                      return ListTile(
+                                        leading: const Icon(Icons.download_for_offline_outlined),
+                                        title: Text(settings.isFfmpegInstalled ? 'Engine Installed' : 'Install FFmpeg Engine'),
+                                        subtitle: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(settings.isFfmpegInstalled 
+                                              ? 'Engine binaries are ready (approx. 45MB)' 
+                                              : 'Download engine for high-quality compression (approx. 45MB)'),
+                                            if (installService.isDownloading) ...[
+                                              const SizedBox(height: 8),
+                                              LinearProgressIndicator(value: installService.downloadProgress),
+                                            ],
+                                          ],
                                         ),
+                                        trailing: installService.isDownloading
+                                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                                          : IconButton(
+                                              icon: Icon(settings.isFfmpegInstalled ? Icons.delete_outline : Icons.download_rounded),
+                                              onPressed: () async {
+                                                if (settings.isFfmpegInstalled) {
+                                                  final confirm = await showDialog<bool>(
+                                                    context: context,
+                                                    builder: (context) => AlertDialog(
+                                                      title: const Text('Uninstall Engine?'),
+                                                      content: const Text('This will remove the FFmpeg binaries from your device to save space.'),
+                                                      actions: [
+                                                        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                                                        TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Uninstall')),
+                                                      ],
+                                                    ),
+                                                  );
+                                                  if (confirm == true) {
+                                                    await installService.uninstallEngine(settings);
+                                                  }
+                                                } else {
+                                                  await installService.installEngine(settings);
+                                                }
+                                              },
+                                            ),
+                                      );
+                                    },
                                   ),
                                 ],
                               ],
@@ -162,7 +168,7 @@ class SettingsScreen extends StatelessWidget {
                               SettingsTile(icon: Icons.delete_outline, title: 'Trash', subtitle: 'View deleted notes', showArrow: true, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const FilteredNotesScreen(filterType: FilterType.trash)))),
                             ],
                           ),
-                          SettingsSection(
+                           SettingsSection(
                             title: 'Privacy & Personal',
                             icon: Icons.security_outlined,
                             children: [
@@ -176,13 +182,54 @@ class SettingsScreen extends StatelessWidget {
                             ],
                           ),
                           SettingsSection(
+                            title: 'Local AI Features',
+                            icon: Icons.psychology_outlined,
+                            children: [
+                              if (settings.isDeviceAiSupported)
+                                SettingsSwitchTile(
+                                  icon: Icons.auto_awesome_outlined,
+                                  title: 'Gemini Nano AI',
+                                  subtitle: 'Enable offline summaries, tag suggestions & smart SMS parsing',
+                                  value: settings.useOnDeviceAi,
+                                  onChanged: settings.setUseOnDeviceAi,
+                                )
+                              else
+                                ListTile(
+                                  leading: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(Icons.auto_awesome_outlined, size: 20, color: Colors.grey),
+                                  ),
+                                  title: const Text(
+                                    'Gemini Nano Offline AI',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                  subtitle: const Text(
+                                    'Unsupported on this device (requires compatible NPU and Android AI Core)',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                  trailing: const Icon(Icons.info_outline, color: Colors.grey),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                ),
+                            ],
+                          ),
+                          SettingsSection(
                             title: 'Data & Backup',
                             icon: Icons.cloud_sync_outlined,
                             children: [
                               SettingsTile(icon: Icons.download_outlined, title: 'Export Backup', subtitle: 'Save notes to a JSON file', showArrow: true, onTap: () => BackupService.exportBackup(context)),
                               const _Divider(),
                               SettingsTile(icon: Icons.upload_outlined, title: 'Import Backup', subtitle: 'Restore from a JSON file', showArrow: true, onTap: () => BackupService.importBackup(context)),
-                              if (Platform.isAndroid) ...[
+                              if (!kIsWeb && Platform.isAndroid) ...[
                                 const _Divider(),
                                 SettingsSwitchTile(
                                   icon: Icons.backup_outlined,
