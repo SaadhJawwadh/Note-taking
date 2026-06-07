@@ -135,6 +135,7 @@ void main() {
       // Since timeout is 0 (default), going to background should immediately lock the session
       // on next frame.
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump(const Duration(milliseconds: 200));
       await tester.pumpAndSettle();
 
       expect(find.text('App Locked'), findsOneWidget);
@@ -168,6 +169,7 @@ void main() {
 
       // Instantly resume (elapsed time is ~0 seconds, which is <= 10 seconds)
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump(const Duration(milliseconds: 200));
       await tester.pumpAndSettle();
 
       // Should still be unlocked!

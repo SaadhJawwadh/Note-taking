@@ -31,6 +31,7 @@ class AppLockScreenState extends State<AppLockScreen>
   bool _isInBackground = false;
   bool _isAuthenticating = false;
   DateTime? _backgroundTime;
+  StreamSubscription? _intentDataStreamSubscription;
 
   bool get _isSessionAuthenticated => AppLockScreen.sessionAuthenticated.value;
   set _isSessionAuthenticated(bool val) => AppLockScreen.sessionAuthenticated.value = val;
@@ -56,6 +57,11 @@ class AppLockScreenState extends State<AppLockScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     AppLockScreen.sessionAuthenticated.addListener(_onAuthChanged);
+    _intentDataStreamSubscription = ReceiveSharingIntent.instance.getMediaStream().listen((value) {
+      if (value.isNotEmpty) {
+        AppLockScreen.unlockSession();
+      }
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         final media = await ReceiveSharingIntent.instance.getInitialMedia();
@@ -79,6 +85,7 @@ class AppLockScreenState extends State<AppLockScreen>
 
   @override
   void dispose() {
+    _intentDataStreamSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     AppLockScreen.sessionAuthenticated.removeListener(_onAuthChanged);
     super.dispose();
@@ -210,37 +217,31 @@ class AppLockScreenState extends State<AppLockScreen>
       return widget.child;
     }
 
-    final isLocked = _isInBackground || !_isSessionAuthenticated;
-
-    return Stack(
-      children: [
-        widget.child,
-        if (isLocked)
-          Positioned.fill(
-            child: Scaffold(
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.lock_outline,
-                        size: 80, color: Theme.of(context).colorScheme.primary),
-                    const SizedBox(height: 24),
-                    Text(
-                      'App Locked',
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                    const SizedBox(height: 16),
-                    if (!_isInBackground)
-                      ElevatedButton(
-                        onPressed: () => _checkAuth(context),
-                        child: const Text('Unlock'),
-                      ),
-                  ],
-                ),
+    if (_isInBackground || !_isSessionAuthenticated) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.lock_outline,
+                  size: 80, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(height: 24),
+              Text(
+                'App Locked',
+                style: Theme.of(context).textTheme.headlineMedium,
               ),
-            ),
+              const SizedBox(height: 16),
+              if (!_isInBackground)
+                ElevatedButton(
+                  onPressed: () => _checkAuth(context),
+                  child: const Text('Unlock'),
+                ),
+            ],
           ),
-      ],
-    );
+        ),
+      );
+    }
+
+    return widget.child;
   }
 }
