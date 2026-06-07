@@ -2,9 +2,11 @@
 
 All notable changes to Note Book are documented here.
 
-## [1.23.0] - 2026-06-07
+## [1.30.0] - 2026-06-07
 
 ### ✨ Standalone Utilities & UI Refinements
+- **File Converter Top Bar Settings Entry**: Added a Settings entry point (IconButton) to the top bar of the File Converter screen, aligning it perfectly with other dashboard tabs.
+- **Decluttered Settings Page**: Configured all ExpansionTile settings sections to be collapsed/closed by default to reduce cognitive load and provide a premium, clean experience.
 - **Dynamic File Converter Top Bar**: Updated the `FileConverterScreen` to use a floating card-style `SliverAppBar`. It dynamically detects if it is nested as a home screen navigation tab (removing the back button and matching start paddings) or pushed as a standalone route (showing the back button), aligning perfectly with other application pages.
 - **Modernized Share API**: Upgraded all deprecated static `Share.shareXFiles` calls to use the newer, more robust `SharePlus.instance.share` API.
 

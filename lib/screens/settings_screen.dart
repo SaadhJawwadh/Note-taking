@@ -67,7 +67,6 @@ class SettingsScreen extends StatelessWidget {
                           SettingsSection(
                             title: 'Finances & Features',
                             icon: Icons.account_balance_wallet_outlined,
-                            initiallyExpanded: true,
                             children: [
                               SettingsSwitchTile(icon: Icons.account_balance_wallet_outlined, title: 'Financial Manager', subtitle: 'Enable expense tracking', value: settings.showFinancialManager, onChanged: settings.setShowFinancialManager),
                               if (settings.showFinancialManager) ...[

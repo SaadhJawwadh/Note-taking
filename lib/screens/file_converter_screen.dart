@@ -8,6 +8,7 @@ import 'package:gal/gal.dart';
 import '../services/ffmpeg_service.dart';
 import '../services/ffmpeg_install_service.dart';
 import '../data/settings_provider.dart';
+import 'settings_screen.dart';
 import 'app_lock_screen.dart';
 
 class FileConverterScreen extends StatefulWidget {
@@ -372,6 +373,21 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
+                  ),
+                  const Spacer(),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: IconButton(
+                      icon: const Icon(Icons.settings_outlined),
+                      tooltip: 'Settings',
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const SettingsScreen(),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),
