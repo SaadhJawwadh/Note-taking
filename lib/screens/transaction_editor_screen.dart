@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../data/settings_provider.dart';
-import '../data/database_helper.dart';
+import '../data/repositories/transaction_repository.dart';
 import '../data/transaction_model.dart';
 import '../data/transaction_category.dart';
 import '../data/category_definition.dart';
@@ -83,9 +83,9 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
     );
 
     if (widget.transaction == null) {
-      await DatabaseHelper.instance.createTransaction(transaction);
+      await TransactionRepository.instance.createTransaction(transaction);
     } else {
-      await DatabaseHelper.instance.updateTransaction(transaction);
+      await TransactionRepository.instance.updateTransaction(transaction);
 
       // Training Prompt logic
       if (widget.transaction!.smsId != null &&
@@ -110,7 +110,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
           _initialCategory != _category) {
         final rule = await _showCategoryTrainingDialog(description, _category);
         if (rule != null && rule.isNotEmpty) {
-          final db = DatabaseHelper.instance;
+          final db = TransactionRepository.instance;
           final defs = await db.getAllCategoryDefinitions();
           CategoryDefinition? targetDef;
           for (final d in defs) {
@@ -162,7 +162,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
 
     if (confirm == true) {
       setState(() => _isLoading = true);
-      await DatabaseHelper.instance.deleteTransaction(widget.transaction!.id!);
+      await TransactionRepository.instance.deleteTransaction(widget.transaction!.id!);
       setState(() => _isLoading = false);
       if (mounted) Navigator.pop(context, true);
     }
@@ -366,7 +366,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
         colorValue: selectedColor.toARGB32(),
         keywords: [],
       );
-      await DatabaseHelper.instance.upsertCategoryDefinition(def);
+      await TransactionRepository.instance.upsertCategoryDefinition(def);
       await TransactionCategory.reload();
       setState(() => _category = name);
     }
@@ -572,6 +572,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'transaction_editor_fab',
         onPressed: _isLoading ? null : _saveTransaction,
         icon: _isLoading
             ? const SizedBox(

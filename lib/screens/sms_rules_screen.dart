@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:provider/provider.dart';
 import '../data/settings_provider.dart';
-import '../data/database_helper.dart';
+import '../data/repositories/transaction_repository.dart';
 import '../data/category_definition.dart';
 import '../data/transaction_category.dart';
 import '../services/sms_service.dart';
@@ -43,7 +43,7 @@ class _SmsRulesScreenState extends State<SmsRulesScreen> with SingleTickerProvid
   }
 
   Future<void> _loadCategories() async {
-    final cats = await DatabaseHelper.instance.getAllCategoryDefinitions();
+    final cats = await TransactionRepository.instance.getAllCategoryDefinitions();
     if (mounted) {
       setState(() {
         _categories = cats;
@@ -63,7 +63,7 @@ class _SmsRulesScreenState extends State<SmsRulesScreen> with SingleTickerProvid
     final updatedKeywords = List<String>.from(def.keywords)..add(kw);
     final updatedDef = def.copyWith(keywords: updatedKeywords);
 
-    await DatabaseHelper.instance.upsertCategoryDefinition(updatedDef);
+    await TransactionRepository.instance.upsertCategoryDefinition(updatedDef);
     await TransactionCategory.reload();
     _categoryRuleControllers[def.name]?.clear();
     await _loadCategories();
@@ -73,7 +73,7 @@ class _SmsRulesScreenState extends State<SmsRulesScreen> with SingleTickerProvid
     final updatedKeywords = List<String>.from(def.keywords)..remove(keyword);
     final updatedDef = def.copyWith(keywords: updatedKeywords);
 
-    await DatabaseHelper.instance.upsertCategoryDefinition(updatedDef);
+    await TransactionRepository.instance.upsertCategoryDefinition(updatedDef);
     await TransactionCategory.reload();
     await _loadCategories();
   }

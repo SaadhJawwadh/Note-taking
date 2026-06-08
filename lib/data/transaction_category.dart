@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'category_definition.dart';
-import 'database_helper.dart';
+import 'repositories/transaction_repository.dart';
 import 'category_constants.dart';
 
 class TransactionCategory {
@@ -38,7 +38,7 @@ class TransactionCategory {
   static List<CategoryDefinition> _cache = [];
 
   static Future<void> reload() async {
-    _cache = await DatabaseHelper.instance.getAllCategoryDefinitions();
+    _cache = await TransactionRepository.instance.getAllCategoryDefinitions();
   }
 
   static List<String> get allNames => _cache.isNotEmpty ? _cache.map((c) => c.name).toList() : all;

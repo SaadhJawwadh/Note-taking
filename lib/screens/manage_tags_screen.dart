@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../data/database_helper.dart';
+import '../data/repositories/note_repository.dart';
 import '../theme/app_theme.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
@@ -23,8 +23,8 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
 
   Future<void> _loadTags() async {
     setState(() => _isLoading = true);
-    final tags = await DatabaseHelper.instance.getAllTags();
-    final col = await DatabaseHelper.instance.getAllTagColors();
+    final tags = await NoteRepository.instance.getAllTags();
+    final col = await NoteRepository.instance.getAllTagColors();
     setState(() {
       _tags = tags;
       _tagColors = col;
@@ -101,10 +101,10 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
                 final newName = controller.text.trim();
                 if (newName.isNotEmpty) {
                   if (newName != tag) {
-                    await DatabaseHelper.instance.renameTag(tag, newName);
+                    await NoteRepository.instance.renameTag(tag, newName);
                   }
                   if (selectedColor != (_tagColors[tag] ?? 0)) {
-                    await DatabaseHelper.instance
+                    await NoteRepository.instance
                         .setTagColor(newName, selectedColor);
                   }
                   if (!context.mounted) return;
@@ -142,7 +142,7 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
     );
 
     if (confirmed == true) {
-      await DatabaseHelper.instance.deleteTag(tag);
+      await NoteRepository.instance.deleteTag(tag);
       await _loadTags();
     }
   }

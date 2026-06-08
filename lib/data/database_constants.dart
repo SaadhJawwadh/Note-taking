@@ -19,6 +19,7 @@ class NoteFields {
   static const String imagePath = 'imagePath';
   static const String category = 'category';
   static const String tags = 'tags';
+  static const String previewText = 'previewText';
   static const String deletedAt = 'deletedAt';
 }
 

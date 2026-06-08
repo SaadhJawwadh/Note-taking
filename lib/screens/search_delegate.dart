@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:intl/intl.dart';
-import '../data/database_helper.dart';
+import '../data/repositories/note_repository.dart';
+import '../data/repositories/transaction_repository.dart';
+import '../data/repositories/period_repository.dart';
 import '../data/note_model.dart';
 import '../data/transaction_model.dart';
 import '../data/period_log_model.dart';
@@ -64,10 +66,10 @@ class GlobalSearchDelegate extends SearchDelegate {
   Widget _buildSearchResults(BuildContext context) {
     return FutureBuilder<List<dynamic>>(
       future: Future.wait([
-        DatabaseHelper.instance.searchNotes(query),
-        DatabaseHelper.instance.searchTransactions(query),
-        DatabaseHelper.instance.searchPeriodLogs(query),
-        DatabaseHelper.instance.getAllTagColors(),
+        NoteRepository.instance.searchNotes(query),
+        TransactionRepository.instance.searchTransactions(query),
+        PeriodRepository.instance.searchPeriodLogs(query),
+        NoteRepository.instance.getAllTagColors(),
       ]),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {

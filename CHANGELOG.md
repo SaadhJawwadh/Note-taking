@@ -2,6 +2,28 @@
 
 All notable changes to Note Book are documented here.
 
+## [1.32.0] - 2026-06-08
+
+### ✨ New Features & Enhancements
+- **AI-Powered SMS Refinement**: Integrated Gemini Nano into the `SmsService` to automatically sanitize and professionalize raw transaction descriptions extracted via regex.
+- **Interactive Empty States**: Added a prominent "Create My First Note" button to the empty state view to reduce friction for new users.
+
+### ⚡ Performance Optimizations
+- **Pre-computed Note Previews**: Added a `previewText` field to the `notes` table (Database v14). Previews are now generated via `RichTextUtils` upon saving, bypassing expensive Markdown parsing during list rendering.
+- **Database-Level Filtering**: Migrated note tag, archive, and trash filtering from in-memory operations to direct SQLite queries in `NoteRepository`, fixing pagination accuracy and reducing memory footprint.
+- **Batched Bulk Actions**: Updated bulk archive, delete, and tag operations to utilize `db.batch()`, drastically reducing execution time for large selections.
+
+### 🏗️ Architectural Refactoring
+- **Repository Pattern Implementation**: Decomposed the monolithic `DatabaseHelper` (600+ lines) into modular singletons: `NoteRepository`, `TransactionRepository`, and `PeriodRepository`.
+- **UI Component Modularization**: Broke down the complex `HomeScreen` into smaller, declarative widgets (`HomeAppBar`, `NoteViewBuilder`).
+- **Robust Navigation State**: Replaced `PageTransitionSwitcher` with `IndexedStack` in the main navigation flow to preserve tab state and scroll positions.
+- **Centralized Design Tokens**: Created `AppLayout` to govern spacing, border radii, and animation constants, ensuring a consistent premium UI.
+- **Backup Service Compatibility**: Enhanced `BackupService` to dynamically generate `previewText` when importing older backups (v13 and below), guaranteeing backward compatibility.
+
+### 🐛 Bug Fixes
+- **Hero Tag Conflicts**: Resolved an exception (`There are multiple heroes that share the same tag`) caused by multiple Floating Action Buttons coexisting within the new `IndexedStack`.
+- **Card Layout Overflow**: Fixed a `RenderFlex overflow` error in `NoteCard` by applying `Flexible` constraints to the new preview text block.
+
 ## [1.31.0] - 2026-06-08
 
 ### 🐛 Bug Fixes (Critical)

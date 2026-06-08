@@ -12,6 +12,7 @@ import '../screens/app_lock_screen.dart';
 import 'package:provider/provider.dart';
 import '../data/settings_provider.dart';
 import '../data/transaction_category.dart';
+import '../utils/rich_text_utils.dart';
 import 'sms_service.dart';
 
 const kAutoBackupTaskName = 'com.example.note_taking_app.autoBackup';
@@ -216,6 +217,10 @@ class BackupService {
         if (data.containsKey('notes')) {
           for (final row in data['notes']) {
             final map = Map<String, Object?>.from(row)..remove('tags'); // Omit legacy tags column
+            if (!map.containsKey('previewText') || map['previewText'] == null) {
+              final content = map['content'] as String? ?? '';
+              map['previewText'] = RichTextUtils.contentToPlainText(content, maxLines: 6);
+            }
             batch.insert('notes', map, conflictAlgorithm: ConflictAlgorithm.replace);
           }
         }

@@ -4,7 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'app_lock_screen.dart';
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
 import 'dart:async';
-import '../data/database_helper.dart';
+import '../data/repositories/note_repository.dart';
 import '../data/note_model.dart';
 import 'package:uuid/uuid.dart';
 import 'package:provider/provider.dart';
@@ -130,8 +130,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   }
 
   Future<void> _loadTags() async {
-    final t = await DatabaseHelper.instance.getAllTags();
-    final c = await DatabaseHelper.instance.getAllTagColors();
+    final t = await NoteRepository.instance.getAllTags();
+    final c = await NoteRepository.instance.getAllTagColors();
     if (mounted) {
       setState(() {
         _allTags = t;
@@ -216,7 +216,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                         onPressed: () async {
                           if (enteredTag.isNotEmpty) {
                             if (newTagColor != 0) {
-                              await DatabaseHelper.instance
+                              await NoteRepository.instance
                                   .setTagColor(enteredTag, newTagColor);
                               _tagColors[enteredTag] = newTagColor;
                             }
@@ -392,7 +392,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
     if (isEmpty) {
       if (exists) {
-        await DatabaseHelper.instance.deleteNote(_noteId);
+        await NoteRepository.instance.deleteNote(_noteId);
       }
       return;
     }
@@ -412,9 +412,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     );
 
     if (exists) {
-      await DatabaseHelper.instance.updateNote(note);
+      await NoteRepository.instance.updateNote(note);
     } else {
-      await DatabaseHelper.instance.createNote(note);
+      await NoteRepository.instance.createNote(note);
       isNoteSaved = true;
     }
   }
@@ -440,7 +440,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     );
 
     if (confirmed == true) {
-      await DatabaseHelper.instance.softDeleteNote(_noteId);
+      await NoteRepository.instance.softDeleteNote(_noteId);
       if (mounted) Navigator.pop(context, true);
     }
   }

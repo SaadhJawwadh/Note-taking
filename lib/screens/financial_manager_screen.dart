@@ -7,7 +7,7 @@ import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../data/settings_provider.dart';
-import '../data/database_helper.dart';
+import '../data/repositories/transaction_repository.dart';
 import '../data/transaction_model.dart';
 import '../data/transaction_category.dart';
 import '../services/sms_service.dart';
@@ -63,7 +63,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
       _isLoading = true;
       _isDashboardLoading = true;
     });
-    final allTransactions = await DatabaseHelper.instance.readAllTransactions();
+    final allTransactions = await TransactionRepository.instance.readAllTransactions();
 
     _allDateFiltered = allTransactions.where((t) {
       // Filter out any orphan reversal sentinels
@@ -78,7 +78,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     }).toList();
 
     _monthlyData =
-        await DatabaseHelper.instance.getMonthlyTransactionSummary(6);
+        await TransactionRepository.instance.getMonthlyTransactionSummary(6);
 
     _applyFilters();
     setState(() {
@@ -983,7 +983,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                         ),
                                       );
                                       if (confirm == true && mounted) {
-                                        await DatabaseHelper.instance
+                                        await TransactionRepository.instance
                                             .deleteTransaction(transaction.id!);
                                         await _refreshTransactions();
                                       }
@@ -1108,6 +1108,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
           return SizedBox(
             height: 56,
             child: FloatingActionButton.extended(
+              heroTag: 'finance_fab',
               label: const Text('New Transaction'),
               icon: const Icon(Icons.add),
               tooltip: 'Add Transaction',

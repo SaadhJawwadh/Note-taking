@@ -14,4 +14,7 @@ abstract class LocalAiService {
   /// Parses transaction details from a bank SMS using the active list of categories.
   /// Returns a map with keys: 'amount' (double), 'merchant' (string), 'category' (string), and 'isExpense' (bool).
   Future<Map<String, dynamic>?> parseSmsTransaction(String smsBody, List<String> categories);
+
+  /// Refines a raw transaction description into a clean, human-readable merchant name or purpose.
+  Future<String?> refineTransactionDescription(String rawDescription, String smsBody);
 }

@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../data/category_definition.dart';
-import '../data/database_helper.dart';
+import '../data/repositories/transaction_repository.dart';
 import '../data/transaction_category.dart';
 
 class CategoryManagementScreen extends StatefulWidget {
@@ -24,7 +24,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
   }
 
   Future<void> _loadCategories() async {
-    final cats = await DatabaseHelper.instance.getAllCategoryDefinitions();
+    final cats = await TransactionRepository.instance.getAllCategoryDefinitions();
     if (mounted) {
       setState(() {
         _categories = cats;
@@ -44,7 +44,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
       builder: (ctx) => _EditKeywordsDialog(
         definition: def,
         onSave: (updated) async {
-          await DatabaseHelper.instance.upsertCategoryDefinition(updated);
+          await TransactionRepository.instance.upsertCategoryDefinition(updated);
           await _saveAndReload();
         },
       ),
@@ -57,7 +57,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
       builder: (ctx) => _AddCategoryDialog(
         existingCategories: _categories,
         onSave: (newDef) async {
-          await DatabaseHelper.instance.upsertCategoryDefinition(newDef);
+          await TransactionRepository.instance.upsertCategoryDefinition(newDef);
           await _saveAndReload();
         },
       ),
@@ -88,7 +88,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
       ),
     );
     if (confirmed == true && mounted) {
-      await DatabaseHelper.instance.deleteCategoryDefinition(def.name);
+      await TransactionRepository.instance.deleteCategoryDefinition(def.name);
       await _saveAndReload();
     }
   }
@@ -270,6 +270,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'category_fab',
         onPressed: _showAddDialog,
         icon: const Icon(Icons.add),
         label: const Text('New Category'),

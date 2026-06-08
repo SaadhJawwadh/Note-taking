@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../data/period_log_model.dart';
-import '../data/database_helper.dart';
+import '../data/repositories/period_repository.dart';
 import '../services/period_prediction_service.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
@@ -36,7 +36,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    _logs = await DatabaseHelper.instance.readAllPeriodLogs();
+    _logs = await PeriodRepository.instance.readAllPeriodLogs();
     _predictedNextPeriod = await PeriodPredictionService.estimateNextPeriod();
     _predictedOvulation = await PeriodPredictionService.estimateOvulationDate();
     _daysUntilNext = await PeriodPredictionService.daysUntilNextPeriod();
@@ -107,7 +107,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> {
         );
         return;
       }
-      await DatabaseHelper.instance.updatePeriodLog(updated);
+      await PeriodRepository.instance.updatePeriodLog(updated);
     } else {
       // Start new period
       if (_checkOverlap(todayUtc, null)) {
@@ -128,7 +128,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> {
         startDate: todayUtc,
         intensity: 'Medium',
       );
-      await DatabaseHelper.instance.createPeriodLog(newLog);
+      await PeriodRepository.instance.createPeriodLog(newLog);
     }
     await _loadData(); // Re-fetch logs and predictions
   }
@@ -151,14 +151,14 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> {
     );
 
     if (confirm == true) {
-      await DatabaseHelper.instance.deletePeriodLog(log.id);
+      await PeriodRepository.instance.deletePeriodLog(log.id);
       await _loadData();
     }
   }
 
   Future<void> _updateIntensity(PeriodLog log, String newIntensity) async {
     final updated = log.copyWith(intensity: newIntensity);
-    await DatabaseHelper.instance.updatePeriodLog(updated);
+    await PeriodRepository.instance.updatePeriodLog(updated);
     await _loadData();
   }
 
@@ -357,7 +357,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> {
           endDate: isOngoing ? null : tempEnd,
           intensity: tempIntensity,
         );
-        await DatabaseHelper.instance.updatePeriodLog(updated);
+        await PeriodRepository.instance.updatePeriodLog(updated);
       } else {
         final newLog = PeriodLog(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -365,7 +365,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> {
           endDate: isOngoing ? null : tempEnd,
           intensity: tempIntensity,
         );
-        await DatabaseHelper.instance.createPeriodLog(newLog);
+        await PeriodRepository.instance.createPeriodLog(newLog);
       }
       await _loadData();
     }

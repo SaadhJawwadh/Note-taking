@@ -130,4 +130,29 @@ $smsBody
     }
     return null;
   }
+
+  @override
+  Future<String?> refineTransactionDescription(String rawDescription, String smsBody) async {
+    final prompt = """
+You are a financial assistant. Refine the following transaction description to be short, clean, and professional.
+Extract the most relevant merchant name or transaction purpose.
+Remove any "Purchase at", "Payment to", account numbers, dates, or technical codes.
+If it's a peer-to-peer transfer, use "Transfer to [Name]" or "Received from [Name]".
+If it's an ATM withdrawal, use "ATM Withdrawal".
+
+Raw Description: $rawDescription
+Original SMS: $smsBody
+
+Respond with ONLY the refined description (max 30 characters). No punctuation at the end.
+""";
+    final result = await generateText(prompt);
+    if (result == null) return null;
+    
+    // Clean up any extra noise the LLM might have added
+    var cleaned = result.trim();
+    if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+      cleaned = cleaned.substring(1, cleaned.length - 1);
+    }
+    return cleaned.length > 35 ? cleaned.substring(0, 35) : cleaned;
+  }
 }

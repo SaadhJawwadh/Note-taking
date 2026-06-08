@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import '../data/database_helper.dart';
+import '../data/repositories/note_repository.dart';
 import '../data/note_model.dart';
 
 class NoteProvider extends ChangeNotifier {
+  final NoteRepository _noteRepository = NoteRepository();
   List<Note> _notes = [];
   List<Note> _filteredNotes = [];
   bool _isLoading = true;
@@ -40,22 +41,25 @@ class NoteProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final tags = await DatabaseHelper.instance.getAllTags();
-      final colors = await DatabaseHelper.instance.getAllTagColors();
+      final tags = await _noteRepository.getAllTags();
+      final colors = await _noteRepository.getAllTagColors();
 
-      final fetchedNotes = await DatabaseHelper.instance.readAllNotes(
+      final fetchedNotes = await _noteRepository.readAllNotes(
         limit: _pageSize,
         offset: 0,
+        tag: _selectedTag == 'All' || _selectedTag == 'Archived' || _selectedTag == 'Trash' ? null : _selectedTag,
+        isArchived: _selectedTag == 'Archived',
+        isTrashed: _selectedTag == 'Trash',
       );
 
-      _allTags = ['All', ...tags];
+      _allTags = ['All', 'Archived', 'Trash', ...tags];
       if (!_allTags.contains(_selectedTag)) {
         _selectedTag = 'All';
       }
 
       _tagColors = colors;
       _notes = fetchedNotes;
-      _filterNotes();
+      _filteredNotes = List.from(_notes);
       
       _isLoading = false;
       if (fetchedNotes.length < _pageSize) {
@@ -69,33 +73,9 @@ class NoteProvider extends ChangeNotifier {
     }
   }
 
-  void _filterNotes() {
-    if (_selectedTag == 'All') {
-      _filteredNotes = _notes.where((n) => !n.isArchived && n.deletedAt == null).toList();
-    } else if (_selectedTag == 'Archived') {
-      _filteredNotes = _notes.where((n) => n.isArchived && n.deletedAt == null).toList();
-    } else if (_selectedTag == 'Trash') {
-      _filteredNotes = _notes.where((n) => n.deletedAt != null).toList();
-    } else {
-      _filteredNotes = _notes
-          .where((note) =>
-              note.tags.contains(_selectedTag) &&
-              !note.isArchived &&
-              note.deletedAt == null)
-          .toList();
-    }
-    
-    _filteredNotes.sort((a, b) {
-      if (a.isPinned && !b.isPinned) return -1;
-      if (!a.isPinned && b.isPinned) return 1;
-      return b.dateModified.compareTo(a.dateModified);
-    });
-  }
-
   void setTag(String tag) {
     _selectedTag = tag;
-    _filterNotes();
-    notifyListeners();
+    refreshNotes();
   }
 
   Future<void> loadMoreNotes() async {
@@ -106,9 +86,12 @@ class NoteProvider extends ChangeNotifier {
 
     try {
       _currentPage++;
-      final moreNotes = await DatabaseHelper.instance.readAllNotes(
+      final moreNotes = await _noteRepository.readAllNotes(
         limit: _pageSize,
         offset: _currentPage * _pageSize,
+        tag: _selectedTag == 'All' || _selectedTag == 'Archived' || _selectedTag == 'Trash' ? null : _selectedTag,
+        isArchived: _selectedTag == 'Archived',
+        isTrashed: _selectedTag == 'Trash',
       );
 
       if (moreNotes.length < _pageSize) {
@@ -120,7 +103,7 @@ class NoteProvider extends ChangeNotifier {
       final newNotes = moreNotes.where((n) => !existingIds.contains(n.id)).toList();
       
       _notes.addAll(newNotes);
-      _filterNotes();
+      _filteredNotes = List.from(_notes);
     } catch (e) {
       debugPrint('Error loading more notes: $e');
     } finally {
@@ -148,41 +131,19 @@ class NoteProvider extends ChangeNotifier {
 
   // Bulk Actions
   Future<void> bulkArchive() async {
-    for (String id in _selectedNoteIds) {
-      final noteIndex = _notes.indexWhere((n) => n.id == id);
-      if (noteIndex != -1) {
-        final note = _notes[noteIndex];
-        final updatedNote = note.copyWith(isArchived: true);
-        await DatabaseHelper.instance.updateNote(updatedNote);
-      }
-    }
+    await _noteRepository.bulkArchive(_selectedNoteIds.toList(), true);
     clearSelection();
     await refreshNotes();
   }
 
   Future<void> bulkDelete() async {
-    for (String id in _selectedNoteIds) {
-      final noteIndex = _notes.indexWhere((n) => n.id == id);
-      if (noteIndex != -1) {
-        final note = _notes[noteIndex];
-        final updatedNote = note.copyWith(deletedAt: DateTime.now());
-        await DatabaseHelper.instance.updateNote(updatedNote);
-      }
-    }
+    await _noteRepository.bulkDelete(_selectedNoteIds.toList());
     clearSelection();
     await refreshNotes();
   }
 
   Future<void> bulkTag(List<String> selectedTags) async {
-    for (String id in _selectedNoteIds) {
-      final noteIndex = _notes.indexWhere((n) => n.id == id);
-      if (noteIndex != -1) {
-        final note = _notes[noteIndex];
-        Set<String> mergedTags = {...note.tags, ...selectedTags};
-        final updatedNote = note.copyWith(tags: mergedTags.toList());
-        await DatabaseHelper.instance.updateNote(updatedNote);
-      }
-    }
+    await _noteRepository.bulkTag(_selectedNoteIds.toList(), selectedTags);
     clearSelection();
     await refreshNotes();
   }
@@ -192,7 +153,7 @@ class NoteProvider extends ChangeNotifier {
     if (newTag.isEmpty || newTag == oldTag || newTag.toLowerCase() == 'all') return;
 
     try {
-      await DatabaseHelper.instance.renameTag(oldTag, newTag);
+      await _noteRepository.renameTag(oldTag, newTag);
       if (_selectedTag == oldTag) {
         _selectedTag = newTag;
       }
@@ -204,7 +165,7 @@ class NoteProvider extends ChangeNotifier {
 
   Future<void> deleteTag(String tag) async {
     try {
-      await DatabaseHelper.instance.deleteTag(tag);
+      await _noteRepository.deleteTag(tag);
       if (_selectedTag == tag) {
         _selectedTag = 'All';
       }

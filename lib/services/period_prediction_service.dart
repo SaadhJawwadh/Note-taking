@@ -1,4 +1,4 @@
-import '../data/database_helper.dart';
+import '../data/repositories/period_repository.dart';
 
 class PeriodPredictionService {
   static const int normalCycleLengthDays = 28;
@@ -8,7 +8,7 @@ class PeriodPredictionService {
   /// Calculates the average cycle length based on the last 3-6 logs.
   /// A cycle is the number of days between the start date of one period and the start date of the next.
   static Future<int> calculateAverageCycleLength() async {
-    final logs = await DatabaseHelper.instance.readAllPeriodLogs();
+    final logs = await PeriodRepository.instance.readAllPeriodLogs();
 
     // Process only logs that have an earlier log to compare against.
     // Since readAllPeriodLogs returns sorted by startDate DESC (newest first).
@@ -50,7 +50,7 @@ class PeriodPredictionService {
   /// Calculates the estimated start date of the next period based on the most recent log
   /// and the average cycle length.
   static Future<DateTime?> estimateNextPeriod() async {
-    final logs = await DatabaseHelper.instance.readAllPeriodLogs();
+    final logs = await PeriodRepository.instance.readAllPeriodLogs();
     if (logs.isEmpty) {
       return null;
     }

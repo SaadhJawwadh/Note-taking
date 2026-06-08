@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:provider/provider.dart';
-import '../data/database_helper.dart';
+import '../data/repositories/note_repository.dart';
 import '../data/note_model.dart';
 import '../data/settings_provider.dart';
 import 'package:animations/animations.dart';
@@ -34,15 +34,15 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
 
   Future refreshNotes() async {
     setState(() => isLoading = true);
-    final colors = await DatabaseHelper.instance.getAllTagColors();
+    final colors = await NoteRepository.instance.getAllTagColors();
     _tagColors = colors;
 
     if (widget.filterType == FilterType.archived) {
-      final allNotes = await DatabaseHelper.instance.readAllNotes();
+      final allNotes = await NoteRepository.instance.readAllNotes();
       displayedNotes =
           allNotes.where((n) => n.isArchived && n.deletedAt == null).toList();
     } else {
-      displayedNotes = await DatabaseHelper.instance.readTrashedNotes();
+      displayedNotes = await NoteRepository.instance.readTrashedNotes();
     }
 
     displayedNotes.sort((a, b) => b.dateModified.compareTo(a.dateModified));
@@ -80,7 +80,7 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
                       Icon(Icons.restore_outlined, color: onSurfaceVariant),
                   title: Text('Restore', style: TextStyle(color: onSurface)),
                   onTap: () async {
-                    await DatabaseHelper.instance.restoreNote(note.id);
+                    await NoteRepository.instance.restoreNote(note.id);
                     if (!context.mounted) return;
                     Navigator.pop(context);
                     await refreshNotes();
@@ -114,7 +114,7 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
                       ),
                     );
                     if (confirmed == true) {
-                      await DatabaseHelper.instance.deleteNote(note.id);
+                      await NoteRepository.instance.deleteNote(note.id);
                       await refreshNotes();
                     }
                   },
@@ -125,7 +125,7 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
                       Icon(Icons.archive_outlined, color: onSurfaceVariant),
                   title: Text('Unarchive', style: TextStyle(color: onSurface)),
                   onTap: () async {
-                    await DatabaseHelper.instance.archiveNote(note.id, false);
+                    await NoteRepository.instance.archiveNote(note.id, false);
                     if (!context.mounted) return;
                     Navigator.pop(context);
                     await refreshNotes();
@@ -137,7 +137,7 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
                   title: const Text('Move to Trash',
                       style: TextStyle(color: Colors.redAccent)),
                   onTap: () async {
-                    await DatabaseHelper.instance.softDeleteNote(note.id);
+                    await NoteRepository.instance.softDeleteNote(note.id);
                     if (!context.mounted) return;
                     Navigator.pop(context);
                     await refreshNotes();

@@ -1,21 +1,20 @@
-# Note Book — Release v1.22.1
+# Note Book — Release v1.32.0
 
-This release focuses on architectural refinements, critical stability fixes, and a premium "Expressive Material" UI update.
+This is a major architectural release focusing on intelligence, extreme performance, and long-term stability.
 
-### 📝 Core Improvements
-- **NoteProvider Refactor**: Successfully migrated the Home Screen state management to a centralized `NoteProvider`, resulting in faster filtering and smoother transitions.
-- **Database Self-Healing**: Enhanced resilience by automatically backing up corrupt database files instead of deleting them.
-- **Improved SMS Pipeline**: Refined automated transaction logging with boundary-aware regex matching for 10+ major banks.
+### 🧠 AI-Enhanced Finances
+- **Smart SMS Descriptions**: The app now leverages on-device AI (Gemini Nano) to automatically clean up and professionalize noisy bank SMS messages. "Purchase at Uber 1500" becomes "Uber Trip", giving you a cleaner, more intuitive financial log.
 
-### 🛡️ Critical Fixes
-- **Theme Crash**: Resolved a critical `ThemeData` brightness mismatch that caused app crashes on certain devices.
-- **Backup Integrity**: Fixed a bug where custom expense/income rules were excluded from backups, ensuring 100% data preservation.
-- **Naming Conflicts**: Corrected `GoogleFonts` implementation to resolve build-time errors.
+### ⚡ Extreme Performance
+- **Instant Previews**: We've revolutionized how the Note grid loads. Previews are now pre-computed in plain-text when you save a note, eliminating scroll jank and dramatically speeding up the Home screen, no matter how many notes you have.
+- **Database-Level Filtering**: Pagination and tag filtering are now handled directly by the SQLite engine, saving memory and ensuring accurate, lightning-fast searches.
+- **Batched Bulk Actions**: Archiving or deleting dozens of notes at once now happens instantly using atomic database batches.
 
-### 🎨 Design & UX
-- **Expressive Material**: Aligned the entire application with the new Design System (Material 3, Stadium FABs, and Rubik typography).
-- **Tactile Transitions**: Integrated `OpenContainer` and `FadeThrough` animations for a premium feel.
-- **Smart Tags**: Implemented MRU (Most Recently Used) tag sorting for quicker organization.
+### 🏗️ Bulletproof Architecture
+- **Repository Pattern**: We completely dismantled the monolithic database helper. Notes, Transactions, and Period Logs are now managed by dedicated, highly-testable repositories.
+- **Robust Navigation**: Navigating between your Notes, Finances, and Tracker is now seamless. We've implemented `IndexedStack` to ensure you never lose your scroll position or state when switching tabs.
+- **Centralized Design Tokens**: The entire app's padding, spacing, and animations have been unified under a single design system for a perfectly consistent, premium feel.
+- **Backward-Compatible Backups**: Your data is safe. The backup system seamlessly handles the new preview structures, ensuring flawless restores from any previous app version.
 
 ---
-**Note Book** remains 100% local, 100% private, and 100% yours.
+Enjoy the fastest, smartest version of Note Book yet!

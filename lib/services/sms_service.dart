@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:telephony/telephony.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../data/database_helper.dart';
+import '../data/repositories/transaction_repository.dart';
 import '../data/transaction_model.dart';
 import '../data/transaction_category.dart';
 import 'sms_parser.dart';
@@ -28,22 +28,22 @@ class SmsService {
     if (transaction == null || transaction.smsId == null) {
       return;
     }
-    if (await DatabaseHelper.instance.hasCrossSenderDuplicate(transaction.amount, transaction.date)) {
+    if (await TransactionRepository.instance.hasCrossSenderDuplicate(transaction.amount, transaction.date)) {
       return;
     }
 
-    final inserted = await DatabaseHelper.instance.createSmsTransaction(transaction);
+    final inserted = await TransactionRepository.instance.createSmsTransaction(transaction);
     if (inserted == null) {
       return;
     }
 
     if (transaction.category == SmsConstants.reversalSentinel) {
-      final target = await DatabaseHelper.instance.findReversalTarget(transaction.amount, transaction.date);
+      final target = await TransactionRepository.instance.findReversalTarget(transaction.amount, transaction.date);
       if (target != null) {
-        await DatabaseHelper.instance.deleteTransaction(target.id!);
+        await TransactionRepository.instance.deleteTransaction(target.id!);
       }
       // Always delete the reversal transaction itself to keep the DB clean
-      await DatabaseHelper.instance.deleteTransaction(inserted.id!);
+      await TransactionRepository.instance.deleteTransaction(inserted.id!);
     }
   }
 
@@ -53,7 +53,7 @@ class SmsService {
   static var _customIncomeRules = <String>[];
 
   static Future<void> reloadSmsContacts() async {
-    final contacts = await DatabaseHelper.instance.getAllSmsContacts();
+    final contacts = await TransactionRepository.instance.getAllSmsContacts();
     final allowed = <String>{};
     final blocked = <String>{};
     for (final c in contacts) {
@@ -105,22 +105,22 @@ class SmsService {
       if (t == null || t.smsId == null) {
         continue;
       }
-      if (await DatabaseHelper.instance.hasCrossSenderDuplicate(t.amount, t.date)) {
+      if (await TransactionRepository.instance.hasCrossSenderDuplicate(t.amount, t.date)) {
         continue;
       }
 
-      final inserted = await DatabaseHelper.instance.createSmsTransaction(t);
+      final inserted = await TransactionRepository.instance.createSmsTransaction(t);
       if (inserted == null) {
         continue;
       }
       count++;
 
       if (t.category == SmsConstants.reversalSentinel) {
-        final target = await DatabaseHelper.instance.findReversalTarget(t.amount, t.date);
+        final target = await TransactionRepository.instance.findReversalTarget(t.amount, t.date);
         if (target != null) {
-          await DatabaseHelper.instance.deleteTransaction(target.id!);
+          await TransactionRepository.instance.deleteTransaction(target.id!);
         }
-        await DatabaseHelper.instance.deleteTransaction(inserted.id!);
+        await TransactionRepository.instance.deleteTransaction(inserted.id!);
       }
     }
     return count;
@@ -225,6 +225,28 @@ class SmsService {
         debugPrint('On-device AI SMS parsing failed: $e');
       }
     }
+
+    // AI Refinement Step: If we have a transaction and AI is enabled, refine the description
+    if (transaction != null) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        if (prefs.getBool('useOnDeviceAi') ?? false) {
+          final aiService = GeminiNanoService();
+          if (await aiService.isSupported()) {
+            final refined = await aiService.refineTransactionDescription(
+              transaction.description,
+              body,
+            );
+            if (refined != null && refined.isNotEmpty) {
+              transaction = transaction.copy(description: refined);
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('AI Refinement failed: $e');
+      }
+    }
+
     return transaction;
   }
 }
@@ -236,7 +258,7 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
   final customExpenseRules = prefs.getStringList('customExpenseRules') ?? [];
   final customIncomeRules = prefs.getStringList('customIncomeRules') ?? [];
   
-  final contacts = await DatabaseHelper.instance.getAllSmsContacts();
+  final contacts = await TransactionRepository.instance.getAllSmsContacts();
   final allowed = <String>{};
   final blocked = <String>{};
   for (final c in contacts) {
@@ -260,16 +282,16 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
     customIncomeRules: customIncomeRules,
   );
   if (transaction != null) {
-    if (await DatabaseHelper.instance.hasCrossSenderDuplicate(transaction.amount, transaction.date)) {
+    if (await TransactionRepository.instance.hasCrossSenderDuplicate(transaction.amount, transaction.date)) {
       return;
     }
-    final inserted = await DatabaseHelper.instance.createSmsTransaction(transaction);
+    final inserted = await TransactionRepository.instance.createSmsTransaction(transaction);
     if (inserted != null && transaction.category == SmsConstants.reversalSentinel) {
-      final target = await DatabaseHelper.instance.findReversalTarget(transaction.amount, transaction.date);
+      final target = await TransactionRepository.instance.findReversalTarget(transaction.amount, transaction.date);
       if (target != null) {
-        await DatabaseHelper.instance.deleteTransaction(target.id!);
+        await TransactionRepository.instance.deleteTransaction(target.id!);
       }
-      await DatabaseHelper.instance.deleteTransaction(inserted.id!);
+      await TransactionRepository.instance.deleteTransaction(inserted.id!);
     }
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
-import '../data/database_helper.dart';
+import '../data/repositories/transaction_repository.dart';
 import '../data/sms_contact.dart';
 import '../services/sms_service.dart';
 
@@ -29,7 +29,7 @@ class _SmsContactsScreenState extends State<SmsContactsScreen> {
   }
 
   Future<void> _load() async {
-    final contacts = await DatabaseHelper.instance.getAllSmsContacts();
+    final contacts = await TransactionRepository.instance.getAllSmsContacts();
     if (mounted) {
       setState(() {
         _contacts = contacts;
@@ -42,7 +42,7 @@ class _SmsContactsScreenState extends State<SmsContactsScreen> {
     final value = _controller.text.trim();
     if (value.isEmpty) return;
     final id = value.toLowerCase().replaceAll(RegExp(r'\s+'), '_');
-    await DatabaseHelper.instance.upsertSmsContact(SmsContact(
+    await TransactionRepository.instance.upsertSmsContact(SmsContact(
       id: 'custom_$id',
       senderIds: [value],
       label: value,
@@ -53,14 +53,14 @@ class _SmsContactsScreenState extends State<SmsContactsScreen> {
   }
 
   Future<void> _toggleBlocked(SmsContact contact) async {
-    await DatabaseHelper.instance
+    await TransactionRepository.instance
         .setSmsContactBlocked(contact.id, !contact.isBlocked);
     await SmsService.reloadSmsContacts();
     await _load();
   }
 
   Future<void> _deleteCustom(SmsContact contact) async {
-    await DatabaseHelper.instance.deleteSmsContact(contact.id);
+    await TransactionRepository.instance.deleteSmsContact(contact.id);
     await SmsService.reloadSmsContacts();
     await _load();
   }

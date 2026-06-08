@@ -12,6 +12,7 @@ class Note {
   String? imagePath;
   String category;
   List<String> tags; // New field
+  String? previewText;
   DateTime? deletedAt;
 
   Note({
@@ -26,6 +27,7 @@ class Note {
     this.imagePath,
     this.category = 'All Notes',
     this.tags = const [], // Default empty list
+    this.previewText,
     this.deletedAt,
   });
 
@@ -41,6 +43,7 @@ class Note {
       'isArchived': isArchived ? 1 : 0,
       'imagePath': imagePath,
       'category': category,
+      'previewText': previewText,
       'deletedAt': deletedAt?.toIso8601String(),
     };
   }
@@ -58,6 +61,7 @@ class Note {
       imagePath: map['imagePath'],
       category: map['category'] ?? 'All Notes',
       tags: [], // Tags will be populated by DatabaseHelper
+      previewText: map['previewText'],
       deletedAt:
           map['deletedAt'] != null ? DateTime.tryParse(map['deletedAt'].toString()) : null,
     );
@@ -73,6 +77,7 @@ class Note {
     String? imagePath,
     String? category,
     List<String>? tags,
+    String? previewText,
     DateTime? deletedAt,
   }) {
     return Note(
@@ -87,6 +92,7 @@ class Note {
       imagePath: imagePath ?? this.imagePath,
       category: category ?? this.category,
       tags: tags ?? this.tags,
+      previewText: previewText ?? this.previewText,
       deletedAt: deletedAt ?? this.deletedAt,
     );
   }
