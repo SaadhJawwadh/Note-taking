@@ -71,8 +71,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (path.startsWith('content://')) {
         try {
           final String? localPath = await _lockChannel.invokeMethod('copyContentUriToTempFile', {'uri': path});
-          if (localPath != null) resolvedPaths.add(localPath);
-          else resolvedPaths.add(path);
+          if (localPath != null) {
+            resolvedPaths.add(localPath);
+          } else {
+            resolvedPaths.add(path);
+          }
         } catch (e) {
           debugPrint('Error copying content URI: $e');
           resolvedPaths.add(path);
@@ -198,7 +201,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 if (newName.isNotEmpty) {
                   if (newName != tag) await NoteRepository.instance.renameTag(tag, newName);
                   if (selectedColor != (noteProvider.tagColors[tag] ?? 0)) await NoteRepository.instance.setTagColor(newName, selectedColor);
-                  if (!mounted) return;
+                  if (!context.mounted) return;
                   Navigator.pop(context);
                   await noteProvider.refreshNotes();
                   if (noteProvider.selectedTag == tag) noteProvider.setTag(newName);
