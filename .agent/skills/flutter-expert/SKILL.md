@@ -224,3 +224,9 @@ Expert Flutter developer specializing in Flutter 3.x+, Dart 3.x, and comprehensi
 - "Create accessible widgets following Material Design 3 guidelines"
 
 Always use null safety with Dart 3 features. Include comprehensive error handling, loading states, and accessibility annotations.
+
+## Project-Specific Learnings & Guidelines
+- **Strict Linting & CI/CD**: The project's GitHub Actions CI is extremely strict. `flutter analyze` warnings (like missing `{}` around single-line `if/else` statements, or using `BuildContext` across async gaps without `if (!context.mounted) return;`) will cause the build to fail. Always run `flutter analyze` locally and ensure 0 issues before preparing a release.
+- **Data Architecture**: The project uses a strict Repository Pattern (`NoteRepository`, `TransactionRepository`, `PeriodRepository`) as singletons. Do not use the monolithic `DatabaseHelper` for CRUD operations.
+- **Navigation State**: `IndexedStack` is used for the main bottom navigation to preserve state and scroll position across tabs. Because `IndexedStack` keeps all tabs alive, any `FloatingActionButton` across these tabs MUST have a unique `heroTag` (e.g., `heroTag: 'home_fab'`) to prevent `Hero` animation conflicts.
+- **Performance**: Move expensive operations (like Markdown parsing for previews) to write-time. The database now includes a `previewText` column generated via `RichTextUtils` when saving. Use `db.batch()` for all bulk operations to maximize SQLite efficiency.

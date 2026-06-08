@@ -63,4 +63,9 @@ git push origin vX.Y.Z   # triggers GitHub Actions CI/CD
 - **Preventing Parser Regressions on Custom Senders**: When working with custom/whitelisted SMS senders, verify that default bank filters (like `debitRegex` or `creditRegex` in `SmsConstants`) do not match these messages in the absence of custom rules. Restrict default bank regexes to recognized bank senders (in `SmsConstants.bankSenders`) so that custom senders rely strictly on custom rules. Always run the `sms_rules_test.dart` suite to ensure whitelisted custom senders correctly return `null` without custom rules.
 - **AppLockScreen Overlay vs Unmount Trade-off**: Using a `Stack` overlay (child stays mounted) is required for native picker flows, but widget tests that assert `findsNothing` on the child text when locked will fail if the child is still in the tree. The solution is: unmount child only when `!_isSessionAuthenticated` (true lock-out), but keep child mounted with an overlay when `_isInBackground` (transient background state). This satisfies both test assertions and picker state preservation.
 
+## Project-Specific Release Automation
+- **Strict Analysis**: The GitHub Action CI pipeline treats all `flutter analyze` warnings as fatal errors. You MUST run `flutter analyze` locally and fix ALL issues (including style rules like missing `{}` around `if` statements or `BuildContext` async gaps) before triggering a release.
+- **Automated Deployment**: Releasing is handled via `./deploy.sh <version>`. The script auto-updates `pubspec.yaml` (calculating the build number automatically), commits, and pushes the Git tag to trigger the GitHub Action.
+- **Tag Retries**: If the CI/CD pipeline fails, fix the code locally, commit the changes, delete the old tag locally (`git tag -d vX.Y.Z`) and remotely (`git push origin :refs/tags/vX.Y.Z`), then create and push the tag again to re-trigger the workflow.
+
 

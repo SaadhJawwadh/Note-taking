@@ -57,3 +57,9 @@ metadata:
     - Accessible via a dedicated Home Screen app bar icon for quick entry.
     - Grouped under "Standalone Utilities" in `SettingsScreen` using `ExpansionTile` to avoid cluttering the main navigation.
     - Deeply integrated with OS Share Intents to provide value outside the app's core loop.
+
+## Project-Specific UI Guidelines
+- **Centralized Design Tokens**: Always use `AppLayout` (`lib/theme/app_layout.dart`) for spacing, border radii, icon sizes, and animation durations. Do not hardcode layout constants. This ensures a consistent, premium tactile feel.
+- **Widget Decomposition**: Break down complex UI screens (like the dashboard) into declarative modular widgets (`HomeAppBar`, `NoteViewBuilder`) rather than monolithic `build` methods.
+- **Empty States**: Empty states must be interactive. Always provide a clear, styled Call-To-Action (e.g., a "Create My First Note" `FilledButton.icon`) directly in the empty state view to reduce user friction.
+- **Layout Constraints**: When adding text to grid components (like `NoteCard`), always wrap the text in `Flexible` or `Expanded` widgets to prevent `RenderFlex overflow` errors on smaller screens or with long data.
