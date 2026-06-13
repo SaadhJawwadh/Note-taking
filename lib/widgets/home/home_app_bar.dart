@@ -99,13 +99,13 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   String _getGreeting() {
     final hour = DateTime.now().hour;
     if (hour >= 5 && hour < 12) {
-      return 'Good morning, Saadh';
+      return 'Morning, Sun Shine!';
     } else if (hour >= 12 && hour < 17) {
-      return 'Good afternoon, Saadh';
+      return 'Had Lunch?';
     } else if (hour >= 17 && hour < 21) {
-      return 'Good evening, Saadh';
+      return 'Time to sleep!';
     } else {
-      return 'Hello, Saadh';
+      return 'Hello, User';
     }
   }
 
@@ -154,7 +154,8 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
             onPressed: () {
               Navigator.of(context)
                   .push(
-                    MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                    MaterialPageRoute(
+                        builder: (context) => const SettingsScreen()),
                   )
                   .then((_) => onRefresh());
             },
@@ -166,17 +167,23 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   IconData _getIconForMode(NoteViewMode mode) {
     switch (mode) {
-      case NoteViewMode.list: return Icons.view_agenda_outlined;
-      case NoteViewMode.masonryGrid: return Icons.grid_view_outlined;
-      case NoteViewMode.uniformGrid: return Icons.dashboard_outlined;
+      case NoteViewMode.list:
+        return Icons.view_agenda_outlined;
+      case NoteViewMode.masonryGrid:
+        return Icons.grid_view_outlined;
+      case NoteViewMode.uniformGrid:
+        return Icons.dashboard_outlined;
     }
   }
 
   String _getTooltipForMode(NoteViewMode mode) {
     switch (mode) {
-      case NoteViewMode.list: return 'List view';
-      case NoteViewMode.masonryGrid: return 'Masonry grid view';
-      case NoteViewMode.uniformGrid: return 'Uniform grid view';
+      case NoteViewMode.list:
+        return 'List view';
+      case NoteViewMode.masonryGrid:
+        return 'Masonry grid view';
+      case NoteViewMode.uniformGrid:
+        return 'Uniform grid view';
     }
   }
 
