@@ -218,6 +218,24 @@ class NoteRepository {
     });
   }
 
+  Future<void> clearOldTrash() async {
+    final db = await _db;
+    final cutoff = DateTime.now().subtract(const Duration(days: 7));
+    await db.transaction((txn) async {
+      final oldNotes = await txn.query(
+        TableNames.notes,
+        columns: [NoteFields.id],
+        where: '${NoteFields.deletedAt} IS NOT NULL AND ${NoteFields.deletedAt} < ?',
+        whereArgs: [cutoff.toIso8601String()],
+      );
+      for (final row in oldNotes) {
+        final id = row[NoteFields.id] as String;
+        await txn.delete('note_tags', where: 'note_id = ?', whereArgs: [id]);
+        await txn.delete(TableNames.notes, where: '${NoteFields.id} = ?', whereArgs: [id]);
+      }
+    });
+  }
+
   Future<Note> _populateNoteTags(Note note) async {
     final db = await _db;
     final result = await db.query('note_tags', where: 'note_id = ?', whereArgs: [note.id]);

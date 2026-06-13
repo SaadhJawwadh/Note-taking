@@ -22,6 +22,17 @@ class DatabaseHelper {
 
   DatabaseHelper._init();
 
+  @visibleForTesting
+  static void setMockDatabase(Database? db) {
+    _database = db;
+    _databaseFuture = db != null ? Future.value(db) : null;
+  }
+
+  @visibleForTesting
+  Future<void> createTestDatabase(Database db) async {
+    await _createDB(db, 14);
+  }
+
   Future<Database> get database {
     if (_database != null) return Future.value(_database!);
     

@@ -22,3 +22,7 @@ description: Specialist in the Note-Taking module, handling Markdown editors, ta
 - **Styling**: Use soft, rounded corners (`BorderRadius.circular(24)`) and subtle `outlineVariant` borders (0.3 alpha) for note cards.
 - **Animations**: Maintain the "Premium" look with `OpenContainer` transitions and snappy `FadeThrough` transitions for view switching.
 - **Bulk Actions**: Utilize the refined selection mode (triggered by long-press) for batch tagging, archiving, or trashing.
+- **Tag Suggestion Guardrails**: When requesting suggested tags via AI for a note, strictly restrict the suggestions to *existing tags* in the database. Filter out and discard any new or hallucinated tags.
+- **Home Chips Filtering**: Do not include `'Archived'` or `'Trash'` in the top level tag chip selection bar on the home screen. These filters are handled on their own screens.
+- **7-Day Auto-Trash Clean-up**: Notes in the trash must be automatically and transactionally deleted (along with their tag relationships) after 7 days using `clearOldTrash()`.
+

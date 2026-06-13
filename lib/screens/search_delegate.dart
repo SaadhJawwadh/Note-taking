@@ -12,6 +12,8 @@ import 'note_editor_screen.dart';
 import 'transaction_editor_screen.dart';
 import 'period_tracker_screen.dart'; // We can use this or a specific detail view
 
+import '../data/transaction_category.dart';
+
 class GlobalSearchDelegate extends SearchDelegate {
   @override
   String get searchFieldLabel => 'Search notes, finance, health...';
@@ -154,10 +156,37 @@ class GlobalSearchDelegate extends SearchDelegate {
 
   Widget _buildTransactionResult(BuildContext context, TransactionModel t) {
     final theme = Theme.of(context);
+    final catColor = TransactionCategory.colorFor(t.category);
+    final catIcon = TransactionCategory.iconFor(t.category);
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       color: theme.colorScheme.surfaceContainerLow,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+          width: 1.0,
+        ),
+      ),
       child: ListTile(
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: catColor.withValues(alpha: 0.15),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: catColor.withValues(alpha: 0.3),
+              width: 1,
+            ),
+          ),
+          child: Icon(
+            catIcon,
+            color: catColor,
+            size: 20,
+          ),
+        ),
         title: Text(t.description),
         subtitle: Text("${t.category} • ${DateFormat.yMMMd().format(t.date)}"),
         trailing: Text(
@@ -181,17 +210,42 @@ class GlobalSearchDelegate extends SearchDelegate {
 
   Widget _buildPeriodLogResult(BuildContext context, PeriodLog log) {
     final theme = Theme.of(context);
+    final healthColor = theme.colorScheme.error;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       color: theme.colorScheme.surfaceContainerLow,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+          width: 1.0,
+        ),
+      ),
       child: ListTile(
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: healthColor.withValues(alpha: 0.15),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: healthColor.withValues(alpha: 0.3),
+              width: 1,
+            ),
+          ),
+          child: Icon(
+            Icons.water_drop_outlined,
+            color: healthColor,
+            size: 20,
+          ),
+        ),
         title: Text("Period Log: ${log.intensity}"),
         subtitle: Text(
           "Started: ${DateFormat.yMMMd().format(log.startDate)}${log.notes.isNotEmpty ? '\n${log.notes}' : ''}",
         ),
         isThreeLine: log.notes.isNotEmpty,
         onTap: () {
-          // Navigating to the tracker screen for context
           Navigator.push(
             context,
             MaterialPageRoute(

@@ -162,7 +162,14 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
                             child: Card(
                               elevation: 0,
                               margin: EdgeInsets.only(bottom: isLast ? 80 : 12),
-                              color: colorScheme.surfaceContainerHigh,
+                              color: colorScheme.surfaceContainerLow,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                side: BorderSide(
+                                  color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                                  width: 1.0,
+                                ),
+                              ),
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
                                 child: Column(
@@ -171,14 +178,23 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
                                     Row(
                                       children: [
                                         Container(
-                                          width: 14,
-                                          height: 14,
+                                          width: 40,
+                                          height: 40,
                                           decoration: BoxDecoration(
-                                            color: catColor,
+                                            color: catColor.withValues(alpha: 0.15),
                                             shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: catColor.withValues(alpha: 0.3),
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: Icon(
+                                            TransactionCategory.iconFor(cat.name),
+                                            color: catColor,
+                                            size: 20,
                                           ),
                                         ),
-                                        const SizedBox(width: 10),
+                                        const SizedBox(width: 12),
                                         Expanded(
                                           child: Text(
                                             cat.name,

@@ -14,6 +14,10 @@ When instructed to use the Tester skill, you must execute the following roles an
 - Test complex interactive widgets like `Dismissible` swipe actions (Archive/Trash) and ensure Undo functions correctly.
 - Test drag-and-drop states (e.g. Kanban drag to new columns) for both visual state and Database persistence.
 - Verify that all components across each page follow a consistent structure and provide a unified UI experience.
+- **Visual Validation**: Capture screenshots of the mobile emulator (`emulator-5554`) to visually verify layout consistency, colors, and accessibility. Run:
+  `~/Library/Android/sdk/platform-tools/adb exec-out screencap -p > "/Users/saadhjawwadh/.gemini/antigravity-ide/brain/6b6e4141-51ba-4f43-88ab-063d06b268f8/<filename>.png"`
+  to capture the rendering output and attach it to the release/walkthrough artifacts.
+
 
 ## Phase 2: QA Tester
 - Go through the entire codebase systematically, regardless of which files were edited most recently.

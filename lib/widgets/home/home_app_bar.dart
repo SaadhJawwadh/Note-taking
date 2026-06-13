@@ -96,15 +96,42 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 12) {
+      return 'Good morning, Saadh';
+    } else if (hour >= 12 && hour < 17) {
+      return 'Good afternoon, Saadh';
+    } else if (hour >= 17 && hour < 21) {
+      return 'Good evening, Saadh';
+    } else {
+      return 'Hello, Saadh';
+    }
+  }
+
   Widget _buildNormalMode(BuildContext context, SettingsProvider settings) {
+    final noteProvider = context.watch<NoteProvider>();
     return Row(
       children: [
         const SizedBox(width: 16),
-        Text(
-          'Note book',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              _getGreeting(),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            Text(
+              '${noteProvider.filteredNotes.length} note${noteProvider.filteredNotes.length == 1 ? "" : "s"}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 11,
+                  ),
+            ),
+          ],
         ),
         const Spacer(),
         IconButton(

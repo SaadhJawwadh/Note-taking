@@ -17,4 +17,7 @@ abstract class LocalAiService {
 
   /// Refines a raw transaction description into a clean, human-readable merchant name or purpose.
   Future<String?> refineTransactionDescription(String rawDescription, String smsBody);
+
+  /// Refines the provided text based on a selection mode (e.g. polish, shorten, expand, professional, casual).
+  Future<String?> refineText(String text, String mode);
 }

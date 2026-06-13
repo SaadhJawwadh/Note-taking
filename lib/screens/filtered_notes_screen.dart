@@ -54,6 +54,7 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+      showDragHandle: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) {
@@ -64,16 +65,6 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: 8),
-              Container(
-                width: 32,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 16),
               if (widget.filterType == FilterType.trash) ...[
                 ListTile(
                   leading:

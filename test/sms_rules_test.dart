@@ -65,5 +65,50 @@ void main() {
       expect(tWithRules!.isExpense, isFalse); // Should be income
       expect(tWithRules.amount, 95000.0);
     });
+
+    test('isPotentiallyRelevant identifies transactional and non-transactional messages correctly', () {
+      final allowed = <String>{'koko_pay'};
+      final blocked = <String>{'spam_sender'};
+
+      // 1. Bank sender (always relevant)
+      expect(SmsParser.isPotentiallyRelevant(
+        body: 'Your account has been debited Rs. 500.00',
+        address: 'COMBANK',
+        allowedSenderIds: allowed,
+        blockedSenderIds: blocked,
+      ), isTrue);
+
+      // 2. Allowed sender + transaction words + amount (relevant)
+      expect(SmsParser.isPotentiallyRelevant(
+        body: 'LKR 1,500.00 paid to Uber',
+        address: 'KOKO_PAY',
+        allowedSenderIds: allowed,
+        blockedSenderIds: blocked,
+      ), isTrue);
+
+      // 3. Non-transactional message (no amount, e.g. OTP) (not relevant)
+      expect(SmsParser.isPotentiallyRelevant(
+        body: 'Your OTP is 123456. Do not share.',
+        address: 'KOKO_PAY',
+        allowedSenderIds: allowed,
+        blockedSenderIds: blocked,
+      ), isFalse);
+
+      // 4. Blocked sender (always not relevant)
+      expect(SmsParser.isPotentiallyRelevant(
+        body: 'Rs. 1000 credit received',
+        address: 'SPAM_SENDER',
+        allowedSenderIds: allowed,
+        blockedSenderIds: blocked,
+      ), isFalse);
+
+      // 5. No transaction keywords but has amount (not relevant)
+      expect(SmsParser.isPotentiallyRelevant(
+        body: 'The price is LKR 500 for the item.',
+        address: 'FRIEND',
+        allowedSenderIds: allowed,
+        blockedSenderIds: blocked,
+      ), isFalse);
+    });
   });
 }

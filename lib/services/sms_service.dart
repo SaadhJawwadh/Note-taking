@@ -187,11 +187,17 @@ class SmsService {
       customIncomeRules: customIncomeRules,
     );
 
+    bool isAiParsed = false;
     if (transaction == null && body.trim().isNotEmpty) {
       try {
         final prefs = await SharedPreferences.getInstance();
         final useAi = prefs.getBool('useOnDeviceAi') ?? false;
-        if (useAi) {
+        if (useAi && SmsParser.isPotentiallyRelevant(
+              body: body,
+              address: address,
+              allowedSenderIds: allowedSenderIds,
+              blockedSenderIds: blockedSenderIds,
+            )) {
           final aiService = GeminiNanoService();
           if (await aiService.isSupported()) {
             await TransactionCategory.reload();
@@ -205,19 +211,21 @@ class SmsService {
                   ? '${messageId}_$messageDate'
                   : 'hash_${body.hashCode}_$messageDate';
 
+              final description = aiParsed['description'] ?? aiParsed['merchant'] ?? 'AI Parsed Transaction';
               String category = aiParsed['category'] ?? 'Other';
               if (!activeCategories.contains(category)) {
-                category = TransactionCategory.fromDescriptionCached(aiParsed['merchant'] ?? body);
+                category = TransactionCategory.fromDescriptionCached('$description $body');
               }
 
               transaction = TransactionModel(
                 amount: aiParsed['amount'],
-                description: aiParsed['merchant'] ?? 'AI Parsed Transaction',
+                description: description,
                 date: date,
                 isExpense: aiParsed['isExpense'] ?? true,
                 category: category,
                 smsId: smsId,
               );
+              isAiParsed = true;
             }
           }
         }
@@ -226,8 +234,8 @@ class SmsService {
       }
     }
 
-    // AI Refinement Step: If we have a transaction and AI is enabled, refine the description
-    if (transaction != null) {
+    // AI Refinement Step: Only refine the description if it was NOT already parsed by the AI
+    if (transaction != null && !isAiParsed) {
       try {
         final prefs = await SharedPreferences.getInstance();
         if (prefs.getBool('useOnDeviceAi') ?? false) {

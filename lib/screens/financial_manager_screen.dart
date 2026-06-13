@@ -368,15 +368,23 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
         barRods: [
           BarChartRodData(
             toY: data['totalIncome'] as double,
-            color: cs.tertiary,
-            width: 8,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+            width: 10,
+            borderRadius: BorderRadius.circular(6),
+            gradient: LinearGradient(
+              colors: [cs.tertiary.withValues(alpha: 0.5), cs.tertiary],
+              begin: Alignment.bottomCenter,
+              end: Alignment.topCenter,
+            ),
           ),
           BarChartRodData(
             toY: data['totalExpense'] as double,
-            color: cs.error,
-            width: 8,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+            width: 10,
+            borderRadius: BorderRadius.circular(6),
+            gradient: LinearGradient(
+              colors: [cs.error.withValues(alpha: 0.5), cs.error],
+              begin: Alignment.bottomCenter,
+              end: Alignment.topCenter,
+            ),
           ),
         ],
         barsSpace: 4,
@@ -477,14 +485,26 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                   borderData: FlBorderData(show: false),
                   barTouchData: BarTouchData(
                     touchTooltipData: BarTouchTooltipData(
+                      getTooltipColor: (group) => cs.surfaceContainerHighest,
+                      tooltipBorder: BorderSide(
+                        color: cs.outlineVariant.withValues(alpha: 0.3),
+                        width: 1,
+                      ),
                       getTooltipItem: (group, groupIndex, rod, rodIndex) {
                         final type = rodIndex == 0 ? 'Income' : 'Expense';
+                        final color = rodIndex == 0 ? cs.tertiary : cs.error;
                         return BarTooltipItem(
-                          '$type\n$currency ${rod.toY.toStringAsFixed(0)}',
-                          (tt.labelSmall ?? const TextStyle()).copyWith(
-                            color: rodIndex == 0 ? cs.tertiary : cs.error,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          '$type\n',
+                          tt.labelSmall?.copyWith(color: cs.onSurfaceVariant) ?? const TextStyle(),
+                          children: [
+                            TextSpan(
+                              text: '$currency ${rod.toY.toStringAsFixed(0)}',
+                              style: tt.bodySmall?.copyWith(
+                                color: color,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         );
                       },
                     ),
@@ -996,20 +1016,23 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                           Container(
                                             padding: const EdgeInsets.all(10),
                                             decoration: BoxDecoration(
-                                              color: transaction.isExpense
-                                                  ? colorScheme.errorContainer
-                                                  : colorScheme
-                                                      .tertiaryContainer,
+                                              color: TransactionCategory.colorFor(transaction.category).withValues(alpha: 0.15),
                                               shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: TransactionCategory.colorFor(transaction.category).withValues(alpha: 0.3),
+                                                width: 1,
+                                              ),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: TransactionCategory.colorFor(transaction.category).withValues(alpha: 0.1),
+                                                  blurRadius: 6,
+                                                  spreadRadius: 1,
+                                                ),
+                                              ],
                                             ),
                                             child: Icon(
-                                              transaction.isExpense
-                                                  ? Icons.remove
-                                                  : Icons.add,
-                                              color: transaction.isExpense
-                                                  ? colorScheme.onErrorContainer
-                                                  : colorScheme
-                                                      .onTertiaryContainer,
+                                              TransactionCategory.iconFor(transaction.category),
+                                              color: TransactionCategory.colorFor(transaction.category),
                                               size: 20,
                                             ),
                                           ),

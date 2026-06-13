@@ -32,12 +32,35 @@ metadata:
 - Always prioritize a tactile feel. The app must respond immediately to touches with appropriate ripple effects, elevation changes, or scaling animations.
 - Add intuitive feedback loops for user actions: always provide Snackbar "Undo" toasts immediately after a destructive or curating action (e.g. archiving/trashing).
 
-### 2. Modern Design Language & Theming
-- Ensure consistent typography, spacing, and padding. Default to soft, rounded corners (e.g., `BorderRadius.circular(20)` to `24`) for cards, dialogs, and specific UI elements.
-- Use dynamic color theming aggressively. Derive background and border colors using `ColorScheme.fromSeed(...)` paired with precise surface mapping (`surfaceContainerHigh`, `surfaceContainerLow`) to blend colors elegantly, maintaining cohesion across light/dark modes.
-- Avoid flat, generic white or black containers unless strictly specified. Always add subtle tinted backgrounds.
+### 2. Modern Design Language & Theming (Material 3)
+- **Always enforce Material 3**: Ensure `useMaterial3: true` is configured in `ThemeData`.
+- **Dynamic Color Roles**: Derive background, container, and outline colors using `ColorScheme` tokens. Map container colors carefully:
+  - Use `surfaceContainerLow` or `surfaceContainer` for card-like structures.
+  - Use `surfaceContainerHigh` or `surfaceContainerHighest` for highlighting elements (like toolbars, dialogs).
+  - Use `outlineVariant` for subtle borders/dividers and `outline` for prominent element boundaries.
+- **Typography Scale**: Align all text styling to official M3 typography specifications:
+  - Headings: `headlineLarge`, `headlineMedium`, `headlineSmall`
+  - Titles: `titleLarge`, `titleMedium`, `titleSmall`
+  - Body: `bodyLarge`, `bodyMedium`, `bodySmall`
+  - Captions/Labels: `labelLarge`, `labelMedium`, `labelSmall`
+- **Component Geometry**: Enforce M3 corner radii (e.g., `8` to `12` for chips, `16` to `20` for standard cards/dialogs, `28` for bottom sheets/large dialogs).
 
-### 3. Unified View Architectures
+### 3. Material 3 Component Mapping
+Follow the official Flutter M3 implementation specifications (https://m3.material.io/develop/flutter) for all visual controls:
+- **Navigation**: Use `NavigationBar` for bottom menus, `NavigationRail` for tablets, and `NavigationDrawer` for desktop layout screens. Avoid legacy `BottomNavigationBar`.
+- **Buttons**:
+  - Primary: `FilledButton` or `ElevatedButton`.
+  - Secondary/Contextual: `FilledButton.tonal` or `OutlinedButton`.
+  - Low-emphasis: `TextButton`.
+- **Toggles**: Use `SegmentedButton` instead of outdated `ToggleButtons` or custom container-based selection rows.
+- **Action Triggers**: Use `FloatingActionButton` (small, normal, large) or `FloatingActionButton.extended` with a stadium shape.
+- **Information Cards**: Use `Card` with M3 attributes. Set `elevation: 0` unless specifically highlighting. Use `color: Theme.of(context).colorScheme.surfaceContainerLow`. Always add a subtle outline: `shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3), width: 1.0))`.
+- **Input Fields**: Use `TextField` with M3 filled or outlined styles, utilizing `surfaceContainerHighest` as the background fill color.
+- **Chips**: Use specific M3 chips (`FilterChip`, `InputChip`, `ActionChip`, `ChoiceChip`) with standard borders and selection state styling.
+- **Dialogs & Sheets**: Use `showDragHandle: true` on `showModalBottomSheet`. Use standard `AlertDialog` with M3 title padding and container coloring.
+- **Icons**: Semantic accuracy is critical. Do not use AI-associated icons (`Icons.auto_awesome`, `Icons.sparkles`) for non-AI tasks like generating random numbers or selecting colors. Reserve them strictly for actual AI functions (e.g., Gemini summaries). Use standard icons like `Icons.shuffle` for random selections.
+
+### 4. Unified View Architectures
 - When dealing with collections of items (like notes), provide multi-modal views to cater to different user mental models:
   - **List View** for high-density reading.
   - **Masonry/Staggered Grid** for visual-heavy mixed content.
@@ -46,7 +69,7 @@ metadata:
   - **Settings & Configuration**: Refactor massive endless option lists into structured, categorized `ExpansionTile` groups. This dramatically reduces cognitive load and keeps advanced configuration discoverable but hidden.
 - Implement seamless state management to switch between these layouts fluently.
 
-### 4. Advanced Gestures & Micro-interactions
+### 5. Advanced Gestures & Micro-interactions
 - Utilize powerful gesture interactions seamlessly:
   - Swipe actions (using `Dismissible`) tailored to left/right curations.
   - Drag-and-Drop organization using `LongPressDraggable` and `DragTarget`, paired with visual drop-zone feedback.

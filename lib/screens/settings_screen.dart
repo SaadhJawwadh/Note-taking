@@ -16,7 +16,6 @@ import 'package:file_picker/file_picker.dart';
 import 'app_lock_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/backup_service.dart';
-import '../services/ffmpeg_install_service.dart';
 import '../widgets/settings_widgets.dart';
 import '../widgets/sms_import_sheet.dart';
 
@@ -25,7 +24,6 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final installService = FfmpegInstallService.instance;
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: Consumer<SettingsProvider>(
@@ -125,88 +123,24 @@ class SettingsScreen extends StatelessWidget {
                                 ),
                               ),
                               SettingsSection(
-                            title: 'Finances & Features',
-                            icon: Icons.account_balance_wallet_outlined,
+                            title: 'App Features',
+                            icon: Icons.apps_outlined,
                             children: [
                               SettingsSwitchTile(icon: Icons.account_balance_wallet_outlined, title: 'Financial Manager', subtitle: 'Enable expense tracking', value: settings.showFinancialManager, onChanged: settings.setShowFinancialManager),
                               if (settings.showFinancialManager) ...[
                                 const _Divider(),
                                 SettingsTile(icon: Icons.currency_exchange_outlined, title: 'Currency', subtitle: settings.currency, onTap: () => _showCurrencyPicker(context, settings)),
                                 const _Divider(),
-                                SettingsTile(icon: Icons.sms_outlined, title: 'Advanced SMS Import', subtitle: 'Fetch past bank transactions from messages', showArrow: true, onTap: () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (_) => const SmsImportSheet())),
+                                SettingsTile(icon: Icons.sms_outlined, title: 'Advanced SMS Import', subtitle: 'Fetch past bank transactions from messages', showArrow: true, onTap: () => showModalBottomSheet(context: context, isScrollControlled: true, showDragHandle: true, builder: (_) => const SmsImportSheet())),
                                 const _Divider(),
                                 SettingsTile(icon: Icons.category_outlined, title: 'Manage Categories', subtitle: 'Customise keywords and create new categories', showArrow: true, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryManagementScreen()))),
                                 const _Divider(),
                                 SettingsTile(icon: Icons.contacts_outlined, title: 'SMS Contacts', subtitle: 'Manage bank & custom senders for auto-import', showArrow: true, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SmsContactsScreen()))),
                                 const _Divider(),
                                 SettingsTile(icon: Icons.rule_folder_outlined, title: 'SMS Import Rules', subtitle: 'Manage auto-categorization and transaction type rules', showArrow: true, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SmsRulesScreen()))),
-                              ]
-                            ],
-                          ),
-                          SettingsSection(
-                            title: 'Standalone Utilities',
-                            icon: Icons.api_outlined,
-                            children: [
-                              SettingsSwitchTile(icon: Icons.transform_rounded, title: 'Enable File Converter', subtitle: 'Show the compression utility in the bottom bar', value: settings.showFileConverter, onChanged: settings.setShowFileConverter),
-                              if (settings.showFileConverter) ...[
-                                const _Divider(),
-                                SettingsSwitchTile(
-                                  icon: Icons.bolt_outlined, 
-                                  title: 'Converter Lite Mode', 
-                                  subtitle: 'Use native tools instead of FFmpeg (Fast, limited formats)', 
-                                  value: settings.isConverterLite, 
-                                  onChanged: settings.setIsConverterLite
-                                ),
-                                if (!settings.isConverterLite) ...[
-                                  const _Divider(),
-                                  ListenableBuilder(
-                                    listenable: installService,
-                                    builder: (context, _) {
-                                      return ListTile(
-                                        leading: const Icon(Icons.download_for_offline_outlined),
-                                        title: Text(settings.isFfmpegInstalled ? 'Engine Installed' : 'Install FFmpeg Engine'),
-                                        subtitle: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(settings.isFfmpegInstalled 
-                                              ? 'Engine binaries are ready (approx. 45MB)' 
-                                              : 'Download engine for high-quality compression (approx. 45MB)'),
-                                            if (installService.isDownloading) ...[
-                                              const SizedBox(height: 8),
-                                              LinearProgressIndicator(value: installService.downloadProgress),
-                                            ],
-                                          ],
-                                        ),
-                                        trailing: installService.isDownloading
-                                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
-                                          : IconButton(
-                                              icon: Icon(settings.isFfmpegInstalled ? Icons.delete_outline : Icons.download_rounded),
-                                              onPressed: () async {
-                                                if (settings.isFfmpegInstalled) {
-                                                  final confirm = await showDialog<bool>(
-                                                    context: context,
-                                                    builder: (context) => AlertDialog(
-                                                      title: const Text('Uninstall Engine?'),
-                                                      content: const Text('This will remove the FFmpeg binaries from your device to save space.'),
-                                                      actions: [
-                                                        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-                                                        TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Uninstall')),
-                                                      ],
-                                                    ),
-                                                  );
-                                                  if (confirm == true) {
-                                                    await installService.uninstallEngine(settings);
-                                                  }
-                                                } else {
-                                                  await installService.installEngine(settings);
-                                                }
-                                              },
-                                            ),
-                                      );
-                                    },
-                                  ),
-                                ],
                               ],
+                              const _Divider(),
+                              SettingsSwitchTile(icon: Icons.transform_rounded, title: 'Enable File Converter', subtitle: 'Show the compression utility in the bottom bar', value: settings.showFileConverter, onChanged: settings.setShowFileConverter),
                             ],
                           ),
                           SettingsSection(
@@ -351,19 +285,7 @@ class SettingsScreen extends StatelessWidget {
                               ],
                             ],
                           ),
-                          SettingsSection(
-                            title: 'File Converter Settings',
-                            icon: Icons.transform_rounded,
-                            children: [
-                              SettingsTile(icon: Icons.video_collection_outlined, title: 'Preferred Video Format', subtitle: settings.preferredVideoFormat.toUpperCase(), onTap: () => _showFormatPicker(context, settings, 'Video', ['mp4', 'mkv', 'gif'], settings.preferredVideoFormat, settings.setPreferredVideoFormat)),
-                              const _Divider(),
-                              SettingsTile(icon: Icons.image_outlined, title: 'Preferred Image Format', subtitle: settings.preferredImageFormat.toUpperCase(), onTap: () => _showFormatPicker(context, settings, 'Image', ['jpg', 'png', 'webp'], settings.preferredImageFormat, settings.setPreferredImageFormat)),
-                              const _Divider(),
-                              SettingsTile(icon: Icons.photo_size_select_large_outlined, title: 'Video Resolution Limit', subtitle: settings.videoResolutionLimit, onTap: () => _showFormatPicker(context, settings, 'Resolution Limit', ['Original', '1080p', '720p', '480p'], settings.videoResolutionLimit, settings.setVideoResolutionLimit)),
-                              const _Divider(),
-                              SettingsSwitchTile(icon: Icons.info_outline_rounded, title: 'Keep Metadata', subtitle: 'Maintain EXIF and device info', value: settings.keepMetadata, onChanged: settings.setKeepMetadata),
-                            ],
-                          ),
+
                           SettingsSection(
                             title: 'About',
                             icon: Icons.info_outline_rounded,
@@ -536,20 +458,7 @@ class SettingsScreen extends StatelessWidget {
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) throw Exception('Could not launch $url');
   }
 
-  void _showFormatPicker(BuildContext context, SettingsProvider settings, String title, List<String> options, String currentValue, Function(String) onSelected) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
-        title: Text('Select $title'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          // ignore: deprecated_member_use
-          children: options.map((option) => RadioListTile<String>(title: Text(option.toUpperCase()), value: option, groupValue: currentValue, onChanged: (v) { onSelected(v!); Navigator.pop(context); })).toList(),
-        ),
-      ),
-    );
-  }
+
 
   String _getTimeoutLabel(int seconds) {
     if (seconds == 0) return 'Immediately';

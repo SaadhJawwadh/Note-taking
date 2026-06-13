@@ -20,6 +20,7 @@ import 'financial_manager_screen.dart';
 import 'period_tracker_screen.dart';
 import 'app_lock_screen.dart';
 import '../data/repositories/note_repository.dart';
+import '../widgets/bouncing_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -175,9 +176,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 spacing: 12, runSpacing: 12, alignment: WrapAlignment.center,
                 children: AppTheme.noteColors.map((c) {
                   final bool isSystem = c.toARGB32() == 0;
-                  final bool isSelected = selectedColor == c.toARGB32();
+                  final bool isSelected = !isSystem && selectedColor == c.toARGB32();
                   return GestureDetector(
-                    onTap: () => setDialogState(() => selectedColor = c.toARGB32()),
+                    onTap: () {
+                      if (isSystem) {
+                        final nonZeroColors = AppTheme.noteColors.where((color) => color.toARGB32() != 0).toList();
+                        final randomColor = (nonZeroColors..shuffle()).first;
+                        setDialogState(() => selectedColor = randomColor.toARGB32());
+                      } else {
+                        setDialogState(() => selectedColor = c.toARGB32());
+                      }
+                    },
                     child: Container(
                       width: 32, height: 32,
                       decoration: BoxDecoration(
@@ -185,7 +194,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         shape: BoxShape.circle,
                         border: Border.all(color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.outlineVariant, width: isSelected ? 3 : 1),
                       ),
-                      child: isSystem ? const Icon(Icons.auto_awesome, size: 16) : (isSelected ? Icon(Icons.check, size: 16, color: c.computeLuminance() > 0.5 ? Colors.black : Colors.white) : null),
+                      child: isSystem ? const Icon(Icons.shuffle, size: 16) : (isSelected ? Icon(Icons.check, size: 16, color: c.computeLuminance() > 0.5 ? Colors.black : Colors.white) : null),
                     ),
                   );
                 }).toList(),
@@ -241,6 +250,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (tag == 'All' || tag == 'Archived' || tag == 'Trash') return;
     showModalBottomSheet(
       context: context,
+      showDragHandle: true,
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -357,7 +367,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           foregroundColor: Theme.of(context).colorScheme.onPrimary,
           elevation: 0,
           shape: const StadiumBorder(),
-          onPressed: openContainer,
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            openContainer();
+          },
         ),
       ),
     );
@@ -390,9 +403,17 @@ class NoteCard extends StatelessWidget {
       borderColor = scheme.outline.withValues(alpha: 0.2);
     }
 
-    return GestureDetector(
-      onTap: onTap,
-      onLongPress: onLongPress,
+    return BouncingWidget(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
+      onLongPress: onLongPress != null
+          ? () {
+              HapticFeedback.mediumImpact();
+              onLongPress!();
+            }
+          : null,
       child: Container(
         padding: AppLayout.paddingAllL,
         decoration: BoxDecoration(

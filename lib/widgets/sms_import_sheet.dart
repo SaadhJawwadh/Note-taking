@@ -67,13 +67,11 @@ class _SmsImportSheetState extends State<SmsImportSheet> {
 
     return Container(
       decoration: BoxDecoration(color: colorScheme.surfaceContainerHigh, borderRadius: const BorderRadius.vertical(top: Radius.circular(28))),
-      padding: EdgeInsets.only(left: 24, right: 24, top: 24, bottom: MediaQuery.of(context).viewInsets.bottom + 24),
+      padding: EdgeInsets.only(left: 24, right: 24, top: 8, bottom: MediaQuery.of(context).viewInsets.bottom + 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(2)))),
-          const SizedBox(height: 20),
           Text('Import SMS Transactions', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
           Text('Choose how far back to scan your SMS inbox for bank transactions.', style: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant)),

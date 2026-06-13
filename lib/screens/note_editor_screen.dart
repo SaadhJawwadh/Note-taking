@@ -14,6 +14,7 @@ import '../utils/rich_text_utils.dart';
 import 'dart:io';
 import 'package:any_link_preview/any_link_preview.dart';
 import '../services/local_ai_service.dart';
+import 'package:flutter/services.dart';
 
 class NoteEditorScreen extends StatefulWidget {
   final Note? note;
@@ -42,6 +43,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   bool isNoteSaved = false;
   bool _isImageSelected = false;
   String? _firstUrl;
+
+  // AI summary and selection states
+  String? _aiSummary;
+  String _selectedText = '';
+  List<String> _suggestedTags = [];
+  Timer? _debounceTagTimer;
+  bool _isAiProcessing = false;
 
   @override
   void initState() {
@@ -82,39 +90,19 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
   void _onSelectionChanged() {
     final selection = _quillController.selection;
-    if (!selection.isCollapsed) {
-      if (_isImageSelected) setState(() => _isImageSelected = false);
-      return;
+    if (mounted) {
+      setState(() {
+        _isImageSelected = _checkIfImageSelected();
+        if (selection.isCollapsed) {
+          _selectedText = '';
+        } else {
+          final text = _quillController.document.toPlainText();
+          if (selection.start >= 0 && selection.end <= text.length) {
+            _selectedText = text.substring(selection.start, selection.end).trim();
+          }
+        }
+      });
     }
-
-    // Check if current selection is an image block (simplified check)
-    // Quill manages images as BlockEmbeds.
-    // A more robust way: check if the leaf at selection is an embed.
-    // For now, let's rely on the assumption that selecting an image usually focuses it.
-    // However, flutter_quill 11.x handles focus differently.
-    // Let's check if the toolbar should be hidden.
-    // If we have an Image focus, we might want to hide the toolbar.
-
-    // Actually, checking if style has 'image' isn't sufficient.
-    // We'll trust the user request: "options appear above OR the bottom formating bar should dissapear"
-    // We can infer image selection if the embed is selected.
-
-    // Better strategy: Use a simple heuristic or check specific embed attribute if possible.
-    // For flutter_quill 10+, we can check:
-    // _quillController.document.queryChild(selection.start).node is BlockEmbed ...
-
-    // Let's implement a listener that checks if we are on an image.
-    // But since `BlockEmbed` detection can be tricky without deep diving,
-    // we'll try to check if the selection style has 'mobile-toolbar-hidden' or similar? No.
-    // We will assume that if the resize handle is active, the user tapped the image.
-    // Unfortunately we can't easily detect "resize active" from here without custom EmbedBuilder callbacks.
-    //
-    // ALTERNATIVE: Just check if the current line is an embed.
-    setState(() {
-      // This simple check might need refinement but is a good start.
-      // We can iterate to improve if it doesn't catch all cases.
-      _isImageSelected = _checkIfImageSelected();
-    });
   }
 
   bool _checkIfImageSelected() {
@@ -157,11 +145,84 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       }
       saveNote();
     });
+
+    _debounceTagTimer?.cancel();
+    _debounceTagTimer = Timer(const Duration(seconds: 3), _getAutoTagSuggestions);
+  }
+
+  Future<void> _getAutoTagSuggestions() async {
+    if (!mounted) return;
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
+    if (!settings.useOnDeviceAi) return;
+
+    final plainText = _quillController.document.toPlainText().trim();
+    if (plainText.isEmpty || plainText.length < 20) {
+      if (mounted && _suggestedTags.isNotEmpty) {
+        setState(() => _suggestedTags = []);
+      }
+      return;
+    }
+
+    final aiService = Provider.of<LocalAiService>(context, listen: false);
+    try {
+      final suggestions = await aiService.suggestTags(plainText, _allTags);
+      if (mounted) {
+        setState(() {
+          _suggestedTags = suggestions.where((t) => !tags.contains(t)).toList();
+        });
+      }
+    } catch (_) {
+      // Ignore background errors
+    }
+  }
+
+  Future<void> _refineSelection(String mode) async {
+    final text = _selectedText;
+    if (text.isEmpty) return;
+
+    setState(() {
+      _isAiProcessing = true;
+    });
+
+    final aiService = Provider.of<LocalAiService>(context, listen: false);
+    final result = await aiService.refineText(text, mode);
+
+    if (result != null && result.trim().isNotEmpty) {
+      final selection = _quillController.selection;
+      _quillController.replaceText(
+        selection.start,
+        selection.end - selection.start,
+        result.trim(),
+        null,
+      );
+      await HapticFeedback.lightImpact();
+    }
+
+    setState(() {
+      _isAiProcessing = false;
+      _selectedText = '';
+    });
+  }
+
+  Widget _aiSelectionButton(String label, VoidCallback onPressed, ColorScheme scheme) {
+    return TextButton(
+      onPressed: onPressed,
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        foregroundColor: scheme.onSurface,
+        backgroundColor: scheme.surfaceContainerHigh,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      child: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+    );
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
+    _debounceTagTimer?.cancel();
     _titleController.dispose();
     _quillController.dispose();
     _focusNode.dispose();
@@ -244,16 +305,23 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                     children: [
                       ...AppTheme.noteColors.map((c) {
                         final bool isSystem = c.toARGB32() == 0;
-                        final bool isSelected = newTagColor == c.toARGB32();
+                        final bool isSelected = !isSystem && newTagColor == c.toARGB32();
                         return Semantics(
                           label: isSystem
-                              ? 'System Default Color'
+                              ? 'Random Color'
                               : 'Color option',
                           selected: isSelected,
                           button: true,
                           child: GestureDetector(
-                            onTap: () =>
-                                setModalState(() => newTagColor = c.toARGB32()),
+                            onTap: () {
+                              if (isSystem) {
+                                final nonZeroColors = AppTheme.noteColors.where((color) => color.toARGB32() != 0).toList();
+                                final randomColor = (nonZeroColors..shuffle()).first;
+                                setModalState(() => newTagColor = randomColor.toARGB32());
+                              } else {
+                                setModalState(() => newTagColor = c.toARGB32());
+                              }
+                            },
                             child: Container(
                               width: 32,
                               height: 32,
@@ -272,7 +340,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                 ),
                               ),
                               child: isSystem
-                                  ? const Icon(Icons.auto_awesome, size: 16)
+                                  ? const Icon(Icons.shuffle, size: 16)
                                   : (isSelected
                                       ? Icon(Icons.check,
                                           size: 16,
@@ -344,6 +412,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   void _showImageOptions() {
     showModalBottomSheet(
       context: context,
+      showDragHandle: true,
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -354,16 +423,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: 8),
-              Container(
-                width: 32,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 16),
               ListTile(
                 leading: Icon(Icons.photo_library, color: textColor),
                 title: Text('Gallery', style: TextStyle(color: textColor)),
@@ -462,14 +521,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           builder: (context, setModalState) {
             final theme = Theme.of(context);
             return SafeArea(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  left: 24,
-                  right: 24,
-                  top: 8,
-                  bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-                ),
-                child: Column(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    left: 24,
+                    right: 24,
+                    top: 8,
+                    bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                  ),
+                  child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -620,14 +680,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                           final summary = await aiService.summarize(content);
                           if (summary != null && summary.trim().isNotEmpty) {
                             if (mounted) {
-                              final currentLength = _quillController.document.length;
-                              _quillController.replaceText(
-                                currentLength - 1, 
-                                0, 
-                                '\n\n=== AI SUMMARY ===\n${summary.trim()}\n', 
-                                null
-                              );
-                              _onContentChanged();
+                              setState(() {
+                                _aiSummary = summary.trim();
+                              });
                               navigator.pop();
                             }
                           } else {
@@ -692,7 +747,8 @@ $content
                   ],
                 ),
               ),
-            );
+            ),
+          );
           },
         );
       },
@@ -788,8 +844,10 @@ $content
           backgroundColor: backgroundColor,
           body: SafeArea(
             bottom: false,
-            child: Column(
+            child: Stack(
               children: [
+                Column(
+                  children: [
                 // Top Bar
                 Padding(
                   padding:
@@ -942,6 +1000,39 @@ $content
                                   deleteIconColor: chipLabelColor,
                                 );
                               }).toList(),
+                            ),
+                          ),
+                        if (_suggestedTags.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 4),
+                                  child: Icon(Icons.auto_awesome_outlined, size: 16, color: noteScheme.primary),
+                                ),
+                                ..._suggestedTags.map((tag) {
+                                  return ActionChip(
+                                    label: Text(tag, style: TextStyle(fontSize: 12, color: noteScheme.primary)),
+                                    avatar: Icon(Icons.add, size: 12, color: noteScheme.primary),
+                                    onPressed: () {
+                                      setState(() {
+                                        tags.add(tag);
+                                        _suggestedTags.remove(tag);
+                                        _updateColorFromTags();
+                                      });
+                                      saveNote();
+                                      HapticFeedback.lightImpact();
+                                    },
+                                    backgroundColor: noteScheme.primaryContainer.withValues(alpha: 0.15),
+                                    shape: const StadiumBorder(),
+                                    side: BorderSide(color: noteScheme.primary.withValues(alpha: 0.2)),
+                                  );
+                                }).toList(),
+                              ],
                             ),
                           ),
                         Expanded(
@@ -1185,6 +1276,185 @@ $content
                     ),
                   ),
                 ),
+                  ],
+                ),
+                // AI Summary Panel Overlay
+                if (_aiSummary != null)
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    bottom: 80, // Elevated above bottom formatting bar
+                    child: Card(
+                      color: noteScheme.surfaceContainerHigh,
+                      elevation: 8,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        side: BorderSide(
+                          color: noteScheme.outlineVariant.withValues(alpha: 0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.auto_awesome, color: noteScheme.primary, size: 18),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'AI Summary',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const Spacer(),
+                                IconButton(
+                                  icon: const Icon(Icons.close, size: 18),
+                                  onPressed: () => setState(() => _aiSummary = null),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxHeight: 120),
+                              child: SingleChildScrollView(
+                                child: Text(
+                                  _aiSummary!,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    height: 1.4,
+                                    color: noteScheme.onSurface,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                TextButton.icon(
+                                  icon: const Icon(Icons.copy, size: 16),
+                                  label: const Text('Copy'),
+                                  onPressed: () {
+                                    Clipboard.setData(ClipboardData(text: _aiSummary!));
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Summary copied to clipboard'),
+                                        behavior: SnackBarBehavior.floating,
+                                      ),
+                                    );
+                                    HapticFeedback.lightImpact();
+                                  },
+                                ),
+                                const SizedBox(width: 8),
+                                FilledButton.icon(
+                                  icon: const Icon(Icons.add, size: 16),
+                                  label: const Text('Append'),
+                                  onPressed: () {
+                                    final currentLength = _quillController.document.length;
+                                    _quillController.replaceText(
+                                      currentLength - 1,
+                                      0,
+                                      '\n\n=== AI SUMMARY ===\n${_aiSummary!.trim()}\n',
+                                      null,
+                                    );
+                                    _onContentChanged();
+                                    setState(() => _aiSummary = null);
+                                    HapticFeedback.lightImpact();
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                // Selection-Based AI Toolbar Overlay
+                if (_selectedText.isNotEmpty && settings.useOnDeviceAi && !_isAiProcessing)
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    bottom: 80, // Positioned above the formatting toolbar
+                    child: Card(
+                      color: noteScheme.surfaceContainerHighest,
+                      elevation: 6,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                        side: BorderSide(
+                          color: noteScheme.primary.withValues(alpha: 0.4),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: Row(
+                          children: [
+                            Icon(Icons.auto_awesome, color: noteScheme.primary, size: 16),
+                            const SizedBox(width: 8),
+                            Text(
+                              'AI Edit',
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: noteScheme.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(width: 1, height: 20, color: noteScheme.outlineVariant),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  children: [
+                                    _aiSelectionButton('Polish', () => _refineSelection('polish'), noteScheme),
+                                    const SizedBox(width: 6),
+                                    _aiSelectionButton('Shorten', () => _refineSelection('shorten'), noteScheme),
+                                    const SizedBox(width: 6),
+                                    _aiSelectionButton('Expand', () => _refineSelection('expand'), noteScheme),
+                                    const SizedBox(width: 6),
+                                    _aiSelectionButton('Formal', () => _refineSelection('professional'), noteScheme),
+                                    const SizedBox(width: 6),
+                                    _aiSelectionButton('Casual', () => _refineSelection('casual'), noteScheme),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close, size: 16),
+                              onPressed: () => setState(() => _selectedText = ''),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                if (_isAiProcessing)
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    bottom: 80,
+                    child: Card(
+                      color: noteScheme.surfaceContainerHighest,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        side: BorderSide(color: noteScheme.outlineVariant.withValues(alpha: 0.3)),
+                      ),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                            SizedBox(width: 12),
+                            Text('AI is processing...', style: TextStyle(fontWeight: FontWeight.w500)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -1248,6 +1518,7 @@ class RoundedImageEmbedBuilder extends EmbedBuilder {
       BuildContext context, QuillController controller, int offset) {
     showModalBottomSheet(
       context: context,
+      showDragHandle: true,
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -1257,16 +1528,6 @@ class RoundedImageEmbedBuilder extends EmbedBuilder {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: 8),
-              Container(
-                width: 32,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 16),
               ListTile(
                 leading: const Icon(Icons.fullscreen),
                 title: const Text('View Full Image'),

@@ -265,7 +265,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
     final result = await showModalBottomSheet<double>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      showDragHandle: true,
       builder: (context) => CalculatorDialog(initialValue: currentVal),
     );
 

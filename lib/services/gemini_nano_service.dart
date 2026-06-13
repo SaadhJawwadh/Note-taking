@@ -51,8 +51,8 @@ $text
 You are a tagging assistant. Analyze the note content below and suggest a list of 1 to 3 relevant tags.
 
 Follow these strict tagging rules in order of priority:
-1. First, check the list of existing tags: [$existingTagsList]. Match the note's topics against these existing tags. Recommend matching tags from this list.
-2. Only suggest a brand new tag if the note discusses a major topic that is NOT covered by any of the existing tags and is highly relevant. Do not generate generic new tags.
+1. You MUST ONLY suggest tags that exist in the provided list of existing tags: [$existingTagsList].
+2. Do NOT suggest any new tags, custom tags, or tags outside of the provided list under any circumstances. If no existing tags are relevant, suggest nothing.
 3. Respond with ONLY a comma-separated list of suggested tags (all lowercase, no hashtags, no explanations, no formatting). If no tags match or are highly relevant, respond with nothing.
 
 Note content:
@@ -77,8 +77,6 @@ $noteContent
       );
       if (matchedExisting.isNotEmpty) {
         result.add(matchedExisting.trim());
-      } else {
-        result.add(tag);
       }
     }
     return result;
@@ -91,8 +89,8 @@ $noteContent
 Analyze the following bank SMS and extract the transaction details.
 Respond with ONLY a raw JSON object with keys:
 "amount" (decimal number/float, without currency symbol or commas, e.g., 1500.50),
-"merchant" (string, e.g., "Uber Eats" or bank name if transferring),
-"category" (string, MUST be exactly one of these values: [$categoriesStr]),
+"description" (string, a refined, clean, and professional description of the transaction, max 30 chars. Extract the actual merchant name, utility provider, or peer-to-peer transfer details like "Transfer to [Name]" or "Received from [Name]". For ATM withdrawals, use "ATM Withdrawal"),
+"category" (string, MUST be exactly one of these values: [$categoriesStr]. Select the category that best matches the transaction description or purpose),
 "isExpense" (boolean, true if debited/spent/withdrawn/transferred out, false if credited/received/deposited).
 
 No formatting, no markdown code block (like ```json), no other text. Just the JSON object.
@@ -104,24 +102,33 @@ $smsBody
     final response = await generateText(prompt);
     if (response == null || response.trim().isEmpty) return null;
     try {
-      // Clean up markdown block format if LLM included it by mistake
       var cleaned = response.trim();
-      if (cleaned.startsWith("```json")) {
-        cleaned = cleaned.substring(7);
-      } else if (cleaned.startsWith("```")) {
-        cleaned = cleaned.substring(3);
+      // Extract the JSON object using brace matching if there's surrounding text or markdown blocks
+      final startIndex = cleaned.indexOf('{');
+      final endIndex = cleaned.lastIndexOf('}');
+      if (startIndex != -1 && endIndex != -1 && endIndex > startIndex) {
+        cleaned = cleaned.substring(startIndex, endIndex + 1);
       }
-      if (cleaned.endsWith("```")) {
-        cleaned = cleaned.substring(0, cleaned.length - 3);
-      }
-      cleaned = cleaned.trim();
 
       final data = json.decode(cleaned);
       if (data is Map<String, dynamic>) {
+        String matchedCategory = 'Other';
+        final parsedCat = data['category']?.toString().trim().toLowerCase();
+        if (parsedCat != null) {
+          for (final cat in categories) {
+            if (cat.trim().toLowerCase() == parsedCat) {
+              matchedCategory = cat;
+              break;
+            }
+          }
+        }
+
+        final description = data['description']?.toString().trim() ?? data['merchant']?.toString().trim();
         return {
           'amount': data['amount'] != null ? double.tryParse(data['amount'].toString()) : null,
-          'merchant': data['merchant']?.toString(),
-          'category': data['category']?.toString(),
+          'merchant': description,
+          'description': description,
+          'category': matchedCategory,
           'isExpense': data['isExpense'] == true,
         };
       }
@@ -154,5 +161,37 @@ Respond with ONLY the refined description (max 30 characters). No punctuation at
       cleaned = cleaned.substring(1, cleaned.length - 1);
     }
     return cleaned.length > 35 ? cleaned.substring(0, 35) : cleaned;
+  }
+
+  @override
+  Future<String?> refineText(String text, String mode) async {
+    String instruction;
+    switch (mode.toLowerCase()) {
+      case 'polish':
+        instruction = "Correct any grammar, spelling, punctuation, and style issues in the text. Respond with ONLY the corrected text, with no explanations, introduction, or quotes.";
+        break;
+      case 'shorten':
+        instruction = "Summarize or shorten the text to make it extremely concise and direct while preserving all essential information. Respond with ONLY the shortened version.";
+        break;
+      case 'expand':
+        instruction = "Elaborate and expand the text, adding helpful details, descriptions, or professional formatting. Respond with ONLY the expanded version.";
+        break;
+      case 'professional':
+        instruction = "Rewrite the text in a formal, professional, and business-ready tone. Respond with ONLY the rewritten text.";
+        break;
+      case 'casual':
+        instruction = "Rewrite the text in a friendly, approachable, and casual tone. Respond with ONLY the rewritten text.";
+        break;
+      default:
+        instruction = "Refine the text based on standard editing rules. Respond with ONLY the refined version.";
+    }
+
+    final prompt = """
+$instruction
+
+Text to process:
+$text
+""";
+    return generateText(prompt);
   }
 }

@@ -41,6 +41,7 @@ class NoteProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      await _noteRepository.clearOldTrash();
       final tags = await _noteRepository.getAllTags();
       final colors = await _noteRepository.getAllTagColors();
 
@@ -52,7 +53,7 @@ class NoteProvider extends ChangeNotifier {
         isTrashed: _selectedTag == 'Trash',
       );
 
-      _allTags = ['All', 'Archived', 'Trash', ...tags];
+      _allTags = ['All', ...tags];
       if (!_allTags.contains(_selectedTag)) {
         _selectedTag = 'All';
       }

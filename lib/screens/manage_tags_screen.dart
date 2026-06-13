@@ -58,9 +58,17 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
                 alignment: WrapAlignment.center,
                 children: AppTheme.noteColors.map((c) {
                   final bool isSystem = c.toARGB32() == 0;
-                  final bool isSelected = selectedColor == c.toARGB32();
+                  final bool isSelected = !isSystem && selectedColor == c.toARGB32();
                   return GestureDetector(
-                    onTap: () => setState(() => selectedColor = c.toARGB32()),
+                    onTap: () {
+                      if (isSystem) {
+                        final nonZeroColors = AppTheme.noteColors.where((color) => color.toARGB32() != 0).toList();
+                        final randomColor = (nonZeroColors..shuffle()).first;
+                        setState(() => selectedColor = randomColor.toARGB32());
+                      } else {
+                        setState(() => selectedColor = c.toARGB32());
+                      }
+                    },
                     child: Container(
                       width: 32,
                       height: 32,
@@ -77,7 +85,7 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
                         ),
                       ),
                       child: isSystem
-                          ? const Icon(Icons.auto_awesome, size: 16)
+                          ? const Icon(Icons.shuffle, size: 16)
                           : (isSelected
                               ? Icon(Icons.check,
                                   size: 16,
@@ -166,11 +174,9 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
                   ),
                 )
               : AnimationLimiter(
-                  child: ListView.separated(
+                  child: ListView.builder(
                     padding: const EdgeInsets.all(16),
                     itemCount: _tags.length,
-                    separatorBuilder: (context, index) =>
-                        const Divider(height: 1),
                     itemBuilder: (context, index) {
                       final tag = _tags[index];
                       final tagColorValue = _tagColors[tag];
@@ -187,35 +193,59 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
                           child: FadeInAnimation(
                             child: Semantics(
                               label: 'Tag: $tag',
-                              child: ListTile(
-                                leading: Icon(Icons.label,
-                                    color: tagColor ??
-                                        Theme.of(context)
-                                            .colorScheme
-                                            .onSurfaceVariant),
-                                title: Text(tag),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Semantics(
-                                      label: 'Edit tag $tag',
-                                      button: true,
-                                      child: IconButton(
-                                        icon: const Icon(Icons.edit_outlined),
-                                        tooltip: 'Edit',
-                                        onPressed: () => _editTag(tag),
+                              child: Card(
+                                elevation: 0,
+                                margin: const EdgeInsets.only(bottom: 12),
+                                color: Theme.of(context).colorScheme.surfaceContainerLow,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  side: BorderSide(
+                                    color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+                                    width: 1.0,
+                                  ),
+                                ),
+                                child: ListTile(
+                                  leading: Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: (tagColor ?? Theme.of(context).colorScheme.primary).withValues(alpha: 0.15),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: (tagColor ?? Theme.of(context).colorScheme.primary).withValues(alpha: 0.3),
+                                        width: 1,
                                       ),
                                     ),
-                                    Semantics(
-                                      label: 'Delete tag $tag',
-                                      button: true,
-                                      child: IconButton(
-                                        icon: const Icon(Icons.delete_outline),
-                                        tooltip: 'Delete',
-                                        onPressed: () => _deleteTag(tag),
-                                      ),
+                                    child: Icon(
+                                      Icons.label_outline,
+                                      color: tagColor ?? Theme.of(context).colorScheme.primary,
+                                      size: 20,
                                     ),
-                                  ],
+                                  ),
+                                  title: Text(tag),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Semantics(
+                                        label: 'Edit tag $tag',
+                                        button: true,
+                                        child: IconButton(
+                                          icon: const Icon(Icons.edit_outlined),
+                                          tooltip: 'Edit',
+                                          onPressed: () => _editTag(tag),
+                                        ),
+                                      ),
+                                      Semantics(
+                                        label: 'Delete tag $tag',
+                                        button: true,
+                                        child: IconButton(
+                                          icon: const Icon(Icons.delete_outline),
+                                          tooltip: 'Delete',
+                                          onPressed: () => _deleteTag(tag),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),

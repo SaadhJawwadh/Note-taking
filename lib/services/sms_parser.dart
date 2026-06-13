@@ -3,6 +3,40 @@ import '../data/transaction_category.dart';
 import 'sms_constants.dart';
 
 class SmsParser {
+  static bool isPotentiallyRelevant({
+    required String body,
+    required String address,
+    required Set<String> allowedSenderIds,
+    required Set<String> blockedSenderIds,
+  }) {
+    if (body.trim().isEmpty) return false;
+
+    // Cancellation check
+    final isReversal = SmsConstants.reversalRegex.hasMatch(body);
+    final isCancellation = SmsConstants.cancellationRegex.hasMatch(body);
+    if (isCancellation && !isReversal) return false;
+
+    // Blocked sender check
+    final senderLower = address.toLowerCase();
+    if (blockedSenderIds.any((s) => senderLower.contains(s))) return false;
+
+    // Check if it has a valid amount match
+    final hasAmount = SmsConstants.amountRegex.hasMatch(body) || SmsConstants.bareAmountRegex.hasMatch(body);
+    if (!hasAmount) return false;
+
+    // Check if known sender, or matches transaction action terms
+    final isBank = SmsConstants.bankSenders.any((s) => address.toUpperCase().contains(s.toUpperCase()));
+    final isKnownSender = isBank || allowedSenderIds.any((s) => senderLower.contains(s));
+    
+    final hasTransactionAction = SmsConstants.debitRegex.hasMatch(body) || 
+                                 SmsConstants.creditRegex.hasMatch(body) ||
+                                 SmsConstants.transferRegex.hasMatch(body) ||
+                                 SmsConstants.depositRegex.hasMatch(body) ||
+                                 SmsConstants.purchaseRegex.hasMatch(body);
+
+    return isKnownSender || hasTransactionAction;
+  }
+
   static TransactionModel? parseMessage({
     required String body,
     required String address,

@@ -72,4 +72,29 @@ class TransactionCategory {
     }
     return badgeColors[category] ?? const Color(0xFF9E9E9E);
   }
+
+  static IconData iconFor(String category) {
+    switch (category.toLowerCase()) {
+      case 'transport':
+        return Icons.directions_car_outlined;
+      case 'food & dining':
+        return Icons.restaurant_outlined;
+      case 'subscriptions':
+        return Icons.subscriptions_outlined;
+      case 'shopping':
+        return Icons.shopping_bag_outlined;
+      case 'utilities':
+        return Icons.power_outlined;
+      case 'health':
+        return Icons.medical_services_outlined;
+      case 'entertainment':
+        return Icons.sports_esports_outlined;
+      case 'payments':
+        return Icons.payment_outlined;
+      case 'deposit':
+        return Icons.savings_outlined;
+      default:
+        return Icons.help_outline;
+    }
+  }
 }

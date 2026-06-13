@@ -27,4 +27,6 @@ description: Specialist in the Financial Management module, handling transaction
 - **SMS Deduplication**: Implement duplicate checks for incoming SMS (checking if a message with the exact same body and timestamp already exists, even if from a different address/sender) inside background isolates and foreground receivers to avoid duplicate transaction entries.
 - **Category Validation**: Ensure category names are validated in a case-insensitive manner to prevent name collisions when users create or edit transaction categories.
 - **Merchant Rules**: Allow multi-word keyword matching in rules rather than truncating/splitting keywords to the first word (e.g. support matching full strings like "Google Play Store").
+- **SMS Pre-Filtering & AI Parsing**: Use `isPotentiallyRelevant` to pre-filter messages (checking for amount patterns, valid senders, and transaction keywords, while excluding OTPs or cancellations) before calling Gemini Nano. The AI parsing pipeline (`parseSmsTransaction`) should extract amount, category, type (expense/income), and a professional description in a single LLM pass to minimize API latency and ensure user privacy.
+
 

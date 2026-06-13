@@ -8,7 +8,6 @@ import 'package:gal/gal.dart';
 import '../services/ffmpeg_service.dart';
 import '../services/ffmpeg_install_service.dart';
 import '../data/settings_provider.dart';
-import 'settings_screen.dart';
 import 'app_lock_screen.dart';
 
 class FileConverterScreen extends StatefulWidget {
@@ -26,6 +25,184 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
   List<String> _selectedFilePaths = [];
   int _currentIndex = 0;
   String _statusMessage = 'Share or pick media files to compress';
+
+  void _showFormatPickerLocal({
+    required BuildContext context,
+    required String title,
+    required List<String> options,
+    required String currentValue,
+    required Function(String) onSelected,
+  }) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+        title: Text('Select $title'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: options.map((option) => RadioListTile<String>(
+            title: Text(option.toUpperCase()),
+            value: option,
+            // ignore: deprecated_member_use
+            groupValue: currentValue,
+            // ignore: deprecated_member_use
+            onChanged: (v) {
+              onSelected(v!);
+              Navigator.pop(context);
+            },
+          )).toList(),
+        ),
+      ),
+    );
+  }
+
+  void _showSettingsSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+      builder: (context) {
+        final installService = FfmpegInstallService.instance;
+        return Consumer<SettingsProvider>(
+          builder: (context, settings, child) {
+            final theme = Theme.of(context);
+            return SafeArea(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    left: 24,
+                    right: 24,
+                    top: 8,
+                    bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'File Converter Settings',
+                        style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 20),
+                      SwitchListTile(
+                        title: const Text('Converter Lite Mode'),
+                        subtitle: const Text('Use native tools instead of FFmpeg (Fast, limited formats)'),
+                        value: settings.isConverterLite,
+                        onChanged: (val) => settings.setIsConverterLite(val),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      const Divider(),
+                      SwitchListTile(
+                        title: const Text('Keep Metadata'),
+                        subtitle: const Text('Maintain EXIF and device info in compressed files'),
+                        value: settings.keepMetadata,
+                        onChanged: (val) => settings.setKeepMetadata(val),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      const Divider(),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.video_collection_outlined),
+                        title: const Text('Preferred Video Format'),
+                        subtitle: Text(settings.preferredVideoFormat.toUpperCase()),
+                        onTap: () => _showFormatPickerLocal(
+                          context: context,
+                          title: 'Video Format',
+                          options: ['mp4', 'mkv', 'gif'],
+                          currentValue: settings.preferredVideoFormat,
+                          onSelected: settings.setPreferredVideoFormat,
+                        ),
+                      ),
+                      const Divider(),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.image_outlined),
+                        title: const Text('Preferred Image Format'),
+                        subtitle: Text(settings.preferredImageFormat.toUpperCase()),
+                        onTap: () => _showFormatPickerLocal(
+                          context: context,
+                          title: 'Image Format',
+                          options: ['jpg', 'png', 'webp'],
+                          currentValue: settings.preferredImageFormat,
+                          onSelected: settings.setPreferredImageFormat,
+                        ),
+                      ),
+                      const Divider(),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.photo_size_select_large_outlined),
+                        title: const Text('Video Resolution Limit'),
+                        subtitle: Text(settings.videoResolutionLimit),
+                        onTap: () => _showFormatPickerLocal(
+                          context: context,
+                          title: 'Resolution Limit',
+                          options: ['Original', '1080p', '720p', '480p'],
+                          currentValue: settings.videoResolutionLimit,
+                          onSelected: settings.setVideoResolutionLimit,
+                        ),
+                      ),
+                      if (!settings.isConverterLite) ...[
+                        const Divider(),
+                        ListenableBuilder(
+                          listenable: installService,
+                          builder: (context, _) {
+                            return ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(Icons.download_for_offline_outlined),
+                              title: Text(settings.isFfmpegInstalled ? 'Engine Installed' : 'Install FFmpeg Engine'),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(settings.isFfmpegInstalled 
+                                    ? 'Engine binaries are ready (approx. 45MB)' 
+                                    : 'Download engine for high-quality compression (approx. 45MB)'),
+                                  if (installService.isDownloading) ...[
+                                    const SizedBox(height: 8),
+                                    LinearProgressIndicator(value: installService.downloadProgress),
+                                  ],
+                                ],
+                              ),
+                              trailing: installService.isDownloading
+                                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                                : IconButton(
+                                    icon: Icon(settings.isFfmpegInstalled ? Icons.delete_outline : Icons.download_rounded),
+                                    onPressed: () async {
+                                      if (settings.isFfmpegInstalled) {
+                                        final confirm = await showDialog<bool>(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            title: const Text('Uninstall Engine?'),
+                                            content: const Text('This will remove the FFmpeg binaries from your device to save space.'),
+                                            actions: [
+                                              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                                              TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Uninstall')),
+                                            ],
+                                          ),
+                                        );
+                                        if (confirm == true) {
+                                          await installService.uninstallEngine(settings);
+                                        }
+                                      } else {
+                                        await installService.installEngine(settings);
+                                      }
+                                    },
+                                  ),
+                            );
+                          },
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 
   @override
   void initState() {
@@ -131,6 +308,7 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      showDragHandle: true,
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24.0)),
@@ -138,7 +316,7 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
       builder: (context) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24.0),
+            padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -381,13 +559,7 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
                     child: IconButton(
                       icon: const Icon(Icons.settings_outlined),
                       tooltip: 'Settings',
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const SettingsScreen(),
-                          ),
-                        );
-                      },
+                      onPressed: () => _showSettingsSheet(context),
                     ),
                   ),
                 ],
@@ -581,8 +753,11 @@ class _ResultCard extends StatelessWidget {
 
     return Card(
       elevation: 0,
-      color: cs.surfaceContainerHigh,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      color: cs.surfaceContainerLow,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(

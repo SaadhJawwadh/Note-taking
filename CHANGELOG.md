@@ -2,6 +2,20 @@
 
 All notable changes to Note Book are documented here.
 
+## [1.33.0] - 2026-06-13
+
+### ✨ New Features
+- **Auto-Clear Trash**: Implemented a 7-day automatic transactional purge for notes and tags in the trash to optimize storage.
+
+### 🛠 Improvements & Refactoring
+- **Clean Home Tags**: Removed the redundant "Archived" and "Trash" chips from the home screen tags row.
+- **Inline Settings Merger**: Merged all File Converter settings (Lite Mode, Keep Metadata, Preferred Formats, Resolution Limit, and the FFmpeg engine installer) into a local, inline settings bottom sheet inside the Converter screen.
+- **Pruned Settings Page**: Removed the "Standalone Utilities" and "File Converter Settings" sections from the global Settings screen, keeping only the high-level enable switch under "App Features".
+
+### 🐛 Bug Fixes & Stability
+- **Static Analysis Compliance**: Fixed unawaited futures (haptic feedback calls) and capitalized library prefixes to achieve a completely clean `flutter analyze` report with zero issues.
+- **Unit Test Coverage**: Added a comprehensive database test suite for `clearOldTrash()` to ensure integrity and prevent regression.
+
 ## [1.32.0] - 2026-06-08
 
 ### ✨ New Features & Enhancements

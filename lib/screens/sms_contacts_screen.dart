@@ -133,7 +133,7 @@ class _SmsContactsScreenState extends State<SmsContactsScreen> {
         ),
       ),
 
-      const Divider(height: 24),
+      const SizedBox(height: 16),
 
       // ── Banks section ────────────────────────────────────────
       if (banks.isNotEmpty) ...[
@@ -144,7 +144,7 @@ class _SmsContactsScreenState extends State<SmsContactsScreen> {
                   fontWeight: FontWeight.w600, color: cs.onSurfaceVariant)),
         ),
         ...banks.map((c) => _contactTile(cs, tt, c, canDelete: false)),
-        const Divider(height: 24),
+        const SizedBox(height: 16),
       ],
 
       // ── Custom senders section ──────────────────────────────
@@ -203,41 +203,62 @@ class _SmsContactsScreenState extends State<SmsContactsScreen> {
     final blocked = contact.isBlocked;
     final label = contact.label ?? contact.id;
     final subtitle = contact.senderIds.join(', ');
+    final avatarColor = blocked ? cs.error : cs.primary;
 
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: blocked ? cs.errorContainer : cs.primaryContainer,
-        radius: 18,
-        child: Icon(
-          blocked ? Icons.block : Icons.message_outlined,
-          size: 18,
-          color: blocked ? cs.onErrorContainer : cs.onPrimaryContainer,
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      color: cs.surfaceContainerLow,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: cs.outlineVariant.withValues(alpha: 0.3),
+          width: 1.0,
         ),
       ),
-      title: Text(
-        label,
-        style: tt.bodyMedium?.copyWith(
-          decoration: blocked ? TextDecoration.lineThrough : null,
-          color: blocked ? cs.onSurfaceVariant : null,
-        ),
-      ),
-      subtitle: Text(subtitle,
-          style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Switch.adaptive(
-            value: !blocked,
-            onChanged: (_) => _toggleBlocked(contact),
-            activeTrackColor: cs.primary,
-          ),
-          if (canDelete)
-            IconButton(
-              icon: Icon(Icons.delete_outline, color: cs.error),
-              tooltip: 'Remove',
-              onPressed: () => _confirmDelete(contact),
+      child: ListTile(
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: avatarColor.withValues(alpha: 0.15),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: avatarColor.withValues(alpha: 0.3),
+              width: 1,
             ),
-        ],
+          ),
+          child: Icon(
+            blocked ? Icons.block : Icons.message_outlined,
+            color: avatarColor,
+            size: 20,
+          ),
+        ),
+        title: Text(
+          label,
+          style: tt.bodyMedium?.copyWith(
+            decoration: blocked ? TextDecoration.lineThrough : null,
+            color: blocked ? cs.onSurfaceVariant : null,
+          ),
+        ),
+        subtitle: Text(subtitle,
+            style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Switch.adaptive(
+              value: !blocked,
+              onChanged: (_) => _toggleBlocked(contact),
+              activeTrackColor: cs.primary,
+            ),
+            if (canDelete)
+              IconButton(
+                icon: Icon(Icons.delete_outline, color: cs.error),
+                tooltip: 'Remove',
+                onPressed: () => _confirmDelete(contact),
+              ),
+          ],
+        ),
       ),
     );
   }
