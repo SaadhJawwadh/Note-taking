@@ -1,5 +1,6 @@
 // ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../data/category_definition.dart';
 import '../data/repositories/transaction_repository.dart';
@@ -88,6 +89,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
       ),
     );
     if (confirmed == true && mounted) {
+      await HapticFeedback.mediumImpact();
       await TransactionRepository.instance.deleteCategoryDefinition(def.name);
       await _saveAndReload();
     }
@@ -127,7 +129,11 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
                   children: [
                     IconButton(
                       icon: const Icon(Icons.arrow_back),
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () async {
+                        await HapticFeedback.lightImpact();
+                        if (!context.mounted) return;
+                        Navigator.pop(context);
+                      },
                     ),
                     const SizedBox(width: 8),
                     Text(
@@ -211,15 +217,20 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
                                             iconSize: 20,
                                             color: colorScheme.error,
                                             tooltip: 'Delete category',
-                                            onPressed: () =>
-                                                _deleteCategory(cat),
+                                            onPressed: () async {
+                                              await HapticFeedback.lightImpact();
+                                              await _deleteCategory(cat);
+                                            },
                                           ),
                                         IconButton(
                                           icon: const Icon(Icons.edit_outlined),
                                           iconSize: 20,
                                           color: colorScheme.onSurfaceVariant,
                                           tooltip: 'Edit keywords',
-                                          onPressed: () => _showEditDialog(cat),
+                                          onPressed: () async {
+                                            await HapticFeedback.lightImpact();
+                                            await _showEditDialog(cat);
+                                          },
                                         ),
                                       ],
                                     ),
@@ -287,7 +298,10 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'category_fab',
-        onPressed: _showAddDialog,
+        onPressed: () async {
+          await HapticFeedback.lightImpact();
+          await _showAddDialog();
+        },
         icon: const Icon(Icons.add),
         label: const Text('New Category'),
       ),
@@ -337,6 +351,7 @@ class _EditKeywordsDialogState extends State<_EditKeywordsDialog> {
   Future<void> _save() async {
     setState(() => _saving = true);
     await widget.onSave(widget.definition.copyWith(keywords: _keywords));
+    await HapticFeedback.mediumImpact();
     if (mounted) Navigator.pop(context);
   }
 
@@ -380,14 +395,20 @@ class _EditKeywordsDialogState extends State<_EditKeywordsDialog> {
                       contentPadding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 10),
                     ),
-                    onSubmitted: (_) => _addKeyword(),
+                    onSubmitted: (_) async {
+                      await HapticFeedback.lightImpact();
+                      _addKeyword();
+                    },
                   ),
                 ),
                 const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.add_circle_outline),
                   color: colorScheme.primary,
-                  onPressed: _addKeyword,
+                  onPressed: () async {
+                    await HapticFeedback.lightImpact();
+                    _addKeyword();
+                  },
                 ),
               ],
             ),
@@ -415,7 +436,10 @@ class _EditKeywordsDialogState extends State<_EditKeywordsDialog> {
                     side: BorderSide(
                         color: catColor.withValues(alpha: 0.3), width: 0.5),
                     deleteIconColor: colorScheme.onSurfaceVariant,
-                    onDeleted: () => setState(() => _keywords.remove(kw)),
+                    onDeleted: () async {
+                      await HapticFeedback.lightImpact();
+                      setState(() => _keywords.remove(kw));
+                    },
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                   );
@@ -520,6 +544,7 @@ class _AddCategoryDialogState extends State<_AddCategoryDialog> {
       isBuiltIn: false,
     );
     await widget.onSave(def);
+    await HapticFeedback.mediumImpact();
     if (mounted) Navigator.pop(context);
   }
 
@@ -567,7 +592,10 @@ class _AddCategoryDialogState extends State<_AddCategoryDialog> {
               children: _colorSwatches.map((color) {
                 final selected = _selectedColor == color;
                 return GestureDetector(
-                  onTap: () => setState(() => _selectedColor = color),
+                  onTap: () async {
+                    await HapticFeedback.selectionClick();
+                    setState(() => _selectedColor = color);
+                  },
                   child: Container(
                     width: 32,
                     height: 32,
@@ -613,14 +641,20 @@ class _AddCategoryDialogState extends State<_AddCategoryDialog> {
                       contentPadding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 10),
                     ),
-                    onSubmitted: (_) => _addKeyword(),
+                    onSubmitted: (_) async {
+                      await HapticFeedback.lightImpact();
+                      _addKeyword();
+                    },
                   ),
                 ),
                 const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.add_circle_outline),
                   color: colorScheme.primary,
-                  onPressed: _addKeyword,
+                  onPressed: () async {
+                    await HapticFeedback.lightImpact();
+                    _addKeyword();
+                  },
                 ),
               ],
             ),
@@ -639,7 +673,10 @@ class _AddCategoryDialogState extends State<_AddCategoryDialog> {
                         color: _selectedColor.withValues(alpha: 0.3),
                         width: 0.5),
                     deleteIconColor: colorScheme.onSurfaceVariant,
-                    onDeleted: () => setState(() => _keywords.remove(kw)),
+                    onDeleted: () async {
+                      await HapticFeedback.lightImpact();
+                      setState(() => _keywords.remove(kw));
+                    },
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                   );

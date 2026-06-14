@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
 import '../data/settings_provider.dart';
 import '../data/repositories/transaction_repository.dart';
 import '../data/transaction_model.dart';
@@ -131,7 +132,11 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
     }
 
     setState(() => _isLoading = false);
-    if (mounted) Navigator.pop(context, true);
+    if (mounted) {
+      final navigator = Navigator.of(context);
+      await HapticFeedback.mediumImpact();
+      navigator.pop(true);
+    }
   }
 
   Future<void> _deleteTransaction() async {
@@ -164,7 +169,11 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
       setState(() => _isLoading = true);
       await TransactionRepository.instance.deleteTransaction(widget.transaction!.id!);
       setState(() => _isLoading = false);
-      if (mounted) Navigator.pop(context, true);
+      if (mounted) {
+        final navigator = Navigator.of(context);
+        await HapticFeedback.mediumImpact();
+        navigator.pop(true);
+      }
     }
   }
 
@@ -256,11 +265,14 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
       lastDate: DateTime(2100),
     );
     if (picked != null && picked != _selectedDate) {
+      await HapticFeedback.lightImpact();
       setState(() => _selectedDate = picked);
     }
   }
 
   Future<void> _openCalculator() async {
+    await HapticFeedback.lightImpact();
+    if (!mounted) return;
     final double? currentVal = double.tryParse(_amountController.text);
     final result = await showModalBottomSheet<double>(
       context: context,
@@ -414,6 +426,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
               ],
               selected: {_isExpense},
               onSelectionChanged: (Set<bool> newSelection) {
+                HapticFeedback.selectionClick();
                 setState(() {
                   _isExpense = newSelection.first;
                 });
@@ -510,7 +523,10 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                   return FilterChip(
                     label: Text(cat),
                     selected: selected,
-                    onSelected: (_) => setState(() => _category = cat),
+                    onSelected: (_) {
+                      HapticFeedback.lightImpact();
+                      setState(() => _category = cat);
+                    },
                     selectedColor: catColor.withValues(alpha: 0.2),
                     checkmarkColor: catColor,
                     labelStyle: TextStyle(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:image_picker/image_picker.dart';
 import 'app_lock_screen.dart';
@@ -453,6 +454,29 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       if (exists) {
         await NoteRepository.instance.deleteNote(_noteId);
       }
+      return;
+    }
+
+    final initialNote = widget.note;
+    bool hasChanges = false;
+    if (initialNote == null) {
+      hasChanges = true;
+    } else {
+      final titleChanged = title != initialNote.title;
+      final contentChanged = content != initialNote.content;
+      final pinnedChanged = isPinned != initialNote.isPinned;
+      final archivedChanged = isArchived != initialNote.isArchived;
+      final colorChanged = color != initialNote.color;
+      final tagsChanged = !listEquals(tags, initialNote.tags);
+      hasChanges = titleChanged ||
+          contentChanged ||
+          pinnedChanged ||
+          archivedChanged ||
+          colorChanged ||
+          tagsChanged;
+    }
+
+    if (!hasChanges) {
       return;
     }
 
@@ -1018,14 +1042,14 @@ $content
                                   return ActionChip(
                                     label: Text(tag, style: TextStyle(fontSize: 12, color: noteScheme.primary)),
                                     avatar: Icon(Icons.add, size: 12, color: noteScheme.primary),
-                                    onPressed: () {
+                                    onPressed: () async {
+                                      await HapticFeedback.lightImpact();
                                       setState(() {
                                         tags.add(tag);
                                         _suggestedTags.remove(tag);
                                         _updateColorFromTags();
                                       });
-                                      saveNote();
-                                      HapticFeedback.lightImpact();
+                                      await saveNote();
                                     },
                                     backgroundColor: noteScheme.primaryContainer.withValues(alpha: 0.15),
                                     shape: const StadiumBorder(),
@@ -1337,22 +1361,24 @@ $content
                                 TextButton.icon(
                                   icon: const Icon(Icons.copy, size: 16),
                                   label: const Text('Copy'),
-                                  onPressed: () {
-                                    Clipboard.setData(ClipboardData(text: _aiSummary!));
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                  onPressed: () async {
+                                    final messenger = ScaffoldMessenger.of(context);
+                                    await HapticFeedback.lightImpact();
+                                    await Clipboard.setData(ClipboardData(text: _aiSummary!));
+                                    messenger.showSnackBar(
                                       const SnackBar(
                                         content: Text('Summary copied to clipboard'),
                                         behavior: SnackBarBehavior.floating,
                                       ),
                                     );
-                                    HapticFeedback.lightImpact();
                                   },
                                 ),
                                 const SizedBox(width: 8),
                                 FilledButton.icon(
                                   icon: const Icon(Icons.add, size: 16),
                                   label: const Text('Append'),
-                                  onPressed: () {
+                                  onPressed: () async {
+                                    await HapticFeedback.lightImpact();
                                     final currentLength = _quillController.document.length;
                                     _quillController.replaceText(
                                       currentLength - 1,
@@ -1362,7 +1388,6 @@ $content
                                     );
                                     _onContentChanged();
                                     setState(() => _aiSummary = null);
-                                    HapticFeedback.lightImpact();
                                   },
                                 ),
                               ],

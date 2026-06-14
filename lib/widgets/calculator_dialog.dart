@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:math_expressions/math_expressions.dart';
+import 'package:flutter/services.dart';
 
 class CalculatorDialog extends StatefulWidget {
   final double? initialValue;
@@ -27,6 +28,7 @@ class _CalculatorDialogState extends State<CalculatorDialog> {
   }
 
   void _onPressed(String text) {
+    HapticFeedback.lightImpact();
     setState(() {
       if (text == 'C') {
         _expression = '';
@@ -64,6 +66,7 @@ class _CalculatorDialogState extends State<CalculatorDialog> {
   }
 
   void _onSubmit() {
+    HapticFeedback.mediumImpact();
     if (_expression.isEmpty || _expression == 'Error') {
       Navigator.pop(context);
       return;

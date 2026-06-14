@@ -65,7 +65,8 @@ git push origin vX.Y.Z   # triggers GitHub Actions CI/CD
 
 ## Project-Specific Release Automation
 - **Strict Analysis**: The GitHub Action CI pipeline treats all `flutter analyze` warnings as fatal errors. You MUST run `flutter analyze` locally and fix ALL issues (including style rules like missing `{}` around `if` statements or `BuildContext` async gaps) before triggering a release.
-- **Automated Deployment**: Releasing is handled via `./deploy.sh <version>`. The script auto-updates `pubspec.yaml` (calculating the build number automatically), commits, and pushes the Git tag to trigger the GitHub Action.
+- **Automated Deployment**: Releasing is handled via `./deploy.sh <version>`. The script automatically runs quality checks (ensuring git cleanliness, verifying that `CHANGELOG.md` is updated, running `flutter analyze` to guarantee zero errors/warnings, and executing `flutter test` to ensure all tests pass) before updating `pubspec.yaml`, committing the bump, and pushing the Git tag to remote.
+- **Version Code Multiplication Rule**: The automated script computes the version code by combining Major, Minor, and Patch: `versionCode = Major * 10000 + Minor * 100 + Patch`. Ensure `Minor` and `Patch` numbers are kept strictly below `100` to avoid build number collisions on app stores.
 - **Tag Retries**: If the CI/CD pipeline fails, fix the code locally, commit the changes, delete the old tag locally (`git tag -d vX.Y.Z`) and remotely (`git push origin :refs/tags/vX.Y.Z`), then create and push the tag again to re-trigger the workflow.
 
 

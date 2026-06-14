@@ -286,7 +286,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
         bottomNavigationBar: NavigationBar(
           selectedIndex: _currentIndex,
-          onDestinationSelected: (index) => setState(() => _currentIndex = index),
+          onDestinationSelected: (index) {
+            HapticFeedback.selectionClick();
+            setState(() => _currentIndex = index);
+          },
           destinations: _buildNavDestinations(settings),
         ),
       );

@@ -195,6 +195,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
       );
       await PeriodRepository.instance.createPeriodLog(newLog);
     }
+    await HapticFeedback.mediumImpact();
     await _loadData(); // Re-fetch logs and predictions
   }
 
@@ -217,11 +218,13 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
 
     if (confirm == true) {
       await PeriodRepository.instance.deletePeriodLog(log.id);
+      await HapticFeedback.mediumImpact();
       await _loadData();
     }
   }
 
   Future<void> _updateIntensity(PeriodLog log, String newIntensity) async {
+    await HapticFeedback.lightImpact();
     final updated = log.copyWith(intensity: newIntensity);
     await PeriodRepository.instance.updatePeriodLog(updated);
     await _loadData();
@@ -298,6 +301,8 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                     subtitle: Text(DateFormat.yMMMMd().format(tempStart)),
                     trailing: const Icon(Icons.edit_outlined),
                     onTap: () async {
+                      await HapticFeedback.lightImpact();
+                      if (!context.mounted) return;
                       final picked = await showDatePicker(
                         context: context,
                         initialDate: tempStart,
@@ -321,7 +326,8 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                     title: const Text('Ongoing Period'),
                     subtitle: const Text('Still active/no end date yet'),
                     value: isOngoing,
-                    onChanged: (val) {
+                    onChanged: (val) async {
+                      await HapticFeedback.selectionClick();
                       setModalState(() {
                         isOngoing = val;
                         if (val) {
@@ -339,6 +345,8 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                       subtitle: Text(tempEnd != null ? DateFormat.yMMMMd().format(tempEnd!) : 'Select end date'),
                       trailing: const Icon(Icons.edit_outlined),
                       onTap: () async {
+                        await HapticFeedback.lightImpact();
+                        if (!context.mounted) return;
                         final picked = await showDatePicker(
                           context: context,
                           initialDate: tempEnd ?? tempStart.add(const Duration(days: 4)),
@@ -367,6 +375,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                     ],
                     selected: {tempIntensity},
                     onSelectionChanged: (Set<String> selection) {
+                      HapticFeedback.selectionClick();
                       setModalState(() {
                         tempIntensity = selection.first;
                       });
@@ -377,6 +386,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                   
                   FilledButton(
                     onPressed: () {
+                      HapticFeedback.mediumImpact();
                       if (!isOngoing && tempEnd != null && tempStart.isAfter(tempEnd!)) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Start date cannot be after end date')),

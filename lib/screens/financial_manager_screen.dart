@@ -6,6 +6,7 @@ import 'package:animations/animations.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/services.dart';
 import '../data/settings_provider.dart';
 import '../data/repositories/transaction_repository.dart';
 import '../data/transaction_model.dart';
@@ -682,12 +683,18 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                     IconButton(
                       icon: const Icon(Icons.sync_outlined),
                       tooltip: 'Quick Import (24h)',
-                      onPressed: _quickImportRecentSms,
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        _quickImportRecentSms();
+                      },
                     ),
                     IconButton(
                       icon: const Icon(Icons.calendar_today_outlined),
                       tooltip: 'Select Date Range',
-                      onPressed: () => _selectDateRange(context),
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        _selectDateRange(context);
+                      },
                     ),
                     Padding(
                       padding: const EdgeInsets.only(right: 4),
@@ -695,6 +702,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                         icon: const Icon(Icons.settings_outlined),
                         tooltip: 'Settings',
                         onPressed: () {
+                          HapticFeedback.lightImpact();
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -828,6 +836,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                 label: const Text('All'),
                                 selected: _selectedCategory == null,
                                 onSelected: (_) {
+                                  HapticFeedback.lightImpact();
                                   setState(() => _selectedCategory = null);
                                   _applyFilters();
                                 },
@@ -843,6 +852,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                     label: Text(cat),
                                     selected: selected,
                                     onSelected: (_) {
+                                      HapticFeedback.lightImpact();
                                       setState(() => _selectedCategory =
                                           selected ? null : cat);
                                       _applyFilters();
@@ -939,42 +949,62 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
 
                       // Date group header
                       if (item is String) {
-                        return Padding(
-                          padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
-                          child: Text(
-                            item,
-                            style: textTheme.labelMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                              fontWeight: FontWeight.w600,
+                        return AnimationConfiguration.staggeredList(
+                          position: index,
+                          duration: const Duration(milliseconds: 300),
+                          child: SlideAnimation(
+                            verticalOffset: 20.0,
+                            child: FadeInAnimation(
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
+                                child: Text(
+                                  item,
+                                  style: textTheme.labelMedium?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         );
                       }
 
                       final transaction = item as TransactionModel;
-                      return OpenContainer<bool>(
-                        transitionType: ContainerTransitionType.fadeThrough,
-                        transitionDuration: const Duration(milliseconds: 300),
-                        openBuilder: (context, _) =>
-                            TransactionEditorScreen(
-                                transaction: transaction),
-                        closedElevation: 0,
-                        openElevation: 0,
-                        closedColor: colorScheme.surfaceContainer,
-                        openColor: colorScheme.surface,
-                        closedShape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        onClosed: (updated) {
-                          if (updated == true) _refreshTransactions();
-                        },
+                      return AnimationConfiguration.staggeredList(
+                        position: index,
+                        duration: const Duration(milliseconds: 300),
+                        child: SlideAnimation(
+                          verticalOffset: 20.0,
+                          child: FadeInAnimation(
+                            child: OpenContainer<bool>(
+                              transitionType: ContainerTransitionType.fadeThrough,
+                              transitionDuration: const Duration(milliseconds: 300),
+                              openBuilder: (context, _) =>
+                                  TransactionEditorScreen(
+                                      transaction: transaction),
+                              closedElevation: 0,
+                              openElevation: 0,
+                              closedColor: colorScheme.surfaceContainer,
+                              openColor: colorScheme.surface,
+                              closedShape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                              onClosed: (updated) {
+                                if (updated == true) _refreshTransactions();
+                              },
                               closedBuilder: (context, openContainer) {
                                 return Card(
                                   elevation: 0,
                                   margin: const EdgeInsets.only(bottom: 12),
                                   color: colorScheme.surfaceContainer,
                                   child: InkWell(
-                                    onTap: openContainer,
+                                    onTap: () async {
+                                      await HapticFeedback.lightImpact();
+                                      openContainer();
+                                    },
                                     onLongPress: () async {
+                                      await HapticFeedback.mediumImpact();
+                                      if (!context.mounted) return;
                                       final confirm = await showDialog<bool>(
                                         context: context,
                                         builder: (ctx) => AlertDialog(
@@ -1106,7 +1136,10 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                   ),
                                 );
                               },
-                          );
+                            ),
+                          ),
+                        ),
+                      );
                     },
                     childCount: _groupedTransactions.length,
                   ),
@@ -1139,7 +1172,10 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
               foregroundColor: colorScheme.onPrimary,
               elevation: 0,
               shape: const StadiumBorder(),
-              onPressed: openContainer,
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                openContainer();
+              },
             ),
           );
         },

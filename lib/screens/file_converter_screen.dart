@@ -9,6 +9,7 @@ import '../services/ffmpeg_service.dart';
 import '../services/ffmpeg_install_service.dart';
 import '../data/settings_provider.dart';
 import 'app_lock_screen.dart';
+import 'package:flutter/services.dart';
 
 class FileConverterScreen extends StatefulWidget {
   final List<String>? initialFilePaths;
@@ -227,6 +228,7 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
 
   void _pickAndConvertFiles() async {
     final settings = Provider.of<SettingsProvider>(context, listen: false);
+    await HapticFeedback.lightImpact();
     if (!settings.isConverterLite && !settings.isFfmpegInstalled) {
        _showSetupDialog();
        return;
@@ -438,12 +440,14 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
     }
   }
 
-  void _shareResults() {
+  void _shareResults() async {
     if (_results.isEmpty) return;
-    SharePlus.instance.share(ShareParams(files: _results.map((r) => XFile(r.outputPath)).toList()));
+    await HapticFeedback.lightImpact();
+    await SharePlus.instance.share(ShareParams(files: _results.map((r) => XFile(r.outputPath)).toList()));
   }
 
-  void _cancelConversion() {
+  void _cancelConversion() async {
+    await HapticFeedback.mediumImpact();
     FfmpegService.instance.cancelAll();
     setState(() {
       _isProcessing = false;
@@ -689,9 +693,14 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
                           padding: const EdgeInsets.only(bottom: 12.0),
                           child: _ResultCard(
                             result: res,
-                            onShare: () =>
-                                SharePlus.instance.share(ShareParams(files: [XFile(res.outputPath)])),
-                            onSave: () => _saveToGallery(res.outputPath),
+                            onShare: () async {
+                              await HapticFeedback.lightImpact();
+                              await SharePlus.instance.share(ShareParams(files: [XFile(res.outputPath)]));
+                            },
+                            onSave: () async {
+                              await HapticFeedback.lightImpact();
+                              await _saveToGallery(res.outputPath);
+                            },
                           ),
                         )),
                   ],

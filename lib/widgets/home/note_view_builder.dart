@@ -106,33 +106,8 @@ class NoteViewBuilder extends StatelessWidget {
           childCount: noteProvider.filteredNotes.length,
         ),
       );
-    } else if (settings.noteViewMode == NoteViewMode.uniformGrid) {
-      return SliverGrid(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 0.8,
-        ),
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final note = noteProvider.filteredNotes[index];
-            return AnimationConfiguration.staggeredGrid(
-              position: index,
-              duration: const Duration(milliseconds: 220),
-              columnCount: 2,
-              child: ScaleAnimation(
-                child: FadeInAnimation(
-                  child: _buildOpenContainer(context, note, onRefresh, noteProvider),
-                ),
-              ),
-            );
-          },
-          childCount: noteProvider.filteredNotes.length,
-        ),
-      );
     } else {
-      // Masonry Grid
+      // Grid (Masonry Grid)
       return SliverMasonryGrid.count(
         crossAxisCount: 2,
         mainAxisSpacing: 12,

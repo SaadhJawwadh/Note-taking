@@ -168,22 +168,18 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   IconData _getIconForMode(NoteViewMode mode) {
     switch (mode) {
       case NoteViewMode.list:
-        return Icons.view_agenda_outlined;
-      case NoteViewMode.masonryGrid:
         return Icons.grid_view_outlined;
-      case NoteViewMode.uniformGrid:
-        return Icons.dashboard_outlined;
+      case NoteViewMode.grid:
+        return Icons.view_agenda_outlined;
     }
   }
 
   String _getTooltipForMode(NoteViewMode mode) {
     switch (mode) {
       case NoteViewMode.list:
-        return 'List view';
-      case NoteViewMode.masonryGrid:
-        return 'Masonry grid view';
-      case NoteViewMode.uniformGrid:
-        return 'Uniform grid view';
+        return 'Switch to grid view';
+      case NoteViewMode.grid:
+        return 'Switch to list view';
     }
   }
 

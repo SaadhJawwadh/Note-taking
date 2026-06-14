@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/note_provider.dart';
+import 'package:flutter/services.dart';
 
 class TagFilterBar extends StatelessWidget {
   final Function(String) onTagLongPress;
@@ -63,11 +64,15 @@ class TagFilterBar extends StatelessWidget {
               return Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: GestureDetector(
-                  onLongPress: () => onTagLongPress(tag),
+                  onLongPress: () {
+                    HapticFeedback.mediumImpact();
+                    onTagLongPress(tag);
+                  },
                   child: FilterChip(
                     label: Text(tag),
                     selected: isSelected,
                     onSelected: (selected) {
+                      HapticFeedback.lightImpact();
                       if (selected) noteProvider.setTag(tag);
                     },
                     backgroundColor: chipBg,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../data/repositories/note_repository.dart';
 import '../theme/app_theme.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
@@ -60,7 +61,8 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
                   final bool isSystem = c.toARGB32() == 0;
                   final bool isSelected = !isSystem && selectedColor == c.toARGB32();
                   return GestureDetector(
-                    onTap: () {
+                    onTap: () async {
+                      await HapticFeedback.selectionClick();
                       if (isSystem) {
                         final nonZeroColors = AppTheme.noteColors.where((color) => color.toARGB32() != 0).toList();
                         final randomColor = (nonZeroColors..shuffle()).first;
@@ -115,6 +117,7 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
                     await NoteRepository.instance
                         .setTagColor(newName, selectedColor);
                   }
+                  await HapticFeedback.mediumImpact();
                   if (!context.mounted) return;
                   Navigator.pop(context);
                   await _loadTags();
@@ -150,6 +153,7 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
     );
 
     if (confirmed == true) {
+      await HapticFeedback.mediumImpact();
       await NoteRepository.instance.deleteTag(tag);
       await _loadTags();
     }
@@ -232,7 +236,10 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
                                         child: IconButton(
                                           icon: const Icon(Icons.edit_outlined),
                                           tooltip: 'Edit',
-                                          onPressed: () => _editTag(tag),
+                                          onPressed: () async {
+                                            await HapticFeedback.lightImpact();
+                                            await _editTag(tag);
+                                          },
                                         ),
                                       ),
                                       Semantics(
@@ -241,7 +248,10 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
                                         child: IconButton(
                                           icon: const Icon(Icons.delete_outline),
                                           tooltip: 'Delete',
-                                          onPressed: () => _deleteTag(tag),
+                                          onPressed: () async {
+                                            await HapticFeedback.lightImpact();
+                                            await _deleteTag(tag);
+                                          },
                                         ),
                                       ),
                                     ],

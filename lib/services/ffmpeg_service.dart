@@ -309,7 +309,7 @@ class FfmpegService {
     // Lite Mode: Always simulate to avoid heavy FFmpeg usage/download
     if (settings.isConverterLite) {
        debugPrint('Converter Lite Mode active. Simulating...');
-       return _simulateConversion(inputPath, outputPath, onProgress);
+       return _simulateConversion(inputPath, outputPath, preset, onProgress);
     }
 
     // Check for engine binaries
@@ -322,7 +322,7 @@ class FfmpegService {
     // Prototype mode: Simulation if binary doesn't actually exist
     if (!await File(binaryPath).exists()) {
        debugPrint('Engine file not found at $binaryPath. Simulating conversion...');
-       return _simulateConversion(inputPath, outputPath, onProgress);
+       return _simulateConversion(inputPath, outputPath, preset, onProgress);
     }
 
     final args = _buildArgs(
@@ -374,6 +374,7 @@ class FfmpegService {
   Future<ConversionResult?> _simulateConversion(
     String inputPath, 
     String outputPath, 
+    ConversionPreset preset,
     ValueChanged<double>? onProgress
   ) async {
     try {
@@ -401,10 +402,16 @@ class FfmpegService {
       int compressedSize;
 
       if (inputExt != outputExt) {
-        // Write placeholder text to avoid corrupt media widgets
-        final placeholderText = 'Simulated conversion from $inputExt to $outputExt\nOriginal size: $size bytes';
-        await File(outputPath).writeAsString(placeholderText);
-        compressedSize = placeholderText.length;
+        if (preset == ConversionPreset.audioExtract || preset == ConversionPreset.audioCompressMP3) {
+          // Write placeholder text to avoid corrupt media widgets
+          final placeholderText = 'Simulated conversion from $inputExt to $outputExt\nOriginal size: $size bytes';
+          await File(outputPath).writeAsString(placeholderText);
+          compressedSize = placeholderText.length;
+        } else {
+          // For images/videos/gifs, copy the original file so it remains a valid media file
+          await originalFile.copy(outputPath);
+          compressedSize = (size * 0.8).toInt();
+        }
       } else {
         // Copy to simulate conversion
         await originalFile.copy(outputPath);

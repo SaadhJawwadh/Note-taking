@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/notification_service.dart';
 import '../services/local_ai_service.dart';
 
-enum NoteViewMode { list, masonryGrid, uniformGrid }
+enum NoteViewMode { list, grid }
 
 class SettingsProvider extends ChangeNotifier {
   double _textSize = 16.0;
@@ -22,12 +22,12 @@ class SettingsProvider extends ChangeNotifier {
   String _fontFamily = 'Rubik';
   String get fontFamily => _fontFamily;
 
-  NoteViewMode _noteViewMode = NoteViewMode.masonryGrid;
+  NoteViewMode _noteViewMode = NoteViewMode.grid;
 
   NoteViewMode get noteViewMode => _noteViewMode;
   
   // Legacy getter for broader compatibility
-  bool get isGridView => _noteViewMode == NoteViewMode.masonryGrid || _noteViewMode == NoteViewMode.uniformGrid;
+  bool get isGridView => _noteViewMode == NoteViewMode.grid;
 
   bool _showFinancialManager = false;
   bool get showFinancialManager => _showFinancialManager;
@@ -107,11 +107,17 @@ class SettingsProvider extends ChangeNotifier {
     _textSize = prefs.getDouble('textSize') ?? 16.0;
     _fontFamily = prefs.getString('fontFamily') ?? 'Rubik';
     final viewModeIndex = prefs.getInt('noteViewMode');
-    if (viewModeIndex != null && viewModeIndex >= 0 && viewModeIndex < NoteViewMode.values.length) {
-      _noteViewMode = NoteViewMode.values[viewModeIndex];
+    if (viewModeIndex != null) {
+      if (viewModeIndex >= 0 && viewModeIndex < NoteViewMode.values.length) {
+        _noteViewMode = NoteViewMode.values[viewModeIndex];
+      } else if (viewModeIndex == 2) {
+        _noteViewMode = NoteViewMode.grid;
+      } else {
+        _noteViewMode = NoteViewMode.grid;
+      }
     } else {
       final legacyGrid = prefs.getBool('isGridView') ?? true;
-      _noteViewMode = legacyGrid ? NoteViewMode.masonryGrid : NoteViewMode.list;
+      _noteViewMode = legacyGrid ? NoteViewMode.grid : NoteViewMode.list;
     }
     _showFinancialManager = prefs.getBool('showFinancialManager') ?? false;
     _showFileConverter = prefs.getBool('showFileConverter') ?? false;
@@ -261,7 +267,7 @@ class SettingsProvider extends ChangeNotifier {
 
   // Legacy fallback
   Future<void> setIsGridView(bool isGrid) async {
-    await setNoteViewMode(isGrid ? NoteViewMode.masonryGrid : NoteViewMode.list);
+    await setNoteViewMode(isGrid ? NoteViewMode.grid : NoteViewMode.list);
   }
 
   Future<void> setShowFinancialManager(bool show) async {
@@ -412,9 +418,11 @@ class SettingsProvider extends ChangeNotifier {
         if (font is String && font.isNotEmpty) await setFontFamily(font);
       }
       if (map.containsKey('noteViewMode')) {
-        final viewModeIdx = (map['noteViewMode'] as num?)?.toInt() ?? NoteViewMode.masonryGrid.index;
+        final viewModeIdx = (map['noteViewMode'] as num?)?.toInt() ?? NoteViewMode.grid.index;
         if (viewModeIdx >= 0 && viewModeIdx < NoteViewMode.values.length) {
           await setNoteViewMode(NoteViewMode.values[viewModeIdx]);
+        } else if (viewModeIdx == 2) {
+          await setNoteViewMode(NoteViewMode.grid);
         }
       } else if (map.containsKey('isGridView')) {
         final grid = map['isGridView'];
