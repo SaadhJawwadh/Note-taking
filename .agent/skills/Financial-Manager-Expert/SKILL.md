@@ -3,30 +3,18 @@ name: Financial-Manager-Expert
 description: Specialist in the Financial Management module, handling transaction tracking, SMS automated logging, categories, and financial reporting.
 ---
 
-## Use this skill when
-- Modifying `lib/screens/financial_manager_screen.dart` or related component files.
-- Updating `lib/data/transaction_model.dart` or `lib/data/transaction_category.dart`.
-- Refining SMS parsing logic in `lib/services/sms_service.dart`.
-- Adjusting financial search queries in `lib/data/database_helper.dart`.
+# Financial Manager Expert
 
-## Relevant Files
-- `lib/data/transaction_model.dart`
-- `lib/data/transaction_category.dart`
-- `lib/screens/financial_manager_screen.dart`
-- `lib/services/sms_service.dart`
-- `lib/services/sms_parser.dart` (Stateless regex parsing)
-- `lib/services/sms_constants.dart` (Centralized bank regexes)
-- `lib/data/database_helper.dart` (Financial queries)
+Use this skill when modifying the financial dashboard, category management, transaction editor, or SMS auto-sync.
 
-## Instructions
-- **SMS Pipeline**: Logic is decoupled into `SmsParser` (stateless parsing) and `SmsService` (permission/inbox management). Always centralize new bank regexes in `sms_constants.dart`.
-- **Reversal Detection**: Use `SmsConstants.reversalSentinel` (`__reversal__`) to identify and auto-delete cancelled or refunded transactions.
-- **Categorization**: Prefer user-defined rules over default keyword matching.
-- **UI Architecture**: Financial components must integrate with the main `NavigationBar` if enabled.
-- **Performance**: Use in-memory filtering for categories and search to ensure a "zero-lag" experience.
-- **SMS Deduplication**: Implement duplicate checks for incoming SMS (checking if a message with the exact same body and timestamp already exists, even if from a different address/sender) inside background isolates and foreground receivers to avoid duplicate transaction entries.
-- **Category Validation**: Ensure category names are validated in a case-insensitive manner to prevent name collisions when users create or edit transaction categories.
-- **Merchant Rules**: Allow multi-word keyword matching in rules rather than truncating/splitting keywords to the first word (e.g. support matching full strings like "Google Play Store").
-- **SMS Pre-Filtering & AI Parsing**: Use `isPotentiallyRelevant` to pre-filter messages (checking for amount patterns, valid senders, and transaction keywords, while excluding OTPs or cancellations) before calling Gemini Nano. The AI parsing pipeline (`parseSmsTransaction`) should extract amount, category, type (expense/income), and a professional description in a single LLM pass to minimize API latency and ensure user privacy.
+## 1. SMS Auto-Import Pipeline
+* **Decoupled Architecture**: SMS logic is separated into `SmsParser` (pure stateless regex text extraction) and `SmsService` (listener, notification dispatcher, and database transactions).
+* **Centralized Regexes**: All bank regexes, credit/debit keywords, and sender IDs must reside in `sms_constants.dart`.
+* **SMS Deduplication**: Skip logs if another identical transaction occurred within $\pm5$ minutes (cross-sender/duplicate check).
+* **Automatic Reversals**: Refund or reversal messages delete the matching target transaction within a 7-day window using the `__reversal__` sentinel.
+* **Pre-Filtering & AI Parsing**: Use `isPotentiallyRelevant` filters (check amounts, keywords) to skip OTPs/cancellations before calling Gemini Nano. The AI parser must return clean merchant name, category, and direction (income vs expense) in one JSON payload.
 
-
+## 2. Category & Keyword Rules
+* **Case-Insensitive Validation**: Validate category names case-insensitively when creating/editing to avoid duplicate naming collisions.
+* **Double-Level Matching**: Keywords match merchant names. Multi-word keywords (e.g. `"Keells Super"`) take precedence over single-word keywords (e.g. `"Keells"`) using cached matches.
+* **Inline Calculator**: Support mathematical operators (+, -, *, /) directly inside the amount field via `CalculatorDialog`.

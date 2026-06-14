@@ -3,22 +3,18 @@ name: Health-Tracker-Expert
 description: Specialist in the Health Tracker (Period Tracker) module, handling symptom logging, cycle predictions, intensity tracking, and privacy-first health data.
 ---
 
-## Use this skill when
-- Modifying `lib/screens/period_tracker_screen.dart`.
-- Updating `lib/data/period_log_model.dart`.
-- Refining cycle prediction algorithms.
-- Updating health-related search queries in `lib/data/database_helper.dart`.
+# Health Tracker Expert
 
-## Relevant Files
-- `lib/data/period_log_model.dart`
-- `lib/screens/period_tracker_screen.dart`
-- `lib/data/database_helper.dart` (Period log queries)
+Use this skill when modifying the menstrual calendar, symptoms log, dynamic cycle prediction algorithms, or local predictions notification scheduling.
 
-## Instructions
-- Prioritize privacy: Ensure health data remains local and is excluded from non-encrypted backups.
-- Cycle predictions should use a rolling average of at least the last 3-6 months.
-- Symptom logging UI should be tactile and use "Material You" seeds for visual comfort.
-- Global search results for health logs should be descriptive yet discreet.
-- Use `TableCalendar` or similar widgets for intuitive date selection.
-- **Retrospective Logging**: Allow users to perform retrospective symptom and flow intensity updates on any selected past log, rather than limiting responsive/interactive controls (such as SegmentedButton and symptom selection states) only to today's date.
+## 1. Cycle Predictions & Ovulation
+* **Predictions Average**: Cycle predictions must compute rolling averages from the last 3 to 7 logs, dynamically filtering out outliers (cycles $<15$ days or $>60$ days).
+* **Ovulation Window**: Calculate fertile/ovulation dates exactly 14 days prior to the estimated start date of the next period (standard luteal phase assumption).
 
+## 2. Calendar UI & Logging
+* **Retrospective Logging**: Enable users to log symptoms, notes, and flow intensity (Spotting, Light, Medium, Heavy) on any selected past date, not just today's date.
+* **Material You Blending**: Integrate soft Material You seed colors for the calendar states.
+
+## 3. Privacy & Alerts
+* **Offline Storage**: Health data is completely local and must be excluded from unencrypted backup exports.
+* **Discreet Alerts**: Local prediction notifications must use customizable discreet text (e.g. `"Check the app"`) to preserve absolute privacy.

@@ -1,43 +1,42 @@
 ---
 name: Tester
-description: A comprehensive testing skill that covers UI/UX consistency, codebase QA, security auditing, and DevOps release readiness.
+description: A comprehensive testing skill that covers UI/UX consistency, codebase QA, security auditing, and verification of settings and backups.
 ---
 
 # Tester Skill
 
-When instructed to use the Tester skill, you must execute the following roles and steps sequentially to ensure the highest quality before a release.
+Use this skill to execute QA verifications, unit/widget tests, security audits, and layout validations.
 
-## Phase 1: UI/UX Developer
-- Test all usability, user experience, accessibility, and UI component aspects.
-- Ensure the project strictly follows **Material Tree Expressive Design** by Google.
-- Verify multi-view layouts (e.g. Kanban, Masonry Grid, List) persist correctly and perform smoothly.
-- Test complex interactive widgets like `Dismissible` swipe actions (Archive/Trash) and ensure Undo functions correctly.
-- Test drag-and-drop states (e.g. Kanban drag to new columns) for both visual state and Database persistence.
-- Verify that all components across each page follow a consistent structure and provide a unified UI experience.
-- **Visual Validation**: Capture screenshots of the mobile emulator (`emulator-5554`) to visually verify layout consistency, colors, and accessibility. Run:
-  `~/Library/Android/sdk/platform-tools/adb exec-out screencap -p > "/Users/saadhjawwadh/.gemini/antigravity-ide/brain/6b6e4141-51ba-4f43-88ab-063d06b268f8/<filename>.png"`
-  to capture the rendering output and attach it to the release/walkthrough artifacts.
+## 1. UI/UX & Layout Verification
+* **Material Design 3**: Verify components follow dynamic Material You themes, container colors (`surfaceContainerLow` for cards, `surfaceContainerHigh` for dialogs), and shape specifications.
+* **Haptics and Snappiness**: Check that micro-animations (e.g. `OpenContainer` transitions) run smoothly and buttons provide tactile feedback.
+* **Overflow Protection**: Verify all dynamically generated text is wrapped appropriately (`Flexible`/`Expanded`) to prevent `RenderFlex overflow` issues.
+* **Visual Validation**: Capture screenshots of the mobile emulator (`emulator-5554`) to verify layouts:
+  ```bash
+  adb exec-out screencap -p > "screenshots/<filename>.png"
+  ```
 
+## 2. Codebase QA & Mocking
+* **Test Suite execution**: Always run the full local test suite:
+  ```bash
+  flutter test
+  ```
+* **Path Provider Mocking**: Unit or widget tests utilizing filesystem paths must mock the path provider channel inside `setUp`:
+  ```dart
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(
+    const MethodChannel('plugins.flutter.io/path_provider'),
+    (MethodCall methodCall) async => '.',
+  );
+  ```
+* **Context safety**: Ensure all asynchronous callback gates check `context.mounted` or state `mounted` before executing context operations.
 
-## Phase 2: QA Tester
-- Go through the entire codebase systematically, regardless of which files were edited most recently.
-- Test all existing files for any potential issues, bugs, logical flaws, or unhandled states.
-- If any issues are found, trigger a fix for them before proceeding to the next steps.
-- **Backup Completeness Audit**: Always verify that `backup_service.dart → generateBackupJson` uses `SettingsProvider.toBackupMap()` and NOT a hardcoded list of `SharedPreferences` keys. Hardcoded keys silently become incomplete each time a new setting is added to `SettingsProvider`. The canonical pattern is: `exportBackup(BuildContext)` calls `Provider.of<SettingsProvider>(...).toBackupMap()` and passes it as `settingsOverride` to `generateBackupJson`. The auto-backup isolate fallback path reads all keys from `SharedPreferences` directly; ensure this fallback list is also kept in sync with all settings fields.
-- **Settings Restore Audit**: Verify `SettingsProvider.restoreFromBackupMap` calls **setter methods** (e.g. `await setShowFinancialManager(show)`) and NOT direct private field assignments (e.g. `_showFinancialManager = show`). Direct field assignments skip `SharedPreferences` writes, causing all restored settings to be lost on the next app restart.
+## 3. Data Integrity & Backups Audit
+* **Backup Completeness**: Ensure `BackupService.generateBackupJson` uses `SettingsProvider.toBackupMap()` to export settings. Never hardcode individual SharedPreferences keys, which go stale as new options are added.
+* **Restore Operations**: Ensure `SettingsProvider.restoreFromBackupMap` calls **setter methods** (e.g., `await setShowFinancialManager(value)`) instead of assigning directly to private fields. Direct assignments skip saving to SharedPreferences, causing settings to revert on app restart.
+* **Database Upgrades**: Verify `onUpgrade` database migrations (especially schema/junction table changes) preserve existing user data.
 
-
-## Phase 3: Software Security Tester
-- Thoroughly check the system for vulnerabilities.
-- Audit the code for potential security or privacy issues (e.g., encryption flaws, exposed keys, unsafe data storage).
-
-## Phase 4: CI/CD Pipeline DevOps
-- **Android Release Consistency**: Ensure strict **JVM 17** targets are enforced across all subprojects to prevent `Inconsistent JVM Target` errors.
-- **Resource Management**: Verify `isShrinkResources = false` in `build.gradle.kts` if the app relies on dynamically referenced assets like `Rubik` fonts.
-- **ProGuard Integrity**: Audit `proguard-rules.pro` to ensure it `-keep`s essential native namespaces (e.g., `com.shounakmulay.telephony`, `net.sqlcipher`).
-- **Play Store Readiness**: Ensure the `release.yml` workflow builds both the Universal APK and the Play Store App Bundle (`.aab`).
-- **Database Migrations**: Rigorously test `onUpgrade` logic (e.g., v12 to v13 junction table migration) to ensure zero data loss for existing users.
-- **Dependency Audit**: Verify all core dependencies (like `Workmanager` 0.9.0) use their latest stable and compatible APIs.
-
-## Phase 5: Release Confirmation
-- **CRITICAL:** After all the above phases are successfully completed, you must **WAIT FOR EXPLICIT USER CONSENT** before pushing any tags or triggering any public release or deployment pipeline. Do not release the application without explicit user approval for that specific action.
+## 4. Security Auditing
+* **SQLCipher**: Confirm that database connections are always opened securely with the key from KeyStore.
+* **App Lock Screen**: Verify that background state detection locks the app after the idle timeout.
+* **Picker Lock Bypasses**: Verify that screens using platform file/image pickers implement `AppLockScreen.ignoreNextResumeLock()` so that returning from the OS picker dialog does not trigger the app lock and unmount the screen state.
