@@ -46,23 +46,27 @@ BUILD_NUMBER=$(( ${MAJOR:-0} * 10000 + ${MINOR:-0} * 100 + ${PATCH:-0} ))
 
 echo "Preparing Release $NEW_VERSION+$BUILD_NUMBER..."
 
-# 5. Update pubspec.yaml
+# 5. Extract release notes from CHANGELOG.md to RELEASE_NOTES.md
+echo "Extracting release notes from CHANGELOG.md..."
+awk "/## \[?$NEW_VERSION\]?/{flag=1;next} /## \[?[0-9]+\.[0-9]+\.[0-9]+\]?/{flag=0} flag" CHANGELOG.md > RELEASE_NOTES.md
+
+# 6. Update pubspec.yaml
 echo "Updating version in pubspec.yaml..."
 sed -i '' "s/version: .*/version: $NEW_VERSION+$BUILD_NUMBER/" pubspec.yaml
 
-# 6. Stage and Commit version bump
+# 7. Stage and Commit version bump
 echo "Staging changes..."
-git add pubspec.yaml CHANGELOG.md
+git add pubspec.yaml CHANGELOG.md RELEASE_NOTES.md
 git commit -m "chore(release): prepare release v$NEW_VERSION" || echo "No changes to commit, proceeding..."
 
-# 7. Tag (Force update to ensure it points to latest)
+# 8. Tag (Force update to ensure it points to latest)
 TAG="v$NEW_VERSION"
 echo "Tagging version $TAG..."
 git tag -d "$TAG" 2>/dev/null # Delete local tag if exists
 git push origin :refs/tags/"$TAG" 2>/dev/null # Delete remote tag if exists
 git tag -a "$TAG" -m "Release $TAG"
 
-# 8. Push
+# 9. Push
 echo "Pushing to GitHub..."
 git push origin main
 git push origin "$TAG"
