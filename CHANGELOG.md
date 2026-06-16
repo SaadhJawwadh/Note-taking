@@ -2,6 +2,13 @@
 
 All notable changes to Note Book are documented here.
 
+<!-- ## 1.35.0 -->
+## [1.35.0] - 2026-06-16
+
+### ✨ New Features
+- **Smart Checklists**: Implemented automatic checked item strikethroughs and contiguous bottom-sorting inside the rich text note editor.
+- **Selection/Cursor Mapping**: Keeps the cursor at the correct position during checklist item updates, preventing visual shifting or cursor jumps.
+
 <!-- ## 1.34.0 -->
 ## [1.34.0] - 2026-06-14
 
