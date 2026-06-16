@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 import '../data/settings_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/rich_text_utils.dart';
+import '../utils/quill_checklist_helper.dart';
 import 'dart:io';
 import 'package:any_link_preview/any_link_preview.dart';
 import '../services/local_ai_service.dart';
@@ -51,6 +52,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   List<String> _suggestedTags = [];
   Timer? _debounceTagTimer;
   bool _isAiProcessing = false;
+  bool _isUpdatingProgrammatically = false;
+  StreamSubscription? _docSubscription;
 
   @override
   void initState() {
@@ -83,10 +86,25 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     }
     _firstUrl = url;
 
+    // Initial checklist sync
+    QuillChecklistHelper.syncChecklists(_quillController);
+
     // Auto-save listeners
     _titleController.addListener(_onContentChanged);
     _quillController.addListener(_onContentChanged);
     _quillController.addListener(_onSelectionChanged); // Add selection listener
+
+    _docSubscription = _quillController.document.changes.listen((event) {
+      if (_isUpdatingProgrammatically) return;
+      _isUpdatingProgrammatically = true;
+      try {
+        QuillChecklistHelper.syncChecklists(_quillController);
+      } catch (e) {
+        debugPrint('Error syncing checklists: $e');
+      } finally {
+        _isUpdatingProgrammatically = false;
+      }
+    });
   }
 
   void _onSelectionChanged() {
@@ -222,6 +240,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
   @override
   void dispose() {
+    _docSubscription?.cancel();
     _debounce?.cancel();
     _debounceTagTimer?.cancel();
     _titleController.dispose();
