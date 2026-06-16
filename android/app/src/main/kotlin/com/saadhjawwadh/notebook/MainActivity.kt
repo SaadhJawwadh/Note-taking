@@ -1,4 +1,4 @@
-package com.example.note_taking_app
+package com.saadhjawwadh.notebook
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -17,7 +17,7 @@ import java.io.FileOutputStream
 import java.io.InputStream
 
 class MainActivity: FlutterFragmentActivity() {
-    private val CHANNEL = "com.example.note_taking_app/device_lock"
+    private val CHANNEL = "com.saadhjawwadh.notebook/device_lock"
     private var screenOffLock = false
     private var receiver: BroadcastReceiver? = null
 
@@ -76,7 +76,7 @@ class MainActivity: FlutterFragmentActivity() {
             @Suppress("DEPRECATION")
             powerManager.isScreenOn
         }
-
+ 
         if (!isInteractive) {
             return true
         }

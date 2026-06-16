@@ -15,7 +15,7 @@ import '../data/transaction_category.dart';
 import '../utils/rich_text_utils.dart';
 import 'sms_service.dart';
 
-const kAutoBackupTaskName = 'com.example.note_taking_app.autoBackup';
+const kAutoBackupTaskName = 'com.saadhjawwadh.notebook.autoBackup';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {

@@ -63,7 +63,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  static const MethodChannel _lockChannel = MethodChannel('com.example.note_taking_app/device_lock');
+  static const MethodChannel _lockChannel = MethodChannel('com.saadhjawwadh.notebook/device_lock');
 
   Future<void> _navigateToConverter(List<String> paths) async {
     AppLockScreen.unlockSession();

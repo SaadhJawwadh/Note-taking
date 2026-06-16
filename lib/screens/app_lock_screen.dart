@@ -42,7 +42,7 @@ class AppLockScreenState extends State<AppLockScreen>
   bool get _isSessionAuthenticated => AppLockScreen.sessionAuthenticated.value;
   set _isSessionAuthenticated(bool val) => AppLockScreen.sessionAuthenticated.value = val;
 
-  static const MethodChannel _channel = MethodChannel('com.example.note_taking_app/device_lock');
+  static const MethodChannel _channel = MethodChannel('com.saadhjawwadh.notebook/device_lock');
 
   Future<bool> _isDeviceLockedNative() async {
     if (kIsWeb) return false;
