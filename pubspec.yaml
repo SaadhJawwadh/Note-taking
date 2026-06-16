@@ -1,7 +1,7 @@
 name: note_taking_app
 description: A fully local offline-first note-taking and financial manager app with SMS auto-import.
 publish_to: "none"
-version: 1.35.0+13500
+version: 1.35.1+13501
 
 
 environment:
