@@ -40,3 +40,5 @@ Use this skill to execute QA verifications, unit/widget tests, security audits, 
 * **SQLCipher**: Confirm that database connections are always opened securely with the key from KeyStore.
 * **App Lock Screen**: Verify that background state detection locks the app after the idle timeout.
 * **Picker Lock Bypasses**: Verify that screens using platform file/image pickers implement `AppLockScreen.ignoreNextResumeLock()` so that returning from the OS picker dialog does not trigger the app lock and unmount the screen state.
+* **Secure Key Storage**: Never store database encryption keys or backups in unencrypted `SharedPreferences`. Migrate legacy backups to `FlutterSecureStorage` on launch and remove them from plaintext storage immediately to prevent leakage.
+* **Android Notifications Resource Resolution**: The `FlutterLocalNotificationsPlugin` looks for initialization icons in the app's `drawable` folder (e.g. `R.drawable.launcher_icon`). If the resource is only defined in `mipmap` directories, it will fail on startup with a `PlatformException(invalid_icon)`. Place a copy of the target icon inside the `drawable` folder to ensure successful native initialization.

@@ -9,7 +9,9 @@ Use this skill when modifying the file compression screen, FFmpeg commands, shar
 
 ## 1. Native Lite vs. FFmpeg Modes
 * **Hybrid Execution**: Support both native platform compression (Lite Mode) and advanced FFmpeg binary execution (FFmpeg Mode).
-* **Presets & Formats**: Map image scaling and JPEG quality settings in Lite Mode, and custom video format configurations (mp4, mkv, gif, webp) in FFmpeg Mode.
+* **Presets & Formats**: 
+  - Image Compression: Perform real, offline image manipulation in Lite Mode using `package:image` (decoding, resizing to max height/width, and re-encoding). Due to package limitations (`image` package supports decoding WebP but not encoding WebP), automatically fall back to JPG if WebP is selected as the output format.
+  - Video Compression: Implement high-clarity video profiles like `whatsappVideoHD` using H.264 profile and low Constant Rate Factor (`-c:v libx264 -preset medium -crf 22 -pix_fmt yuv420p`) to generate visually lossless, highly-compatible video packages optimized for native playback inside WhatsApp without triggering server re-encoding.
 * **Process Cleanup**: Ensure `FfmpegService.instance.cancelAll()` is invoked on screen disposal to clear background processes.
 
 ## 2. Simulation & Extensions Fallbacks
