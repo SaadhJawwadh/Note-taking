@@ -42,9 +42,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _scrollController.addListener(_scrollListener);
     
+    AppLockScreen.sessionAuthenticated.addListener(_handleSessionUnlock);
+
     _intentDataStreamSubscription = ReceiveSharingIntent.instance.getMediaStream().listen((List<SharedMediaFile> value) {
       if (value.isNotEmpty && mounted) {
-        _navigateToConverter(value.map((f) => f.path).toList());
+        _handleSharedPaths(value.map((f) => f.path).toList());
       }
     }, onError: (err) {
       debugPrint("getIntentDataStream error: $err");
@@ -52,10 +54,40 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     ReceiveSharingIntent.instance.getInitialMedia().then((List<SharedMediaFile> value) {
       if (value.isNotEmpty && mounted) {
-        _navigateToConverter(value.map((f) => f.path).toList());
+        _handleSharedPaths(value.map((f) => f.path).toList());
       }
       ReceiveSharingIntent.instance.reset();
     });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _checkAndProcessPendingIntents();
+      }
+    });
+  }
+
+  void _handleSharedPaths(List<String> paths) {
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
+    final bool isLocked = settings.appLockEnabled && !AppLockScreen.sessionAuthenticated.value;
+    if (isLocked) {
+      AppLockScreen.pendingSharedPaths = paths;
+    } else {
+      _navigateToConverter(paths);
+    }
+  }
+
+  void _handleSessionUnlock() {
+    if (AppLockScreen.sessionAuthenticated.value && mounted) {
+      _checkAndProcessPendingIntents();
+    }
+  }
+
+  void _checkAndProcessPendingIntents() {
+    if (AppLockScreen.pendingSharedPaths != null && AppLockScreen.pendingSharedPaths!.isNotEmpty) {
+      final paths = AppLockScreen.pendingSharedPaths!;
+      AppLockScreen.pendingSharedPaths = null;
+      _navigateToConverter(paths);
+    }
   }
 
   @override
@@ -68,7 +100,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   static const MethodChannel _lockChannel = MethodChannel('com.saadhjawwadh.notebook/device_lock');
 
   Future<void> _navigateToConverter(List<String> paths) async {
-    AppLockScreen.unlockSession();
     final resolvedPaths = <String>[];
     for (final path in paths) {
       if (path.startsWith('content://')) {
@@ -101,6 +132,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void dispose() {
     _intentDataStreamSubscription.cancel();
     _scrollController.dispose();
+    AppLockScreen.sessionAuthenticated.removeListener(_handleSessionUnlock);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }

@@ -15,6 +15,7 @@ class AppLockScreen extends StatefulWidget {
   
   static final ValueNotifier<bool> sessionAuthenticated = ValueNotifier<bool>(false);
   static bool _ignoreNextResumeLock = false;
+  static List<String>? pendingSharedPaths;
 
   // Static helper to manually unlock the session (useful for sharing)
   static void unlockSession() {
@@ -65,14 +66,14 @@ class AppLockScreenState extends State<AppLockScreen>
     AppLockScreen.sessionAuthenticated.addListener(_onAuthChanged);
     _intentDataStreamSubscription = ReceiveSharingIntent.instance.getMediaStream().listen((value) {
       if (value.isNotEmpty) {
-        AppLockScreen.unlockSession();
+        AppLockScreen.pendingSharedPaths = value.map((f) => f.path).toList();
       }
     });
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         final media = await ReceiveSharingIntent.instance.getInitialMedia();
         if (media.isNotEmpty) {
-          AppLockScreen.unlockSession();
+          AppLockScreen.pendingSharedPaths = media.map((f) => f.path).toList();
         }
       } catch (e) {
         debugPrint('Error checking initial media on lock screen start: $e');
