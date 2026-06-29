@@ -98,6 +98,12 @@ class SettingsProvider extends ChangeNotifier {
   bool _isDeviceAiSupported = false;
   bool get isDeviceAiSupported => _isDeviceAiSupported;
 
+  bool _hasSeenOnboarding = false;
+  bool get hasSeenOnboarding => _hasSeenOnboarding;
+
+  bool _isInitialized = false;
+  bool get isInitialized => _isInitialized;
+
   SettingsProvider() {
     loadSettings();
   }
@@ -146,9 +152,19 @@ class SettingsProvider extends ChangeNotifier {
     _keepMetadata = prefs.getBool('keepMetadata') ?? false;
     _useOnDeviceAi = prefs.getBool('useOnDeviceAi') ?? false;
 
+    _hasSeenOnboarding = prefs.getBool('hasSeenOnboarding_v1') ?? false;
+
     final themeIndex = prefs.getInt('themeMode') ?? 0;
     _themeMode = _getThemeModeFromInt(themeIndex);
 
+    _isInitialized = true;
+    notifyListeners();
+  }
+
+  Future<void> setHasSeenOnboarding(bool seen) async {
+    _hasSeenOnboarding = seen;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('hasSeenOnboarding_v1', seen);
     notifyListeners();
   }
 

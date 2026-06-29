@@ -21,6 +21,7 @@ import 'period_tracker_screen.dart';
 import 'app_lock_screen.dart';
 import '../data/repositories/note_repository.dart';
 import '../widgets/bouncing_widget.dart';
+import '../widgets/onboarding_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -33,6 +34,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _currentIndex = 0;
   final ScrollController _scrollController = ScrollController();
   late StreamSubscription _intentDataStreamSubscription;
+  bool _onboardingChecked = false;
 
   @override
   void initState() {
@@ -269,9 +271,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  void _showOnboardingSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const OnboardingSheet(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<SettingsProvider>(builder: (context, settings, child) {
+      if (settings.isInitialized && !settings.hasSeenOnboarding && !_onboardingChecked) {
+        _onboardingChecked = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _showOnboardingSheet();
+        });
+      }
+      
       final bool hasExtraFeatures = settings.showFinancialManager || settings.isPeriodTrackerEnabled || settings.showFileConverter;
       
       if (!hasExtraFeatures) return _buildNotesScaffold(context, settings);
