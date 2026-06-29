@@ -21,8 +21,8 @@ All notable changes to Note Book are documented here.
 - **Material 3 Consistent Dialogs**: Standardized custom currency and notification alert pickers to use Material 3 surface colors.
 - **Android Notifications Icon**: Fixed a startup PlatformException by copying the launcher icon asset to Android's drawable resource path.
 
-<!-- ## 1.35.0 -->
-## [1.35.0] - 2026-06-16
+<!-- ## 1.35.1 -->
+## [1.35.1] - 2026-06-16
 
 ### ✨ New Features
 - **Smart Checklists**: Implemented automatic checked item strikethroughs and contiguous bottom-sorting inside the rich text note editor.
