@@ -668,6 +668,8 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
                   // ── Result Section ──
                   if (_results.isNotEmpty) ...[
                     const SizedBox(height: 32),
+                    _SavingsDashboard(results: _results),
+                    const SizedBox(height: 32),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -755,10 +757,21 @@ class _ResultCard extends StatelessWidget {
     required this.onSave,
   });
 
+  void _showComparisonDialog(BuildContext context, ConversionResult result) {
+    showDialog(
+      context: context,
+      useRootNavigator: true,
+      builder: (context) => _ImageComparisonDialog(result: result),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isSmaller = result.compressedSizeBytes < result.originalSizeBytes;
+    
+    final ext = p.extension(result.outputPath).toLowerCase();
+    final isImage = ['.jpg', '.jpeg', '.png', '.webp', '.bmp'].contains(ext);
 
     return Card(
       elevation: 0,
@@ -811,6 +824,23 @@ class _ResultCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 20),
+            if (isImage) ...[
+              OutlinedButton.icon(
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  _showComparisonDialog(context, result);
+                },
+                icon: const Icon(Icons.compare_rounded),
+                label: const Text('Compare Quality'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             Row(
               children: [
                 Expanded(
@@ -886,4 +916,288 @@ class _SizeChip extends StatelessWidget {
       ),
     );
   }
+}
+
+// ─────────────────────────────────────
+//  Savings Dashboard Widget
+// ─────────────────────────────────────
+class _SavingsDashboard extends StatelessWidget {
+  final List<ConversionResult> results;
+  const _SavingsDashboard({required this.results});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    int totalOriginal = results.fold(0, (sum, r) => sum + r.originalSizeBytes);
+    int totalCompressed = results.fold(0, (sum, r) => sum + r.compressedSizeBytes);
+    int totalSaved = totalOriginal - totalCompressed;
+    if (totalSaved < 0) totalSaved = 0;
+    double savedPercent = totalOriginal > 0 ? (totalSaved / totalOriginal) * 100 : 0.0;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            cs.primaryContainer.withValues(alpha: 0.25),
+            cs.secondaryContainer.withValues(alpha: 0.1),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: cs.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.auto_awesome_rounded, color: cs.primary, size: 24),
+              const SizedBox(width: 8),
+              Text(
+                'Space Savings Dashboard',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: cs.onSurface,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Total Space Saved',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    ConversionResult.formatBytes(totalSaved),
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          color: cs.primary,
+                        ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: cs.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${savedPercent.toStringAsFixed(1)}% Saved',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: cs.primary,
+                      ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: totalOriginal > 0 ? totalCompressed / totalOriginal : 0.0,
+              minHeight: 10,
+              backgroundColor: cs.primary.withValues(alpha: 0.1),
+              valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Original: ${ConversionResult.formatBytes(totalOriginal)}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+              ),
+              Text(
+                'Compressed: ${ConversionResult.formatBytes(totalCompressed)}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────
+//  Visual Image Comparison Dialog
+// ─────────────────────────────────────
+class _ImageComparisonDialog extends StatefulWidget {
+  final ConversionResult result;
+  const _ImageComparisonDialog({required this.result});
+
+  @override
+  State<_ImageComparisonDialog> createState() => _ImageComparisonDialogState();
+}
+
+class _ImageComparisonDialogState extends State<_ImageComparisonDialog> {
+  double _sliderValue = 0.5;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    
+    return Dialog.fullscreen(
+      backgroundColor: Colors.black,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+          title: const Text('Visual Comparison'),
+          leading: IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.pop(context),
+          ),
+          actions: [
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16.0),
+                child: Text(
+                  'Original (Left)  |  Compressed (Right)',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70),
+                ),
+              ),
+            ),
+          ],
+        ),
+        body: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final originalFile = File(widget.result.originalPath);
+                        final compressedFile = File(widget.result.outputPath);
+                        
+                        return Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // Compressed image (background)
+                            Image.file(
+                              compressedFile,
+                              fit: BoxFit.contain,
+                              width: constraints.maxWidth,
+                              height: constraints.maxHeight,
+                            ),
+                            // Original image (foreground, clipped)
+                            ClipRect(
+                              clipper: _SideBySideClipper(_sliderValue),
+                              child: Image.file(
+                                originalFile,
+                                fit: BoxFit.contain,
+                                width: constraints.maxWidth,
+                                height: constraints.maxHeight,
+                              ),
+                            ),
+                            // Sliding divider handle line
+                            Positioned.fill(
+                              child: FractionalTranslation(
+                                translation: const Offset(-0.5, 0),
+                                child: Align(
+                                  alignment: Alignment(2.0 * _sliderValue - 1.0, 0.0),
+                                  child: Container(
+                                    width: 2,
+                                    color: cs.primary,
+                                    height: constraints.maxHeight,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            // Sliding divider handle drag circle
+                            Positioned.fill(
+                              child: FractionalTranslation(
+                                translation: const Offset(-0.5, 0),
+                                child: Align(
+                                  alignment: Alignment(2.0 * _sliderValue - 1.0, 0.0),
+                                  child: GestureDetector(
+                                    behavior: HitTestBehavior.translucent,
+                                    onHorizontalDragUpdate: (details) {
+                                      setState(() {
+                                        _sliderValue = (_sliderValue + details.delta.dx / constraints.maxWidth).clamp(0.0, 1.0);
+                                      });
+                                    },
+                                    child: CircleAvatar(
+                                      backgroundColor: cs.primary,
+                                      radius: 20,
+                                      child: const Icon(Icons.unfold_more_rounded, color: Colors.white, size: 24),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              Container(
+                color: cs.surfaceContainerLowest,
+                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Original: ${widget.result.originalSizeFormatted}',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          'Compressed: ${widget.result.compressedSizeFormatted}',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold, color: cs.primary),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Slider(
+                      value: _sliderValue,
+                      activeColor: cs.primary,
+                      inactiveColor: cs.outlineVariant,
+                      onChanged: (v) => setState(() => _sliderValue = v),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SideBySideClipper extends CustomClipper<Rect> {
+  final double clipRatio;
+  _SideBySideClipper(this.clipRatio);
+
+  @override
+  Rect getClip(Size size) {
+    return Rect.fromLTWH(0, 0, size.width * clipRatio, size.height);
+  }
+
+  @override
+  bool shouldReclip(_SideBySideClipper oldClipper) => oldClipper.clipRatio != clipRatio;
 }

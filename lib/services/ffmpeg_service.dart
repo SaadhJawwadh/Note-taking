@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:image/image.dart' as img;
 import '../data/settings_provider.dart';
 import 'ffmpeg_install_service.dart';
 
@@ -15,6 +16,7 @@ enum ConversionPreset {
   socialVideo720p,
   socialVideoCompress,
   videoToGif,
+  whatsappVideoHD,
   // ─── Gif ───
   gifToVideo,
   gifCompress,
@@ -35,6 +37,8 @@ extension ConversionPresetExtension on ConversionPreset {
         return 'Compress (keep resolution)';
       case ConversionPreset.videoToGif:
         return 'Convert to GIF';
+      case ConversionPreset.whatsappVideoHD:
+        return 'WhatsApp HD Video';
       case ConversionPreset.gifToVideo:
         return 'Convert to Video (MP4)';
       case ConversionPreset.gifCompress:
@@ -58,6 +62,8 @@ extension ConversionPresetExtension on ConversionPreset {
         return '🗜️';
       case ConversionPreset.videoToGif:
         return '🎞️';
+      case ConversionPreset.whatsappVideoHD:
+        return '💬';
       case ConversionPreset.gifToVideo:
         return '🎬';
       case ConversionPreset.gifCompress:
@@ -81,6 +87,8 @@ extension ConversionPresetExtension on ConversionPreset {
         return 'H.264, CRF 32, original res + strip metadata';
       case ConversionPreset.videoToGif:
         return 'Animated GIF, 10fps, 480px wide';
+      case ConversionPreset.whatsappVideoHD:
+        return 'High clarity, H.264 High Profile, CRF 22, 1080p';
       case ConversionPreset.gifToVideo:
         return 'MP4 Loop, high compatibility';
       case ConversionPreset.gifCompress:
@@ -101,6 +109,7 @@ extension ConversionPresetExtension on ConversionPreset {
       case ConversionPreset.socialVideo720p:
       case ConversionPreset.socialVideoCompress:
       case ConversionPreset.videoToGif:
+      case ConversionPreset.whatsappVideoHD:
         return MediaType.video;
       case ConversionPreset.gifToVideo:
       case ConversionPreset.gifCompress:
@@ -119,11 +128,13 @@ extension ConversionPresetExtension on ConversionPreset {
 //  Conversion Result — carries size delta info
 // ──────────────────────────────────────────────
 class ConversionResult {
+  final String originalPath;
   final String outputPath;
   final int originalSizeBytes;
   final int compressedSizeBytes;
 
   ConversionResult({
+    required this.originalPath,
     required this.outputPath,
     required this.originalSizeBytes,
     required this.compressedSizeBytes,
@@ -201,6 +212,7 @@ class FfmpegService {
       case ConversionPreset.socialVideo720p:
       case ConversionPreset.socialVideoCompress:
       case ConversionPreset.gifToVideo:
+      case ConversionPreset.whatsappVideoHD:
         ext = '.${settings.preferredVideoFormat}';
         break;
       case ConversionPreset.videoToGif:
@@ -267,6 +279,14 @@ class FfmpegService {
           '-c:a', 'aac', '-b:a', '96k',
         ]);
         break;
+      case ConversionPreset.whatsappVideoHD:
+        args.addAll([
+          '-vf', resScale ?? 'format=yuv420p',
+          '-c:v', 'libx264', '-preset', 'medium', '-crf', '22',
+          '-profile:v', 'high', '-level:v', '4.0', '-pix_fmt', 'yuv420p',
+          '-c:a', 'aac', '-b:a', '128k',
+        ]);
+        break;
       case ConversionPreset.videoToGif:
         args.addAll(['-vf', 'fps=10,scale=480:-1:flags=lanczos']);
         break;
@@ -309,7 +329,7 @@ class FfmpegService {
     // Lite Mode: Always simulate to avoid heavy FFmpeg usage/download
     if (settings.isConverterLite) {
        debugPrint('Converter Lite Mode active. Simulating...');
-       return _simulateConversion(inputPath, outputPath, preset, onProgress);
+       return _simulateConversion(inputPath, outputPath, preset, settings, onProgress);
     }
 
     // Check for engine binaries
@@ -322,7 +342,7 @@ class FfmpegService {
     // Prototype mode: Simulation if binary doesn't actually exist
     if (!await File(binaryPath).exists()) {
        debugPrint('Engine file not found at $binaryPath. Simulating conversion...');
-       return _simulateConversion(inputPath, outputPath, preset, onProgress);
+       return _simulateConversion(inputPath, outputPath, preset, settings, onProgress);
     }
 
     final args = _buildArgs(
@@ -355,6 +375,7 @@ class FfmpegService {
         if (await outputFile.exists()) {
           final compressedSize = await outputFile.length();
           return ConversionResult(
+            originalPath: inputPath,
             outputPath: outputPath,
             originalSizeBytes: originalSize,
             compressedSizeBytes: compressedSize,
@@ -375,6 +396,7 @@ class FfmpegService {
     String inputPath, 
     String outputPath, 
     ConversionPreset preset,
+    SettingsProvider settings,
     ValueChanged<double>? onProgress
   ) async {
     try {
@@ -401,24 +423,70 @@ class FfmpegService {
       final size = await originalFile.length();
       int compressedSize;
 
-      if (inputExt != outputExt) {
-        if (preset == ConversionPreset.audioExtract || preset == ConversionPreset.audioCompressMP3) {
-          // Write placeholder text to avoid corrupt media widgets
-          final placeholderText = 'Simulated conversion from $inputExt to $outputExt\nOriginal size: $size bytes';
-          await File(outputPath).writeAsString(placeholderText);
-          compressedSize = placeholderText.length;
+      if (preset.mediaType == MediaType.image) {
+        // REAL offline image compression using Dart image package
+        final bytes = await originalFile.readAsBytes();
+        final image = img.decodeImage(bytes);
+        if (image != null) {
+          img.Image resized = image;
+          int? targetWidth;
+          
+          if (preset == ConversionPreset.imageResizeSocial) {
+            targetWidth = 1080;
+          } else {
+            // Apply resolution limits from settings if necessary
+            switch (settings.videoResolutionLimit) {
+              case '1080p':
+                if (image.width > 1080) targetWidth = 1080;
+                break;
+              case '720p':
+                if (image.width > 720) targetWidth = 720;
+                break;
+              case '480p':
+                if (image.width > 480) targetWidth = 480;
+                break;
+            }
+          }
+
+          if (targetWidth != null && image.width > targetWidth) {
+            resized = img.copyResize(image, width: targetWidth);
+          }
+
+          List<int> compressedBytes;
+          final format = settings.preferredImageFormat.toLowerCase();
+          if (format == 'png') {
+            compressedBytes = img.encodePng(resized, level: 6);
+          } else {
+            // WebP is not supported for writing by package:image, fallback to JPEG
+            compressedBytes = img.encodeJpg(resized, quality: 80);
+          }
+
+          await File(outputPath).writeAsBytes(compressedBytes);
+          compressedSize = compressedBytes.length;
         } else {
-          // For images/videos/gifs, copy the original file so it remains a valid media file
+          // Fallback if decode fails
           await originalFile.copy(outputPath);
           compressedSize = (size * 0.8).toInt();
         }
       } else {
-        // Copy to simulate conversion
-        await originalFile.copy(outputPath);
-        compressedSize = (size * 0.8).toInt();
+        // Videos and Audios fallback to copying or mock content
+        if (inputExt != outputExt) {
+          if (preset == ConversionPreset.audioExtract || preset == ConversionPreset.audioCompressMP3) {
+            final placeholderText = 'Simulated conversion from $inputExt to $outputExt\nOriginal size: $size bytes';
+            await File(outputPath).writeAsString(placeholderText);
+            compressedSize = placeholderText.length;
+          } else {
+            await originalFile.copy(outputPath);
+            compressedSize = (size * 0.8).toInt();
+          }
+        } else {
+          await originalFile.copy(outputPath);
+          compressedSize = (size * 0.8).toInt();
+        }
       }
       
       return ConversionResult(
+        originalPath: inputPath,
         outputPath: outputPath,
         originalSizeBytes: size,
         compressedSizeBytes: compressedSize,

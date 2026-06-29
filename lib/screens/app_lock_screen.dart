@@ -110,24 +110,23 @@ class AppLockScreenState extends State<AppLockScreen>
       // Ignore lifecycle changes caused by the biometric authentication dialog itself
       return;
     }
-    setState(() {
-      if (isBackground) {
-        // Record when the app went to the background
-        _backgroundTime ??= DateTime.now();
-      } else {
-        // App is resuming
-        if (AppLockScreen._ignoreNextResumeLock) {
-          AppLockScreen._ignoreNextResumeLock = false;
-        } else if (_backgroundTime != null) {
-          final settings = Provider.of<SettingsProvider>(context, listen: false);
-          final elapsed = DateTime.now().difference(_backgroundTime!).inSeconds;
-          if (elapsed >= settings.appLockTimeout) {
-            _isSessionAuthenticated = false;
-          }
+
+    if (isBackground) {
+      // Record when the app went to the background
+      _backgroundTime ??= DateTime.now();
+    } else {
+      // App is resuming
+      if (AppLockScreen._ignoreNextResumeLock) {
+        AppLockScreen._ignoreNextResumeLock = false;
+      } else if (_backgroundTime != null) {
+        final settings = Provider.of<SettingsProvider>(context, listen: false);
+        final elapsed = DateTime.now().difference(_backgroundTime!).inSeconds;
+        if (elapsed >= settings.appLockTimeout) {
+          _isSessionAuthenticated = false;
         }
-        _backgroundTime = null;
       }
-    });
+      _backgroundTime = null;
+    }
 
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       unawaited(_checkDeviceLockOnBackground());

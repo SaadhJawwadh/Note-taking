@@ -370,6 +370,7 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
         title: const Text('Select Currency'),
         content: SizedBox(
           width: double.maxFinite,
@@ -392,6 +393,7 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
         title: const Text('Discreet Notification'),
         content: TextField(controller: controller, decoration: const InputDecoration(hintText: 'e.g., Check the app', labelText: 'Alert Text')),
         actions: [

@@ -55,13 +55,16 @@ class DatabaseHelper {
 
     final prefs = await SharedPreferences.getInstance();
     
-    if (key == null || key.isEmpty) {
-      key = prefs.getString('db_encryption_key_backup');
-      if (key != null && key.isNotEmpty) {
+    // Migrate key from SharedPreferences if it exists, then delete it to prevent leakage
+    final backupKey = prefs.getString('db_encryption_key_backup');
+    if (backupKey != null && backupKey.isNotEmpty) {
+      if (key == null || key.isEmpty) {
+        key = backupKey;
         try {
           await _secureStorage.write(key: _keyStorageKey, value: key);
         } catch (_) {}
       }
+      await prefs.remove('db_encryption_key_backup');
     }
 
     if (key == null || key.isEmpty) {
@@ -72,12 +75,6 @@ class DatabaseHelper {
       try {
         await _secureStorage.write(key: _keyStorageKey, value: key);
       } catch (_) {}
-      await prefs.setString('db_encryption_key_backup', key);
-    } else {
-      final existingFallback = prefs.getString('db_encryption_key_backup');
-      if (existingFallback != key) {
-        await prefs.setString('db_encryption_key_backup', key);
-      }
     }
     return key;
   }
