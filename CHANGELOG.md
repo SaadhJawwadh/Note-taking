@@ -2,6 +2,12 @@
 
 All notable changes to Note Book are documented here.
 
+<!-- ## 1.36.1 -->
+## [1.36.1] - 2026-07-06
+
+### 🐛 Bug Fixes & Refactoring
+- **Android 15 Edge-to-Edge Compatibility**: Resolved Play Store warning regarding deprecated window APIs by removing `android:windowFullscreen` and `android:windowDrawsSystemBarBackgrounds` parameters from the XML themes.
+
 <!-- ## 1.36.0 -->
 ## [1.36.0] - 2026-06-29
 
