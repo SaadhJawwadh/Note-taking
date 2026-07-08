@@ -4,6 +4,7 @@ import '../transaction_model.dart';
 import '../database_constants.dart';
 import '../category_definition.dart';
 import '../sms_contact.dart';
+import '../../utils/widget_helper.dart';
 
 class TransactionRepository {
   static final TransactionRepository instance = TransactionRepository._init();
@@ -17,13 +18,20 @@ class TransactionRepository {
   Future<TransactionModel> createTransaction(TransactionModel transaction) async {
     final db = await _db;
     final id = await db.insert(TableNames.transactions, transaction.toJson());
-    return transaction.copy(id: id);
+    final result = transaction.copy(id: id);
+    await WidgetHelper.updateWidgetData();
+    return result;
   }
 
   Future<TransactionModel?> createSmsTransaction(TransactionModel transaction) async {
     final db = await _db;
     final id = await db.insert(TableNames.transactions, transaction.toJson(), conflictAlgorithm: ConflictAlgorithm.ignore);
-    return id > 0 ? transaction.copy(id: id) : null;
+    if (id > 0) {
+      final result = transaction.copy(id: id);
+      await WidgetHelper.updateWidgetData();
+      return result;
+    }
+    return null;
   }
 
   Future<TransactionModel?> readTransaction(int id) async {
@@ -40,12 +48,20 @@ class TransactionRepository {
 
   Future<int> updateTransaction(TransactionModel transaction) async {
     final db = await _db;
-    return await db.update(TableNames.transactions, transaction.toJson(), where: '${TransactionFields.id} = ?', whereArgs: [transaction.id]);
+    final count = await db.update(TableNames.transactions, transaction.toJson(), where: '${TransactionFields.id} = ?', whereArgs: [transaction.id]);
+    if (count > 0) {
+      await WidgetHelper.updateWidgetData();
+    }
+    return count;
   }
 
   Future<int> deleteTransaction(int id) async {
     final db = await _db;
-    return await db.delete(TableNames.transactions, where: '${TransactionFields.id} = ?', whereArgs: [id]);
+    final count = await db.delete(TableNames.transactions, where: '${TransactionFields.id} = ?', whereArgs: [id]);
+    if (count > 0) {
+      await WidgetHelper.updateWidgetData();
+    }
+    return count;
   }
 
   Future<List<TransactionModel>> searchTransactions(String keyword) async {

@@ -19,6 +19,7 @@ import 'file_converter_screen.dart';
 import 'financial_manager_screen.dart';
 import 'period_tracker_screen.dart';
 import 'app_lock_screen.dart';
+import 'transaction_editor_screen.dart';
 import '../data/repositories/note_repository.dart';
 import '../widgets/bouncing_widget.dart';
 import '../widgets/onboarding_sheet.dart';
@@ -82,11 +83,45 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  void _checkAndProcessPendingIntents() {
+  Future<void> _checkAndProcessPendingIntents() async {
     if (AppLockScreen.pendingSharedPaths != null && AppLockScreen.pendingSharedPaths!.isNotEmpty) {
       final paths = AppLockScreen.pendingSharedPaths!;
       AppLockScreen.pendingSharedPaths = null;
-      _navigateToConverter(paths);
+      unawaited(_navigateToConverter(paths));
+      return;
+    }
+
+    try {
+      const widgetChannel = MethodChannel('com.saadhjawwadh.notebook/widget');
+      final String? action = await widgetChannel.invokeMethod<String>('getPendingAction');
+      if (action == 'add_transaction' && mounted) {
+        final settings = Provider.of<SettingsProvider>(context, listen: false);
+        if (settings.showFinancialManager) {
+          final List<Widget> destinations = _buildDestinations(settings);
+          int financesIndex = -1;
+          for (int i = 0; i < destinations.length; i++) {
+            if (destinations[i] is FinancialManagerScreen) {
+              financesIndex = i;
+              break;
+            }
+          }
+          if (financesIndex != -1) {
+            setState(() {
+              _currentIndex = financesIndex;
+            });
+          }
+        }
+        if (mounted) {
+          unawaited(
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const TransactionEditorScreen()),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error getting pending widget action: $e');
     }
   }
 
@@ -94,6 +129,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && mounted) {
       context.read<NoteProvider>().refreshNotes();
+      final settings = Provider.of<SettingsProvider>(context, listen: false);
+      final bool isLocked = settings.appLockEnabled && !AppLockScreen.sessionAuthenticated.value;
+      if (!isLocked) {
+        _checkAndProcessPendingIntents();
+      }
     }
   }
 
@@ -329,7 +369,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (!hasExtraFeatures) return _buildNotesScaffold(context, settings);
 
       final List<Widget> destinations = _buildDestinations(settings);
-      if (_currentIndex >= destinations.length) _currentIndex = destinations.length - 1;
+      _currentIndex = _currentIndex.clamp(0, destinations.length - 1);
 
       return Scaffold(
         body: IndexedStack(

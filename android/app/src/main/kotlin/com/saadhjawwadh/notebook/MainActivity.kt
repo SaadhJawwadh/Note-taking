@@ -15,14 +15,19 @@ import android.net.Uri
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 
 class MainActivity: FlutterFragmentActivity() {
     private val CHANNEL = "com.saadhjawwadh.notebook/device_lock"
+    private val WIDGET_CHANNEL = "com.saadhjawwadh.notebook/widget"
     private var screenOffLock = false
     private var receiver: BroadcastReceiver? = null
+    private var pendingWidgetAction: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handleIntent(intent)
         val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
         receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
@@ -30,6 +35,17 @@ class MainActivity: FlutterFragmentActivity() {
             }
         }
         registerReceiver(receiver, filter)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        if (intent?.action == "com.saadhjawwadh.notebook.ADD_TRANSACTION") {
+            pendingWidgetAction = "add_transaction"
+        }
     }
 
     override fun onDestroy() {
@@ -62,6 +78,30 @@ class MainActivity: FlutterFragmentActivity() {
                 }
             } else {
                 result.notImplemented()
+            }
+        }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, WIDGET_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "updateWidget" -> {
+                    val context = this@MainActivity
+                    val intent = Intent(context, FinanceWidgetProvider::class.java).apply {
+                        action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                    }
+                    val ids = AppWidgetManager.getInstance(context).getAppWidgetIds(
+                        ComponentName(context, FinanceWidgetProvider::class.java)
+                    )
+                    intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+                    context.sendBroadcast(intent)
+                    result.success(true)
+                }
+                "getPendingAction" -> {
+                    result.success(pendingWidgetAction)
+                    pendingWidgetAction = null
+                }
+                else -> {
+                    result.notImplemented()
+                }
             }
         }
     }

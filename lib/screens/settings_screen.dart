@@ -13,6 +13,7 @@ import 'category_management_screen.dart';
 import 'sms_contacts_screen.dart';
 import 'sms_rules_screen.dart';
 import '../utils/app_constants.dart';
+import '../utils/widget_helper.dart';
 import 'package:file_picker/file_picker.dart';
 import 'app_lock_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -380,7 +381,7 @@ class SettingsScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final currency = AppConstants.currencies[index];
               // ignore: deprecated_member_use
-              return RadioListTile<String>(title: Text(currency), value: currency, groupValue: settings.currency, onChanged: (v) { settings.setCurrency(v!); Navigator.pop(context); });
+              return RadioListTile<String>(title: Text(currency), value: currency, groupValue: settings.currency, onChanged: (v) { settings.setCurrency(v!); WidgetHelper.updateWidgetData(); Navigator.pop(context); });
             },
           ),
         ),

@@ -13,6 +13,7 @@ import 'package:provider/provider.dart';
 import '../data/settings_provider.dart';
 import '../data/transaction_category.dart';
 import '../utils/rich_text_utils.dart';
+import '../utils/widget_helper.dart';
 import 'sms_service.dart';
 
 const kAutoBackupTaskName = 'com.saadhjawwadh.notebook.autoBackup';
@@ -278,6 +279,7 @@ class BackupService {
 
       await TransactionCategory.reload();
       await SmsService.reloadSmsContacts();
+      await WidgetHelper.updateWidgetData();
 
       if (context.mounted && data.containsKey('settings')) {
         await Provider.of<SettingsProvider>(context, listen: false).restoreFromBackupMap(Map<String, dynamic>.from(data['settings'] as Map));
