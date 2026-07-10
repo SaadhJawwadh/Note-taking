@@ -1,10 +1,7 @@
 
-### ✨ New Features
-- **Material 3 Finance Home Screen Widget**: Designed a resizable home screen widget displaying Today's spent, Monthly spent, and Monthly income.
-- **Recent Transactions Feed**: Shows the top 3 recent transactions directly on the widget with dynamic text colors indicating debit/credit status.
-- **Quick-Add Deep Linking**: Added a direct shortcut "+" button on the widget to deep link into the transaction editor with automatic lockscreen security gating.
-- **Material You Design Integration**: Supports full Material You dynamic colors and M3 standard 28dp rounded corners on Android 12+ (API 31+).
-
-### 🐛 Bug Fixes & Refactoring
-- **RemoteViews Inflation Crash**: Resolved launcher crashes by replacing generic `<View>` elements with allowed layout views (e.g. `<FrameLayout>`).
+### ✨ Rebranding & Assets
+- **Everything App Rebrand**: Rebranded the app name and descriptions to "Everything App" across all native and Flutter configurations.
+- **Modern Ribbon Logo**: Replaced app icons with a sleek new violet/indigo ribbon graphic combining pen-nib and graph paths.
+- **Dynamic Themed Icons**: Configured transparent monochrome layers for full Material You dynamic wallpaper tinting on Samsung One UI and Google Pixel launchers.
+- **Splash Screen Upgrades**: Regenerated Android and iOS native splash screens to present the new branding.
 

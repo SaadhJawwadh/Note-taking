@@ -2,7 +2,7 @@
 
 **Last Updated: June 16, 2026**
 
-This Privacy Policy describes how **Note Book** (the "Application"), a mobile application developed for offline-first personal note-taking and financial management, handles your information. 
+This Privacy Policy describes how **Everything App** (the "Application"), a mobile application developed for offline-first personal note-taking and financial management, handles your information. 
 
 By using the Application, you agree to the practices described in this policy.
 
@@ -10,7 +10,7 @@ By using the Application, you agree to the practices described in this policy.
 
 ## 1. Absolute Privacy Commitment (Zero Data Collection)
 
-Note Book is designed as a **fully local, offline-first application**. We operate under a strict privacy model:
+Everything App is designed as a **fully local, offline-first application**. We operate under a strict privacy model:
 * **No External Servers**: We do not run, lease, or maintain any external databases or cloud servers to collect, upload, or process your personal data.
 * **No User Accounts**: You do not need to register, create an account, or log in to use the Application.
 * **Encryption at Rest**: All notes, checklists, financial transactions, categories, and settings are stored locally on your device in a database encrypted using **SQLCipher (256-bit AES encryption)**.

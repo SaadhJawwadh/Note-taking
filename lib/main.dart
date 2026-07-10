@@ -69,7 +69,7 @@ class NoteApp extends StatelessWidget {
         debugPrint('NoteApp Build: Dynamic Scheme: ${lightDynamic != null}, ThemeMode: ${settings.themeMode}');
 
         return MaterialApp(
-          title: 'Note Book',
+          title: 'Everything App',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.createTheme(
             lightDynamic,

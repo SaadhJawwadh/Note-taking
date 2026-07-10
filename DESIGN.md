@@ -1,7 +1,7 @@
-# Note Book App Design System
+# Everything App Design System
 
 ## Overview
-This document outlines the core design language, tokens, and component guidelines for the Note Book application. The design focuses on a premium, tactile, dark-mode-first aesthetic with modern glassmorphism elements, micro-interactions, and Material 3 principles.
+This document outlines the core design language, tokens, and component guidelines for the Everything App. The design focuses on a premium, tactile, dark-mode-first aesthetic with modern glassmorphism elements, micro-interactions, and Material 3 principles.
 
 ## 1. Colors
 The app utilizes a dark, high-contrast palette with vibrant accents to create a premium feel.

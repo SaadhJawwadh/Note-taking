@@ -724,7 +724,7 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'Share any video, image, or audio directly from your Gallery — Note Book will appear in the share sheet.',
+                            'Share any video, image, or audio directly from your Gallery — Everything App will appear in the share sheet.',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   color: cs.onSurfaceVariant,
                                 ),

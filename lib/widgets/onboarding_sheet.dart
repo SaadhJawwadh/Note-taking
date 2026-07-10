@@ -216,7 +216,7 @@ class _OnboardingSheetState extends State<OnboardingSheet> {
           ),
           const SizedBox(height: AppLayout.spaceXXL),
           Text(
-            'Welcome to Note Book',
+            'Welcome to Everything App',
             style: theme.textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
               letterSpacing: -0.5,
@@ -282,7 +282,7 @@ class _OnboardingSheetState extends State<OnboardingSheet> {
               ),
               const SizedBox(height: AppLayout.spaceM),
               Text(
-                'Note Book adapts to your life. Enable extra modules below, or customize them in Settings anytime.',
+                'Everything App adapts to your life. Enable extra modules below, or customize them in Settings anytime.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                   height: 1.4,

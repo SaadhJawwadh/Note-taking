@@ -1,4 +1,4 @@
-# Note Book 📝 — Developer Map & Rules
+# Everything App 📝 — Developer Map & Rules
 
 > [!IMPORTANT]
 > **COMPULSORY RULES FOR AGENT EXECUTION:**
