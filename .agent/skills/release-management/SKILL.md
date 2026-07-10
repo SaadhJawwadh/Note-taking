@@ -60,3 +60,37 @@ Execute the automated deploy script to bump, tag, and publish:
   git tag vX.Y.Z
   git push origin vX.Y.Z
   ```
+
+---
+
+## Play Store Listing Assets & Mockup Generation
+
+### 1. App Icon & Feature Graphic Specifications
+Google Play Console enforces strict dimensions for marketing assets. Use `sips` on macOS to resize/crop generated assets:
+* **App Icon (512x512 PNG)**:
+  ```bash
+  sips -z 512 512 <source_icon.png> --out <dest_icon_512.png>
+  ```
+* **Feature Graphic (1024x500 PNG)**: Generate a 1024x1024 background asset first, then center-crop it to the correct aspect ratio:
+  ```bash
+  sips -c 500 1024 <source_graphic.png> --out <dest_graphic_1024x500.png>
+  ```
+
+### 2. Creating Mockups with Real Emulator Screenshots
+To showcase real app workflows in mockups instead of placeholders:
+1. Launch the app on the connected emulator:
+   ```bash
+   adb shell am start -n <package>/<main_activity>
+   ```
+2. Switch tabs or trigger actions by tapping exact coordinates (e.g., `x=540, y=2300` for bottom navigation bar):
+   ```bash
+   adb shell input tap <x> <y>
+   ```
+3. Capture screen contents directly to files:
+   ```bash
+   adb exec-out screencap -p > <output_path.png>
+   ```
+4. Pass the captured file path to `ImagePaths` in the `generate_image` tool, prompting it to overlay the screenshot inside a bezel-less smartphone frame on a custom gradient background.
+
+### 3. Android Monochrome Launcher Override Gotcha
+If regenerating adaptive icons using tools like `flutter_launcher_icons`, check for any pre-existing monochrome vector resource at `android/app/src/main/res/drawable/ic_launcher_monochrome.xml`. Delete this stale XML to allow the system launcher to fallback correctly to the newly generated transparent PNG layers.
