@@ -125,12 +125,40 @@ class SettingsScreen extends StatelessWidget {
                                 ),
                               ),
                               SettingsSection(
-                            title: 'App Features',
+                            title: 'Manage Features',
                             icon: Icons.apps_outlined,
+                            initiallyExpanded: true,
                             children: [
-                              SettingsSwitchTile(icon: Icons.account_balance_wallet_outlined, title: 'Financial Manager', subtitle: 'Enable expense tracking', value: settings.showFinancialManager, onChanged: settings.setShowFinancialManager),
-                              if (settings.showFinancialManager) ...[
-                                const _Divider(),
+                              SettingsSwitchTile(
+                                icon: Icons.account_balance_wallet_outlined,
+                                title: 'Financial Manager',
+                                subtitle: 'Enable expense tracking',
+                                value: settings.showFinancialManager,
+                                onChanged: settings.setShowFinancialManager,
+                              ),
+                              const _Divider(),
+                              SettingsSwitchTile(
+                                icon: Icons.transform_rounded,
+                                title: 'Enable File Converter',
+                                subtitle: 'Show the compression utility in the bottom bar',
+                                value: settings.showFileConverter,
+                                onChanged: settings.setShowFileConverter,
+                              ),
+                              const _Divider(),
+                              SettingsSwitchTile(
+                                icon: Icons.calendar_month_outlined,
+                                title: 'Period Tracker',
+                                subtitle: 'Optional cycle tracking',
+                                value: settings.isPeriodTrackerEnabled,
+                                onChanged: settings.setIsPeriodTrackerEnabled,
+                              ),
+                            ],
+                          ),
+                          if (settings.showFinancialManager)
+                            SettingsSection(
+                              title: 'Financial Manager Settings',
+                              icon: Icons.wallet_outlined,
+                              children: [
                                 SettingsTile(icon: Icons.currency_exchange_outlined, title: 'Currency', subtitle: settings.currency, onTap: () => _showCurrencyPicker(context, settings)),
                                 const _Divider(),
                                 SettingsTile(icon: Icons.sms_outlined, title: 'Advanced SMS Import', subtitle: 'Fetch past bank transactions from messages', showArrow: true, onTap: () => showModalBottomSheet(context: context, isScrollControlled: true, showDragHandle: true, builder: (_) => const SmsImportSheet())),
@@ -140,9 +168,45 @@ class SettingsScreen extends StatelessWidget {
                                 SettingsTile(icon: Icons.contacts_outlined, title: 'SMS Contacts', subtitle: 'Manage bank & custom senders for auto-import', showArrow: true, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SmsContactsScreen()))),
                                 const _Divider(),
                                 SettingsTile(icon: Icons.rule_folder_outlined, title: 'SMS Import Rules', subtitle: 'Manage auto-categorization and transaction type rules', showArrow: true, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SmsRulesScreen()))),
+                                const _Divider(),
+                                SettingsSwitchTile(icon: Icons.sync_outlined, title: 'Daily SMS Auto-Sync', subtitle: 'Import bank transactions automatically daily', value: settings.dailySyncEnabled, onChanged: settings.setDailySyncEnabled),
+                                if (settings.dailySyncEnabled) ...[
+                                  const _Divider(),
+                                  SettingsTile(icon: Icons.schedule_outlined, title: 'Auto-Sync Time', subtitle: _formatTimeOfDay(context, settings.dailySyncTime), onTap: () => _showTimePicker(context, settings)),
+                                ],
                               ],
-                              const _Divider(),
-                              SettingsSwitchTile(icon: Icons.transform_rounded, title: 'Enable File Converter', subtitle: 'Show the compression utility in the bottom bar', value: settings.showFileConverter, onChanged: settings.setShowFileConverter),
+                            ),
+                          if (settings.isPeriodTrackerEnabled)
+                            SettingsSection(
+                              title: 'Period Tracker Settings',
+                              icon: Icons.calendar_today_outlined,
+                              children: [
+                                SettingsTile(icon: Icons.notifications_none_outlined, title: 'Discreet Notification Text', subtitle: settings.discreetNotificationText, onTap: () => _showNotificationTextDialog(context, settings)),
+                              ],
+                            ),
+                          SettingsSection(
+                            title: 'Privacy & Security',
+                            icon: Icons.security_outlined,
+                            children: [
+                              SettingsSwitchTile(icon: Icons.lock_outline, title: 'App Lock', subtitle: 'Require authentication to open app', value: settings.appLockEnabled, onChanged: settings.setAppLockEnabled),
+                              if (settings.appLockEnabled) ...[
+                                const _Divider(),
+                                SettingsSwitchTile(
+                                  icon: Icons.fingerprint_outlined,
+                                  title: 'Use Biometrics',
+                                  subtitle: 'Require biometric scan specifically',
+                                  value: settings.useBiometrics,
+                                  onChanged: settings.setUseBiometrics,
+                                ),
+                                const _Divider(),
+                                SettingsTile(
+                                  icon: Icons.timer_outlined,
+                                  title: 'Auto-Lock Timeout',
+                                  subtitle: _getTimeoutLabel(settings.appLockTimeout),
+                                  showArrow: true,
+                                  onTap: () => _showTimeoutPicker(context, settings),
+                                ),
+                              ],
                             ],
                           ),
                           SettingsSection(
@@ -163,37 +227,6 @@ class SettingsScreen extends StatelessWidget {
                               SettingsTile(icon: Icons.archive_outlined, title: 'Archive', subtitle: 'View archived notes', showArrow: true, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const FilteredNotesScreen(filterType: FilterType.archived)))),
                               const _Divider(),
                               SettingsTile(icon: Icons.delete_outline, title: 'Trash', subtitle: 'View deleted notes', showArrow: true, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const FilteredNotesScreen(filterType: FilterType.trash)))),
-                            ],
-                          ),
-                          SettingsSection(
-                            title: 'Privacy & Security',
-                            icon: Icons.security_outlined,
-                            children: [
-                              SettingsSwitchTile(icon: Icons.calendar_month_outlined, title: 'Period Tracker', subtitle: 'Optional cycle tracking', value: settings.isPeriodTrackerEnabled, onChanged: settings.setIsPeriodTrackerEnabled),
-                              if (settings.isPeriodTrackerEnabled) ...[
-                                const _Divider(),
-                                SettingsTile(icon: Icons.notifications_none_outlined, title: 'Discreet Notification Text', subtitle: settings.discreetNotificationText, onTap: () => _showNotificationTextDialog(context, settings)),
-                              ],
-                              const _Divider(),
-                              SettingsSwitchTile(icon: Icons.lock_outline, title: 'App Lock', subtitle: 'Require authentication to open app', value: settings.appLockEnabled, onChanged: settings.setAppLockEnabled),
-                              if (settings.appLockEnabled) ...[
-                                const _Divider(),
-                                SettingsSwitchTile(
-                                  icon: Icons.fingerprint_outlined,
-                                  title: 'Use Biometrics',
-                                  subtitle: 'Require biometric scan specifically',
-                                  value: settings.useBiometrics,
-                                  onChanged: settings.setUseBiometrics,
-                                ),
-                                const _Divider(),
-                                SettingsTile(
-                                  icon: Icons.timer_outlined,
-                                  title: 'Auto-Lock Timeout',
-                                  subtitle: _getTimeoutLabel(settings.appLockTimeout),
-                                  showArrow: true,
-                                  onTap: () => _showTimeoutPicker(context, settings),
-                                ),
-                              ],
                             ],
                           ),
                           SettingsSection(
@@ -504,7 +537,33 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
+  String _formatTimeOfDay(BuildContext context, String timeStr) {
+    try {
+      final parts = timeStr.split(':');
+      final hour = int.parse(parts[0]);
+      final minute = int.parse(parts[1]);
+      final time = TimeOfDay(hour: hour, minute: minute);
+      return time.format(context);
+    } catch (_) {
+      return timeStr;
+    }
+  }
 
+  void _showTimePicker(BuildContext context, SettingsProvider settings) async {
+    final parts = settings.dailySyncTime.split(':');
+    final initialHour = parts.isNotEmpty ? int.tryParse(parts[0]) ?? 20 : 20;
+    final initialMinute = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
+
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: initialHour, minute: initialMinute),
+    );
+
+    if (picked != null) {
+      final formattedTime = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      await settings.setDailySyncTime(formattedTime);
+    }
+  }
 }
 
 class _Divider extends StatelessWidget {

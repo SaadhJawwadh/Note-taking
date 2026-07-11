@@ -23,6 +23,7 @@ import 'transaction_editor_screen.dart';
 import '../data/repositories/note_repository.dart';
 import '../widgets/bouncing_widget.dart';
 import '../widgets/onboarding_sheet.dart';
+import '../utils/widget_helper.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -42,6 +43,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _scrollController.addListener(_scrollListener);
+    
+    // Update home screen widget on startup to ensure intents are fresh
+    unawaited(WidgetHelper.updateWidgetData());
     
     AppLockScreen.sessionAuthenticated.addListener(_handleSessionUnlock);
 
@@ -118,6 +122,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               MaterialPageRoute(builder: (context) => const TransactionEditorScreen()),
             ),
           );
+        }
+      } else if (action == 'view_budgets' && mounted) {
+        final settings = Provider.of<SettingsProvider>(context, listen: false);
+        if (settings.showFinancialManager) {
+          final List<Widget> destinations = _buildDestinations(settings);
+          int financesIndex = -1;
+          for (int i = 0; i < destinations.length; i++) {
+            if (destinations[i] is FinancialManagerScreen) {
+              financesIndex = i;
+              break;
+            }
+          }
+          if (financesIndex != -1) {
+            setState(() {
+              _currentIndex = financesIndex;
+            });
+            FinancialManagerScreen.tabRedirectNotifier.value = 'Budgets';
+          }
         }
       }
     } catch (e) {

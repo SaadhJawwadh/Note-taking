@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/notification_service.dart';
 import '../services/local_ai_service.dart';
+import '../services/sms_service.dart';
+import 'dart:convert';
 
 enum NoteViewMode { list, grid }
 
@@ -104,6 +106,18 @@ class SettingsProvider extends ChangeNotifier {
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
 
+  bool _dailySyncEnabled = false;
+  bool get dailySyncEnabled => _dailySyncEnabled;
+
+  String _dailySyncTime = '20:00';
+  String get dailySyncTime => _dailySyncTime;
+
+  String _lastSeenVersion = '';
+  String get lastSeenVersion => _lastSeenVersion;
+
+  Map<String, double> _categoryBudgets = {};
+  Map<String, double> get categoryBudgets => _categoryBudgets;
+
   SettingsProvider() {
     loadSettings();
   }
@@ -151,6 +165,17 @@ class SettingsProvider extends ChangeNotifier {
     _videoResolutionLimit = prefs.getString('videoResolutionLimit') ?? 'Original';
     _keepMetadata = prefs.getBool('keepMetadata') ?? false;
     _useOnDeviceAi = prefs.getBool('useOnDeviceAi') ?? false;
+    _dailySyncEnabled = prefs.getBool('dailySyncEnabled') ?? false;
+    _dailySyncTime = prefs.getString('dailySyncTime') ?? '20:00';
+    _lastSeenVersion = prefs.getString('lastSeenVersion') ?? '';
+
+    final budgetsStr = prefs.getString('categoryBudgets');
+    if (budgetsStr != null) {
+      try {
+        final Map<String, dynamic> decoded = jsonDecode(budgetsStr);
+        _categoryBudgets = decoded.map((k, v) => MapEntry(k, (v as num).toDouble()));
+      } catch (_) {}
+    }
 
     _hasSeenOnboarding = prefs.getBool('hasSeenOnboarding_v1') ?? false;
 
@@ -165,6 +190,13 @@ class SettingsProvider extends ChangeNotifier {
     _hasSeenOnboarding = seen;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('hasSeenOnboarding_v1', seen);
+    notifyListeners();
+  }
+
+  Future<void> setLastSeenVersion(String version) async {
+    _lastSeenVersion = version;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('lastSeenVersion', version);
     notifyListeners();
   }
 
@@ -372,6 +404,22 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setDailySyncEnabled(bool enabled) async {
+    _dailySyncEnabled = enabled;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('dailySyncEnabled', enabled);
+    notifyListeners();
+    await SmsService.syncDailySyncSchedule();
+  }
+
+  Future<void> setDailySyncTime(String time) async {
+    _dailySyncTime = time;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('dailySyncTime', time);
+    notifyListeners();
+    await SmsService.syncDailySyncSchedule();
+  }
+
   ThemeMode _getThemeModeFromInt(int value) {
     switch (value) {
       case 1:
@@ -417,6 +465,8 @@ class SettingsProvider extends ChangeNotifier {
         'videoResolutionLimit': _videoResolutionLimit,
         'keepMetadata': _keepMetadata,
         'useOnDeviceAi': _useOnDeviceAi,
+        'dailySyncEnabled': _dailySyncEnabled,
+        'dailySyncTime': _dailySyncTime,
       };
 
   Future<void> restoreFromBackupMap(Map<String, dynamic> map) async {
@@ -527,6 +577,14 @@ class SettingsProvider extends ChangeNotifier {
           await prefs.setStringList('customIncomeRules', _customIncomeRules);
         }
       }
+      if (map.containsKey('dailySyncEnabled')) {
+        final val = map['dailySyncEnabled'];
+        if (val is bool) await setDailySyncEnabled(val);
+      }
+      if (map.containsKey('dailySyncTime')) {
+        final val = map['dailySyncTime'];
+        if (val is String) await setDailySyncTime(val);
+      }
       notifyListeners();
     } catch (_) {
       // Silently ignore malformed backup settings; existing values are kept.
@@ -546,6 +604,20 @@ class SettingsProvider extends ChangeNotifier {
     _useOnDeviceAi = enabled;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('useOnDeviceAi', enabled);
+    notifyListeners();
+  }
+
+  Future<void> setCategoryBudget(String category, double amount) async {
+    _categoryBudgets[category] = amount;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('categoryBudgets', jsonEncode(_categoryBudgets));
+    notifyListeners();
+  }
+
+  Future<void> removeCategoryBudget(String category) async {
+    _categoryBudgets.remove(category);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('categoryBudgets', jsonEncode(_categoryBudgets));
     notifyListeners();
   }
 }

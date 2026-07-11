@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../data/settings_provider.dart';
 import '../theme/app_layout.dart';
 import '../widgets/bouncing_widget.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class OnboardingSheet extends StatefulWidget {
   const OnboardingSheet({super.key});
@@ -15,7 +16,7 @@ class OnboardingSheet extends StatefulWidget {
 class _OnboardingSheetState extends State<OnboardingSheet> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
-  static const int _totalPages = 4;
+  static const int _totalPages = 5;
 
   @override
   void dispose() {
@@ -35,10 +36,17 @@ class _OnboardingSheetState extends State<OnboardingSheet> {
     }
   }
 
-  void _finishOnboarding() {
-    HapticFeedback.mediumImpact();
-    context.read<SettingsProvider>().setHasSeenOnboarding(true);
-    Navigator.pop(context);
+  void _finishOnboarding() async {
+    final settings = context.read<SettingsProvider>();
+    await HapticFeedback.mediumImpact();
+    await settings.setHasSeenOnboarding(true);
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      await settings.setLastSeenVersion(packageInfo.version);
+    } catch (_) {}
+    if (mounted) {
+      Navigator.pop(context);
+    }
   }
 
   @override
@@ -101,6 +109,7 @@ class _OnboardingSheetState extends State<OnboardingSheet> {
                 children: [
                   _buildWelcomePage(theme),
                   _buildModulesPage(theme),
+                  _buildAiPage(theme),
                   _buildNavigationPage(theme),
                   _buildTipsPage(theme),
                 ],
@@ -318,6 +327,84 @@ class _OnboardingSheetState extends State<OnboardingSheet> {
                 value: settings.isPeriodTrackerEnabled,
                 onChanged: settings.setIsPeriodTrackerEnabled,
               ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAiPage(ThemeData theme) {
+    return Consumer<SettingsProvider>(
+      builder: (context, settings, child) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: AppLayout.spaceXL),
+          child: Column(
+            children: [
+              const SizedBox(height: AppLayout.spaceL),
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.secondary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.auto_awesome_outlined,
+                  color: theme.colorScheme.secondary,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: AppLayout.spaceXL),
+              Text(
+                'On-Device Gemini AI',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppLayout.spaceM),
+              Text(
+                'Unlock local AI capabilities to summarize notes, auto-suggest tags, and intelligently categorize SMS transactions.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppLayout.spaceXL),
+              if (settings.isDeviceAiSupported)
+                _buildModuleCard(
+                  theme,
+                  icon: Icons.psychology_outlined,
+                  title: 'Enable Offline AI',
+                  desc: 'Run model on-device (zero data leaves your phone).',
+                  value: settings.useOnDeviceAi,
+                  onChanged: settings.setUseOnDeviceAi,
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.all(AppLayout.spaceM),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainer,
+                    borderRadius: BorderRadius.circular(AppLayout.radiusL),
+                    border: Border.all(
+                      color: theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: theme.colorScheme.outline),
+                      const SizedBox(width: AppLayout.spaceM),
+                      Expanded(
+                        child: Text(
+                          'Offline AI is unsupported on this device (requires compatible NPU and Android AI Core).',
+                          style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
         );

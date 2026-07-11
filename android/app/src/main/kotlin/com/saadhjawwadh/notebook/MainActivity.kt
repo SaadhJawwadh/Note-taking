@@ -45,6 +45,8 @@ class MainActivity: FlutterFragmentActivity() {
     private fun handleIntent(intent: Intent?) {
         if (intent?.action == "com.saadhjawwadh.notebook.ADD_TRANSACTION") {
             pendingWidgetAction = "add_transaction"
+        } else if (intent?.action == "com.saadhjawwadh.notebook.VIEW_BUDGETS") {
+            pendingWidgetAction = "view_budgets"
         }
     }
 

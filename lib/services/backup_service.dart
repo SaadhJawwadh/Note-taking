@@ -24,6 +24,7 @@ void callbackDispatcher() {
   try {
     Workmanager().executeTask((task, inputData) async {
       if (task == kAutoBackupTaskName) return await performAutoBackup();
+      if (task == SmsService.kDailySyncTaskName) return await SmsService.performDailyTransactionSync();
       return Future.value(true);
     });
   } catch (e) {

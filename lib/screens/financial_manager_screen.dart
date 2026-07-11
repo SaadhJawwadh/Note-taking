@@ -17,6 +17,8 @@ import 'transaction_editor_screen.dart';
 import 'settings_screen.dart';
 
 class FinancialManagerScreen extends StatefulWidget {
+  static final ValueNotifier<String?> tabRedirectNotifier = ValueNotifier<String?>(null);
+
   const FinancialManagerScreen({super.key});
 
   @override
@@ -33,6 +35,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
   bool _isLoading = true;
   String? _selectedCategory;
   List<String> _activeCategories = [];
+  late String _selectedTab;
 
   List<Map<String, dynamic>> _monthlyData = [];
   bool _isDashboardLoading = true;
@@ -45,6 +48,8 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedTab = FinancialManagerScreen.tabRedirectNotifier.value ?? 'Budgets';
+    FinancialManagerScreen.tabRedirectNotifier.addListener(_handleTabRedirect);
     _refreshTransactions();
     _smsSubscription = SmsService.incomingTransactions.listen((t) async {
       if (!mounted) return;
@@ -52,8 +57,19 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     });
   }
 
+  void _handleTabRedirect() {
+    final newTab = FinancialManagerScreen.tabRedirectNotifier.value;
+    if (newTab != null && mounted) {
+      setState(() {
+        _selectedTab = newTab;
+      });
+      FinancialManagerScreen.tabRedirectNotifier.value = null; // consume
+    }
+  }
+
   @override
   void dispose() {
+    FinancialManagerScreen.tabRedirectNotifier.removeListener(_handleTabRedirect);
     _smsSubscription?.cancel();
     _searchController.dispose();
     super.dispose();
@@ -633,7 +649,50 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     return Scaffold(
       body: AnimationLimiter(
         child: CustomScrollView(
-          slivers: [
+          slivers: _buildSlivers(colorScheme, textTheme, currency, settings),
+        ),
+      ),
+      floatingActionButton: OpenContainer<bool>(
+        transitionType: ContainerTransitionType.fadeThrough,
+        transitionDuration: const Duration(milliseconds: 300),
+        openBuilder: (context, _) => const TransactionEditorScreen(),
+        closedElevation: 6.0,
+        openElevation: 0,
+        closedShape: const StadiumBorder(),
+        closedColor: colorScheme.primary,
+        openColor: colorScheme.surface,
+        onClosed: (updated) {
+          if (updated == true) _refreshTransactions();
+        },
+        closedBuilder: (context, openContainer) {
+          return SizedBox(
+            height: 56,
+            child: FloatingActionButton.extended(
+              heroTag: 'finance_fab',
+              label: const Text('New Transaction'),
+              icon: const Icon(Icons.add),
+              tooltip: 'Add Transaction',
+              backgroundColor: colorScheme.primary,
+              foregroundColor: colorScheme.onPrimary,
+              elevation: 0,
+              shape: const StadiumBorder(),
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                openContainer();
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+  List<Widget> _buildSlivers(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+    String currency,
+    SettingsProvider settings,
+  ) {
+    return [
             SliverAppBar(
               backgroundColor: Colors.transparent,
               floating: true,
@@ -717,42 +776,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
               ),
             ),
 
-            // ── 6-month bar chart ─────────────────────────────────────────
-            SliverToBoxAdapter(
-              child: AnimationConfiguration.staggeredList(
-                position: 0,
-                duration: const Duration(milliseconds: 220),
-                child: SlideAnimation(
-                  verticalOffset: 24.0,
-                  child: FadeInAnimation(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                      child:
-                          _buildBarChartCard(colorScheme, textTheme, currency),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            // ── Month-over-month comparison ───────────────────────────────
-            SliverToBoxAdapter(
-              child: AnimationConfiguration.staggeredList(
-                position: 1,
-                duration: const Duration(milliseconds: 220),
-                child: SlideAnimation(
-                  verticalOffset: 24.0,
-                  child: FadeInAnimation(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                      child: _buildMonthComparisonCard(
-                          colorScheme, textTheme, currency),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
+      // ── Hero summary card (net + income/expense breakdown) ────────
             // ── Hero summary card (net + income/expense breakdown) ────────
             SliverToBoxAdapter(
               child: AnimationConfiguration.staggeredList(
@@ -771,6 +795,15 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
               ),
             ),
 
+      // ── Tab selector ──────────────────────────────────────────────
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: _buildTabSelector(colorScheme),
+        ),
+      ),
+      if (_selectedTab == 'Ledger') ...[
+        // ── Search bar ──────────────────────────────────────────────
             // ── Search bar ────────────────────────────────────────────────
             SliverToBoxAdapter(
               child: AnimationConfiguration.staggeredList(
@@ -817,6 +850,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
               ),
             ),
 
+        // ── Category filter chips ────────────────────────────────────
             // ── Category filter chips ────────────────────────────────────
             if (_activeCategories.isNotEmpty)
               SliverToBoxAdapter(
@@ -886,6 +920,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                 ),
               ),
 
+        // ── Transaction list ──────────────────────────────────────────
             // ── Transaction list ──────────────────────────────────────────
             if (_isLoading)
               const SliverFillRemaining(
@@ -1145,43 +1180,426 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                   ),
                 ),
               ),
-          ],
-        ),
-      ),
-      floatingActionButton: OpenContainer<bool>(
-        transitionType: ContainerTransitionType.fadeThrough,
-        transitionDuration: const Duration(milliseconds: 300),
-        openBuilder: (context, _) => const TransactionEditorScreen(),
-        closedElevation: 6.0,
-        openElevation: 0,
-        closedShape: const StadiumBorder(),
-        closedColor: colorScheme.primary,
-        openColor: colorScheme.surface,
-        onClosed: (updated) {
-          if (updated == true) _refreshTransactions();
-        },
-        closedBuilder: (context, openContainer) {
-          return SizedBox(
-            height: 56,
-            child: FloatingActionButton.extended(
-              heroTag: 'finance_fab',
-              label: const Text('New Transaction'),
-              icon: const Icon(Icons.add),
-              tooltip: 'Add Transaction',
-              backgroundColor: colorScheme.primary,
-              foregroundColor: colorScheme.onPrimary,
-              elevation: 0,
-              shape: const StadiumBorder(),
-              onPressed: () {
-                HapticFeedback.lightImpact();
-                openContainer();
-              },
+      ] else ...[
+        // ── 6-month bar chart ─────────────────────────────────────────
+            // ── 6-month bar chart ─────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: AnimationConfiguration.staggeredList(
+                position: 0,
+                duration: const Duration(milliseconds: 220),
+                child: SlideAnimation(
+                  verticalOffset: 24.0,
+                  child: FadeInAnimation(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                      child:
+                          _buildBarChartCard(colorScheme, textTheme, currency),
+                    ),
+                  ),
+                ),
+              ),
             ),
-          );
+
+        // ── Month-over-month comparison ───────────────────────────────
+            // ── Month-over-month comparison ───────────────────────────────
+            SliverToBoxAdapter(
+              child: AnimationConfiguration.staggeredList(
+                position: 1,
+                duration: const Duration(milliseconds: 220),
+                child: SlideAnimation(
+                  verticalOffset: 24.0,
+                  child: FadeInAnimation(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                      child: _buildMonthComparisonCard(
+                          colorScheme, textTheme, currency),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+        // ── Category Budgets Card ──────────────────────────────────────
+        SliverToBoxAdapter(
+          child: Consumer<SettingsProvider>(
+            builder: (context, settings, child) {
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: _buildCategoryBudgetsCard(colorScheme, textTheme, settings),
+              );
+            }
+          ),
+        ),
+        // ── Top Merchants Card ─────────────────────────────────────────
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
+            child: _buildTopMerchantsCard(colorScheme, textTheme, currency),
+          ),
+        ),
+      ],
+    ];
+  }
+
+
+  // Helper tab selector
+  Widget _buildTabSelector(ColorScheme colorScheme) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: SegmentedButton<String>(
+        segments: const [
+          ButtonSegment<String>(
+            value: 'Budgets',
+            label: Text('Budgets & Analytics'),
+            icon: Icon(Icons.analytics_outlined),
+          ),
+          ButtonSegment<String>(
+            value: 'Ledger',
+            label: Text('Ledger'),
+            icon: Icon(Icons.list_alt_outlined),
+          ),
+        ],
+        selected: {_selectedTab},
+        onSelectionChanged: (Set<String> newSelection) {
+          HapticFeedback.lightImpact();
+          setState(() {
+            _selectedTab = newSelection.first;
+          });
         },
       ),
     );
   }
+
+  // Budgets & Analytics helper: Levenshtein distance
+  int _levenshtein(String s1, String s2) {
+    if (s1 == s2) return 0;
+    if (s1.isEmpty) return s2.length;
+    if (s2.isEmpty) return s1.length;
+    
+    List<int> v0 = List<int>.generate(s2.length + 1, (i) => i);
+    List<int> v1 = List<int>.filled(s2.length + 1, 0);
+    
+    for (int i = 0; i < s1.length; i++) {
+      v1[0] = i + 1;
+      for (int j = 0; j < s2.length; j++) {
+        int cost = (s1[i] == s2[j]) ? 0 : 1;
+        v1[j + 1] = [v1[j] + 1, v0[j + 1] + 1, v0[j] + cost].reduce((a, b) => a < b ? a : b);
+      }
+      v0 = List<int>.from(v1);
+    }
+    return v0[s2.length];
+  }
+
+  // Budgets & Analytics helper: merchant clustering
+  List<Map<String, dynamic>> _calculateClusteredMerchants() {
+    final Map<String, List<TransactionModel>> clusters = {};
+    for (var tx in _transactions) {
+      if (!tx.isExpense) continue;
+      final desc = tx.description.trim();
+      if (desc.isEmpty) continue;
+      
+      String? bestMatch;
+      for (var existing in clusters.keys) {
+        if (desc.toLowerCase() == existing.toLowerCase()) {
+          bestMatch = existing;
+          break;
+        }
+        final distance = _levenshtein(desc.toLowerCase(), existing.toLowerCase());
+        final maxLength = desc.length > existing.length ? desc.length : existing.length;
+        if (maxLength > 0 && (distance / maxLength) < 0.25) {
+          bestMatch = existing;
+          break;
+        }
+      }
+      
+      if (bestMatch != null) {
+        clusters[bestMatch]!.add(tx);
+      } else {
+        clusters[desc] = [tx];
+      }
+    }
+    
+    final List<Map<String, dynamic>> result = [];
+    clusters.forEach((merchant, list) {
+      final total = list.fold<double>(0.0, (sum, item) => sum + item.amount);
+      result.add({
+        'merchant': merchant,
+        'total': total,
+        'count': list.length,
+      });
+    });
+    
+    result.sort((a, b) => (b['total'] as double).compareTo(a['total'] as double));
+    return result;
+  }
+
+  // Budgets & Analytics card: Category Budgets
+  Widget _buildCategoryBudgetsCard(ColorScheme colorScheme, TextTheme textTheme, SettingsProvider settings) {
+    final budgets = settings.categoryBudgets;
+    
+    // Calculate total spent per category in currently visible transactions
+    final Map<String, double> spentMap = {};
+    for (var tx in _transactions) {
+      if (tx.isExpense) {
+        spentMap[tx.category] = (spentMap[tx.category] ?? 0.0) + tx.amount;
+      }
+    }
+    
+    // We can display the predefined categories, or ones with active budgets
+    final categories = TransactionCategory.allNames;
+    
+    return Card(
+      elevation: 0,
+      color: colorScheme.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.donut_large_outlined, color: colorScheme.primary),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Monthly Budgets',
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  settings.currency,
+                  style: textTheme.labelLarge?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...categories.map((category) {
+              final budget = budgets[category] ?? 0.0;
+              final spent = spentMap[category] ?? 0.0;
+              final hasBudget = budget > 0;
+              final progress = hasBudget ? (spent / budget).clamp(0.0, 1.0) : 0.0;
+              final isOverBudget = spent > budget && hasBudget;
+              
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12.0),
+                child: InkWell(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    _showSetBudgetDialog(context, settings, category, budget);
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 2.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  TransactionCategory.iconFor(category),
+                                  size: 16,
+                                  color: TransactionCategory.colorFor(category),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  category,
+                                  style: textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              hasBudget
+                                  ? '${spent.toStringAsFixed(0)} / ${budget.toStringAsFixed(0)}'
+                                  : '${spent.toStringAsFixed(0)} (No Budget)',
+                              style: textTheme.bodySmall?.copyWith(
+                                color: isOverBudget
+                                    ? colorScheme.error
+                                    : colorScheme.onSurfaceVariant,
+                                fontWeight: hasBudget ? FontWeight.bold : FontWeight.normal,
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (hasBudget) ...[
+                          const SizedBox(height: 6),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: progress,
+                              backgroundColor: colorScheme.surfaceContainerHighest,
+                              color: isOverBudget
+                                  ? colorScheme.error
+                                  : TransactionCategory.colorFor(category),
+                              minHeight: 6,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Budget dialog
+  void _showSetBudgetDialog(
+    BuildContext context,
+    SettingsProvider settings,
+    String category,
+    double currentBudget,
+  ) {
+    final controller = TextEditingController(
+      text: currentBudget > 0 ? currentBudget.toStringAsFixed(0) : '',
+    );
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Set Budget for $category'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          decoration: InputDecoration(
+            labelText: 'Monthly Limit (${settings.currency})',
+            hintText: 'Enter amount or leave empty to disable',
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final value = double.tryParse(controller.text) ?? 0.0;
+              settings.setCategoryBudget(category, value);
+              Navigator.pop(ctx);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Budgets & Analytics card: Top Merchants
+  Widget _buildTopMerchantsCard(ColorScheme colorScheme, TextTheme textTheme, String currency) {
+    final merchants = _calculateClusteredMerchants();
+    
+    return Card(
+      elevation: 0,
+      color: colorScheme.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.storefront_outlined, color: colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Top Spending Outlets',
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (merchants.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24.0),
+                child: Center(
+                  child: Text(
+                    'No transaction outlets identified yet.',
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              )
+            else
+              ...merchants.take(5).map((m) {
+                final double amount = m['total'];
+                final int count = m['count'];
+                final String merchant = m['merchant'];
+                
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              merchant,
+                              style: textTheme.bodyLarge?.copyWith(
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              '$count transaction${count > 1 ? "s" : ""}',
+                              style: textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        '- $currency ${amount.toStringAsFixed(0)}',
+                        style: textTheme.titleMedium?.copyWith(
+                          color: colorScheme.error,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+          ],
+        ),
+      ),
+    );
+  }
+
 }
-
-

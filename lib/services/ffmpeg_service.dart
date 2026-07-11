@@ -240,6 +240,8 @@ class FfmpegService {
     required String outputPath,
     required ConversionPreset preset,
     required SettingsProvider settings,
+    double? customResolutionScale,
+    double? customQuality,
   }) {
     final List<String> args = ['-y', '-i', inputPath];
 
@@ -250,7 +252,9 @@ class FfmpegService {
 
     // Resolution handling (if set by user)
     String? resScale;
-    if (preset.mediaType == MediaType.video || preset == ConversionPreset.gifToVideo) {
+    if (customResolutionScale != null && customResolutionScale < 1.0) {
+      resScale = 'scale=2*trunc(iw*$customResolutionScale/2):2*trunc(ih*$customResolutionScale/2)';
+    } else if (preset.mediaType == MediaType.video || preset == ConversionPreset.gifToVideo) {
       switch (settings.videoResolutionLimit) {
         case '1080p':
           resScale = 'scale=iw*min(1,1080/ih):ih*min(1,1080/ih):force_original_aspect_ratio=decrease,pad=ceil(iw/2)*2:ceil(ih/2)*2';
@@ -262,6 +266,31 @@ class FfmpegService {
           resScale = 'scale=iw*min(1,480/ih):ih*min(1,480/ih):force_original_aspect_ratio=decrease,pad=ceil(iw/2)*2:ceil(ih/2)*2';
           break;
       }
+    }
+
+    final isCustom = customResolutionScale != null || customQuality != null;
+    if (isCustom) {
+      final mediaType = preset.mediaType;
+      if (mediaType == MediaType.video || preset == ConversionPreset.gifToVideo) {
+        if (resScale != null) args.addAll(['-vf', resScale]);
+        final q = customQuality ?? 0.8;
+        final crfVal = 51 - ((q - 0.1) / 0.9 * (51 - 18)).round();
+        args.addAll([
+          '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '$crfVal',
+          '-c:a', 'aac', '-b:a', '128k',
+        ]);
+      } else if (mediaType == MediaType.image || preset == ConversionPreset.videoToGif || preset == ConversionPreset.gifCompress) {
+        if (resScale != null) args.addAll(['-vf', resScale]);
+        final q = customQuality ?? 0.8;
+        final qVal = (32 - (q * 31).round()).clamp(1, 31);
+        args.addAll(['-frames:v', '1', '-q:v', '$qVal']);
+      } else if (mediaType == MediaType.audio) {
+        final q = customQuality ?? 0.8;
+        final kbps = (64 + (q * 192).round()).clamp(64, 256);
+        args.addAll(['-vn', '-c:a', preset == ConversionPreset.audioCompressMP3 ? 'libmp3lame' : 'aac', '-b:a', '${kbps}k']);
+      }
+      args.add(outputPath);
+      return args;
     }
 
     switch (preset) {
@@ -322,6 +351,8 @@ class FfmpegService {
     required String inputPath,
     required ConversionPreset preset,
     required SettingsProvider settings,
+    double? customResolutionScale,
+    double? customQuality,
     ValueChanged<double>? onProgress,
   }) async {
     final outputPath = await _getOutputPath(inputPath, preset, settings);
@@ -329,7 +360,7 @@ class FfmpegService {
     // Lite Mode: Always simulate to avoid heavy FFmpeg usage/download
     if (settings.isConverterLite) {
        debugPrint('Converter Lite Mode active. Simulating...');
-       return _simulateConversion(inputPath, outputPath, preset, settings, onProgress);
+       return _simulateConversion(inputPath, outputPath, preset, settings, customResolutionScale, customQuality, onProgress);
     }
 
     // Check for engine binaries
@@ -342,7 +373,7 @@ class FfmpegService {
     // Prototype mode: Simulation if binary doesn't actually exist
     if (!await File(binaryPath).exists()) {
        debugPrint('Engine file not found at $binaryPath. Simulating conversion...');
-       return _simulateConversion(inputPath, outputPath, preset, settings, onProgress);
+       return _simulateConversion(inputPath, outputPath, preset, settings, customResolutionScale, customQuality, onProgress);
     }
 
     final args = _buildArgs(
@@ -350,6 +381,8 @@ class FfmpegService {
       outputPath: outputPath,
       preset: preset,
       settings: settings,
+      customResolutionScale: customResolutionScale,
+      customQuality: customQuality,
     );
 
     // Get original file size
@@ -397,6 +430,8 @@ class FfmpegService {
     String outputPath, 
     ConversionPreset preset,
     SettingsProvider settings,
+    double? customResolutionScale,
+    double? customQuality,
     ValueChanged<double>? onProgress
   ) async {
     try {
@@ -431,7 +466,9 @@ class FfmpegService {
           img.Image resized = image;
           int? targetWidth;
           
-          if (preset == ConversionPreset.imageResizeSocial) {
+          if (customResolutionScale != null && customResolutionScale < 1.0) {
+            targetWidth = (image.width * customResolutionScale).round();
+          } else if (preset == ConversionPreset.imageResizeSocial) {
             targetWidth = 1080;
           } else {
             // Apply resolution limits from settings if necessary
@@ -454,11 +491,12 @@ class FfmpegService {
 
           List<int> compressedBytes;
           final format = settings.preferredImageFormat.toLowerCase();
+          final q = customQuality != null ? (customQuality * 100).round() : 80;
           if (format == 'png') {
-            compressedBytes = img.encodePng(resized, level: 6);
+            compressedBytes = img.encodePng(resized, level: (q / 10).round().clamp(1, 9));
           } else {
             // WebP is not supported for writing by package:image, fallback to JPEG
-            compressedBytes = img.encodeJpg(resized, quality: 80);
+            compressedBytes = img.encodeJpg(resized, quality: q);
           }
 
           await File(outputPath).writeAsBytes(compressedBytes);

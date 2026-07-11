@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:telephony/telephony.dart';
+import 'package:telephony/telephony.dart' hide NetworkType;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../data/repositories/transaction_repository.dart';
@@ -9,6 +9,9 @@ import 'sms_parser.dart';
 import 'sms_constants.dart';
 import 'gemini_nano_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:workmanager/workmanager.dart';
+import 'notification_service.dart';
+import 'dart:io';
 
 class SmsService {
   static final Telephony telephony = Telephony.instance;
@@ -256,6 +259,98 @@ class SmsService {
     }
 
     return transaction;
+  }
+
+  static const kDailySyncTaskName = 'com.saadhjawwadh.notebook.dailySync';
+
+  static Duration calculateDailySyncDelay(String timeStr) {
+    try {
+      final parts = timeStr.split(':');
+      final hour = int.parse(parts[0]);
+      final minute = int.parse(parts[1]);
+
+      final now = DateTime.now();
+      var target = DateTime(now.year, now.month, now.day, hour, minute);
+      if (target.isBefore(now)) {
+        target = target.add(const Duration(days: 1));
+      }
+      return target.difference(now);
+    } catch (e) {
+      debugPrint('Error calculating delay: $e');
+      return const Duration(hours: 24);
+    }
+  }
+
+  static Future<void> syncDailySyncSchedule() async {
+    if (kIsWeb || !(Platform.isAndroid || Platform.isIOS)) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final enabled = prefs.getBool('dailySyncEnabled') ?? false;
+
+      // Cancel any existing task first to avoid multiple triggers
+      await Workmanager().cancelByUniqueName(kDailySyncTaskName);
+
+      if (!enabled) return;
+
+      final timeStr = prefs.getString('dailySyncTime') ?? '20:00';
+      final delay = calculateDailySyncDelay(timeStr);
+
+      await Workmanager().registerOneOffTask(
+        kDailySyncTaskName,
+        kDailySyncTaskName,
+        initialDelay: delay,
+        constraints: Constraints(
+          networkType: NetworkType.notRequired,
+          requiresBatteryNotLow: true,
+        ),
+      );
+      debugPrint('Daily sync task scheduled with delay: $delay');
+    } catch (e) {
+      debugPrint('Error scheduling daily sync: $e');
+    }
+  }
+
+  static Future<bool> performDailyTransactionSync() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Double-check settings and permission
+      if (!(prefs.getBool('dailySyncEnabled') ?? false)) return true;
+      if (!await hasPermission()) return true;
+
+      // Sync transactions from the past 24 hours
+      final now = DateTime.now();
+      final oneDayAgo = now.subtract(const Duration(days: 1));
+      final count = await syncInboxFrom(oneDayAgo);
+
+      // Notify the user if new transactions were synced
+      if (count > 0) {
+        await NotificationService.showNotification(
+          id: 101,
+          title: 'Daily SMS Sync Complete',
+          body: 'Synced $count new transaction${count == 1 ? "" : "s"} from your messages.',
+        );
+      }
+
+      // Schedule next execution 24 hours later
+      final timeStr = prefs.getString('dailySyncTime') ?? '20:00';
+      final delay = calculateDailySyncDelay(timeStr);
+
+      await Workmanager().registerOneOffTask(
+        kDailySyncTaskName,
+        kDailySyncTaskName,
+        initialDelay: delay,
+        constraints: Constraints(
+          networkType: NetworkType.notRequired,
+          requiresBatteryNotLow: true,
+        ),
+      );
+
+      return true;
+    } catch (e) {
+      debugPrint('performDailyTransactionSync error: $e');
+      return false;
+    }
   }
 }
 

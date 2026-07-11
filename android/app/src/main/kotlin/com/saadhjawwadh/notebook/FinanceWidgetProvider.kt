@@ -146,11 +146,12 @@ class FinanceWidgetProvider : AppWidgetProvider() {
 
         // Intent for clicking the widget body (opens MainActivity)
         val mainIntent = Intent(context, MainActivity::class.java).apply {
+            action = "com.saadhjawwadh.notebook.VIEW_BUDGETS"
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val mainPendingIntent = PendingIntent.getActivity(
             context,
-            0,
+            2,
             mainIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )

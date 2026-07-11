@@ -374,12 +374,214 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
                     },
                   );
                 }),
+                const Divider(height: 1),
+                ListTile(
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 24.0, vertical: 4.0),
+                  leading: CircleAvatar(
+                    backgroundColor:
+                        Theme.of(context).colorScheme.secondaryContainer,
+                    child: const Icon(Icons.tune_rounded),
+                  ),
+                  title: const Text('Custom Tuning'),
+                  subtitle: Text(
+                    'Manually adjust resolution and compression quality',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showCustomTuningSheet(context);
+                  },
+                ),
               ],
             ),
           ),
         );
       },
     );
+  }
+
+  void _showCustomTuningSheet(BuildContext context) {
+    double scale = 1.0;
+    double quality = 0.8;
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.0)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 24,
+                  right: 24,
+                  top: 8,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Custom Compression Tuning',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Fine-tune the output resolution and quality factor.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // Resolution Scale Slider
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Resolution Scale', style: TextStyle(fontWeight: FontWeight.w600)),
+                        Text('${(scale * 100).toInt()}%', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    Slider(
+                      value: scale,
+                      min: 0.1,
+                      max: 1.0,
+                      divisions: 9,
+                      onChanged: (v) {
+                        setModalState(() => scale = v);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Quality Slider
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Compression Quality', style: TextStyle(fontWeight: FontWeight.w600)),
+                        Text('${(quality * 100).toInt()}%', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    Slider(
+                      value: quality,
+                      min: 0.1,
+                      max: 1.0,
+                      divisions: 18,
+                      onChanged: (v) {
+                        setModalState(() => quality = v);
+                      },
+                    ),
+                    const SizedBox(height: 32),
+                    
+                    // Action button
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        icon: const Icon(Icons.play_arrow_rounded),
+                        label: const Text('Start Compression'),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          final firstPath = _selectedFilePaths.first;
+                          final ext = p.extension(firstPath).toLowerCase();
+                          final isImage = ['.jpg', '.jpeg', '.png', '.webp', '.bmp'].contains(ext);
+                          
+                          final fallbackPreset = isImage 
+                              ? ConversionPreset.imageCompress 
+                              : ConversionPreset.socialVideoCompress;
+                              
+                          _executeBatchConversionCustom(
+                            preset: fallbackPreset,
+                            customResolutionScale: scale,
+                            customQuality: quality,
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+        );
+      },
+    );
+  }
+
+  Future<void> _executeBatchConversionCustom({
+    required ConversionPreset preset,
+    required double customResolutionScale,
+    required double customQuality,
+  }) async {
+    setState(() {
+      _isProcessing = true;
+      _results = [];
+      _currentIndex = 0;
+      _statusMessage = 'Starting batch conversion…';
+    });
+
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
+
+    for (int i = 0; i < _selectedFilePaths.length; i++) {
+      if (!mounted || !_isProcessing) break;
+
+      final inputPath = _selectedFilePaths[i];
+      setState(() {
+        _currentIndex = i;
+        _progress = 0.0;
+        _statusMessage = 'Compressing ${i + 1}/${_selectedFilePaths.length}…';
+      });
+
+      final result = await FfmpegService.instance.convertFile(
+        inputPath: inputPath,
+        preset: preset,
+        settings: settings,
+        customResolutionScale: customResolutionScale,
+        customQuality: customQuality,
+        onProgress: (p) {
+          if (mounted) {
+            setState(() => _progress = p.clamp(0.0, 1.0));
+          }
+        },
+      );
+
+      if (result != null) {
+        setState(() {
+          _results.add(result);
+        });
+      }
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _isProcessing = false;
+      _statusMessage = _results.isNotEmpty 
+          ? 'Done! ${_results.length} files ready.' 
+          : 'Conversion failed.';
+    });
+
+    if (_results.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Batch compression failed.'),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
   }
 
   Future<void> _executeBatchConversion(ConversionPreset preset) async {
@@ -442,6 +644,7 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
 
   void _shareResults() async {
     if (_results.isEmpty) return;
+    AppLockScreen.ignoreNextResumeLock();
     await HapticFeedback.lightImpact();
     await SharePlus.instance.share(ShareParams(files: _results.map((r) => XFile(r.outputPath)).toList()));
   }
@@ -459,6 +662,7 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
     try {
       // Unlock session to avoid locking after permission dialog/intent return
       AppLockScreen.unlockSession();
+      AppLockScreen.ignoreNextResumeLock();
 
       final hasAccess = await Gal.hasAccess();
       if (!hasAccess) {
@@ -592,12 +796,22 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  Text(
-                    'FFmpeg Engine',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                    textAlign: TextAlign.center,
+                  Consumer<SettingsProvider>(
+                    builder: (context, settings, child) {
+                      String engineTitle = 'Advanced Media Converter';
+                      if (settings.isConverterLite) {
+                        engineTitle = 'Fast Native Converter';
+                      } else if (settings.isFfmpegInstalled) {
+                        engineTitle = 'High-Performance Converter';
+                      }
+                      return Text(
+                        engineTitle,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                        textAlign: TextAlign.center,
+                      );
+                    },
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -646,23 +860,148 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
                       ),
                     ),
                   ] else ...[
-                    FilledButton.icon(
-                      onPressed: _pickAndConvertFiles,
-                      icon: const Icon(Icons.add_to_photos_rounded),
-                      label: const Text('Pick Files'),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 32, vertical: 16),
+                    if (_selectedFilePaths.isEmpty)
+                      GestureDetector(
+                        onTap: _pickAndConvertFiles,
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
+                          decoration: BoxDecoration(
+                            color: cs.primaryContainer.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: cs.primary.withValues(alpha: 0.3),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.add_to_photos_outlined,
+                                size: 40,
+                                color: cs.primary,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Select files to convert',
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: cs.onSurface,
+                                    ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Tap here to browse video, image, or audio files',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: cs.onSurfaceVariant,
+                                    ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Selected Files (${_selectedFilePaths.length})',
+                                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                              ),
+                              TextButton.icon(
+                                onPressed: () {
+                                  HapticFeedback.lightImpact();
+                                  setState(() {
+                                    _selectedFilePaths = [];
+                                    _results = [];
+                                  });
+                                },
+                                icon: const Icon(Icons.clear_all_rounded, size: 18),
+                                label: const Text('Clear All'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          ..._selectedFilePaths.map((path) {
+                            final ext = p.extension(path).toLowerCase();
+                            IconData iconData;
+                            Color iconColor;
+                            if (['.mp4', '.mkv', '.mov', '.avi', '.webm'].contains(ext)) {
+                              iconData = Icons.movie_outlined;
+                              iconColor = Colors.blue;
+                            } else if (['.jpg', '.jpeg', '.png', '.webp', '.bmp'].contains(ext)) {
+                              iconData = Icons.image_outlined;
+                              iconColor = Colors.green;
+                            } else if (ext == '.gif') {
+                              iconData = Icons.gif_box_outlined;
+                              iconColor = Colors.orange;
+                            } else if (['.mp3', '.aac', '.m4a', '.ogg', '.wav'].contains(ext)) {
+                              iconData = Icons.audiotrack_outlined;
+                              iconColor = Colors.purple;
+                            } else {
+                              iconData = Icons.insert_drive_file_outlined;
+                              iconColor = cs.primary;
+                            }
+                            
+                            return Card(
+                              elevation: 0,
+                              color: cs.surfaceContainerLow,
+                              margin: const EdgeInsets.symmetric(vertical: 4),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
+                              ),
+                              child: ListTile(
+                                dense: true,
+                                leading: Icon(iconData, color: iconColor),
+                                title: Text(
+                                  p.basename(path),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontWeight: FontWeight.w500),
+                                ),
+                                subtitle: Text(
+                                  ConversionResult.formatBytes(File(path).lengthSync()),
+                                ),
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.delete_outline),
+                                  color: cs.error,
+                                  onPressed: () {
+                                    HapticFeedback.lightImpact();
+                                    setState(() {
+                                      _selectedFilePaths.remove(path);
+                                      if (_selectedFilePaths.isEmpty) {
+                                        _results = [];
+                                      }
+                                    });
+                                  },
+                                ),
+                              ),
+                            );
+                          }),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.icon(
+                              onPressed: () => _showPresetSheet(context),
+                              icon: const Icon(Icons.play_arrow_rounded),
+                              label: const Text('Start Compression'),
+                              style: FilledButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    if (_selectedFilePaths.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      TextButton.icon(
-                        onPressed: () => _showPresetSheet(context),
-                        icon: const Icon(Icons.refresh_rounded),
-                        label: const Text('Restart with Different Preset'),
-                      ),
-                    ],
                   ],
 
                   // ── Result Section ──
@@ -696,10 +1035,12 @@ class _FileConverterScreenState extends State<FileConverterScreen> {
                           child: _ResultCard(
                             result: res,
                             onShare: () async {
+                              AppLockScreen.ignoreNextResumeLock();
                               await HapticFeedback.lightImpact();
                               await SharePlus.instance.share(ShareParams(files: [XFile(res.outputPath)]));
                             },
                             onSave: () async {
+                              AppLockScreen.ignoreNextResumeLock();
                               await HapticFeedback.lightImpact();
                               await _saveToGallery(res.outputPath);
                             },
@@ -790,13 +1131,27 @@ class _ResultCard extends StatelessWidget {
                     color: isSmaller ? Colors.green : cs.primary, size: 28),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    isSmaller
-                        ? 'Compressed ${result.reductionPercent.toStringAsFixed(1)}% smaller'
-                        : 'Conversion Complete',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        p.basename(result.originalPath),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        isSmaller
+                            ? 'Compressed ${result.reductionPercent.toStringAsFixed(1)}% smaller'
+                            : 'Conversion Complete',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: cs.onSurfaceVariant,
+                            ),
+                      ),
+                    ],
                   ),
                 ),
               ],

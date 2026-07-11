@@ -131,4 +131,28 @@ class NotificationService {
   static DateTime _normalizeTime(DateTime date) {
     return DateTime(date.year, date.month, date.day, 9, 0);
   }
+
+  static Future<void> showNotification({
+    required int id,
+    required String title,
+    required String body,
+  }) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'daily_sync_channel',
+      'Daily Sync Alerts',
+      channelDescription: 'Notifications for daily transaction synchronization results',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+    const NotificationDetails platformChannelSpecifics =
+        NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    await _notificationsPlugin.show(
+      id,
+      title,
+      body,
+      platformChannelSpecifics,
+    );
+  }
 }

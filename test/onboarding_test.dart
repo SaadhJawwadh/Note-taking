@@ -74,9 +74,15 @@ void main() {
       await tester.tap(find.text('Next'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Where to Find Features'), findsOneWidget);
+      expect(find.text('On-Device Gemini AI'), findsOneWidget);
 
       // Page 3 -> Page 4
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Where to Find Features'), findsOneWidget);
+
+      // Page 4 -> Page 5
       await tester.tap(find.text('Next'));
       await tester.pumpAndSettle();
 
