@@ -18,3 +18,8 @@ Use this skill when modifying the financial dashboard, category management, tran
 * **Case-Insensitive Validation**: Validate category names case-insensitively when creating/editing to avoid duplicate naming collisions.
 * **Double-Level Matching**: Keywords match merchant names. Multi-word keywords (e.g. `"Keells Super"`) take precedence over single-word keywords (e.g. `"Keells"`) using cached matches.
 * **Inline Calculator**: Support mathematical operators (+, -, *, /) directly inside the amount field via `CalculatorDialog`.
+
+## 3. Home Screen Widget & Deep Linking
+* **Android PendingIntent Re-use**: The Android OS caches `PendingIntents` using the destination Component and `requestCode` as keys. If deep link intent parameters (like custom action strings or extras) are modified, you MUST assign a new unique `requestCode` in the Kotlin widget provider to force the OS to invalidate its cache. Otherwise, the old intent action is run.
+* **Startup Synchronization**: To prevent widgets from getting out-of-sync with Dart storage on app launch, call `WidgetHelper.updateWidgetData()` inside the App Home Screen's `initState()` to force update the widget's PendingIntents and shared states.
+
