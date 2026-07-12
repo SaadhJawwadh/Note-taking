@@ -9,6 +9,7 @@ import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 import 'home_screen.dart';
 import 'note_editor_screen.dart';
+import '../theme/app_layout.dart';
 
 enum FilterType { archived, trash }
 
@@ -97,7 +98,10 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
                           ),
                           FilledButton(
                             style: FilledButton.styleFrom(
-                                backgroundColor: Colors.red),
+                                backgroundColor:
+                                    Theme.of(context).colorScheme.error,
+                                foregroundColor:
+                                    Theme.of(context).colorScheme.onError),
                             onPressed: () => Navigator.pop(context, true),
                             child: const Text('Delete Forever'),
                           ),
@@ -190,7 +194,9 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
                     child: AnimationLimiter(
                       child: settings.isGridView
                           ? MasonryGridView.count(
-                              crossAxisCount: 2,
+                              crossAxisCount: (MediaQuery.sizeOf(context).width / 220)
+                                  .floor()
+                                  .clamp(2, 4),
                               mainAxisSpacing: 12,
                               crossAxisSpacing: 12,
                               itemCount: displayedNotes.length,
@@ -199,7 +205,9 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
                                 return AnimationConfiguration.staggeredGrid(
                                   position: index,
                                   duration: const Duration(milliseconds: 375),
-                                  columnCount: 2,
+                                  columnCount: (MediaQuery.sizeOf(context).width / 220)
+                                      .floor()
+                                      .clamp(2, 4),
                                   child: ScaleAnimation(
                                     child: FadeInAnimation(
                                       child: OpenContainer<bool>(
@@ -211,7 +219,7 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
                                         closedColor: Colors.transparent,
                                         closedShape: RoundedRectangleBorder(
                                             borderRadius:
-                                                BorderRadius.circular(20)),
+                                                BorderRadius.circular(AppLayout.radiusXL)),
                                         onClosed: (returned) async {
                                           if (returned == true) {
                                             await refreshNotes();
@@ -255,7 +263,7 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
                                           closedColor: Colors.transparent,
                                           closedShape: RoundedRectangleBorder(
                                               borderRadius:
-                                                  BorderRadius.circular(20)),
+                                                  BorderRadius.circular(AppLayout.radiusXL)),
                                           onClosed: (returned) async {
                                             if (returned == true) {
                                               await refreshNotes();

@@ -5,6 +5,7 @@ class TableNames {
   static const String categoryDefinitions = 'category_definitions';
   static const String smsContacts = 'sms_contacts';
   static const String periodLogs = 'period_logs';
+  static const String recurringRules = 'recurring_rules';
 }
 
 class NoteFields {
@@ -21,6 +22,18 @@ class NoteFields {
   static const String tags = 'tags';
   static const String previewText = 'previewText';
   static const String deletedAt = 'deletedAt';
+  static const String reminderAt = 'reminderAt';
+  static const String isLocked = 'isLocked';
+}
+
+class RecurringRuleFields {
+  static const String id = 'id';
+  static const String description = 'description';
+  static const String amount = 'amount';
+  static const String category = 'category';
+  static const String isExpense = 'isExpense';
+  static const String frequency = 'frequency'; // daily | weekly | monthly
+  static const String nextDue = 'nextDue';
 }
 
 class TagFields {

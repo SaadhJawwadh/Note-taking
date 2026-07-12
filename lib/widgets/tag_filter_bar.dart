@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/note_provider.dart';
 import 'package:flutter/services.dart';
+import '../theme/app_layout.dart';
 
 class TagFilterBar extends StatelessWidget {
   final Function(String) onTagLongPress;
@@ -69,7 +70,11 @@ class TagFilterBar extends StatelessWidget {
                     onTagLongPress(tag);
                   },
                   child: FilterChip(
-                    label: Text(tag),
+                    label: Text(
+                      (noteProvider.tagCounts[tag] ?? 0) > 0
+                          ? '$tag · ${noteProvider.tagCounts[tag]}'
+                          : tag,
+                    ),
                     selected: isSelected,
                     onSelected: (selected) {
                       HapticFeedback.lightImpact();
@@ -83,7 +88,7 @@ class TagFilterBar extends StatelessWidget {
                     ),
                     side: chipSide,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(AppLayout.radiusXL),
                     ),
                     showCheckmark: false,
                   ),

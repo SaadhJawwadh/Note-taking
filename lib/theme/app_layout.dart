@@ -38,4 +38,17 @@ class AppLayout {
   static const EdgeInsets paddingAllM = EdgeInsets.all(spaceM);
   static const EdgeInsets paddingAllL = EdgeInsets.all(spaceL);
   static const EdgeInsets paddingHome = EdgeInsets.fromLTRB(spaceL, 0, spaceL, 88);
+
+  /// Theme-driven replacement for ad hoc `BoxShadow(color: Colors.black...)`
+  /// blocks scattered across screens — uses the theme's shadow color so it
+  /// adapts correctly between light and dark mode.
+  static List<BoxShadow> softShadow(BuildContext context, {double blurRadius = 10, Offset offset = const Offset(0, 4)}) {
+    return [
+      BoxShadow(
+        color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.1),
+        blurRadius: blurRadius,
+        offset: offset,
+      ),
+    ];
+  }
 }

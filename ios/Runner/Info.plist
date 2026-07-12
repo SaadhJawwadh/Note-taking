@@ -46,7 +46,11 @@
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
 		<key>NSPhotoLibraryAddUsageDescription</key>
-		<string>We need access to your gallery to save converted media files.</string>
+		<string>We need access to your gallery to attach images to notes.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>The microphone is used to dictate notes with your voice.</string>
+		<key>NSSpeechRecognitionUsageDescription</key>
+		<string>Speech recognition converts your voice into note text, on device.</string>
 		<key>UIStatusBarHidden</key>
 		<false/>
 	</dict>

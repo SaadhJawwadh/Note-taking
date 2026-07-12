@@ -1,5 +1,69 @@
 import 'package:flutter/material.dart';
 import 'package:animations/animations.dart';
+import 'app_layout.dart';
+
+/// Semantic color roles not covered by [ColorScheme] (success/income,
+/// cycle phases; destructive already maps to [ColorScheme.error]).
+@immutable
+class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
+  final Color success;
+  final Color phaseMenstrual;
+  final Color phaseFollicular;
+  final Color phaseOvulatory;
+  final Color phaseLuteal;
+
+  const AppSemanticColors({
+    required this.success,
+    required this.phaseMenstrual,
+    required this.phaseFollicular,
+    required this.phaseOvulatory,
+    required this.phaseLuteal,
+  });
+
+  static const light = AppSemanticColors(
+    success: Color(0xFF1E8E3E),
+    phaseMenstrual: Color(0xFFE57373),
+    phaseFollicular: Color(0xFF64B5F6),
+    phaseOvulatory: Color(0xFFFFB74D),
+    phaseLuteal: Color(0xFFBA68C8),
+  );
+  static const dark = AppSemanticColors(
+    success: Color(0xFF34C759),
+    phaseMenstrual: Color(0xFFE57373),
+    phaseFollicular: Color(0xFF64B5F6),
+    phaseOvulatory: Color(0xFFFFB74D),
+    phaseLuteal: Color(0xFFBA68C8),
+  );
+
+  @override
+  AppSemanticColors copyWith({
+    Color? success,
+    Color? phaseMenstrual,
+    Color? phaseFollicular,
+    Color? phaseOvulatory,
+    Color? phaseLuteal,
+  }) {
+    return AppSemanticColors(
+      success: success ?? this.success,
+      phaseMenstrual: phaseMenstrual ?? this.phaseMenstrual,
+      phaseFollicular: phaseFollicular ?? this.phaseFollicular,
+      phaseOvulatory: phaseOvulatory ?? this.phaseOvulatory,
+      phaseLuteal: phaseLuteal ?? this.phaseLuteal,
+    );
+  }
+
+  @override
+  AppSemanticColors lerp(ThemeExtension<AppSemanticColors>? other, double t) {
+    if (other is! AppSemanticColors) return this;
+    return AppSemanticColors(
+      success: Color.lerp(success, other.success, t)!,
+      phaseMenstrual: Color.lerp(phaseMenstrual, other.phaseMenstrual, t)!,
+      phaseFollicular: Color.lerp(phaseFollicular, other.phaseFollicular, t)!,
+      phaseOvulatory: Color.lerp(phaseOvulatory, other.phaseOvulatory, t)!,
+      phaseLuteal: Color.lerp(phaseLuteal, other.phaseLuteal, t)!,
+    );
+  }
+}
 
 class AppTheme {
   // Premium Colors
@@ -35,8 +99,8 @@ class AppTheme {
     Colors.blueGrey,
   ];
 
-  static ThemeData createTheme(ColorScheme? dynamicColorScheme,
-      Brightness brightness, String fontFamily) {
+  static ThemeData createTheme(
+      ColorScheme? dynamicColorScheme, Brightness brightness) {
     ColorScheme scheme;
 
     if (dynamicColorScheme != null) {
@@ -68,7 +132,7 @@ class AppTheme {
       scheme = dynamicColorScheme;
     }
 
-    final textTheme =
+    final baseTextTheme =
         (brightness == Brightness.dark ? ThemeData.dark() : ThemeData.light())
             .textTheme
             .apply(
@@ -77,11 +141,24 @@ class AppTheme {
               displayColor: scheme.onSurface,
             );
 
+    // Material Expressive pairing: Google Sans Text for display/headline/
+    // titleLarge (hero numbers, screen titles), Rubik stays for everything
+    // else (body copy, labels, smaller titles).
+    final textTheme = baseTextTheme.copyWith(
+      displayLarge: baseTextTheme.displayLarge?.copyWith(fontFamily: 'Google Sans Text'),
+      displayMedium: baseTextTheme.displayMedium?.copyWith(fontFamily: 'Google Sans Text'),
+      displaySmall: baseTextTheme.displaySmall?.copyWith(fontFamily: 'Google Sans Text'),
+      headlineLarge: baseTextTheme.headlineLarge?.copyWith(fontFamily: 'Google Sans Text'),
+      headlineMedium: baseTextTheme.headlineMedium?.copyWith(fontFamily: 'Google Sans Text'),
+      headlineSmall: baseTextTheme.headlineSmall?.copyWith(fontFamily: 'Google Sans Text'),
+      titleLarge: baseTextTheme.titleLarge?.copyWith(fontFamily: 'Google Sans Text'),
+    );
+
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
       colorScheme: scheme,
-      fontFamily: 'Rubik',
+      textTheme: textTheme,
       scaffoldBackgroundColor: scheme.surface,
       appBarTheme: AppBarTheme(
         backgroundColor: scheme.surface,
@@ -105,6 +182,29 @@ class AppTheme {
         elevation: 4,
         shape: const StadiumBorder(), // M3 Pill Style
       ),
+      // Deliberate shape steps: cards (16) < buttons (20) < FAB (full pill),
+      // rather than pill-ifying every control.
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppLayout.radiusXL),
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppLayout.radiusXL),
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppLayout.radiusXL),
+          ),
+        ),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: scheme.surfaceContainerHighest,
@@ -120,6 +220,31 @@ class AppTheme {
           textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w500),
         ),
       ),
+      // Keep modal sheets readable on tablets/foldables instead of
+      // stretching edge to edge.
+      bottomSheetTheme: const BottomSheetThemeData(
+        constraints: BoxConstraints(maxWidth: AppLayout.maxContentWidth),
+      ),
+      // One shape language for every floating surface (menus, dialogs,
+      // snackbars) so ad hoc surfaces like context menus match the cards.
+      popupMenuTheme: PopupMenuThemeData(
+        color: scheme.surfaceContainerHigh,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppLayout.radiusL),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: scheme.surfaceContainerHigh,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28), // M3 dialog spec
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppLayout.radiusM),
+        ),
+      ),
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
           TargetPlatform.android: FadeThroughPageTransitionsBuilder(),
@@ -127,6 +252,9 @@ class AppTheme {
           TargetPlatform.macOS: FadeThroughPageTransitionsBuilder(),
         },
       ),
+      extensions: [
+        brightness == Brightness.dark ? AppSemanticColors.dark : AppSemanticColors.light,
+      ],
     );
   }
 }

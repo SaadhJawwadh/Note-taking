@@ -30,7 +30,7 @@ class DatabaseHelper {
 
   @visibleForTesting
   Future<void> createTestDatabase(Database db) async {
-    await _createDB(db, 14);
+    await _createDB(db, 15);
   }
 
   Future<Database> get database {
@@ -95,7 +95,7 @@ class DatabaseHelper {
       return await openDatabase(
         path,
         password: password,
-        version: 14,
+        version: 15,
         onCreate: _createDB,
         onUpgrade: _upgradeDB,
       );
@@ -115,7 +115,7 @@ class DatabaseHelper {
         return await openDatabase(
           path,
           password: password,
-          version: 14,
+          version: 15,
           onCreate: _createDB,
           onUpgrade: _upgradeDB,
         );
@@ -177,7 +177,9 @@ class DatabaseHelper {
         ${NoteFields.category} TEXT,
         ${NoteFields.tags} TEXT,
         ${NoteFields.previewText} TEXT,
-        ${NoteFields.deletedAt} TEXT
+        ${NoteFields.deletedAt} TEXT,
+        ${NoteFields.reminderAt} TEXT,
+        ${NoteFields.isLocked} INTEGER NOT NULL DEFAULT 0
       )
     ''');
 
@@ -240,6 +242,18 @@ class DatabaseHelper {
         ${PeriodLogFields.endDate} TEXT,
         ${PeriodLogFields.intensity} TEXT NOT NULL,
         ${PeriodLogFields.notes} TEXT NOT NULL DEFAULT ''
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ${TableNames.recurringRules} (
+        ${RecurringRuleFields.id} TEXT PRIMARY KEY,
+        ${RecurringRuleFields.description} TEXT NOT NULL,
+        ${RecurringRuleFields.amount} REAL NOT NULL,
+        ${RecurringRuleFields.category} TEXT NOT NULL,
+        ${RecurringRuleFields.isExpense} INTEGER NOT NULL,
+        ${RecurringRuleFields.frequency} TEXT NOT NULL,
+        ${RecurringRuleFields.nextDue} TEXT NOT NULL
       )
     ''');
   }
@@ -306,6 +320,21 @@ class DatabaseHelper {
         final preview = RichTextUtils.contentToPlainText(content, maxLines: 6);
         await db.update(TableNames.notes, {NoteFields.previewText: preview}, where: '${NoteFields.id} = ?', whereArgs: [id]);
       }
+    }
+    if (oldVersion < 15) {
+      await db.execute('ALTER TABLE ${TableNames.notes} ADD COLUMN ${NoteFields.reminderAt} TEXT');
+      await db.execute('ALTER TABLE ${TableNames.notes} ADD COLUMN ${NoteFields.isLocked} INTEGER NOT NULL DEFAULT 0');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS ${TableNames.recurringRules} (
+          ${RecurringRuleFields.id} TEXT PRIMARY KEY,
+          ${RecurringRuleFields.description} TEXT NOT NULL,
+          ${RecurringRuleFields.amount} REAL NOT NULL,
+          ${RecurringRuleFields.category} TEXT NOT NULL,
+          ${RecurringRuleFields.isExpense} INTEGER NOT NULL,
+          ${RecurringRuleFields.frequency} TEXT NOT NULL,
+          ${RecurringRuleFields.nextDue} TEXT NOT NULL
+        )
+      ''');
     }
   }
 }

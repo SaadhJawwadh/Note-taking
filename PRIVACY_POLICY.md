@@ -32,7 +32,7 @@ The Application requests specific device permissions to enable core offline feat
 * **Data Handling**: The Application never accesses, reads, or stores your biometric credentials (such as fingerprint templates or facial recognition data). It only receives a `success` or `failure` response from the Android OS.
 
 ### C. Storage and Media Access
-* **Purpose**: Enables you to attach images/drawings to your notes and import files into the local File Converter module.
+* **Purpose**: Enables you to attach images/drawings to your notes.
 * **How it is processed**: The Application accesses files only when you manually pick them using the system file/image selector.
 * **Data Handling**: Files are copied or processed locally within the Application's secure cache directory. No media files are shared or uploaded to the cloud.
 

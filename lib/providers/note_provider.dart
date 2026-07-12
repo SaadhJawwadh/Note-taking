@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../data/repositories/note_repository.dart';
 import '../data/note_model.dart';
 
@@ -17,6 +18,10 @@ class NoteProvider extends ChangeNotifier {
   int _currentPage = 0;
   bool _isLoadingMore = false;
   bool _hasMoreNotes = true;
+  String _sortMode = 'modified'; // modified | created | title | color
+  Map<String, int> _tagCounts = {};
+  String? _selectedFolder; // null = all folders
+  List<String> _folders = [];
 
   // Getters
   List<Note> get notes => _notes;
@@ -29,9 +34,33 @@ class NoteProvider extends ChangeNotifier {
   Map<String, int> get tagColors => _tagColors;
   bool get isLoadingMore => _isLoadingMore;
   bool get hasMoreNotes => _hasMoreNotes;
+  String get sortMode => _sortMode;
+  Map<String, int> get tagCounts => _tagCounts;
+  String? get selectedFolder => _selectedFolder;
+  List<String> get folders => _folders;
+
+  void setFolder(String? folder) {
+    _selectedFolder = folder;
+    refreshNotes();
+  }
 
   NoteProvider() {
-    refreshNotes();
+    _loadSortMode().then((_) => refreshNotes());
+  }
+
+  Future<void> _loadSortMode() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _sortMode = prefs.getString('noteSortMode') ?? 'modified';
+    } catch (_) {}
+  }
+
+  Future<void> setSortMode(String mode) async {
+    if (mode == _sortMode) return;
+    _sortMode = mode;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('noteSortMode', mode);
+    await refreshNotes();
   }
 
   Future<void> refreshNotes() async {
@@ -51,7 +80,14 @@ class NoteProvider extends ChangeNotifier {
         tag: _selectedTag == 'All' || _selectedTag == 'Archived' || _selectedTag == 'Trash' ? null : _selectedTag,
         isArchived: _selectedTag == 'Archived',
         isTrashed: _selectedTag == 'Trash',
+        sortMode: _sortMode,
+        folder: _selectedFolder,
       );
+      _tagCounts = await _noteRepository.getTagCounts();
+      _folders = await _noteRepository.getAllFolders();
+      if (_selectedFolder != null && !_folders.contains(_selectedFolder)) {
+        _selectedFolder = null;
+      }
 
       _allTags = ['All', ...tags];
       if (!_allTags.contains(_selectedTag)) {
@@ -93,6 +129,8 @@ class NoteProvider extends ChangeNotifier {
         tag: _selectedTag == 'All' || _selectedTag == 'Archived' || _selectedTag == 'Trash' ? null : _selectedTag,
         isArchived: _selectedTag == 'Archived',
         isTrashed: _selectedTag == 'Trash',
+        sortMode: _sortMode,
+        folder: _selectedFolder,
       );
 
       if (moreNotes.length < _pageSize) {
@@ -131,16 +169,32 @@ class NoteProvider extends ChangeNotifier {
   }
 
   // Bulk Actions
+  /// Pins the selection; if every selected note is already pinned, unpins.
+  Future<void> bulkTogglePin() async {
+    final ids = _selectedNoteIds.toList();
+    if (ids.isEmpty) return;
+    final selected = _notes.where((n) => ids.contains(n.id));
+    final allPinned =
+        selected.isNotEmpty && selected.every((n) => n.isPinned);
+    await _noteRepository.bulkSetPinned(ids, !allPinned);
+    clearSelection();
+    await refreshNotes();
+  }
+
   Future<void> bulkArchive() async {
     await _noteRepository.bulkArchive(_selectedNoteIds.toList(), true);
     clearSelection();
     await refreshNotes();
   }
 
-  Future<void> bulkDelete() async {
-    await _noteRepository.bulkDelete(_selectedNoteIds.toList());
+  /// Moves the selection to trash and returns the affected ids so callers
+  /// can offer an undo.
+  Future<List<String>> bulkDelete() async {
+    final ids = _selectedNoteIds.toList();
+    await _noteRepository.bulkDelete(ids);
     clearSelection();
     await refreshNotes();
+    return ids;
   }
 
   Future<void> bulkTag(List<String> selectedTags) async {

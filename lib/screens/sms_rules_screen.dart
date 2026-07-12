@@ -6,6 +6,7 @@ import '../data/repositories/transaction_repository.dart';
 import '../data/category_definition.dart';
 import '../data/transaction_category.dart';
 import '../services/sms_service.dart';
+import '../theme/app_layout.dart';
 
 class SmsRulesScreen extends StatefulWidget {
   const SmsRulesScreen({super.key});
@@ -56,6 +57,40 @@ class _SmsRulesScreenState extends State<SmsRulesScreen> with SingleTickerProvid
     }
   }
 
+  Future<void> _confirmRestoreDefaults() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Restore default rules?'),
+        content: const Text(
+            'All custom transaction-type rules will be removed and built-in category keywords reset to their defaults. Custom categories themselves are kept.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Restore'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
+    await settings.clearCustomRules();
+    await TransactionRepository.instance.resetBuiltInCategoryKeywords();
+    await TransactionCategory.reload();
+    await SmsService.reloadSmsContacts();
+    await _loadCategories();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('SMS rules restored to defaults')),
+      );
+    }
+  }
+
   Future<void> _addCategoryKeyword(CategoryDefinition def, String keyword) async {
     final kw = keyword.trim().toLowerCase();
     if (kw.isEmpty || def.keywords.contains(kw)) return;
@@ -86,6 +121,13 @@ class _SmsRulesScreenState extends State<SmsRulesScreen> with SingleTickerProvid
     return Scaffold(
       appBar: AppBar(
         title: const Text('SMS Import Rules'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_backup_restore),
+            tooltip: 'Restore defaults',
+            onPressed: _confirmRestoreDefaults,
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -364,7 +406,7 @@ class _SmsRulesScreenState extends State<SmsRulesScreen> with SingleTickerProvid
             elevation: 0,
             color: cs.surfaceContainerLow,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppLayout.radiusL),
               side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3), width: 1.0),
             ),
             child: Padding(

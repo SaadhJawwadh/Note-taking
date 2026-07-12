@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/sms_service.dart';
+import '../screens/app_lock_screen.dart';
 
 class SmsImportSheet extends StatefulWidget {
   const SmsImportSheet({super.key});
@@ -40,6 +41,7 @@ class _SmsImportSheetState extends State<SmsImportSheet> {
       );
       if (proceed != true) return;
 
+      AppLockScreen.ignoreNextResumeLock();
       final ok = await SmsService.requestPermissions();
       if (!mounted) return;
       if (!ok) {

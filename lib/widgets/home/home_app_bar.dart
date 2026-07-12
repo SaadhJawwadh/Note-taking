@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../data/settings_provider.dart';
 import '../../providers/note_provider.dart';
 import '../../screens/settings_screen.dart';
 import '../../screens/search_delegate.dart';
+import '../../theme/app_layout.dart';
+import '../../utils/app_route.dart';
+import '../../l10n/app_localizations.dart';
 
 class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback onClearSelection;
@@ -43,14 +47,8 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
           color: noteProvider.isSelectionMode
               ? Theme.of(context).colorScheme.primaryContainer
               : Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(32),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+          boxShadow: AppLayout.softShadow(context),
         ),
         child: noteProvider.isSelectionMode
             ? _buildSelectionMode(context, noteProvider)
@@ -65,7 +63,10 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
         const SizedBox(width: 8),
         IconButton(
           icon: const Icon(Icons.close),
-          onPressed: onClearSelection,
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            onClearSelection();
+          },
         ),
         const SizedBox(width: 8),
         Text(
@@ -77,35 +78,53 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
         const Spacer(),
         IconButton(
+          icon: const Icon(Icons.push_pin_outlined),
+          tooltip: 'Pin / unpin selected',
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            context.read<NoteProvider>().bulkTogglePin();
+          },
+        ),
+        IconButton(
           icon: const Icon(Icons.archive_outlined),
           tooltip: 'Archive selected',
-          onPressed: onBulkArchive,
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            onBulkArchive();
+          },
         ),
         IconButton(
           icon: const Icon(Icons.label_outline),
           tooltip: 'Tag selected',
-          onPressed: onBulkTag,
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            onBulkTag();
+          },
         ),
         IconButton(
           icon: const Icon(Icons.delete_outline),
           tooltip: 'Delete selected',
-          color: Colors.red,
-          onPressed: onBulkDelete,
+          color: Theme.of(context).colorScheme.error,
+          onPressed: () {
+            HapticFeedback.mediumImpact();
+            onBulkDelete();
+          },
         ),
       ],
     );
   }
 
-  String _getGreeting() {
+  String _getGreeting(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final hour = DateTime.now().hour;
     if (hour >= 5 && hour < 12) {
-      return 'Morning, Sun Shine!';
+      return l10n.greetingMorning;
     } else if (hour >= 12 && hour < 17) {
-      return 'Had Lunch?';
+      return l10n.greetingAfternoon;
     } else if (hour >= 17 && hour < 21) {
-      return 'Time to sleep!';
+      return l10n.greetingEvening;
     } else {
-      return 'Hello, User';
+      return l10n.greetingNight;
     }
   }
 
@@ -119,13 +138,15 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              _getGreeting(),
+              _getGreeting(context),
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
             ),
             Text(
-              '${noteProvider.filteredNotes.length} note${noteProvider.filteredNotes.length == 1 ? "" : "s"}',
+              AppLocalizations.of(context)!.noteCount(
+                  noteProvider.tagCounts['All'] ??
+                      noteProvider.filteredNotes.length),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 11,
@@ -134,15 +155,57 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
           ],
         ),
         const Spacer(),
+        if (noteProvider.folders.isNotEmpty)
+          PopupMenuButton<String>(
+            icon: Icon(
+              noteProvider.selectedFolder != null
+                  ? Icons.folder
+                  : Icons.folder_outlined,
+              color: noteProvider.selectedFolder != null
+                  ? Theme.of(context).colorScheme.primary
+                  : null,
+            ),
+            tooltip: 'Filter by folder',
+            onSelected: (value) {
+              HapticFeedback.selectionClick();
+              noteProvider.setFolder(value == '__all__' ? null : value);
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                  value: '__all__', child: Text('All folders')),
+              ...noteProvider.folders.map(
+                (f) => PopupMenuItem(value: f, child: Text(f)),
+              ),
+            ],
+          ),
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.sort),
+          tooltip: 'Sort notes',
+          initialValue: noteProvider.sortMode,
+          onSelected: (mode) {
+            HapticFeedback.selectionClick();
+            noteProvider.setSortMode(mode);
+          },
+          itemBuilder: (context) => const [
+            CheckedPopupMenuItem(value: 'modified', child: Text('Last modified')),
+            CheckedPopupMenuItem(value: 'created', child: Text('Date created')),
+            CheckedPopupMenuItem(value: 'title', child: Text('Title')),
+            CheckedPopupMenuItem(value: 'color', child: Text('Color')),
+          ],
+        ),
         IconButton(
           icon: Icon(_getIconForMode(settings.noteViewMode)),
           tooltip: _getTooltipForMode(settings.noteViewMode),
-          onPressed: onCycleViewMode,
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            onCycleViewMode();
+          },
         ),
         IconButton(
           icon: const Icon(Icons.search),
           tooltip: 'Global search',
           onPressed: () {
+            HapticFeedback.selectionClick();
             showSearch(context: context, delegate: GlobalSearchDelegate());
           },
         ),
@@ -152,11 +215,8 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Settings',
             onPressed: () {
-              Navigator.of(context)
-                  .push(
-                    MaterialPageRoute(
-                        builder: (context) => const SettingsScreen()),
-                  )
+              HapticFeedback.selectionClick();
+              AppRoute.push(context, const SettingsScreen())
                   .then((_) => onRefresh());
             },
           ),

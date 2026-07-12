@@ -1,0 +1,22 @@
+{
+  "@@locale": "ta",
+  "appTitle": "Everything App",
+  "navNotes": "குறிப்புகள்",
+  "navFinances": "நிதி",
+  "navTracker": "கண்காணிப்பு",
+  "greetingMorning": "காலை வணக்கம்!",
+  "greetingAfternoon": "மதிய உணவு சாப்பிட்டீர்களா?",
+  "greetingEvening": "மாலை வணக்கம்!",
+  "greetingNight": "தூங்க வேண்டிய நேரம்!",
+  "noteCount": "{count, plural, =1{1 குறிப்பு} other{{count} குறிப்புகள்}}",
+  "settingsTitle": "அமைப்புகள்",
+  "newNote": "புதிய குறிப்பு",
+  "newTransaction": "புதிய பரிவர்த்தனை",
+  "search": "தேடு",
+  "save": "சேமி",
+  "cancel": "ரத்து செய்",
+  "delete": "நீக்கு",
+  "lockedNote": "பூட்டிய குறிப்பு",
+  "appLocked": "செயலி பூட்டப்பட்டுள்ளது",
+  "unlock": "திற"
+}

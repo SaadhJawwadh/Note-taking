@@ -4,10 +4,12 @@
     <color name="widget_background">#FFFFFF</color>
     <color name="widget_surface">#F2F2F7</color>
     <color name="widget_primary">#6B4EFF</color>
+    <color name="widget_primary_container">#E8DEFF</color>
+    <color name="widget_on_primary_container">#25036B</color>
     <color name="widget_accent">#FF85C2</color>
     <color name="widget_text_primary">#000000</color>
     <color name="widget_text_secondary">#8E8E93</color>
-    <color name="widget_border">#E5E5EA</color>
+    <color name="widget_border">#33E5E5EA</color>
     <color name="widget_income">#34C759</color>
     <color name="widget_expense">#FF3B30</color>
 </resources>

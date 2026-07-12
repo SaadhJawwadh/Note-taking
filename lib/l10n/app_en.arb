@@ -1,0 +1,27 @@
+{
+  "@@locale": "en",
+  "appTitle": "Everything App",
+  "navNotes": "Notes",
+  "navFinances": "Finances",
+  "navTracker": "Tracker",
+  "greetingMorning": "Morning, Sun Shine!",
+  "greetingAfternoon": "Had Lunch?",
+  "greetingEvening": "Good Evening!",
+  "greetingNight": "Time to sleep!",
+  "noteCount": "{count, plural, =1{1 note} other{{count} notes}}",
+  "@noteCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "settingsTitle": "Settings",
+  "newNote": "New Note",
+  "newTransaction": "New Transaction",
+  "search": "Search",
+  "save": "Save",
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "lockedNote": "Locked note",
+  "appLocked": "App Locked",
+  "unlock": "Unlock"
+}

@@ -13,6 +13,10 @@ import '../data/settings_provider.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import 'dart:math' as math;
+import '../utils/app_route.dart';
+import '../theme/app_layout.dart';
+import '../theme/app_theme.dart';
+import '../widgets/skeleton_card.dart';
 
 class PeriodTrackerScreen extends StatefulWidget {
   const PeriodTrackerScreen({super.key});
@@ -40,7 +44,6 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
   int? _currentCycleDay;
   String _currentPhase = 'No Data';
   String _phaseDescription = 'Log a period to start prediction.';
-  Color _phaseColor = Colors.grey;
 
   @override
   void initState() {
@@ -78,7 +81,6 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
       _currentCycleDay = null;
       _currentPhase = "No Logs";
       _phaseDescription = "Log a period start date to see cycle phases.";
-      _phaseColor = Colors.grey;
       return;
     }
     final latestLog = _logs.first;
@@ -95,19 +97,33 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
     if (cycleDay >= 1 && cycleDay <= 5) {
       _currentPhase = "Menstrual Phase";
       _phaseDescription = "Flow begins. Progesterone and estrogen levels drop. Rest and nurture yourself.";
-      _phaseColor = Colors.red.shade300;
     } else if (cycleDay >= 6 && cycleDay <= 11) {
       _currentPhase = "Follicular Phase";
       _phaseDescription = "Estrogen rises, boosting energy, mood, and focus. Great time for planning.";
-      _phaseColor = Colors.blue.shade300;
     } else if (cycleDay >= 12 && cycleDay <= 16) {
       _currentPhase = "Ovulatory Phase";
       _phaseDescription = "Estrogen peaks, triggering ovulation. High energy and social openness.";
-      _phaseColor = Colors.orange.shade300;
     } else {
       _currentPhase = "Luteal Phase";
       _phaseDescription = "Progesterone peaks, winding down energy. Prioritize self-care.";
-      _phaseColor = Colors.purple.shade300;
+    }
+  }
+
+  /// Phase colors come from the theme's semantic tokens so they stay
+  /// consistent with the rest of the design system.
+  Color _resolvePhaseColor(BuildContext context) {
+    final semantic = Theme.of(context).extension<AppSemanticColors>();
+    switch (_currentPhase) {
+      case 'Menstrual Phase':
+        return semantic?.phaseMenstrual ?? Colors.red.shade300;
+      case 'Follicular Phase':
+        return semantic?.phaseFollicular ?? Colors.blue.shade300;
+      case 'Ovulatory Phase':
+        return semantic?.phaseOvulatory ?? Colors.orange.shade300;
+      case 'Luteal Phase':
+        return semantic?.phaseLuteal ?? Colors.purple.shade300;
+      default:
+        return Theme.of(context).colorScheme.outline;
     }
   }
 
@@ -211,7 +227,9 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
               child: const Text('Cancel')),
           TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Delete', style: TextStyle(color: Colors.red))),
+              child: Text('Delete',
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.error))),
         ],
       ),
     );
@@ -450,7 +468,22 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        body: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: const [
+              SkeletonCard(height: 64),
+              SizedBox(height: 12),
+              SkeletonCard(height: 180),
+              SizedBox(height: 12),
+              SkeletonCard(height: 120),
+              SizedBox(height: 12),
+              SkeletonCard(height: 320),
+            ],
+          ),
+        ),
+      );
     }
 
     final ongoingPeriod = _getCurrentOngoingPeriod();
@@ -486,14 +519,8 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                 height: 64,
                 decoration: BoxDecoration(
                   color: colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(32),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+                  boxShadow: AppLayout.softShadow(context),
                 ),
                 child: Row(
                   children: [
@@ -545,11 +572,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                         color: colorScheme.onSurfaceVariant,
                       ),
                       onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const SettingsScreen(),
-                          ),
-                        );
+                        AppRoute.push(context, const SettingsScreen());
                       },
                     ),
                   ],
@@ -572,7 +595,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                         description: _phaseDescription,
                         cycleDay: _currentCycleDay,
                         avgCycleLength: _avgCycleLength,
-                        phaseColor: _phaseColor,
+                        phaseColor: _resolvePhaseColor(context),
                         animation: _waveController,
                         isMasked: _isPrivacyMasked,
                       ),
@@ -596,7 +619,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                         elevation: 0,
                         color: colorScheme.surfaceContainerLow,
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(AppLayout.radiusXL),
                             side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
                         ),
                         child: Padding(
@@ -674,7 +697,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                         color: colorScheme.surfaceContainerLow,
                         margin: const EdgeInsets.only(bottom: 12),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(AppLayout.radiusXL),
                             side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
                         ),
                         child: TableCalendar(
@@ -791,7 +814,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                                       ? periodColor.withValues(alpha: 0.5)
                                       : colorScheme.surfaceContainerHighest)),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20)),
+                              borderRadius: BorderRadius.circular(AppLayout.radiusXL)),
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: _isPrivacyMasked
@@ -1020,7 +1043,7 @@ class CyclePhaseWaveWidget extends StatelessWidget {
       elevation: 0,
       color: theme.colorScheme.surfaceContainerLow,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppLayout.radiusL),
         side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3)),
       ),
       child: SizedBox(
@@ -1061,7 +1084,7 @@ class CyclePhaseWaveWidget extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: phaseColor.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(AppLayout.radiusL),
                           ),
                           child: Text(
                             'Day $cycleDay of $avgCycleLength',

@@ -25,6 +25,12 @@ void callbackDispatcher() {
     Workmanager().executeTask((task, inputData) async {
       if (task == kAutoBackupTaskName) return await performAutoBackup();
       if (task == SmsService.kDailySyncTaskName) return await SmsService.performDailyTransactionSync();
+      if (task == kWidgetRefreshTaskName) {
+        // Recomputes widget prefs; the widget's own updatePeriodMillis cycle
+        // redraws from them since the widget channel isn't available here.
+        await WidgetHelper.updateWidgetData();
+        return true;
+      }
       return Future.value(true);
     });
   } catch (e) {
@@ -55,13 +61,9 @@ Future<String> generateBackupJson({Map<String, dynamic>? settingsOverride}) asyn
     settingsMap = {
       'textSize': prefs.getDouble('textSize') ?? 16.0,
       'themeMode': prefs.getInt('themeMode') ?? 0,
-      'fontFamily': prefs.getString('fontFamily') ?? 'Rubik',
       'noteViewMode': prefs.getInt('noteViewMode') ?? 1,
       'isGridView': prefs.getBool('isGridView') ?? true, // legacy
       'showFinancialManager': prefs.getBool('showFinancialManager') ?? false,
-      'showFileConverter': prefs.getBool('showFileConverter') ?? false,
-      'isConverterLite': prefs.getBool('isConverterLite') ?? true,
-      'isFfmpegInstalled': prefs.getBool('isFfmpegInstalled') ?? false,
       'currency': prefs.getString('currency') ?? 'LKR',
       'isPeriodTrackerEnabled': prefs.getBool('isPeriodTrackerEnabled') ?? false,
       'appLockEnabled': prefs.getBool('appLockEnabled') ?? false,
@@ -70,10 +72,6 @@ Future<String> generateBackupJson({Map<String, dynamic>? settingsOverride}) asyn
       'discreetNotificationText': prefs.getString('discreetNotificationText') ?? 'Check the app',
       'customExpenseRules': prefs.getStringList('customExpenseRules') ?? [],
       'customIncomeRules': prefs.getStringList('customIncomeRules') ?? [],
-      'preferredVideoFormat': prefs.getString('preferredVideoFormat') ?? 'mp4',
-      'preferredImageFormat': prefs.getString('preferredImageFormat') ?? 'jpg',
-      'videoResolutionLimit': prefs.getString('videoResolutionLimit') ?? 'Original',
-      'keepMetadata': prefs.getBool('keepMetadata') ?? false,
       'useOnDeviceAi': prefs.getBool('useOnDeviceAi') ?? false,
     };
   }
@@ -159,7 +157,7 @@ class BackupService {
   static Future<void> exportBackup(BuildContext context) async {
     try {
       // Pass the full settings map from SettingsProvider to ensure all fields
-      // are captured (noteViewMode, showFileConverter, custom rules, etc.).
+      // are captured (noteViewMode, custom rules, etc.).
       final settingsMap = context.mounted
           ? Provider.of<SettingsProvider>(context, listen: false).toBackupMap()
           : null;

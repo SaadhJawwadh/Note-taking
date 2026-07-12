@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:telephony/telephony.dart' hide NetworkType;
+import 'package:another_telephony/telephony.dart' hide NetworkType;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../data/repositories/transaction_repository.dart';

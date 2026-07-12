@@ -7,15 +7,24 @@ import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import '../data/settings_provider.dart';
+import '../l10n/app_localizations.dart';
 
 class AppLockScreen extends StatefulWidget {
   final Widget child;
 
   const AppLockScreen({super.key, required this.child});
-  
+
   static final ValueNotifier<bool> sessionAuthenticated = ValueNotifier<bool>(false);
   static bool _ignoreNextResumeLock = false;
-  static List<String>? pendingSharedPaths;
+
+  /// Media shared into the app that hasn't been turned into a note yet —
+  /// either because it arrived while locked, or because it arrived at cold
+  /// start before HomeScreen mounted. Consumed by HomeScreen.
+  static List<SharedMediaFile>? pendingSharedMedia;
+
+  /// Bumped whenever [pendingSharedMedia] is (re)filled so HomeScreen can
+  /// consume it immediately instead of waiting for the next resume.
+  static final ValueNotifier<int> sharedMediaTick = ValueNotifier<int>(0);
 
   // Static helper to manually unlock the session (useful for sharing)
   static void unlockSession() {
@@ -64,19 +73,32 @@ class AppLockScreenState extends State<AppLockScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     AppLockScreen.sessionAuthenticated.addListener(_onAuthChanged);
-    _intentDataStreamSubscription = ReceiveSharingIntent.instance.getMediaStream().listen((value) {
-      if (value.isNotEmpty) {
-        AppLockScreen.pendingSharedPaths = value.map((f) => f.path).toList();
+
+    // Park shares that arrive while the lock screen is covering the app;
+    // HomeScreen isn't mounted then, so its own listener can't see them.
+    _intentDataStreamSubscription =
+        ReceiveSharingIntent.instance.getMediaStream().listen((files) {
+      if (files.isEmpty || !mounted) return;
+      final settings = Provider.of<SettingsProvider>(context, listen: false);
+      final isLocked =
+          settings.appLockEnabled && !AppLockScreen.sessionAuthenticated.value;
+      if (isLocked) {
+        AppLockScreen.pendingSharedMedia = files;
       }
     });
+
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Cold-start shares are read here (single source of truth) and handed
+      // to HomeScreen via pendingSharedMedia + sharedMediaTick.
       try {
         final media = await ReceiveSharingIntent.instance.getInitialMedia();
         if (media.isNotEmpty) {
-          AppLockScreen.pendingSharedPaths = media.map((f) => f.path).toList();
+          AppLockScreen.pendingSharedMedia = media;
+          AppLockScreen.sharedMediaTick.value++;
         }
+        unawaited(ReceiveSharingIntent.instance.reset());
       } catch (e) {
-        debugPrint('Error checking initial media on lock screen start: $e');
+        debugPrint('Error checking initial shared media: $e');
       }
       if (mounted) {
         await _checkAuth(context);
@@ -92,7 +114,7 @@ class AppLockScreenState extends State<AppLockScreen>
 
   @override
   void dispose() {
-    _intentDataStreamSubscription?.cancel();
+    unawaited(_intentDataStreamSubscription?.cancel());
     WidgetsBinding.instance.removeObserver(this);
     AppLockScreen.sessionAuthenticated.removeListener(_onAuthChanged);
     super.dispose();
@@ -100,16 +122,17 @@ class AppLockScreenState extends State<AppLockScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_isAuthenticating) {
+      // Ignore lifecycle changes caused by the biometric authentication dialog itself
+      // (its system UI briefly backgrounds the app on some platforms/OEM skins).
+      return;
+    }
+
     final isBackground = state != AppLifecycleState.resumed;
     if (mounted) {
       setState(() {
         _isInBackground = isBackground;
       });
-    }
-
-    if (_isAuthenticating) {
-      // Ignore lifecycle changes caused by the biometric authentication dialog itself
-      return;
     }
 
     if (isBackground) {
@@ -235,14 +258,15 @@ class AppLockScreenState extends State<AppLockScreen>
                   size: 80, color: Theme.of(context).colorScheme.primary),
               const SizedBox(height: 24),
               Text(
-                'App Locked',
+                AppLocalizations.of(context)?.appLocked ?? 'App Locked',
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
               const SizedBox(height: 16),
               if (!_isInBackground)
-                ElevatedButton(
+                FilledButton.icon(
                   onPressed: () => _checkAuth(context),
-                  child: const Text('Unlock'),
+                  icon: const Icon(Icons.fingerprint),
+                  label: Text(AppLocalizations.of(context)?.unlock ?? 'Unlock'),
                 ),
             ],
           ),
@@ -264,7 +288,7 @@ class AppLockScreenState extends State<AppLockScreen>
                         size: 80, color: Theme.of(context).colorScheme.primary),
                     const SizedBox(height: 24),
                     Text(
-                      'App Locked',
+                      AppLocalizations.of(context)?.appLocked ?? 'App Locked',
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                   ],

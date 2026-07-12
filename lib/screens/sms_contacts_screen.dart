@@ -3,6 +3,7 @@ import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../data/repositories/transaction_repository.dart';
 import '../data/sms_contact.dart';
 import '../services/sms_service.dart';
+import '../theme/app_layout.dart';
 
 class SmsContactsScreen extends StatefulWidget {
   const SmsContactsScreen({super.key});
@@ -210,7 +211,7 @@ class _SmsContactsScreenState extends State<SmsContactsScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       color: cs.surfaceContainerLow,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppLayout.radiusL),
         side: BorderSide(
           color: cs.outlineVariant.withValues(alpha: 0.3),
           width: 1.0,

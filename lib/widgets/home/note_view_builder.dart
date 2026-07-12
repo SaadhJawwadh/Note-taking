@@ -9,6 +9,8 @@ import '../../providers/note_provider.dart';
 import '../../screens/note_editor_screen.dart';
 import '../../screens/home_screen.dart'; // For NoteCard for now, maybe move it too
 import '../../data/repositories/note_repository.dart';
+import '../../theme/app_layout.dart';
+import '../skeleton_card.dart';
 
 class NoteViewBuilder extends StatelessWidget {
   final VoidCallback onRefresh;
@@ -28,8 +30,18 @@ class NoteViewBuilder extends StatelessWidget {
     final settings = context.watch<SettingsProvider>();
 
     if (noteProvider.isLoading) {
-      return const SliverFillRemaining(
-        child: Center(child: CircularProgressIndicator()),
+      // Skeleton cards instead of a bare spinner — mirrors the grid the
+      // content will land in.
+      final skeletonColumns =
+          (MediaQuery.sizeOf(context).width / 220).floor().clamp(2, 4);
+      const skeletonHeights = [150.0, 190.0, 120.0, 170.0, 140.0, 200.0];
+      return SliverMasonryGrid.count(
+        crossAxisCount: skeletonColumns,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childCount: skeletonHeights.length,
+        itemBuilder: (context, index) =>
+            SkeletonCard(height: skeletonHeights[index]),
       );
     }
 
@@ -107,9 +119,12 @@ class NoteViewBuilder extends StatelessWidget {
         ),
       );
     } else {
-      // Grid (Masonry Grid)
+      // Grid (Masonry Grid) — column count adapts to width so tablets and
+      // foldables get 3-4 columns instead of two stretched ones.
+      final width = MediaQuery.sizeOf(context).width;
+      final columnCount = (width / 220).floor().clamp(2, 4);
       return SliverMasonryGrid.count(
-        crossAxisCount: 2,
+        crossAxisCount: columnCount,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
         childCount: noteProvider.filteredNotes.length,
@@ -118,7 +133,7 @@ class NoteViewBuilder extends StatelessWidget {
           return AnimationConfiguration.staggeredGrid(
             position: index,
             duration: const Duration(milliseconds: 220),
-            columnCount: 2,
+            columnCount: columnCount,
             child: ScaleAnimation(
               child: FadeInAnimation(
                 child: _buildOpenContainer(context, note, onRefresh, noteProvider),
@@ -137,7 +152,7 @@ class NoteViewBuilder extends StatelessWidget {
       background: Container(
         decoration: BoxDecoration(
           color: Colors.green.withValues(alpha: 0.8),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppLayout.radiusXL),
         ),
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -146,7 +161,7 @@ class NoteViewBuilder extends StatelessWidget {
       secondaryBackground: Container(
         decoration: BoxDecoration(
           color: Colors.red.withValues(alpha: 0.8),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppLayout.radiusXL),
         ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -201,7 +216,7 @@ class NoteViewBuilder extends StatelessWidget {
       openElevation: 0,
       closedColor: Theme.of(context).colorScheme.surfaceContainer,
       openColor: Theme.of(context).colorScheme.surface,
-      closedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      closedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusXL)),
       onClosed: (returned) async {
         if (returned == true) {
           refresh();

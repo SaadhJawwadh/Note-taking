@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -14,12 +15,16 @@ import 'sms_contacts_screen.dart';
 import 'sms_rules_screen.dart';
 import '../utils/app_constants.dart';
 import '../utils/widget_helper.dart';
+import '../utils/app_route.dart';
+import '../theme/app_layout.dart';
 import 'package:file_picker/file_picker.dart';
 import 'app_lock_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/backup_service.dart';
 import '../widgets/settings_widgets.dart';
 import '../widgets/sms_import_sheet.dart';
+import '../widgets/recurring_rules_sheet.dart';
+import '../l10n/app_localizations.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -46,14 +51,20 @@ class SettingsScreen extends StatelessWidget {
                   height: 64,
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(32),
-                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4))],
+                    borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+                    boxShadow: AppLayout.softShadow(context),
                   ),
                   child: Row(
                     children: [
-                      IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context)),
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back),
+                        onPressed: () {
+                          HapticFeedback.selectionClick();
+                          Navigator.pop(context);
+                        },
+                      ),
                       const SizedBox(width: 8),
-                      Text('Settings', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                      Text(AppLocalizations.of(context)!.settingsTitle, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ),
@@ -79,7 +90,7 @@ class SettingsScreen extends StatelessWidget {
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                     ),
-                                    borderRadius: BorderRadius.circular(24),
+                                    borderRadius: BorderRadius.circular(AppLayout.radiusXXL),
                                     border: Border.all(
                                       color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
                                     ),
@@ -138,14 +149,6 @@ class SettingsScreen extends StatelessWidget {
                               ),
                               const _Divider(),
                               SettingsSwitchTile(
-                                icon: Icons.transform_rounded,
-                                title: 'Enable File Converter',
-                                subtitle: 'Show the compression utility in the bottom bar',
-                                value: settings.showFileConverter,
-                                onChanged: settings.setShowFileConverter,
-                              ),
-                              const _Divider(),
-                              SettingsSwitchTile(
                                 icon: Icons.calendar_month_outlined,
                                 title: 'Period Tracker',
                                 subtitle: 'Optional cycle tracking',
@@ -163,11 +166,13 @@ class SettingsScreen extends StatelessWidget {
                                 const _Divider(),
                                 SettingsTile(icon: Icons.sms_outlined, title: 'Advanced SMS Import', subtitle: 'Fetch past bank transactions from messages', showArrow: true, onTap: () => showModalBottomSheet(context: context, isScrollControlled: true, showDragHandle: true, builder: (_) => const SmsImportSheet())),
                                 const _Divider(),
-                                SettingsTile(icon: Icons.category_outlined, title: 'Manage Categories', subtitle: 'Customise keywords and create new categories', showArrow: true, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryManagementScreen()))),
+                                SettingsTile(icon: Icons.category_outlined, title: 'Manage Categories', subtitle: 'Customise keywords and create new categories', showArrow: true, onTap: () => AppRoute.push(context, const CategoryManagementScreen())),
                                 const _Divider(),
-                                SettingsTile(icon: Icons.contacts_outlined, title: 'SMS Contacts', subtitle: 'Manage bank & custom senders for auto-import', showArrow: true, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SmsContactsScreen()))),
+                                SettingsTile(icon: Icons.contacts_outlined, title: 'SMS Contacts', subtitle: 'Manage bank & custom senders for auto-import', showArrow: true, onTap: () => AppRoute.push(context, const SmsContactsScreen())),
                                 const _Divider(),
-                                SettingsTile(icon: Icons.rule_folder_outlined, title: 'SMS Import Rules', subtitle: 'Manage auto-categorization and transaction type rules', showArrow: true, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SmsRulesScreen()))),
+                                SettingsTile(icon: Icons.event_repeat_outlined, title: 'Recurring Transactions', subtitle: 'Manage automatically repeating entries', showArrow: true, onTap: () => showModalBottomSheet(context: context, isScrollControlled: true, showDragHandle: true, builder: (_) => const RecurringRulesSheet())),
+                                const _Divider(),
+                                SettingsTile(icon: Icons.rule_folder_outlined, title: 'SMS Import Rules', subtitle: 'Manage auto-categorization and transaction type rules', showArrow: true, onTap: () => AppRoute.push(context, const SmsRulesScreen())),
                                 const _Divider(),
                                 SettingsSwitchTile(icon: Icons.sync_outlined, title: 'Daily SMS Auto-Sync', subtitle: 'Import bank transactions automatically daily', value: settings.dailySyncEnabled, onChanged: settings.setDailySyncEnabled),
                                 if (settings.dailySyncEnabled) ...[
@@ -222,11 +227,11 @@ class SettingsScreen extends StatelessWidget {
                             title: 'Organization & Folders',
                             icon: Icons.folder_open_outlined,
                             children: [
-                              SettingsTile(icon: Icons.label_outline, title: 'Manage Tags', subtitle: 'Rename or delete tags', showArrow: true, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ManageTagsScreen()))),
+                              SettingsTile(icon: Icons.label_outline, title: 'Manage Tags', subtitle: 'Rename or delete tags', showArrow: true, onTap: () => AppRoute.push(context, const ManageTagsScreen())),
                               const _Divider(),
-                              SettingsTile(icon: Icons.archive_outlined, title: 'Archive', subtitle: 'View archived notes', showArrow: true, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const FilteredNotesScreen(filterType: FilterType.archived)))),
+                              SettingsTile(icon: Icons.archive_outlined, title: 'Archive', subtitle: 'View archived notes', showArrow: true, onTap: () => AppRoute.push(context, const FilteredNotesScreen(filterType: FilterType.archived))),
                               const _Divider(),
-                              SettingsTile(icon: Icons.delete_outline, title: 'Trash', subtitle: 'View deleted notes', showArrow: true, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const FilteredNotesScreen(filterType: FilterType.trash)))),
+                              SettingsTile(icon: Icons.delete_outline, title: 'Trash', subtitle: 'View deleted notes', showArrow: true, onTap: () => AppRoute.push(context, const FilteredNotesScreen(filterType: FilterType.trash))),
                             ],
                           ),
                           SettingsSection(
@@ -247,7 +252,7 @@ class SettingsScreen extends StatelessWidget {
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
                                       color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                                      borderRadius: BorderRadius.circular(12),
+                                      borderRadius: BorderRadius.circular(AppLayout.radiusM),
                                     ),
                                     child: const Icon(Icons.auto_awesome_outlined, size: 20, color: Colors.grey),
                                   ),
@@ -491,6 +496,7 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Future<void> _launchUrl(String url) async {
+    AppLockScreen.ignoreNextResumeLock();
     final uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) throw Exception('Could not launch $url');
   }

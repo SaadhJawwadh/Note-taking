@@ -18,3 +18,9 @@ Use this skill when modifying the menstrual calendar, symptoms log, dynamic cycl
 ## 3. Privacy & Alerts
 * **Offline Storage**: Health data is completely local and must be excluded from unencrypted backup exports.
 * **Discreet Alerts**: Local prediction notifications must use customizable discreet text (e.g. `"Check the app"`) to preserve absolute privacy.
+
+## 3. Theming & Notifications (v2.0)
+* **Phase colors are semantic tokens**: menstrual/follicular/ovulatory/luteal come from `AppSemanticColors` (ThemeExtension in `app_theme.dart`) via `_resolvePhaseColor(context)` — never hardcode `Colors.red.shade300` etc. Resolve colors at build time, not in async state computation.
+* **Notification id discipline**: period notifications own ids 1-3; reschedule by cancelling those ids only — `cancelAll()` destroys note reminders and other channels.
+* **Loading**: use the shared `SkeletonCard` list, not a full-screen spinner.
+* **Privacy mask**: tracker details stay masked until device auth when App Lock is on (`_isPrivacyMasked` + LocalAuthentication) — preserve this in any redesign.

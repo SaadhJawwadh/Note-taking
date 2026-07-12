@@ -62,7 +62,6 @@ lib/
 └── screens/                          # Complete Application Screens
     ├── app_lock_screen.dart          # PIN/Biometric App Lock session supervisor
     ├── category_management_screen.dart# Custom financial categories controller
-    ├── file_converter_screen.dart    # Video & Image compression UI presets
     ├── filtered_notes_screen.dart    # Dedicated viewer for Archive and Trash notes
     ├── financial_manager_screen.dart # Financial dashboard, graphs, and transaction search
     ├── home_screen.dart              # Primary multi-tab container & note feed
@@ -165,16 +164,6 @@ Enables exporting and restoring data securely across devices.
 *   **Key Files**:
     *   Service Methods: `backup_service.dart`
     *   Schedule Configuration: `settings_provider.dart`
-
-### 8. File & Media Converter (Fiber Converter)
-A background utility for media file compression and format conversion.
-*   **Key Features**:
-    *   **Dual Mode Execution**: Lite Mode (native platform APIs) or FFmpeg Mode (local FFmpeg binaries).
-    *   **Presets**: Custom video format configurations (mp4, mkv, gif) and image formats (jpg, png, webp).
-*   **Key Files**:
-    *   UI Panel: `file_converter_screen.dart`
-    *   FFmpeg Controller: `ffmpeg_service.dart`
-    *   Binary Downloader: `ffmpeg_install_service.dart`
 
 ---
 

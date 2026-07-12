@@ -3,6 +3,7 @@ import '../database_helper.dart';
 import '../note_model.dart';
 import '../database_constants.dart';
 import '../../utils/rich_text_utils.dart';
+import '../../services/notification_service.dart';
 
 class NoteRepository {
   static final NoteRepository instance = NoteRepository._init();
@@ -38,6 +39,8 @@ class NoteRepository {
     String? tag,
     bool isArchived = false,
     bool isTrashed = false,
+    String sortMode = 'modified', // modified | created | title | color
+    String? folder,
   }) async {
     final db = await _db;
     
@@ -54,13 +57,23 @@ class NoteRepository {
         whereClause += ' AND ${NoteFields.id} IN (SELECT note_id FROM note_tags WHERE tag_name = ?)';
         whereArgs.add(tag);
       }
+
+      if (folder != null) {
+        whereClause += ' AND ${NoteFields.category} = ?';
+        whereArgs.add(folder);
+      }
     }
 
     final result = await db.query(
       TableNames.notes,
       where: whereClause,
       whereArgs: whereArgs,
-      orderBy: '${NoteFields.isPinned} DESC, ${NoteFields.dateModified} DESC',
+      orderBy: switch (sortMode) {
+        'created' => '${NoteFields.isPinned} DESC, ${NoteFields.dateCreated} DESC',
+        'title' => '${NoteFields.isPinned} DESC, LOWER(${NoteFields.title}) ASC',
+        'color' => '${NoteFields.isPinned} DESC, ${NoteFields.color} ASC, ${NoteFields.dateModified} DESC',
+        _ => '${NoteFields.isPinned} DESC, ${NoteFields.dateModified} DESC',
+      },
       limit: limit,
       offset: offset,
     );
@@ -106,6 +119,7 @@ class NoteRepository {
   }
 
   Future<int> softDeleteNote(String id) async {
+    await NotificationService.cancelNoteReminder(id);
     final db = await _db;
     return await db.update(TableNames.notes, {NoteFields.deletedAt: DateTime.now().toIso8601String()}, where: '${NoteFields.id} = ?', whereArgs: [id]);
   }
@@ -113,6 +127,46 @@ class NoteRepository {
   Future<int> restoreNote(String id) async {
     final db = await _db;
     return await db.update(TableNames.notes, {NoteFields.deletedAt: null}, where: '${NoteFields.id} = ?', whereArgs: [id]);
+  }
+
+  /// Distinct folder names in use by active notes (excluding the default).
+  Future<List<String>> getAllFolders() async {
+    final db = await _db;
+    final rows = await db.rawQuery(
+        "SELECT DISTINCT ${NoteFields.category} AS c FROM ${TableNames.notes} "
+        "WHERE ${NoteFields.deletedAt} IS NULL AND ${NoteFields.category} IS NOT NULL "
+        "AND ${NoteFields.category} != 'All Notes' ORDER BY c COLLATE NOCASE");
+    return rows.map((r) => r['c'] as String).toList();
+  }
+
+  /// Note count per tag for active (non-archived, non-trashed) notes,
+  /// plus an 'All' total, for the filter bar chips.
+  Future<Map<String, int>> getTagCounts() async {
+    final db = await _db;
+    final rows = await db.rawQuery('''
+      SELECT nt.tag_name AS tag, COUNT(*) AS cnt
+      FROM note_tags nt
+      JOIN ${TableNames.notes} n ON n.${NoteFields.id} = nt.note_id
+      WHERE n.${NoteFields.deletedAt} IS NULL AND n.${NoteFields.isArchived} = 0
+      GROUP BY nt.tag_name
+    ''');
+    final counts = <String, int>{
+      for (final r in rows) r['tag'] as String: r['cnt'] as int,
+    };
+    final total = Sqflite.firstIntValue(await db.rawQuery(
+        'SELECT COUNT(*) FROM ${TableNames.notes} WHERE ${NoteFields.deletedAt} IS NULL AND ${NoteFields.isArchived} = 0'));
+    counts['All'] = total ?? 0;
+    return counts;
+  }
+
+  Future<void> bulkSetPinned(List<String> ids, bool pinned) async {
+    final db = await _db;
+    final batch = db.batch();
+    for (final id in ids) {
+      batch.update(TableNames.notes, {NoteFields.isPinned: pinned ? 1 : 0},
+          where: '${NoteFields.id} = ?', whereArgs: [id]);
+    }
+    await batch.commit(noResult: true);
   }
 
   Future<void> bulkArchive(List<String> ids, bool archive) async {
@@ -125,6 +179,9 @@ class NoteRepository {
   }
 
   Future<void> bulkDelete(List<String> ids) async {
+    for (final id in ids) {
+      await NotificationService.cancelNoteReminder(id);
+    }
     final db = await _db;
     final batch = db.batch();
     final now = DateTime.now().toIso8601String();

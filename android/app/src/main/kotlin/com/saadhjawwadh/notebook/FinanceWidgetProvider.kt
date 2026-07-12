@@ -40,14 +40,19 @@ class FinanceWidgetProvider : AppWidgetProvider() {
         options: Bundle? = null
     ) {
         val views = RemoteViews(context.packageName, R.layout.finance_widget_layout)
+        val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
 
-        // Read responsive height configuration
+        // Responsive tiers: analytics grow first; recent transactions only
+        // appear on the tallest sizes.
         val minHeight = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT) ?: 180
-        if (minHeight < 150) {
-            views.setViewVisibility(R.id.widget_recent_section, View.GONE)
-        } else {
-            views.setViewVisibility(R.id.widget_recent_section, View.VISIBLE)
-        }
+        val hasBudget = (prefs.getLong("flutter.widget_budget_percent", -1L).toInt()) >= 0
+        val showBudget = minHeight >= 120 && hasBudget
+        val showTopCategory = minHeight >= if (hasBudget) 190 else 120
+        val showRecent = minHeight >= 260
+
+        views.setViewVisibility(R.id.widget_budget_section, if (showBudget) View.VISIBLE else View.GONE)
+        views.setViewVisibility(R.id.widget_top_category_section, if (showTopCategory) View.VISIBLE else View.GONE)
+        views.setViewVisibility(R.id.widget_recent_section, if (showRecent) View.VISIBLE else View.GONE)
 
         // Populate Widget Data
         populateWidgetData(context, views)
@@ -62,12 +67,44 @@ class FinanceWidgetProvider : AppWidgetProvider() {
         val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
         val spentToday = prefs.getString("flutter.widget_spent_today", "$0.00") ?: "$0.00"
         val spentMonth = prefs.getString("flutter.widget_spent_month", "$0.00") ?: "$0.00"
-        val incomeMonth = prefs.getString("flutter.widget_income_month", "$0.00") ?: "$0.00"
+        val netMonth = prefs.getString("flutter.widget_net_month", "+$0.00") ?: "+$0.00"
+        val netPositive = prefs.getBoolean("flutter.widget_net_positive", true)
         val recentTransactionsJson = prefs.getString("flutter.widget_recent_transactions", "[]") ?: "[]"
 
         views.setTextViewText(R.id.widget_today_spent, spentToday)
         views.setTextViewText(R.id.widget_month_spent, spentMonth)
-        views.setTextViewText(R.id.widget_month_income, incomeMonth)
+        views.setTextViewText(R.id.widget_month_net, netMonth)
+        views.setTextColor(
+            R.id.widget_month_net,
+            context.getColor(if (netPositive) R.color.widget_income else R.color.widget_expense)
+        )
+
+        // Budget progress
+        val budgetPercent = prefs.getLong("flutter.widget_budget_percent", -1L).toInt()
+        if (budgetPercent >= 0) {
+            views.setProgressBar(R.id.widget_budget_bar, 100, budgetPercent.coerceAtMost(100), false)
+            views.setTextViewText(R.id.widget_budget_percent, "$budgetPercent%")
+            views.setTextColor(
+                R.id.widget_budget_percent,
+                context.getColor(if (budgetPercent > 100) R.color.widget_expense else R.color.widget_on_primary_container)
+            )
+            views.setTextViewText(
+                R.id.widget_budget_label,
+                prefs.getString("flutter.widget_budget_label", "") ?: ""
+            )
+        }
+
+        // Top spending category
+        val topCategory = prefs.getString("flutter.widget_top_category", "") ?: ""
+        if (topCategory.isNotEmpty()) {
+            views.setTextViewText(R.id.widget_top_category, "Top: $topCategory")
+            views.setTextViewText(
+                R.id.widget_top_category_amount,
+                prefs.getString("flutter.widget_top_category_amount", "") ?: ""
+            )
+        } else {
+            views.setViewVisibility(R.id.widget_top_category_section, View.GONE)
+        }
 
         try {
             val jsonArray = JSONArray(recentTransactionsJson)

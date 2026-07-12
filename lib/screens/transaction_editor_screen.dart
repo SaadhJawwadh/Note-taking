@@ -7,9 +7,14 @@ import '../data/repositories/transaction_repository.dart';
 import '../data/transaction_model.dart';
 import '../data/transaction_category.dart';
 import '../data/category_definition.dart';
+import '../data/recurring_rule_model.dart';
+import '../data/repositories/recurring_rule_repository.dart';
 import '../widgets/calculator_dialog.dart';
 import 'category_management_screen.dart';
 import '../services/sms_service.dart';
+import '../utils/app_route.dart';
+import 'package:uuid/uuid.dart';
+import '../theme/app_layout.dart';
 
 class TransactionEditorScreen extends StatefulWidget {
   final TransactionModel? transaction;
@@ -28,6 +33,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
   bool _isExpense = true;
   bool _isLoading = false;
   String _category = TransactionCategory.other;
+  RecurringFrequency? _repeatFrequency;
 
   late String _initialCategory;
 
@@ -85,6 +91,31 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
 
     if (widget.transaction == null) {
       await TransactionRepository.instance.createTransaction(transaction);
+
+      if (_repeatFrequency != null) {
+        // The transaction just saved covers this period; the rule owns the
+        // next one onward.
+        var rule = RecurringRule(
+          id: const Uuid().v4(),
+          description: description,
+          amount: amount,
+          category: _category,
+          isExpense: _isExpense,
+          frequency: _repeatFrequency!,
+          nextDue: _selectedDate,
+        );
+        rule = rule.copyWith(nextDue: rule.advance(_selectedDate));
+        await RecurringRuleRepository.instance.createRule(rule);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Repeats ${_repeatFrequency!.label.toLowerCase()} — manage in Settings → Financial Manager'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
     } else {
       await TransactionRepository.instance.updateTransaction(transaction);
 
@@ -454,7 +485,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                 labelText: 'Amount',
                 hintText: '0.00',
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppLayout.radiusL),
                 ),
                 suffixIcon: IconButton(
                   onPressed: _openCalculator,
@@ -473,7 +504,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                 labelText: 'Description',
                 hintText: 'e.g., Groceries, Rent',
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppLayout.radiusL),
                 ),
                 prefixIcon: const Icon(Icons.description_outlined),
               ),
@@ -491,12 +522,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                 const Spacer(),
                 TextButton.icon(
                   onPressed: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const CategoryManagementScreen(),
-                      ),
-                    );
+                    await AppRoute.push(context, const CategoryManagementScreen());
                     await TransactionCategory.reload();
                     if (!TransactionCategory.allNames.contains(_category)) {
                       _category = TransactionCategory.other;
@@ -539,9 +565,9 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                       width: selected ? 1.5 : 0.5,
                     ),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
+                        borderRadius: BorderRadius.circular(AppLayout.radiusS)),
                   );
-                }).toList(),
+                }),
                 ActionChip(
                   avatar: Icon(Icons.add, size: 18, color: colorScheme.primary),
                   label:
@@ -549,7 +575,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                   onPressed: _showNewCategoryDialog,
                   side: BorderSide(color: colorScheme.primary, width: 0.5),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
+                      borderRadius: BorderRadius.circular(AppLayout.radiusS)),
                 ),
               ],
             ),
@@ -558,12 +584,12 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
             // Date Picker
             InkWell(
               onTap: _pickDate,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppLayout.radiusL),
               child: InputDecorator(
                 decoration: InputDecoration(
                   labelText: 'Date',
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(AppLayout.radiusL),
                   ),
                   prefixIcon: const Icon(Icons.calendar_today_outlined),
                   enabled: false, // Handle tap via InkWell
@@ -584,6 +610,45 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                 ),
               ),
             ),
+
+            // Repeat picker (creating only — editing a materialized
+            // transaction shouldn't silently spawn a rule)
+            if (widget.transaction == null) ...[
+              const SizedBox(height: 24),
+              Text(
+                'Repeat',
+                style: textTheme.labelLarge
+                    ?.copyWith(color: colorScheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 8),
+              SegmentedButton<RecurringFrequency?>(
+                segments: const [
+                  ButtonSegment(value: null, label: Text('Once')),
+                  ButtonSegment(
+                      value: RecurringFrequency.daily, label: Text('Daily')),
+                  ButtonSegment(
+                      value: RecurringFrequency.weekly, label: Text('Weekly')),
+                  ButtonSegment(
+                      value: RecurringFrequency.monthly,
+                      label: Text('Monthly')),
+                ],
+                selected: {_repeatFrequency},
+                onSelectionChanged: (selection) {
+                  HapticFeedback.selectionClick();
+                  setState(() => _repeatFrequency = selection.first);
+                },
+              ),
+              if (_repeatFrequency != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'This will be added automatically every '
+                  '${_repeatFrequency!.label.toLowerCase().replaceFirst('ly', '')} '
+                  'starting from the date above.',
+                  style: textTheme.bodySmall
+                      ?.copyWith(color: colorScheme.onSurfaceVariant),
+                ),
+              ],
+            ],
           ],
         ),
       ),

@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 import '../database_helper.dart';
+import '../database_seed.dart';
+import '../category_constants.dart';
 import '../transaction_model.dart';
 import '../database_constants.dart';
 import '../category_definition.dart';
@@ -125,6 +128,30 @@ class TransactionRepository {
   }
 
   // Category Definition CRUD
+  /// Deletes every category definition (built-in and custom) and re-seeds
+  /// the built-in set with default colors and keywords. Existing
+  /// transactions keep their category labels.
+  Future<void> resetCategoriesToDefaults() async {
+    final db = await _db;
+    await db.delete(TableNames.categoryDefinitions);
+    await DatabaseSeed.seedBuiltInCategories(db);
+  }
+
+  /// Restores the default keyword lists on built-in categories without
+  /// touching custom categories.
+  Future<void> resetBuiltInCategoryKeywords() async {
+    final db = await _db;
+    for (final name in CategoryConstants.all) {
+      final kws = CategoryConstants.keywords[name] ?? <String>[];
+      await db.update(
+        TableNames.categoryDefinitions,
+        {CategoryFields.keywords: jsonEncode(kws)},
+        where: '${CategoryFields.name} = ? AND ${CategoryFields.isBuiltIn} = 1',
+        whereArgs: [name],
+      );
+    }
+  }
+
   Future<List<CategoryDefinition>> getAllCategoryDefinitions() async {
     final db = await _db;
     final rows = await db.query(TableNames.categoryDefinitions, orderBy: '${CategoryFields.isBuiltIn} DESC, ${CategoryFields.name} ASC');

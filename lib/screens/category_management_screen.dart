@@ -5,6 +5,7 @@ import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../data/category_definition.dart';
 import '../data/repositories/transaction_repository.dart';
 import '../data/transaction_category.dart';
+import '../theme/app_layout.dart';
 
 class CategoryManagementScreen extends StatefulWidget {
   const CategoryManagementScreen({super.key});
@@ -37,6 +38,37 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
   Future<void> _saveAndReload() async {
     await TransactionCategory.reload();
     await _loadCategories();
+  }
+
+  Future<void> _confirmRestoreDefaults() async {
+    await HapticFeedback.mediumImpact();
+    if (!mounted) return;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Restore default categories?'),
+        content: const Text(
+            'Custom categories will be removed and built-in categories reset to their default colors and keywords. Existing transactions keep their category labels.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Restore'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+    await TransactionRepository.instance.resetCategoriesToDefaults();
+    await _saveAndReload();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Categories restored to defaults')),
+      );
+    }
   }
 
   Future<void> _showEditDialog(CategoryDefinition def) async {
@@ -116,14 +148,8 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
                 height: 64,
                 decoration: BoxDecoration(
                   color: colorScheme.surfaceContainer,
-                  borderRadius: BorderRadius.circular(32),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+                  boxShadow: AppLayout.softShadow(context),
                 ),
                 child: Row(
                   children: [
@@ -140,6 +166,15 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
                       'Manage Categories',
                       style: textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Spacer(),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: IconButton(
+                        icon: const Icon(Icons.settings_backup_restore),
+                        tooltip: 'Restore defaults',
+                        onPressed: _confirmRestoreDefaults,
                       ),
                     ),
                   ],
@@ -170,7 +205,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
                               margin: EdgeInsets.only(bottom: isLast ? 80 : 12),
                               color: colorScheme.surfaceContainerLow,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(AppLayout.radiusL),
                                 side: BorderSide(
                                   color: colorScheme.outlineVariant.withValues(alpha: 0.3),
                                   width: 1.0,
@@ -252,7 +287,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
                                                   color: catColor.withValues(
                                                       alpha: 0.1),
                                                   borderRadius:
-                                                      BorderRadius.circular(20),
+                                                      BorderRadius.circular(AppLayout.radiusXL),
                                                   border: Border.all(
                                                     color: catColor.withValues(
                                                         alpha: 0.3),
@@ -390,7 +425,7 @@ class _EditKeywordsDialogState extends State<_EditKeywordsDialog> {
                       hintText: 'Add keyword…',
                       isDense: true,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(AppLayout.radiusM),
                       ),
                       contentPadding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 10),
@@ -568,7 +603,7 @@ class _AddCategoryDialogState extends State<_AddCategoryDialog> {
                 labelText: 'Category name',
                 errorText: _nameError,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppLayout.radiusM),
                 ),
                 isDense: true,
               ),
@@ -636,7 +671,7 @@ class _AddCategoryDialogState extends State<_AddCategoryDialog> {
                       hintText: 'Add keyword…',
                       isDense: true,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(AppLayout.radiusM),
                       ),
                       contentPadding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 10),

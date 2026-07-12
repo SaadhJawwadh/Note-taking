@@ -23,17 +23,20 @@ Before bumping the version, ensure all of the following are done:
 * `flutter analyze` → **zero errors/warnings**. CI/CD will fail on any lint issues.
 * `flutter test` → **all tests passing**. Running the full test suite locally is mandatory to catch regressions.
 * `CHANGELOG.md` entry is documented under `## [X.Y.Z] - YYYY-MM-DD`.
+* **What's New sheet (MANDATORY for every release)**: Update the feature cards in `lib/widgets/whats_new_sheet.dart` to describe THIS release's user-facing features in friendly, benefit-first language (5-7 cards max, lead with the biggest features). The sheet auto-fires once per version — it's gated on `SettingsProvider.lastSeenVersion` vs `PackageInfo` version in `home_screen._maybeShowWhatsNew` — so stale content from a previous release WILL be shown to every updating user. Never ship a release without refreshing it.
 * Version number in `pubspec.yaml` is bumped using the project convention:
   * **Minor bump** (new features): `1.X.0+Y` where `Y = X * 10000` (e.g. `1.34.0+13400`)
   * **Patch bump** (bug fixes): `1.X.Y+Z` (e.g. `1.33.1+13301`)
   * Keep `minor` and `patch` numbers strictly under `100` to prevent version code overlaps.
 
-### Step 2: Build Local Release APK
+### Step 2: Build Local Release APK & On-Device Smoke Test
 Verify the release build succeeds locally:
 ```bash
 flutter build apk --release
 ```
 Provide the APK path (`build/app/outputs/flutter-apk/app-release.apk`) to the user for verification.
+
+**Release-mode emulator smoke test is mandatory, not optional.** Install the release APK on the emulator and cold-start it: debug builds hide release-only startup races (a WorkManager background isolate opening the SQLCipher DB during app launch once deadlocked the app on the splash screen in release mode only). Verify: first frame renders, the What's New sheet fires with the right version, and each module tab opens. Diagnose stuck launches with `adb logcat -s flutter` and `adb shell dumpsys window | grep mCurrentFocus`; note that a `MissingPluginException` for activity-registered channels coming from the WorkManager isolate is expected and benign.
 
 ### Step 3: Run Release Automation
 Execute the automated deploy script to bump, tag, and publish:

@@ -11,10 +11,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.BroadcastReceiver
 import android.os.Bundle
-import android.net.Uri
-import java.io.File
-import java.io.FileOutputStream
-import java.io.InputStream
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 
@@ -24,6 +20,7 @@ class MainActivity: FlutterFragmentActivity() {
     private var screenOffLock = false
     private var receiver: BroadcastReceiver? = null
     private var pendingWidgetAction: String? = null
+    private var pendingSharedText: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,10 +40,18 @@ class MainActivity: FlutterFragmentActivity() {
     }
 
     private fun handleIntent(intent: Intent?) {
-        if (intent?.action == "com.saadhjawwadh.notebook.ADD_TRANSACTION") {
-            pendingWidgetAction = "add_transaction"
-        } else if (intent?.action == "com.saadhjawwadh.notebook.VIEW_BUDGETS") {
-            pendingWidgetAction = "view_budgets"
+        when (intent?.action) {
+            "com.saadhjawwadh.notebook.ADD_TRANSACTION" -> pendingWidgetAction = "add_transaction"
+            "com.saadhjawwadh.notebook.VIEW_BUDGETS" -> pendingWidgetAction = "view_budgets"
+            "com.saadhjawwadh.notebook.NEW_NOTE" -> pendingWidgetAction = "new_note"
+            "com.saadhjawwadh.notebook.SEARCH" -> pendingWidgetAction = "search"
+            Intent.ACTION_PROCESS_TEXT -> {
+                val text = intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.toString()
+                if (!text.isNullOrEmpty()) {
+                    pendingSharedText = text
+                    pendingWidgetAction = "process_text"
+                }
+            }
         }
     }
 
@@ -70,14 +75,6 @@ class MainActivity: FlutterFragmentActivity() {
             } else if (call.method == "resetLockFlag") {
                 screenOffLock = false
                 result.success(true)
-            } else if (call.method == "copyContentUriToTempFile") {
-                val uriString = call.argument<String>("uri")
-                if (uriString != null) {
-                    val tempFilePath = copyContentUriToTempFile(this, uriString)
-                    result.success(tempFilePath)
-                } else {
-                    result.error("INVALID_ARGUMENT", "URI is null", null)
-                }
             } else {
                 result.notImplemented()
             }
@@ -100,6 +97,10 @@ class MainActivity: FlutterFragmentActivity() {
                 "getPendingAction" -> {
                     result.success(pendingWidgetAction)
                     pendingWidgetAction = null
+                }
+                "getPendingSharedText" -> {
+                    result.success(pendingSharedText)
+                    pendingSharedText = null
                 }
                 else -> {
                     result.notImplemented()
@@ -130,49 +131,4 @@ class MainActivity: FlutterFragmentActivity() {
         }
     }
 
-    private fun copyContentUriToTempFile(context: Context, uriString: String): String? {
-        try {
-            val uri = Uri.parse(uriString)
-            val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
-            if (inputStream != null) {
-                val fileName = getFileName(context, uri) ?: "shared_file_${System.currentTimeMillis()}"
-                val tempFile = File(context.cacheDir, fileName)
-                val outputStream = FileOutputStream(tempFile)
-                val buffer = ByteArray(4 * 1024)
-                var bytesRead: Int
-                while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                    outputStream.write(buffer, 0, bytesRead)
-                }
-                outputStream.close()
-                inputStream.close()
-                return tempFile.absolutePath
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("MainActivity", "Error copying content URI to temp file", e)
-        }
-        return null
-    }
-
-    private fun getFileName(context: Context, uri: Uri): String? {
-        var result: String? = null
-        if (uri.scheme == "content") {
-            val cursor = context.contentResolver.query(uri, null, null, null, null)
-            cursor?.use {
-                if (it.moveToFirst()) {
-                    val displayNameIndex = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-                    if (displayNameIndex != -1) {
-                        result = it.getString(displayNameIndex)
-                    }
-                }
-            }
-        }
-        if (result == null) {
-            result = uri.path
-            val cut = result?.lastIndexOf('/') ?: -1
-            if (cut != -1) {
-                result = result?.substring(cut + 1)
-            }
-        }
-        return result
-    }
 }

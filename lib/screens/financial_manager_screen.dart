@@ -9,12 +9,16 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/services.dart';
 import '../data/settings_provider.dart';
 import '../data/repositories/transaction_repository.dart';
+import '../data/repositories/recurring_rule_repository.dart';
 import '../data/transaction_model.dart';
 import '../data/transaction_category.dart';
 import '../services/sms_service.dart';
 import '../services/sms_constants.dart';
 import 'transaction_editor_screen.dart';
 import 'settings_screen.dart';
+import 'app_lock_screen.dart';
+import '../utils/app_route.dart';
+import '../theme/app_layout.dart';
 
 class FinancialManagerScreen extends StatefulWidget {
   static final ValueNotifier<String?> tabRedirectNotifier = ValueNotifier<String?>(null);
@@ -48,7 +52,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedTab = FinancialManagerScreen.tabRedirectNotifier.value ?? 'Budgets';
+    _selectedTab = FinancialManagerScreen.tabRedirectNotifier.value ?? 'Ledger';
     FinancialManagerScreen.tabRedirectNotifier.addListener(_handleTabRedirect);
     _refreshTransactions();
     _smsSubscription = SmsService.incomingTransactions.listen((t) async {
@@ -80,6 +84,12 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
       _isLoading = true;
       _isDashboardLoading = true;
     });
+    // Materialize any recurring transactions that came due since last visit.
+    try {
+      await RecurringRuleRepository.instance.materializeDueRules();
+    } catch (e) {
+      debugPrint('Recurring materialization error: $e');
+    }
     final allTransactions = await TransactionRepository.instance.readAllTransactions();
 
     _allDateFiltered = allTransactions.where((t) {
@@ -224,6 +234,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
       );
       if (proceed != true) return;
 
+      AppLockScreen.ignoreNextResumeLock();
       final ok = await SmsService.requestPermissions();
       if (!mounted) return;
       if (!ok) {
@@ -706,14 +717,8 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                 height: 64,
                 decoration: BoxDecoration(
                   color: colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(32),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+                  boxShadow: AppLayout.softShadow(context),
                 ),
                 child: Row(
                   children: [
@@ -762,12 +767,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                         tooltip: 'Settings',
                         onPressed: () {
                           HapticFeedback.lightImpact();
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const SettingsScreen(),
-                            ),
-                          );
+                          AppRoute.push(context, const SettingsScreen());
                         },
                       ),
                     ),
@@ -969,6 +969,24 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                           },
                           child: const Text('Clear filter'),
                         ),
+                      ] else ...[
+                        const SizedBox(height: 24),
+                        FilledButton.icon(
+                          onPressed: () async {
+                            await HapticFeedback.lightImpact();
+                            if (!mounted) return;
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const TransactionEditorScreen(),
+                              ),
+                            );
+                            await _refreshTransactions();
+                          },
+                          icon: const Icon(Icons.add),
+                          label: const Text('Add First Transaction'),
+                        ),
                       ],
                     ],
                   ),
@@ -1023,7 +1041,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                               closedColor: colorScheme.surfaceContainer,
                               openColor: colorScheme.surface,
                               closedShape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12)),
+                                  borderRadius: BorderRadius.circular(AppLayout.radiusM)),
                               onClosed: (updated) {
                                 if (updated == true) _refreshTransactions();
                               },
@@ -1073,7 +1091,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                         await _refreshTransactions();
                                       }
                                     },
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(AppLayout.radiusM),
                                     child: Padding(
                                       padding: const EdgeInsets.all(16.0),
                                       child: Row(
@@ -1249,14 +1267,14 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
       child: SegmentedButton<String>(
         segments: const [
           ButtonSegment<String>(
-            value: 'Budgets',
-            label: Text('Budgets & Analytics'),
-            icon: Icon(Icons.analytics_outlined),
-          ),
-          ButtonSegment<String>(
             value: 'Ledger',
             label: Text('Ledger'),
             icon: Icon(Icons.list_alt_outlined),
+          ),
+          ButtonSegment<String>(
+            value: 'Budgets',
+            label: Text('Budgets & Analytics'),
+            icon: Icon(Icons.analytics_outlined),
           ),
         ],
         selected: {_selectedTab},
@@ -1352,7 +1370,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
       elevation: 0,
       color: colorScheme.surfaceContainerHigh,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppLayout.radiusXL),
         side: BorderSide(
           color: colorScheme.outlineVariant.withValues(alpha: 0.3),
           width: 1,
@@ -1402,7 +1420,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                     HapticFeedback.lightImpact();
                     _showSetBudgetDialog(context, settings, category, budget);
                   },
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppLayout.radiusS),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 2.0),
                     child: Column(
@@ -1516,7 +1534,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
       elevation: 0,
       color: colorScheme.surfaceContainerHigh,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppLayout.radiusXL),
         side: BorderSide(
           color: colorScheme.outlineVariant.withValues(alpha: 0.3),
           width: 1,

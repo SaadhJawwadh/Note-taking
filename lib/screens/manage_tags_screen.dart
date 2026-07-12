@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../data/repositories/note_repository.dart';
 import '../theme/app_theme.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import '../theme/app_layout.dart';
 
 class ManageTagsScreen extends StatefulWidget {
   const ManageTagsScreen({super.key});
@@ -144,7 +145,7 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error, foregroundColor: Theme.of(context).colorScheme.onError),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Delete'),
           ),
@@ -202,7 +203,7 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
                                 margin: const EdgeInsets.only(bottom: 12),
                                 color: Theme.of(context).colorScheme.surfaceContainerLow,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(AppLayout.radiusL),
                                   side: BorderSide(
                                     color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
                                     width: 1.0,

@@ -13,6 +13,8 @@ import 'transaction_editor_screen.dart';
 import 'period_tracker_screen.dart'; // We can use this or a specific detail view
 
 import '../data/transaction_category.dart';
+import '../utils/app_route.dart';
+import '../theme/app_layout.dart';
 
 class GlobalSearchDelegate extends SearchDelegate {
   @override
@@ -108,12 +110,7 @@ class GlobalSearchDelegate extends SearchDelegate {
                     note: notes[index],
                     tagColors: tagColors,
                     onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => NoteEditorScreen(note: notes[index]),
-                        ),
-                      );
+                      AppRoute.push(context, NoteEditorScreen(note: notes[index]));
                     },
                   );
                 },
@@ -163,7 +160,7 @@ class GlobalSearchDelegate extends SearchDelegate {
       margin: const EdgeInsets.only(bottom: 8),
       color: theme.colorScheme.surfaceContainerLow,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppLayout.radiusL),
         side: BorderSide(
           color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
           width: 1.0,
@@ -197,12 +194,7 @@ class GlobalSearchDelegate extends SearchDelegate {
           ),
         ),
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => TransactionEditorScreen(transaction: t),
-            ),
-          );
+          AppRoute.push(context, TransactionEditorScreen(transaction: t));
         },
       ),
     );
@@ -216,7 +208,7 @@ class GlobalSearchDelegate extends SearchDelegate {
       margin: const EdgeInsets.only(bottom: 8),
       color: theme.colorScheme.surfaceContainerLow,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppLayout.radiusL),
         side: BorderSide(
           color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
           width: 1.0,
@@ -246,12 +238,7 @@ class GlobalSearchDelegate extends SearchDelegate {
         ),
         isThreeLine: log.notes.isNotEmpty,
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const PeriodTrackerScreen(),
-            ),
-          );
+          AppRoute.push(context, const PeriodTrackerScreen());
         },
       ),
     );

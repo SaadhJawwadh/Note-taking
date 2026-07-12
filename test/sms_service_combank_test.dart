@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:note_taking_app/services/sms_parser.dart';
 import 'package:note_taking_app/data/transaction_model.dart';
-import 'package:telephony/telephony.dart';
+import 'package:another_telephony/telephony.dart';
 
 void main() {
   TransactionModel? parse(SmsMessage sms) {

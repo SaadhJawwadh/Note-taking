@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/notification_service.dart';
 import '../services/local_ai_service.dart';
 import '../services/sms_service.dart';
+import '../screens/app_lock_screen.dart';
 import 'dart:convert';
 
 enum NoteViewMode { list, grid }
@@ -21,9 +22,6 @@ class SettingsProvider extends ChangeNotifier {
     return 'Medium';
   }
 
-  String _fontFamily = 'Rubik';
-  String get fontFamily => _fontFamily;
-
   NoteViewMode _noteViewMode = NoteViewMode.grid;
 
   NoteViewMode get noteViewMode => _noteViewMode;
@@ -33,15 +31,6 @@ class SettingsProvider extends ChangeNotifier {
 
   bool _showFinancialManager = false;
   bool get showFinancialManager => _showFinancialManager;
-
-  bool _showFileConverter = false;
-  bool get showFileConverter => _showFileConverter;
-
-  bool _isConverterLite = true;
-  bool get isConverterLite => _isConverterLite;
-
-  bool _isFfmpegInstalled = false;
-  bool get isFfmpegInstalled => _isFfmpegInstalled;
 
   String _currency = 'LKR';
   String get currency => _currency;
@@ -81,19 +70,6 @@ class SettingsProvider extends ChangeNotifier {
   List<String> _customIncomeRules = [];
   List<String> get customIncomeRules => _customIncomeRules;
 
-  // File Converter Settings
-  String _preferredVideoFormat = 'mp4';
-  String get preferredVideoFormat => _preferredVideoFormat;
-
-  String _preferredImageFormat = 'jpg';
-  String get preferredImageFormat => _preferredImageFormat;
-
-  String _videoResolutionLimit = 'Original';
-  String get videoResolutionLimit => _videoResolutionLimit;
-
-  bool _keepMetadata = false;
-  bool get keepMetadata => _keepMetadata;
-
   bool _useOnDeviceAi = false;
   bool get useOnDeviceAi => _useOnDeviceAi;
 
@@ -125,7 +101,6 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     _textSize = prefs.getDouble('textSize') ?? 16.0;
-    _fontFamily = prefs.getString('fontFamily') ?? 'Rubik';
     final viewModeIndex = prefs.getInt('noteViewMode');
     if (viewModeIndex != null) {
       if (viewModeIndex >= 0 && viewModeIndex < NoteViewMode.values.length) {
@@ -140,9 +115,6 @@ class SettingsProvider extends ChangeNotifier {
       _noteViewMode = legacyGrid ? NoteViewMode.grid : NoteViewMode.list;
     }
     _showFinancialManager = prefs.getBool('showFinancialManager') ?? false;
-    _showFileConverter = prefs.getBool('showFileConverter') ?? false;
-    _isConverterLite = prefs.getBool('isConverterLite') ?? true;
-    _isFfmpegInstalled = prefs.getBool('isFfmpegInstalled') ?? false;
     _currency = prefs.getString('currency') ?? 'LKR';
 
     _autoBackupEnabled = prefs.getBool('autoBackupEnabled') ?? false;
@@ -160,10 +132,6 @@ class SettingsProvider extends ChangeNotifier {
     _customExpenseRules = prefs.getStringList('customExpenseRules') ?? [];
     _customIncomeRules = prefs.getStringList('customIncomeRules') ?? [];
 
-    _preferredVideoFormat = prefs.getString('preferredVideoFormat') ?? 'mp4';
-    _preferredImageFormat = prefs.getString('preferredImageFormat') ?? 'jpg';
-    _videoResolutionLimit = prefs.getString('videoResolutionLimit') ?? 'Original';
-    _keepMetadata = prefs.getBool('keepMetadata') ?? false;
     _useOnDeviceAi = prefs.getBool('useOnDeviceAi') ?? false;
     _dailySyncEnabled = prefs.getBool('dailySyncEnabled') ?? false;
     _dailySyncTime = prefs.getString('dailySyncTime') ?? '20:00';
@@ -223,6 +191,16 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Removes every user-added transaction-type rule (restore defaults).
+  Future<void> clearCustomRules() async {
+    _customExpenseRules = [];
+    _customIncomeRules = [];
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('customExpenseRules', []);
+    await prefs.setStringList('customIncomeRules', []);
+    notifyListeners();
+  }
+
   Future<void> removeCustomRule(String rule, {required bool isExpense}) async {
     final prefs = await SharedPreferences.getInstance();
     if (isExpense) {
@@ -232,27 +210,6 @@ class SettingsProvider extends ChangeNotifier {
       _customIncomeRules.remove(rule);
       await prefs.setStringList('customIncomeRules', _customIncomeRules);
     }
-    notifyListeners();
-  }
-
-  Future<void> setShowFileConverter(bool show) async {
-    _showFileConverter = show;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('showFileConverter', show);
-    notifyListeners();
-  }
-
-  Future<void> setIsConverterLite(bool lite) async {
-    _isConverterLite = lite;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isConverterLite', lite);
-    notifyListeners();
-  }
-
-  Future<void> setIsFfmpegInstalled(bool installed) async {
-    _isFfmpegInstalled = installed;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isFfmpegInstalled', installed);
     notifyListeners();
   }
 
@@ -299,13 +256,6 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setFontFamily(String font) async {
-    _fontFamily = font;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('fontFamily', font);
-    notifyListeners();
-  }
-
   Future<void> setNoteViewMode(NoteViewMode mode) async {
     _noteViewMode = mode;
     final prefs = await SharedPreferences.getInstance();
@@ -338,6 +288,7 @@ class SettingsProvider extends ChangeNotifier {
     await prefs.setBool('isPeriodTrackerEnabled', enabled);
     if (!kIsWeb) {
       if (enabled) {
+        AppLockScreen.ignoreNextResumeLock();
         await NotificationService.requestPermissions();
       }
       await NotificationService.schedulePeriodNotifications();
@@ -373,34 +324,6 @@ class SettingsProvider extends ChangeNotifier {
     if (!kIsWeb) {
       await NotificationService.schedulePeriodNotifications();
     }
-    notifyListeners();
-  }
-
-  Future<void> setPreferredVideoFormat(String format) async {
-    _preferredVideoFormat = format;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('preferredVideoFormat', format);
-    notifyListeners();
-  }
-
-  Future<void> setPreferredImageFormat(String format) async {
-    _preferredImageFormat = format;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('preferredImageFormat', format);
-    notifyListeners();
-  }
-
-  Future<void> setVideoResolutionLimit(String limit) async {
-    _videoResolutionLimit = limit;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('videoResolutionLimit', limit);
-    notifyListeners();
-  }
-
-  Future<void> setKeepMetadata(bool keep) async {
-    _keepMetadata = keep;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('keepMetadata', keep);
     notifyListeners();
   }
 
@@ -445,13 +368,9 @@ class SettingsProvider extends ChangeNotifier {
   Map<String, dynamic> toBackupMap() => {
         'textSize': _textSize,
         'themeMode': _getIntFromThemeMode(_themeMode),
-        'fontFamily': _fontFamily,
         'isGridView': isGridView, // Legacy export support
         'noteViewMode': _noteViewMode.index,
         'showFinancialManager': _showFinancialManager,
-        'showFileConverter': _showFileConverter,
-        'isConverterLite': _isConverterLite,
-        'isFfmpegInstalled': _isFfmpegInstalled,
         'currency': _currency,
         'isPeriodTrackerEnabled': _isPeriodTrackerEnabled,
         'appLockEnabled': _appLockEnabled,
@@ -460,10 +379,6 @@ class SettingsProvider extends ChangeNotifier {
         'discreetNotificationText': _discreetNotificationText,
         'customExpenseRules': _customExpenseRules,
         'customIncomeRules': _customIncomeRules,
-        'preferredVideoFormat': _preferredVideoFormat,
-        'preferredImageFormat': _preferredImageFormat,
-        'videoResolutionLimit': _videoResolutionLimit,
-        'keepMetadata': _keepMetadata,
         'useOnDeviceAi': _useOnDeviceAi,
         'dailySyncEnabled': _dailySyncEnabled,
         'dailySyncTime': _dailySyncTime,
@@ -478,10 +393,6 @@ class SettingsProvider extends ChangeNotifier {
       if (map.containsKey('themeMode')) {
         final idx = (map['themeMode'] as num?)?.toInt() ?? 0;
         await setThemeMode(_getThemeModeFromInt(idx));
-      }
-      if (map.containsKey('fontFamily')) {
-        final font = map['fontFamily'];
-        if (font is String && font.isNotEmpty) await setFontFamily(font);
       }
       if (map.containsKey('noteViewMode')) {
         final viewModeIdx = (map['noteViewMode'] as num?)?.toInt() ?? NoteViewMode.grid.index;
@@ -498,24 +409,6 @@ class SettingsProvider extends ChangeNotifier {
         final show = map['showFinancialManager'];
         if (show is bool) {
           await setShowFinancialManager(show);
-        }
-      }
-      if (map.containsKey('showFileConverter')) {
-        final show = map['showFileConverter'];
-        if (show is bool) {
-          await setShowFileConverter(show);
-        }
-      }
-      if (map.containsKey('isConverterLite')) {
-        final lite = map['isConverterLite'];
-        if (lite is bool) {
-          await setIsConverterLite(lite);
-        }
-      }
-      if (map.containsKey('isFfmpegInstalled')) {
-        final installed = map['isFfmpegInstalled'];
-        if (installed is bool) {
-          await setIsFfmpegInstalled(installed);
         }
       }
       if (map.containsKey('currency')) {
@@ -540,22 +433,6 @@ class SettingsProvider extends ChangeNotifier {
         if (txt is String && txt.isNotEmpty) {
           await setDiscreetNotificationText(txt);
         }
-      }
-      if (map.containsKey('preferredVideoFormat')) {
-        final val = map['preferredVideoFormat'];
-        if (val is String) await setPreferredVideoFormat(val);
-      }
-      if (map.containsKey('preferredImageFormat')) {
-        final val = map['preferredImageFormat'];
-        if (val is String) await setPreferredImageFormat(val);
-      }
-      if (map.containsKey('videoResolutionLimit')) {
-        final val = map['videoResolutionLimit'];
-        if (val is String) await setVideoResolutionLimit(val);
-      }
-      if (map.containsKey('keepMetadata')) {
-        final val = map['keepMetadata'];
-        if (val is bool) await setKeepMetadata(val);
       }
       if (map.containsKey('useOnDeviceAi')) {
         final val = map['useOnDeviceAi'];

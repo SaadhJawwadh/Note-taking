@@ -14,6 +14,8 @@ class Note {
   List<String> tags; // New field
   String? previewText;
   DateTime? deletedAt;
+  DateTime? reminderAt;
+  bool isLocked;
 
   Note({
     required this.id,
@@ -29,6 +31,8 @@ class Note {
     this.tags = const [], // Default empty list
     this.previewText,
     this.deletedAt,
+    this.reminderAt,
+    this.isLocked = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -45,6 +49,8 @@ class Note {
       'category': category,
       'previewText': previewText,
       'deletedAt': deletedAt?.toIso8601String(),
+      'reminderAt': reminderAt?.toIso8601String(),
+      'isLocked': isLocked ? 1 : 0,
     };
   }
 
@@ -64,6 +70,9 @@ class Note {
       previewText: map['previewText'],
       deletedAt:
           map['deletedAt'] != null ? DateTime.tryParse(map['deletedAt'].toString()) : null,
+      reminderAt:
+          map['reminderAt'] != null ? DateTime.tryParse(map['reminderAt'].toString()) : null,
+      isLocked: map['isLocked'] == 1 || map['isLocked'] == true,
     );
   }
 
@@ -79,6 +88,8 @@ class Note {
     List<String>? tags,
     String? previewText,
     DateTime? deletedAt,
+    DateTime? reminderAt,
+    bool? isLocked,
   }) {
     return Note(
       id: id,
@@ -94,6 +105,8 @@ class Note {
       tags: tags ?? this.tags,
       previewText: previewText ?? this.previewText,
       deletedAt: deletedAt ?? this.deletedAt,
+      reminderAt: reminderAt ?? this.reminderAt,
+      isLocked: isLocked ?? this.isLocked,
     );
   }
 }

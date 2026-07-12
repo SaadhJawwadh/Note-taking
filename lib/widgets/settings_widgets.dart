@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../theme/app_layout.dart';
 
 class SettingsSection extends StatelessWidget {
   final String title;
@@ -24,15 +26,15 @@ class SettingsSection extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.6),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppLayout.radiusXL),
             border: Border.all(
               color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
             ),
           ),
           child: ExpansionTile(
             initiallyExpanded: initiallyExpanded,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusXL)),
+            collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusXL)),
             leading: Icon(icon, size: 22, color: theme.colorScheme.primary.withValues(alpha: 0.8)),
             title: Text(
               title,
@@ -78,7 +80,7 @@ class SettingsTile extends StatelessWidget {
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppLayout.radiusM),
         ),
         child: Icon(icon, size: 20, color: theme.colorScheme.primary),
       ),
@@ -99,7 +101,12 @@ class SettingsTile extends StatelessWidget {
           : null,
       trailing: trailing ?? (showArrow ? Icon(Icons.chevron_right_rounded, size: 20, color: theme.colorScheme.outline) : null),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      onTap: onTap,
+      onTap: onTap == null
+          ? null
+          : () {
+              HapticFeedback.selectionClick();
+              onTap!();
+            },
     );
   }
 }
@@ -128,7 +135,7 @@ class SettingsSwitchTile extends StatelessWidget {
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppLayout.radiusM),
         ),
         child: Icon(icon, size: 20, color: theme.colorScheme.primary),
       ),
@@ -148,7 +155,10 @@ class SettingsSwitchTile extends StatelessWidget {
             )
           : null,
       value: value,
-      onChanged: onChanged,
+      onChanged: (v) {
+        HapticFeedback.selectionClick();
+        onChanged(v);
+      },
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       activeThumbColor: theme.colorScheme.primary,
     );

@@ -1,7 +1,7 @@
 name: note_taking_app
 description: "Everything App: A fully local offline-first note-taking, financial manager, and health tracker app with offline AI and SMS auto-import."
 publish_to: "none"
-version: 1.39.0+13900
+version: 2.0.0+20000
 
 
 environment:
@@ -45,7 +45,7 @@ dependencies:
   markdown: ^7.3.0
   math_expressions: ^2.6.0
   font_awesome_flutter: ^10.8.0
-  telephony: ^0.2.0
+  another_telephony: ^0.4.1
   permission_handler: ^11.4.0
   workmanager: ^0.9.0
   flutter_local_notifications: ^19.0.0
@@ -55,10 +55,8 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   any_link_preview: ^3.0.2
-  share_plus: ^11.0.0
-  gal: ^2.3.1
-  receive_sharing_intent: ^1.6.0
-  image: ^4.8.0
+  receive_sharing_intent: 1.7.0
+  speech_to_text: ^7.0.0
   gemini_nano_android: ^1.1.3
   in_app_update: ^4.2.2
   in_app_review: ^2.0.9
@@ -66,7 +64,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0
+  flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.13.1
   flutter_native_splash: ^2.3.1
   sqflite_common_ffi: ^2.4.0+3
@@ -90,6 +88,7 @@ flutter_native_splash:
 
 flutter:
   uses-material-design: true
+  generate: true
   assets:
     - assets/app_icon.png
     - assets/app_icon_monochrome.png
@@ -99,3 +98,13 @@ flutter:
         - asset: assets/fonts/Rubik-VariableFont_wght.ttf
         - asset: assets/fonts/Rubik-Italic-VariableFont_wght.ttf
           style: italic
+    - family: Google Sans Text
+      fonts:
+        - asset: assets/fonts/GoogleSansText-Regular.ttf
+        - asset: assets/fonts/GoogleSansText-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/GoogleSansText-Bold.ttf
+          weight: 700
+    - family: Google Sans Code
+      fonts:
+        - asset: assets/fonts/GoogleSansCode-Variable.ttf
