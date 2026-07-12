@@ -47,3 +47,4 @@
 
 ### 🧹 Maintenance
 - Replaced the discontinued `telephony` package with the maintained `another_telephony` fork; upgraded 21 dependencies; `flutter_lints` 2→6 with all findings fixed; added a CI workflow gating pushes/PRs on analyze + tests.
+
