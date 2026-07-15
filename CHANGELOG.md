@@ -2,7 +2,7 @@
 
 All notable changes to Everything App are documented here.
 
-## [2.1.0] - 2026-07-15
+## 2.1.0 - 2026-07-15
 
 ### 📁 Folder & Selection Enhancements
 - **Folder Card Selector**: Replaced the dynamic greeting with an interactive folder picker card showing active folder name, note count, and inline dropdown arrow.
