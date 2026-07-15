@@ -77,7 +77,11 @@ class NoteViewBuilder extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const NoteEditorScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => NoteEditorScreen(
+                        initialFolder: noteProvider.selectedFolder,
+                      ),
+                    ),
                   ).then((_) => onRefresh());
                 },
                 icon: const Icon(Icons.add),
@@ -171,8 +175,10 @@ class NoteViewBuilder extends StatelessWidget {
         if (direction == DismissDirection.endToStart) {
           await NoteRepository.instance.softDeleteNote(note.id);
           if (!context.mounted) return;
+          ScaffoldMessenger.of(context).clearSnackBars();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
+              duration: const Duration(seconds: 3),
               content: const Text('Note moved to trash'),
               action: SnackBarAction(
                 label: 'Undo',
@@ -187,8 +193,10 @@ class NoteViewBuilder extends StatelessWidget {
           final updated = note.copyWith(isArchived: true);
           await NoteRepository.instance.updateNote(updated);
           if (!context.mounted) return;
+          ScaffoldMessenger.of(context).clearSnackBars();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
+              duration: const Duration(seconds: 3),
               content: const Text('Note archived'),
               action: SnackBarAction(
                 label: 'Undo',

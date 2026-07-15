@@ -17,6 +17,7 @@ import '../services/sms_constants.dart';
 import 'transaction_editor_screen.dart';
 import 'settings_screen.dart';
 import 'app_lock_screen.dart';
+import '../services/backup_service.dart';
 import '../utils/app_route.dart';
 import '../theme/app_layout.dart';
 
@@ -760,6 +761,14 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                         _selectDateRange(context);
                       },
                     ),
+                    IconButton(
+                      icon: const Icon(Icons.table_view_outlined),
+                      tooltip: 'Export to CSV',
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        BackupService.exportTransactionsToCsv(context);
+                      },
+                    ),
                     Padding(
                       padding: const EdgeInsets.only(right: 4),
                       child: IconButton(
@@ -1199,62 +1208,99 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                 ),
               ),
       ] else ...[
-        // ── 6-month bar chart ─────────────────────────────────────────
-            // ── 6-month bar chart ─────────────────────────────────────────
-            SliverToBoxAdapter(
-              child: AnimationConfiguration.staggeredList(
-                position: 0,
-                duration: const Duration(milliseconds: 220),
-                child: SlideAnimation(
-                  verticalOffset: 24.0,
-                  child: FadeInAnimation(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                      child:
-                          _buildBarChartCard(colorScheme, textTheme, currency),
+        if (MediaQuery.sizeOf(context).width >= 600)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildBarChartCard(colorScheme, textTheme, currency),
+                        const SizedBox(height: 12),
+                        Consumer<SettingsProvider>(
+                          builder: (context, settings, child) {
+                            return _buildCategoryBudgetsCard(colorScheme, textTheme, settings);
+                          }
+                        ),
+                      ],
                     ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildMonthComparisonCard(colorScheme, textTheme, currency),
+                        const SizedBox(height: 12),
+                        _buildTopMerchantsCard(colorScheme, textTheme, currency),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else ...[
+          // ── 6-month bar chart ─────────────────────────────────────────
+          SliverToBoxAdapter(
+            child: AnimationConfiguration.staggeredList(
+              position: 0,
+              duration: const Duration(milliseconds: 220),
+              child: SlideAnimation(
+                verticalOffset: 24.0,
+                child: FadeInAnimation(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child:
+                        _buildBarChartCard(colorScheme, textTheme, currency),
                   ),
                 ),
               ),
             ),
+          ),
 
-        // ── Month-over-month comparison ───────────────────────────────
-            // ── Month-over-month comparison ───────────────────────────────
-            SliverToBoxAdapter(
-              child: AnimationConfiguration.staggeredList(
-                position: 1,
-                duration: const Duration(milliseconds: 220),
-                child: SlideAnimation(
-                  verticalOffset: 24.0,
-                  child: FadeInAnimation(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                      child: _buildMonthComparisonCard(
-                          colorScheme, textTheme, currency),
-                    ),
+          // ── Month-over-month comparison ───────────────────────────────
+          SliverToBoxAdapter(
+            child: AnimationConfiguration.staggeredList(
+              position: 1,
+              duration: const Duration(milliseconds: 220),
+              child: SlideAnimation(
+                verticalOffset: 24.0,
+                child: FadeInAnimation(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: _buildMonthComparisonCard(
+                        colorScheme, textTheme, currency),
                   ),
                 ),
               ),
             ),
+          ),
 
-        // ── Category Budgets Card ──────────────────────────────────────
-        SliverToBoxAdapter(
-          child: Consumer<SettingsProvider>(
-            builder: (context, settings, child) {
-              return Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: _buildCategoryBudgetsCard(colorScheme, textTheme, settings),
-              );
-            }
+          // ── Category Budgets Card ──────────────────────────────────────
+          SliverToBoxAdapter(
+            child: Consumer<SettingsProvider>(
+              builder: (context, settings, child) {
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: _buildCategoryBudgetsCard(colorScheme, textTheme, settings),
+                );
+              }
+            ),
           ),
-        ),
-        // ── Top Merchants Card ─────────────────────────────────────────
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
-            child: _buildTopMerchantsCard(colorScheme, textTheme, currency),
+
+          // ── Top Merchants Card ─────────────────────────────────────────
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
+              child: _buildTopMerchantsCard(colorScheme, textTheme, currency),
+            ),
           ),
-        ),
+        ],
       ],
     ];
   }

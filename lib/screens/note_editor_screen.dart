@@ -38,6 +38,7 @@ class NoteEditorScreen extends StatefulWidget {
   /// Starting title/content (Delta JSON) when creating from a template.
   final String? templateTitle;
   final String? templateContent;
+  final String? initialFolder;
 
   const NoteEditorScreen({
     super.key,
@@ -46,6 +47,7 @@ class NoteEditorScreen extends StatefulWidget {
     this.initialSharedImagePaths,
     this.templateTitle,
     this.templateContent,
+    this.initialFolder,
   });
 
   @override
@@ -121,7 +123,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     tags = List.from(widget.note?.tags ?? []);
     _reminderAt = widget.note?.reminderAt;
     _isNoteLocked = widget.note?.isLocked ?? false;
-    _folder = widget.note?.category ?? 'All Notes';
+    _folder = widget.note?.category ?? widget.initialFolder ?? 'All Notes';
     _lastScheduledReminder = _reminderAt;
     _lockAuthPassed = !_isNoteLocked;
     if (!_lockAuthPassed) {
@@ -745,22 +747,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     );
   }
 
-  /// Appends a fresh unchecked checklist item at the cursor and focuses it.
-  void _addChecklistItem() {
-    HapticFeedback.selectionClick();
-    final sel = _quillController.selection;
-    final docLength = _quillController.document.length;
-    final index =
-        sel.isValid ? sel.end.clamp(0, docLength - 1) : docLength - 1;
-    _quillController.replaceText(
-      index,
-      0,
-      '\n',
-      TextSelection.collapsed(offset: index + 1),
-    );
-    _quillController.formatSelection(Attribute.unchecked);
-    _focusNode.requestFocus();
-  }
+
 
   /// Jump-to-heading navigation for long notes.
   void _showOutlineSheet() {
@@ -1468,6 +1455,7 @@ $content
                                 color: textColor,
                                 onPressed: _showTagPicker,
                               ),
+
                               PopupMenuButton<String>(
                                 icon: Icon(Icons.more_vert, color: textColor),
                                 tooltip: 'More',
@@ -2037,14 +2025,6 @@ $content
                                       foregroundColor: _isListening
                                           ? theme.colorScheme.error
                                           : textColor,
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.playlist_add),
-                                    tooltip: 'Add checklist item',
-                                    onPressed: _addChecklistItem,
-                                    style: IconButton.styleFrom(
-                                      foregroundColor: textColor,
                                     ),
                                   ),
                                   QuillToolbarSearchButton(

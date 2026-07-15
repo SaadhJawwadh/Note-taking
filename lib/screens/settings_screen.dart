@@ -13,6 +13,7 @@ import 'filtered_notes_screen.dart';
 import 'category_management_screen.dart';
 import 'sms_contacts_screen.dart';
 import 'sms_rules_screen.dart';
+import 'changelog_screen.dart';
 import '../utils/app_constants.dart';
 import '../utils/widget_helper.dart';
 import '../utils/app_route.dart';
@@ -331,6 +332,14 @@ class SettingsScreen extends StatelessWidget {
                             icon: Icons.info_outline_rounded,
                             children: [
                               SettingsTile(icon: FontAwesomeIcons.github, title: 'GitHub Repository', subtitle: 'View source code & contribute', trailing: Icon(Icons.open_in_new_rounded, size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant), onTap: () => _launchUrl(AppConstants.repoUrl)),
+                              const _Divider(),
+                              SettingsTile(
+                                icon: Icons.history_rounded,
+                                title: 'Changelog',
+                                subtitle: 'View version release logs',
+                                showArrow: true,
+                                onTap: () => AppRoute.push(context, const ChangelogScreen()),
+                              ),
                               const _Divider(),
                               FutureBuilder<PackageInfo>(
                                 future: PackageInfo.fromPlatform(),

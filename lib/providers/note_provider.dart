@@ -22,6 +22,9 @@ class NoteProvider extends ChangeNotifier {
   Map<String, int> _tagCounts = {};
   String? _selectedFolder; // null = all folders
   List<String> _folders = [];
+  final List<String> _emptyFolders = [];
+
+  Map<String, int> _folderCounts = {};
 
   // Getters
   List<Note> get notes => _notes;
@@ -37,11 +40,21 @@ class NoteProvider extends ChangeNotifier {
   String get sortMode => _sortMode;
   Map<String, int> get tagCounts => _tagCounts;
   String? get selectedFolder => _selectedFolder;
-  List<String> get folders => _folders;
+  List<String> get folders => [..._folders, ..._emptyFolders]..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+  Map<String, int> get folderCounts => _folderCounts;
 
   void setFolder(String? folder) {
     _selectedFolder = folder;
     refreshNotes();
+  }
+
+  void createFolder(String name) {
+    final cleaned = name.trim();
+    if (cleaned.isEmpty || cleaned == 'All Notes' || cleaned == 'All folders') return;
+    if (!_folders.contains(cleaned) && !_emptyFolders.contains(cleaned)) {
+      _emptyFolders.add(cleaned);
+    }
+    setFolder(cleaned);
   }
 
   NoteProvider() {
@@ -84,8 +97,11 @@ class NoteProvider extends ChangeNotifier {
         folder: _selectedFolder,
       );
       _tagCounts = await _noteRepository.getTagCounts();
+      _folderCounts = await _noteRepository.getFolderCounts();
       _folders = await _noteRepository.getAllFolders();
-      if (_selectedFolder != null && !_folders.contains(_selectedFolder)) {
+      _emptyFolders.removeWhere((f) => _folders.contains(f));
+      final allAvailableFolders = [..._folders, ..._emptyFolders];
+      if (_selectedFolder != null && !allAvailableFolders.contains(_selectedFolder)) {
         _selectedFolder = null;
       }
 

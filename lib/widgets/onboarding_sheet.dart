@@ -250,9 +250,15 @@ class _OnboardingSheetState extends State<OnboardingSheet> {
           ),
           _buildInfoRow(
             theme,
+            icon: Icons.folder_copy_outlined,
+            title: 'Folders & Templates',
+            desc: 'Organize notes in memory-persistent folders and start instantly from pre-designed templates.',
+          ),
+          _buildInfoRow(
+            theme,
             icon: Icons.edit_note_rounded,
-            title: 'Rich Editor',
-            desc: 'Format text with checklists, markdown support, and bullet lists.',
+            title: 'Advanced Editor',
+            desc: 'Format markdown on the fly, record voice dictation, set reminders, and lock notes.',
           ),
         ],
       ),
@@ -442,8 +448,8 @@ class _OnboardingSheetState extends State<OnboardingSheet> {
           _buildInfoRow(
             theme,
             icon: Icons.navigation_outlined,
-            title: 'Bottom Navigation Bar',
-            desc: 'Once any modular feature is enabled, a navigation bar appears at the bottom of the home screen to switch tabs.',
+            title: 'Responsive Navigation',
+            desc: 'Once modular features are enabled, a bottom navigation bar appears on phones, while tablets display a sleek side navigation rail.',
           ),
           const SizedBox(height: AppLayout.spaceM),
           _buildInfoRow(
@@ -506,6 +512,13 @@ class _OnboardingSheetState extends State<OnboardingSheet> {
             icon: Icons.security_rounded,
             title: 'Encrypted & Safe',
             desc: 'The local database is encrypted securely with SQLCipher using a protected KeyStore key.',
+          ),
+          const SizedBox(height: AppLayout.spaceM),
+          _buildTipCard(
+            theme,
+            icon: Icons.sync_lock_rounded,
+            title: 'Local Sync & Backup',
+            desc: 'Export JSON backups or CSV ledger sheets under Settings to transfer and keep your devices in sync offline.',
           ),
         ],
       ),

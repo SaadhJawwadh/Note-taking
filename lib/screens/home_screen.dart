@@ -123,10 +123,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => NoteEditorScreen(
-            initialSharedText: textParts.isEmpty ? null : textParts.join('\n'),
-            initialSharedImagePaths: imagePaths.isEmpty ? null : imagePaths,
-          ),
+          builder: (context) {
+            final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+            return NoteEditorScreen(
+              initialSharedText: textParts.isEmpty ? null : textParts.join('\n'),
+              initialSharedImagePaths: imagePaths.isEmpty ? null : imagePaths,
+              initialFolder: noteProvider.selectedFolder,
+            );
+          },
         ),
       ),
     );
@@ -209,10 +213,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           }
         }
       } else if (action == 'new_note' && mounted) {
+        final noteProvider = Provider.of<NoteProvider>(context, listen: false);
         unawaited(
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const NoteEditorScreen()),
+            MaterialPageRoute(
+              builder: (context) => NoteEditorScreen(initialFolder: noteProvider.selectedFolder),
+            ),
           ),
         );
       } else if (action == 'search' && mounted) {
@@ -223,12 +230,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         final String? sharedText =
             await widgetChannel.invokeMethod<String>('getPendingSharedText');
         if (sharedText != null && sharedText.trim().isNotEmpty && mounted) {
+          final noteProvider = Provider.of<NoteProvider>(context, listen: false);
           unawaited(
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) =>
-                    NoteEditorScreen(initialSharedText: sharedText),
+                    NoteEditorScreen(
+                      initialSharedText: sharedText,
+                      initialFolder: noteProvider.selectedFolder,
+                    ),
               ),
             ),
           );
@@ -264,8 +275,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _bulkDeleteWithUndo(NoteProvider noteProvider) async {
     final ids = await noteProvider.bulkDelete();
     if (ids.isEmpty || !mounted) return;
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
+        duration: const Duration(seconds: 3),
         content: Text(ids.length == 1
             ? 'Note moved to Trash'
             : '${ids.length} notes moved to Trash'),
@@ -511,6 +524,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final List<Widget> destinations = _buildDestinations(settings);
       _currentIndex = _currentIndex.clamp(0, destinations.length - 1);
 
+      final bool isTablet = MediaQuery.sizeOf(context).width >= 600;
+
+      if (isTablet) {
+        return Scaffold(
+          body: Row(
+            children: [
+              NavigationRail(
+                selectedIndex: _currentIndex,
+                onDestinationSelected: (index) {
+                  HapticFeedback.selectionClick();
+                  setState(() => _currentIndex = index);
+                },
+                labelType: NavigationRailLabelType.all,
+                destinations: _buildNavRailDestinations(settings),
+                backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
+              ),
+              const VerticalDivider(thickness: 1, width: 1),
+              Expanded(
+                child: IndexedStack(
+                  index: _currentIndex,
+                  children: _buildFeatureScreens(settings),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
       return Scaffold(
         body: IndexedStack(
           index: _currentIndex,
@@ -526,6 +567,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
       );
     });
+  }
+
+  List<NavigationRailDestination> _buildNavRailDestinations(SettingsProvider settings) {
+    final l10n = AppLocalizations.of(context)!;
+    return [
+      NavigationRailDestination(
+        icon: const Icon(Icons.note_alt_outlined),
+        selectedIcon: const Icon(Icons.note_alt),
+        label: Text(l10n.navNotes),
+      ),
+      if (settings.showFinancialManager)
+        NavigationRailDestination(
+          icon: const Icon(Icons.account_balance_wallet_outlined),
+          selectedIcon: const Icon(Icons.account_balance_wallet),
+          label: Text(l10n.navFinances),
+        ),
+      if (settings.isPeriodTrackerEnabled)
+        NavigationRailDestination(
+          icon: const Icon(Icons.water_drop_outlined),
+          selectedIcon: const Icon(Icons.water_drop),
+          label: Text(l10n.navTracker),
+        ),
+    ];
   }
 
   List<Widget> _buildNavDestinations(SettingsProvider settings) {
@@ -578,39 +642,82 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  void _showNewNoteOptions(BuildContext context, VoidCallback openBlankNote) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                'New Note',
+                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ),
+            ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Theme.of(sheetContext).colorScheme.primaryContainer,
+                child: Icon(Icons.note_alt_outlined,
+                    color: Theme.of(sheetContext).colorScheme.onPrimaryContainer),
+              ),
+              title: const Text('Blank Note'),
+              subtitle: const Text('Start writing in a new blank note'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                openBlankNote();
+              },
+            ),
+            ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Theme.of(sheetContext).colorScheme.secondaryContainer,
+                child: Icon(Icons.style_outlined,
+                    color: Theme.of(sheetContext).colorScheme.onSecondaryContainer),
+              ),
+              title: const Text('Use a Template'),
+              subtitle: const Text('Create a note from a pre-defined layout'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _showTemplateSheet();
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildFAB(BuildContext context) {
+    final noteProvider = Provider.of<NoteProvider>(context, listen: false);
     return OpenContainer<bool>(
       transitionType: ContainerTransitionType.fadeThrough,
       transitionDuration: const Duration(milliseconds: 300),
-      openBuilder: (context, _) => const NoteEditorScreen(),
+      openBuilder: (context, _) => NoteEditorScreen(initialFolder: noteProvider.selectedFolder),
       closedElevation: 6.0,
       openElevation: 0,
       closedShape: const StadiumBorder(),
       closedColor: Theme.of(context).colorScheme.primary,
       openColor: Theme.of(context).colorScheme.surface,
       onClosed: (returned) async { if (returned == true) await refreshNotes(); },
-      closedBuilder: (context, openContainer) => GestureDetector(
-        onLongPress: () {
-          HapticFeedback.mediumImpact();
-          _showTemplateSheet();
-        },
-        child: SizedBox(
-          height: 56,
-          child: FloatingActionButton.extended(
-            heroTag: 'home_fab',
-            label: const Text('New Note'),
-            icon: const Icon(Icons.add),
-            // No tooltip: it would swallow the long-press that opens the
-            // template sheet.
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            foregroundColor: Theme.of(context).colorScheme.onPrimary,
-            elevation: 0,
-            shape: const StadiumBorder(),
-            onPressed: () {
-              HapticFeedback.lightImpact();
-              openContainer();
-            },
-          ),
+      closedBuilder: (context, openContainer) => SizedBox(
+        height: 56,
+        child: FloatingActionButton.extended(
+          heroTag: 'home_fab',
+          label: const Text('New Note'),
+          icon: const Icon(Icons.add),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+          elevation: 0,
+          shape: const StadiumBorder(),
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            _showNewNoteOptions(context, openContainer);
+          },
         ),
       ),
     );
@@ -648,12 +755,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 onTap: () async {
                   unawaited(HapticFeedback.selectionClick());
                   Navigator.pop(sheetContext);
+                  final noteProvider = Provider.of<NoteProvider>(context, listen: false);
                   await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => NoteEditorScreen(
                         templateTitle: t.title,
                         templateContent: t.contentDeltaJson,
+                        initialFolder: noteProvider.selectedFolder,
                       ),
                     ),
                   );

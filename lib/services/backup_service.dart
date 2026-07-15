@@ -12,6 +12,8 @@ import '../screens/app_lock_screen.dart';
 import 'package:provider/provider.dart';
 import '../data/settings_provider.dart';
 import '../data/transaction_category.dart';
+import '../data/transaction_model.dart';
+import '../data/repositories/transaction_repository.dart';
 import '../utils/rich_text_utils.dart';
 import '../utils/widget_helper.dart';
 import 'sms_service.dart';
@@ -306,5 +308,71 @@ class BackupService {
         );
       }
     }
+  }
+
+  static Future<void> exportTransactionsToCsv(BuildContext context) async {
+    try {
+      final transactions = await TransactionRepository.instance.readAllTransactions();
+      if (transactions.isEmpty) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No transactions to export'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
+
+      final csvBuffer = StringBuffer();
+      // Write headers matching the fields of TransactionModel
+      csvBuffer.writeln('ID,Date,Amount,Type,Category,Description,SMS ID');
+
+      for (final TransactionModel tx in transactions) {
+        final id = tx.id?.toString() ?? '';
+        final date = tx.date.toIso8601String();
+        final amount = tx.amount.toString();
+        final type = tx.isExpense ? 'Expense' : 'Income';
+        final category = _escapeCsvValue(tx.category);
+        final description = _escapeCsvValue(tx.description);
+        final smsId = tx.smsId != null ? _escapeCsvValue(tx.smsId!) : '';
+
+        csvBuffer.writeln('$id,$date,$amount,$type,$category,$description,$smsId');
+      }
+
+      AppLockScreen.ignoreNextResumeLock();
+      final dir = await FilePicker.platform.getDirectoryPath();
+      if (dir != null) {
+        final dateStr = DateTime.now().toString().replaceAll(RegExp(r'[: ]'), '_').split('.')[0];
+        final file = File('$dir/transactions_export_$dateStr.csv');
+        await file.writeAsString(csvBuffer.toString());
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Transactions exported to ${file.path}'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  static String _escapeCsvValue(String value) {
+    if (value.contains('"') || value.contains(',') || value.contains('\n') || value.contains('\r')) {
+      return '"${value.replaceAll('"', '""')}"';
+    }
+    return value;
   }
 }

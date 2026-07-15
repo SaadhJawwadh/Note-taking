@@ -114,70 +114,187 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
-  String _getGreeting(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final hour = DateTime.now().hour;
-    if (hour >= 5 && hour < 12) {
-      return l10n.greetingMorning;
-    } else if (hour >= 12 && hour < 17) {
-      return l10n.greetingAfternoon;
-    } else if (hour >= 17 && hour < 21) {
-      return l10n.greetingEvening;
-    } else {
-      return l10n.greetingNight;
-    }
+  void _showCreateFolderDialog(BuildContext context, NoteProvider noteProvider) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Create New Folder'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Folder name',
+            prefixIcon: Icon(Icons.create_new_folder_outlined),
+          ),
+          onSubmitted: (v) {
+            final name = v.trim();
+            if (name.isNotEmpty) {
+              HapticFeedback.selectionClick();
+              noteProvider.createFolder(name);
+              Navigator.pop(ctx);
+            }
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final name = controller.text.trim();
+              if (name.isNotEmpty) {
+                HapticFeedback.selectionClick();
+                noteProvider.createFolder(name);
+                Navigator.pop(ctx);
+              }
+            },
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFolderPicker(BuildContext context, NoteProvider noteProvider) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        final folders = ['All folders', ...noteProvider.folders];
+        final currentFolder = noteProvider.selectedFolder ?? 'All folders';
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Filter by folder',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    TextButton.icon(
+                      icon: const Icon(Icons.create_new_folder_outlined, size: 20),
+                      label: const Text('New Folder'),
+                      onPressed: () {
+                        Navigator.pop(context); // Close bottom sheet
+                        _showCreateFolderDialog(context, noteProvider);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: folders.length,
+                  itemBuilder: (context, index) {
+                    final folder = folders[index];
+                    final isSelected = folder == currentFolder;
+                    return ListTile(
+                      leading: Icon(
+                        index == 0 ? Icons.folder_open_outlined : Icons.folder,
+                        color: isSelected ? Theme.of(context).colorScheme.primary : null,
+                      ),
+                      title: Text(
+                        folder,
+                        style: TextStyle(
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected ? Theme.of(context).colorScheme.primary : null,
+                        ),
+                      ),
+                      trailing: isSelected
+                          ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
+                          : null,
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        noteProvider.setFolder(index == 0 ? null : folder);
+                        Navigator.pop(context);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildNormalMode(BuildContext context, SettingsProvider settings) {
     final noteProvider = context.watch<NoteProvider>();
     return Row(
       children: [
-        const SizedBox(width: 16),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              _getGreeting(context),
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+        const SizedBox(width: 8),
+        InkWell(
+          borderRadius: BorderRadius.circular(AppLayout.radiusM),
+          onTap: () {
+            HapticFeedback.selectionClick();
+            _showFolderPicker(context, noteProvider);
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  noteProvider.selectedFolder != null ? Icons.folder : Icons.folder_open_outlined,
+                  size: 20,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          noteProvider.selectedFolder ?? 'All folders',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.arrow_drop_down,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          size: 16,
+                        ),
+                      ],
+                    ),
+                    Text(
+                      AppLocalizations.of(context)!.noteCount(
+                        noteProvider.selectedFolder == null
+                            ? (noteProvider.tagCounts['All'] ?? 0)
+                            : (noteProvider.folderCounts[noteProvider.selectedFolder] ?? 0),
+                      ),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontSize: 10,
+                          ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            Text(
-              AppLocalizations.of(context)!.noteCount(
-                  noteProvider.tagCounts['All'] ??
-                      noteProvider.filteredNotes.length),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    fontSize: 11,
-                  ),
-            ),
-          ],
+          ),
         ),
         const Spacer(),
-        if (noteProvider.folders.isNotEmpty)
-          PopupMenuButton<String>(
-            icon: Icon(
-              noteProvider.selectedFolder != null
-                  ? Icons.folder
-                  : Icons.folder_outlined,
-              color: noteProvider.selectedFolder != null
-                  ? Theme.of(context).colorScheme.primary
-                  : null,
-            ),
-            tooltip: 'Filter by folder',
-            onSelected: (value) {
-              HapticFeedback.selectionClick();
-              noteProvider.setFolder(value == '__all__' ? null : value);
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                  value: '__all__', child: Text('All folders')),
-              ...noteProvider.folders.map(
-                (f) => PopupMenuItem(value: f, child: Text(f)),
-              ),
-            ],
-          ),
         PopupMenuButton<String>(
           icon: const Icon(Icons.sort),
           tooltip: 'Sort notes',

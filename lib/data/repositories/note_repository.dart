@@ -159,6 +159,19 @@ class NoteRepository {
     return counts;
   }
 
+  Future<Map<String, int>> getFolderCounts() async {
+    final db = await _db;
+    final rows = await db.rawQuery('''
+      SELECT ${NoteFields.category} AS folder, COUNT(*) AS cnt
+      FROM ${TableNames.notes}
+      WHERE ${NoteFields.deletedAt} IS NULL AND ${NoteFields.isArchived} = 0 AND ${NoteFields.category} IS NOT NULL
+      GROUP BY ${NoteFields.category}
+    ''');
+    return <String, int>{
+      for (final r in rows) r['folder'] as String: r['cnt'] as int,
+    };
+  }
+
   Future<void> bulkSetPinned(List<String> ids, bool pinned) async {
     final db = await _db;
     final batch = db.batch();
