@@ -32,6 +32,10 @@ Use this skill when modifying the note editor, home screen note feeds, note tagg
 * **Folders**: `NoteFields.category` doubles as the folder ('All Notes' = none). Filter via `readAllNotes(folder:)`; distinct list via `getAllFolders()`.
 * **Quill 11 built-ins**: markdown-as-you-type = `QuillEditorConfig(characterShortcutEvents: standardCharactersShortcutEvents, spaceShortcutEvents: standardSpaceShorcutEvents)` (note the package's 'Shorcut' typo). `[]`→checklist needs a custom `SpaceShortcutEvent` replicating the internal key-phrase dance (the helper/enum aren't exported). Find-in-note = `QuillToolbarSearchButton`.
 * **Undo pattern**: every trash path offers a snackbar Undo (`restoreNote`); post-pop editor deletes use `appScaffoldMessengerKey`.
+* **Folder Note Counting**: The home feed utilizes lazy pagination (e.g., loading 20 notes at a time). Never rely on list length (e.g., `filteredNotes.length`) to display folder note counts in app bars. Always retrieve un-paginated count groupings directly from the database using queries like `SELECT category, COUNT(*)` and cache them in the provider on load.
+* **Auto-Inherit Folder Context**: When triggering a new note or template bottom sheet from a specific folder view, forward the active folder (`noteProvider.selectedFolder`) to the note creator as the initial category so notes are automatically assigned to the active workspace folder.
+* **Snackbars Clearing & Duration**: When displaying snackbar alerts for user actions (like trashing a note with an "Undo" action), always call `ScaffoldMessenger.of(context).clearSnackbars()` beforehand to clear the queue and set a snappy, user-friendly duration (e.g. 3 seconds) to prevent visual crowding.
+
 
 ## 5. Share-Into-Notes Pipeline
 * `receive_sharing_intent` is PINNED to 1.7.0 (1.8+ is Swift-Package-Manager-only and fails `flutter pub get` when Xcode is incomplete). Text/URLs arrive as `SharedMediaFile.path` with type `text`/`url`.
