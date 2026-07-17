@@ -16,6 +16,7 @@ Use this skill when modifying the note editor, home screen note feeds, note tagg
 * **Rich Preview Generation**: When saving a note, generate a plain text `previewText` (up to 6 lines) from the quill delta:
   * For checklists, prepend unchecked boxes with `☐ ` and checked boxes with `☑ `.
   * Save the preview text directly to the database to avoid runtime parsing during feed rendering.
+  * For tables, format the preview text by extracting the first two rows and joining columns with ` | ` (Option A format), rather than displaying raw markdown or simple placeholders.
 * **Tag Blending**: Home cards must automatically match their background card colors to the colors of their primary tags.
 
 ## 3. UI, Feeds & Filters
@@ -35,6 +36,9 @@ Use this skill when modifying the note editor, home screen note feeds, note tagg
 * **Folder Note Counting**: The home feed utilizes lazy pagination (e.g., loading 20 notes at a time). Never rely on list length (e.g., `filteredNotes.length`) to display folder note counts in app bars. Always retrieve un-paginated count groupings directly from the database using queries like `SELECT category, COUNT(*)` and cache them in the provider on load.
 * **Auto-Inherit Folder Context**: When triggering a new note or template bottom sheet from a specific folder view, forward the active folder (`noteProvider.selectedFolder`) to the note creator as the initial category so notes are automatically assigned to the active workspace folder.
 * **Snackbars Clearing & Duration**: When displaying snackbar alerts for user actions (like trashing a note with an "Undo" action), always call `ScaffoldMessenger.of(context).clearSnackbars()` beforehand to clear the queue and set a snappy, user-friendly duration (e.g. 3 seconds) to prevent visual crowding.
+* **Interactive Embed Cursors & Focus**: When embedding custom interactive blocks (like tables) containing internal text fields inside a scrollable `QuillEditor`, isolate cursors and handle focus dismissals cleanly:
+  * Notify the parent editor to toggle `showCursor = false` when an internal cell is focused, preventing duplicate blinking cursors.
+  * Wrap the embed widget in a `TapRegion` to capture clicks outside the block and clear cell focus.
 
 
 ## 5. Share-Into-Notes Pipeline

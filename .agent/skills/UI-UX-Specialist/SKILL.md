@@ -26,6 +26,7 @@ Use this skill when designing, implementing, or refining layouts, micro-animatio
 * **Input Fields**: Use `TextField` with M3 filled or outlined styles, using `surfaceContainerHighest` as the background fill color.
 * **Toggles**: Use `SegmentedButton` instead of legacy toggle buttons.
 * **Icons**: Semantic accuracy is critical. Do not use AI-associated icons (`Icons.auto_awesome`, `Icons.sparkles`) for non-AI tasks. Use standard icons like `Icons.shuffle` for random selections, and reserve AI icons strictly for actual AI services.
+* **Settings Cards Layout**: Avoid expandable menus (`ExpansionTile`) in settings screens to eliminate automatic expansion bugs. Instead, display settings in static card containers grouped under clear uppercase header labels with sub-icons and letter spacing.
 
 ## 3. Gestures, Motion & Layout
 * **snappy Transitions**: Use snappy transitions like `OpenContainer` (from `package:animations`) with durations around ~300ms.
@@ -37,6 +38,7 @@ Use this skill when designing, implementing, or refining layouts, micro-animatio
 ## 4. App Lock Overlay & Picker Safety
 * **State-Preserving Lock Overlay**: When the app lock is triggered on app pause, display the lock screen as a `Stack` overlay on top of the child view rather than unmounting the child widget tree. This preserves background async actions and picker states. Unmount the child only when the session is fully unauthenticated.
 * **Picker Lock Bypass**: Call `AppLockScreen.ignoreNextResumeLock()` immediately before invoking native platform dialogs (`FilePicker`, `ImagePicker`, directory pickers) to prevent the background-pause state from locking the session upon user return.
+* **External Link Lock Bypass**: Call `AppLockScreen.ignoreNextResumeLock()` before launching external URLs (such as app rating pages or GitHub repositories) to prevent the app from locking when the user returns from external browser/store apps.
 * **Share Intent Queuing**: When launching/resuming the app via a system share sheet while App Lock is active, the child view is completely unmounted. To prevent state loss, queue the shared intent paths in a static variable (e.g. `AppLockScreen.pendingSharedPaths`) and check/process the queue inside the child state's lifecycle immediately upon successful unlock.
 * **Material 3 Dialog Standardizations**: All custom pickers or alert dialogs must explicitly set their background color using `Theme.of(context).colorScheme.surfaceContainerHigh` to align dialog styles with the official Material 3 guidelines and other picker widgets in the app.
 
