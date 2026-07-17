@@ -44,7 +44,8 @@ class FinanceWidgetProvider : AppWidgetProvider() {
 
         // Responsive tiers: analytics grow first; recent transactions only
         // appear on the tallest sizes.
-        val minHeight = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT) ?: 180
+        val widgetOptions = options ?: appWidgetManager.getAppWidgetOptions(appWidgetId)
+        val minHeight = widgetOptions?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT) ?: 180
         val hasBudget = (prefs.getLong("flutter.widget_budget_percent", -1L).toInt()) >= 0
         val showBudget = minHeight >= 120 && hasBudget
         val showTopCategory = minHeight >= if (hasBudget) 190 else 120

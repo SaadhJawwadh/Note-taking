@@ -20,35 +20,48 @@ class SettingsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Theme(
-        data: theme.copyWith(dividerColor: Colors.transparent),
-        child: Container(
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.6),
-            borderRadius: BorderRadius.circular(AppLayout.radiusXL),
-            border: Border.all(
-              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 16, bottom: 8, top: 8),
+            child: Row(
+              children: [
+                Icon(
+                  icon,
+                  size: 16,
+                  color: theme.colorScheme.primary.withValues(alpha: 0.8),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  title.toUpperCase(),
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                    color: theme.colorScheme.primary.withValues(alpha: 0.8),
+                  ),
+                ),
+              ],
             ),
           ),
-          child: ExpansionTile(
-            initiallyExpanded: initiallyExpanded,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusXL)),
-            collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusXL)),
-            leading: Icon(icon, size: 22, color: theme.colorScheme.primary.withValues(alpha: 0.8)),
-            title: Text(
-              title,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.onSurface,
+          Container(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(AppLayout.radiusXL),
+              border: Border.all(
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
               ),
             ),
-            children: [
-              ...children,
-              const SizedBox(height: 8),
-            ],
+            child: Column(
+              children: [
+                const SizedBox(height: 8),
+                ...children,
+                const SizedBox(height: 8),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

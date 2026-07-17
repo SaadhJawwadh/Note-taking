@@ -78,68 +78,9 @@ class SettingsScreen extends StatelessWidget {
                             duration: const Duration(milliseconds: 220),
                             childAnimationBuilder: (widget) => SlideAnimation(verticalOffset: 24.0, child: FadeInAnimation(child: widget)),
                             children: [
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 16),
-                                child: Container(
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.8),
-                                        Theme.of(context).colorScheme.secondaryContainer.withValues(alpha: 0.4),
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                    borderRadius: BorderRadius.circular(AppLayout.radiusXXL),
-                                    border: Border.all(
-                                      color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(12),
-                                        decoration: BoxDecoration(
-                                          color: Theme.of(context).colorScheme.primary,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Icon(
-                                          Icons.settings_suggest_rounded,
-                                          size: 28,
-                                          color: Theme.of(context).colorScheme.onPrimary,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'System Settings',
-                                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Theme.of(context).colorScheme.onPrimaryContainer,
-                                                  ),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              'Customize note styling, automated SMS rules, app security, and formats.',
-                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                                  ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
                               SettingsSection(
-                            title: 'Manage Features',
-                            icon: Icons.apps_outlined,
-                            initiallyExpanded: true,
+                                title: 'Manage Features',
+                                icon: Icons.apps_outlined,
                             children: [
                               SettingsSwitchTile(
                                 icon: Icons.account_balance_wallet_outlined,
@@ -331,6 +272,14 @@ class SettingsScreen extends StatelessWidget {
                             title: 'About',
                             icon: Icons.info_outline_rounded,
                             children: [
+                              SettingsTile(
+                                icon: Icons.star_outline_rounded,
+                                title: 'Rate & Feedback',
+                                subtitle: 'Love the app? Rate us on the Play Store',
+                                trailing: Icon(Icons.open_in_new_rounded, size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                                onTap: () => _launchUrl('https://play.google.com/store/apps/details?id=com.saadhjawwadh.notebook'),
+                              ),
+                              const _Divider(),
                               SettingsTile(icon: FontAwesomeIcons.github, title: 'GitHub Repository', subtitle: 'View source code & contribute', trailing: Icon(Icons.open_in_new_rounded, size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant), onTap: () => _launchUrl(AppConstants.repoUrl)),
                               const _Divider(),
                               SettingsTile(

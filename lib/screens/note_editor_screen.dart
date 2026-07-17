@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_quill/quill_delta.dart';
 import 'package:image_picker/image_picker.dart';
+import 'dart:convert';
 import 'app_lock_screen.dart';
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
 import 'dart:async';
@@ -95,9 +96,21 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   bool _isUpdatingProgrammatically = false;
   StreamSubscription? _docSubscription;
 
+  // Search and formatting panel state
+  bool _showFormattingBar = false;
+  bool _isSearching = false;
+  List<int> _searchOffsets = [];
+  int _currentSearchIndex = -1;
+  bool _isEditingTableCell = false;
+
+  late TextEditingController _searchController;
+  late FocusNode _searchFocusNode;
+
   @override
   void initState() {
     super.initState();
+    _searchController = TextEditingController();
+    _searchFocusNode = FocusNode();
     _noteId = widget.note?.id ?? const Uuid().v4();
     _dateCreated = widget.note?.dateCreated ?? DateTime.now();
     _titleController = TextEditingController(
@@ -331,6 +344,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     _titleController.dispose();
     _quillController.dispose();
     _focusNode.dispose();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -687,6 +702,159 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     HapticFeedback.selectionClick();
     setState(() => _reminderAt = null);
     _onContentChanged();
+  }
+
+  void _performSearch(String query) {
+    if (query.isEmpty) {
+      setState(() {
+        _searchOffsets = [];
+        _currentSearchIndex = -1;
+      });
+      return;
+    }
+
+    final text = _quillController.document.toPlainText();
+    final escapedQuery = RegExp.escape(query);
+    final matches = RegExp(escapedQuery, caseSensitive: false).allMatches(text);
+    
+    final offsets = matches.map((m) => m.start).toList();
+    
+    setState(() {
+      _searchOffsets = offsets;
+      if (offsets.isNotEmpty) {
+        _currentSearchIndex = 0;
+        _jumpToMatch(offsets[0], query.length);
+      } else {
+        _currentSearchIndex = -1;
+      }
+    });
+  }
+
+  void _jumpToMatch(int offset, int length) {
+    _quillController.updateSelection(
+      TextSelection(baseOffset: offset, extentOffset: offset + length),
+      ChangeSource.local,
+    );
+    _focusNode.requestFocus();
+  }
+
+  void _nextSearchMatch() {
+    if (_searchOffsets.isEmpty) return;
+    setState(() {
+      _currentSearchIndex = (_currentSearchIndex + 1) % _searchOffsets.length;
+      _jumpToMatch(_searchOffsets[_currentSearchIndex], _searchController.text.length);
+    });
+  }
+
+  void _previousSearchMatch() {
+    if (_searchOffsets.isEmpty) return;
+    setState(() {
+      _currentSearchIndex = (_currentSearchIndex - 1 + _searchOffsets.length) % _searchOffsets.length;
+      _jumpToMatch(_searchOffsets[_currentSearchIndex], _searchController.text.length);
+    });
+  }
+
+  Future<void> _showTableInsertionDialog() async {
+    int rows = 3;
+    int cols = 3;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return AlertDialog(
+              backgroundColor: Theme.of(ctx).colorScheme.surfaceContainerHigh,
+              title: const Text('Insert Table'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Choose dimensions for your table:'),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Column(
+                        children: [
+                          const Text('Columns', style: TextStyle(fontWeight: FontWeight.bold)),
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.remove),
+                                onPressed: cols > 1 ? () => setModalState(() => cols--) : null,
+                              ),
+                              Text('$cols', style: const TextStyle(fontSize: 18)),
+                              IconButton(
+                                icon: const Icon(Icons.add),
+                                onPressed: cols < 10 ? () => setModalState(() => cols++) : null,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      Column(
+                        children: [
+                          const Text('Rows', style: TextStyle(fontWeight: FontWeight.bold)),
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.remove),
+                                onPressed: rows > 1 ? () => setModalState(() => rows--) : null,
+                              ),
+                              Text('$rows', style: const TextStyle(fontSize: 18)),
+                              IconButton(
+                                icon: const Icon(Icons.add),
+                                onPressed: rows < 20 ? () => setModalState(() => rows++) : null,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Insert'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result == true) {
+      final rowsList = List.generate(
+        rows,
+        (rIndex) => List.generate(
+          cols,
+          (cIndex) => rIndex == 0 ? 'Header ${cIndex + 1}' : 'Cell',
+        ),
+      );
+      final jsonStr = jsonEncode(rowsList);
+
+      final index = _quillController.selection.baseOffset;
+      final length = _quillController.selection.extentOffset - index;
+      
+      _quillController.replaceText(
+        index,
+        length,
+        TableBlockEmbed(jsonStr),
+        null,
+      );
+      
+      _quillController.updateSelection(
+        TextSelection.collapsed(offset: index + 1),
+        ChangeSource.local,
+      );
+    }
   }
 
   /// Starts/stops on-device speech dictation, streaming recognized words
@@ -1405,157 +1573,235 @@ $content
                                 BorderRadius.circular(AppLayout.radiusMAX),
                             boxShadow: AppLayout.softShadow(context),
                           ),
-                          child: Row(
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.arrow_back),
-                                color: textColor,
-                                onPressed: () => Navigator.maybePop(context),
-                              ),
-                              Container(
-                                height: 32,
-                                width: 1,
-                                color: textColor.withValues(alpha: 0.2),
-                                margin:
-                                    const EdgeInsets.symmetric(horizontal: 8),
-                              ),
-                              QuillToolbarHistoryButton(
-                                isUndo: true,
-                                controller: _quillController,
-                                options: QuillToolbarHistoryButtonOptions(
-                                    iconTheme: QuillIconTheme(
-                                        iconButtonUnselectedData:
-                                            IconButtonData(
-                                                style: IconButton.styleFrom(
-                                                    foregroundColor:
-                                                        textColor)))),
-                              ),
-                              QuillToolbarHistoryButton(
-                                isUndo: false,
-                                controller: _quillController,
-                                options: QuillToolbarHistoryButtonOptions(
-                                    iconTheme: QuillIconTheme(
-                                        iconButtonUnselectedData:
-                                            IconButtonData(
-                                                style: IconButton.styleFrom(
-                                                    foregroundColor:
-                                                        textColor)))),
-                              ),
-                              const Spacer(),
-                              if (settings.useOnDeviceAi)
-                                IconButton(
-                                  icon: const Icon(Icons.auto_awesome_outlined),
-                                  tooltip: 'Gemini AI',
-                                  color: textColor,
-                                  onPressed: _showAiOptionsSheet,
-                                ),
-                              IconButton(
-                                icon: const Icon(Icons.label_outline),
-                                tooltip: 'Tags',
-                                color: textColor,
-                                onPressed: _showTagPicker,
-                              ),
-
-                              PopupMenuButton<String>(
-                                icon: Icon(Icons.more_vert, color: textColor),
-                                tooltip: 'More',
-                                onSelected: (value) {
-                                  switch (value) {
-                                    case 'reminder':
-                                      _pickReminder();
-                                      break;
-                                    case 'clear_reminder':
-                                      _clearReminder();
-                                      break;
-                                    case 'folder':
-                                      _pickFolder();
-                                      break;
-                                    case 'outline':
-                                      _showOutlineSheet();
-                                      break;
-                                    case 'lock':
-                                      _toggleNoteLock();
-                                      break;
-                                    case 'delete':
-                                      _deleteNote();
-                                      break;
-                                  }
-                                },
-                                itemBuilder: (context) => [
-                                  PopupMenuItem(
-                                    value: 'reminder',
-                                    child: ListTile(
-                                      contentPadding: EdgeInsets.zero,
-                                      leading: Icon(_reminderAt != null
-                                          ? Icons.alarm_on
-                                          : Icons.alarm_add_outlined),
-                                      title: Text(_reminderAt != null
-                                          ? 'Change reminder'
-                                          : 'Set reminder'),
+                          child: _isSearching
+                              ? Row(
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.arrow_back),
+                                      color: textColor,
+                                      onPressed: () {
+                                        setState(() {
+                                          _isSearching = false;
+                                          _searchController.clear();
+                                          _searchOffsets = [];
+                                          _currentSearchIndex = -1;
+                                        });
+                                      },
                                     ),
-                                  ),
-                                  if (_reminderAt != null)
-                                    const PopupMenuItem(
-                                      value: 'clear_reminder',
-                                      child: ListTile(
-                                        contentPadding: EdgeInsets.zero,
-                                        leading: Icon(Icons.alarm_off_outlined),
-                                        title: Text('Remove reminder'),
+                                    Expanded(
+                                      child: TextField(
+                                        controller: _searchController,
+                                        focusNode: _searchFocusNode,
+                                        style: TextStyle(color: textColor),
+                                        decoration: InputDecoration(
+                                          hintText: 'Search in note...',
+                                          hintStyle: TextStyle(color: hintColor),
+                                          border: InputBorder.none,
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                                        ),
+                                        onChanged: _performSearch,
+                                        onSubmitted: (_) => _nextSearchMatch(),
                                       ),
                                     ),
-                                  const PopupMenuItem(
-                                    value: 'folder',
-                                    child: ListTile(
-                                      contentPadding: EdgeInsets.zero,
-                                      leading: Icon(Icons.folder_outlined),
-                                      title: Text('Move to folder'),
+                                    if (_searchOffsets.isNotEmpty) ...[
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                                        child: Text(
+                                          '${_currentSearchIndex + 1}/${_searchOffsets.length}',
+                                          style: TextStyle(color: textColor, fontSize: 12, fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.keyboard_arrow_up),
+                                        color: textColor,
+                                        onPressed: _previousSearchMatch,
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.keyboard_arrow_down),
+                                        color: textColor,
+                                        onPressed: _nextSearchMatch,
+                                      ),
+                                    ],
+                                    IconButton(
+                                      icon: const Icon(Icons.close),
+                                      color: textColor,
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        _performSearch('');
+                                      },
                                     ),
-                                  ),
-                                  const PopupMenuItem(
-                                    value: 'outline',
-                                    child: ListTile(
-                                      contentPadding: EdgeInsets.zero,
-                                      leading: Icon(Icons.toc_outlined),
-                                      title: Text('Outline'),
+                                  ],
+                                )
+                              : Row(
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.arrow_back),
+                                      color: textColor,
+                                      onPressed: () => Navigator.maybePop(context),
                                     ),
-                                  ),
-                                  PopupMenuItem(
-                                    value: 'lock',
-                                    child: ListTile(
-                                      contentPadding: EdgeInsets.zero,
-                                      leading: Icon(_isNoteLocked
-                                          ? Icons.lock_open_outlined
-                                          : Icons.lock_outline),
-                                      title: Text(_isNoteLocked
-                                          ? 'Unlock note'
-                                          : 'Lock note'),
+                                    Container(
+                                      height: 32,
+                                      width: 1,
+                                      color: textColor.withValues(alpha: 0.2),
+                                      margin:
+                                          const EdgeInsets.symmetric(horizontal: 8),
                                     ),
-                                  ),
-                                  const PopupMenuItem(
-                                    value: 'delete',
-                                    child: ListTile(
-                                      contentPadding: EdgeInsets.zero,
-                                      leading: Icon(Icons.delete_outline),
-                                      title: Text('Move to Trash'),
+                                    QuillToolbarHistoryButton(
+                                      isUndo: true,
+                                      controller: _quillController,
+                                      options: QuillToolbarHistoryButtonOptions(
+                                          iconTheme: QuillIconTheme(
+                                              iconButtonUnselectedData:
+                                                  IconButtonData(
+                                                      style: IconButton.styleFrom(
+                                                          foregroundColor:
+                                                              textColor)))),
                                     ),
-                                  ),
-                                ],
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.check),
-                                tooltip: 'Done',
-                                color: textColor,
-                                onPressed: () => Navigator.maybePop(context),
-                              ),
-                            ],
-                          ),
+                                    QuillToolbarHistoryButton(
+                                      isUndo: false,
+                                      controller: _quillController,
+                                      options: QuillToolbarHistoryButtonOptions(
+                                          iconTheme: QuillIconTheme(
+                                              iconButtonUnselectedData:
+                                                  IconButtonData(
+                                                      style: IconButton.styleFrom(
+                                                          foregroundColor:
+                                                              textColor)))),
+                                    ),
+                                    const Spacer(),
+                                    if (settings.useOnDeviceAi)
+                                      IconButton(
+                                        icon: const Icon(Icons.auto_awesome_outlined),
+                                        tooltip: 'Gemini AI',
+                                        color: textColor,
+                                        onPressed: _showAiOptionsSheet,
+                                      ),
+                                    IconButton(
+                                      icon: const Icon(Icons.label_outline),
+                                      tooltip: 'Tags',
+                                      color: textColor,
+                                      onPressed: _showTagPicker,
+                                    ),
+
+                                    PopupMenuButton<String>(
+                                      icon: Icon(Icons.more_vert, color: textColor),
+                                      tooltip: 'More',
+                                      onSelected: (value) {
+                                        switch (value) {
+                                          case 'reminder':
+                                            _pickReminder();
+                                            break;
+                                          case 'clear_reminder':
+                                            _clearReminder();
+                                            break;
+                                          case 'folder':
+                                            _pickFolder();
+                                            break;
+                                          case 'outline':
+                                            _showOutlineSheet();
+                                            break;
+                                          case 'lock':
+                                            _toggleNoteLock();
+                                            break;
+                                          case 'delete':
+                                            _deleteNote();
+                                            break;
+                                          case 'search':
+                                            setState(() {
+                                              _isSearching = true;
+                                            });
+                                            _searchFocusNode.requestFocus();
+                                            break;
+                                        }
+                                      },
+                                      itemBuilder: (context) => [
+                                        const PopupMenuItem(
+                                          value: 'search',
+                                          child: ListTile(
+                                            contentPadding: EdgeInsets.zero,
+                                            leading: Icon(Icons.search),
+                                            title: Text('Find in Note'),
+                                          ),
+                                        ),
+                                        PopupMenuItem(
+                                          value: 'reminder',
+                                          child: ListTile(
+                                            contentPadding: EdgeInsets.zero,
+                                            leading: Icon(_reminderAt != null
+                                                ? Icons.alarm_on
+                                                : Icons.alarm_add_outlined),
+                                            title: Text(_reminderAt != null
+                                                ? 'Change reminder'
+                                                : 'Set reminder'),
+                                          ),
+                                        ),
+                                        if (_reminderAt != null)
+                                          const PopupMenuItem(
+                                            value: 'clear_reminder',
+                                            child: ListTile(
+                                              contentPadding: EdgeInsets.zero,
+                                              leading: Icon(Icons.alarm_off_outlined),
+                                              title: Text('Remove reminder'),
+                                            ),
+                                          ),
+                                        const PopupMenuItem(
+                                          value: 'folder',
+                                          child: ListTile(
+                                            contentPadding: EdgeInsets.zero,
+                                            leading: Icon(Icons.folder_outlined),
+                                            title: Text('Move to folder'),
+                                          ),
+                                        ),
+                                        const PopupMenuItem(
+                                          value: 'outline',
+                                          child: ListTile(
+                                            contentPadding: EdgeInsets.zero,
+                                            leading: Icon(Icons.toc_outlined),
+                                            title: Text('Outline'),
+                                          ),
+                                        ),
+                                        PopupMenuItem(
+                                          value: 'lock',
+                                          child: ListTile(
+                                            contentPadding: EdgeInsets.zero,
+                                            leading: Icon(_isNoteLocked
+                                                ? Icons.lock_open_outlined
+                                                : Icons.lock_outline),
+                                            title: Text(_isNoteLocked
+                                                ? 'Unlock note'
+                                                : 'Lock note'),
+                                          ),
+                                        ),
+                                        const PopupMenuItem(
+                                          value: 'delete',
+                                          child: ListTile(
+                                            contentPadding: EdgeInsets.zero,
+                                            leading: Icon(Icons.delete_outline),
+                                            title: Text('Move to Trash'),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.check),
+                                      tooltip: 'Done',
+                                      color: textColor,
+                                      onPressed: () => Navigator.maybePop(context),
+                                    ),
+                                  ],
+                                ),
                         ),
                       ),
                       // Editor Area
                       Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: Column(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onTap: () {
+                            FocusManager.instance.primaryFocus?.unfocus();
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               TextField(
@@ -1716,12 +1962,20 @@ $content
                                   ),
                                 ),
                               Expanded(
-                                child: QuillEditor.basic(
-                                  controller: _quillController,
-                                  focusNode: _focusNode,
-                                  config: QuillEditorConfig(
-                                    padding: const EdgeInsets.only(bottom: 16),
-                                    autoFocus: false,
+                                child: NotificationListener<TableCellFocusNotification>(
+                                  onNotification: (notification) {
+                                    setState(() {
+                                      _isEditingTableCell = notification.isFocused;
+                                    });
+                                    return true;
+                                  },
+                                  child: QuillEditor.basic(
+                                    controller: _quillController,
+                                    focusNode: _focusNode,
+                                    config: QuillEditorConfig(
+                                      padding: const EdgeInsets.only(bottom: 16),
+                                      autoFocus: false,
+                                      showCursor: !_isEditingTableCell,
                                     // Markdown-style typing: '- ', '1. ',
                                     // '# ', '**bold**', and '[] ' for a
                                     // checklist item.
@@ -1771,6 +2025,7 @@ $content
                                     placeholder: 'Start typing...',
                                     embedBuilders: [
                                       const RoundedImageEmbedBuilder(),
+                                      const TableEmbedBuilder(),
                                       ...FlutterQuillEmbeds.editorBuilders(),
                                     ],
                                     customStyles: DefaultStyles(
@@ -1836,6 +2091,7 @@ $content
                                   ),
                                 ),
                               ),
+                            ),
                               ..._noteUrls.map(
                                 (url) => Padding(
                                   padding: const EdgeInsets.only(bottom: 12),
@@ -1859,31 +2115,35 @@ $content
                           ),
                         ),
                       ),
-                      // Bottom Toolbar (Pill)
-                      Visibility(
-                        visible: !_isImageSelected,
-                        child: SafeArea(
+                    ),
+                      // Secondary Formatting Bar
+                      if (_showFormattingBar && !_isImageSelected)
+                        SafeArea(
                           top: false,
-                          child: Container(
+                          bottom: false,
+                          child: AnimatedContainer(
+                            duration: AppLayout.animShort,
                             margin: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
+                                horizontal: 16, vertical: 4),
                             decoration: BoxDecoration(
                               color: isSystemDefault
-                                  ? theme.colorScheme.surfaceContainerHighest
+                                  ? theme.colorScheme.surfaceContainerHigh
                                   : ColorScheme.fromSeed(
                                           seedColor: Color(color),
                                           brightness: theme.brightness)
-                                      .surfaceContainerHighest,
+                                      .surfaceContainerHigh,
                               borderRadius:
-                                  BorderRadius.circular(AppLayout.radiusMAX),
+                                  BorderRadius.circular(AppLayout.radiusXL),
                               boxShadow: AppLayout.softShadow(context),
+                              border: Border.all(
+                                color: noteScheme.outlineVariant.withValues(alpha: 0.3),
+                              ),
                             ),
                             child: SingleChildScrollView(
                               scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               child: Row(
                                 children: [
-                                  const SizedBox(width: 16),
-                                  // Basic Formatting
                                   QuillToolbarToggleStyleButton(
                                     attribute: Attribute.bold,
                                     controller: _quillController,
@@ -1920,8 +2180,6 @@ $content
                                                             .colorScheme
                                                             .onPrimary)))),
                                   ),
-
-                                  // Lists & Indent
                                   QuillToolbarToggleStyleButton(
                                     attribute: Attribute.ol,
                                     controller: _quillController,
@@ -1958,25 +2216,6 @@ $content
                                                             .colorScheme
                                                             .onPrimary)))),
                                   ),
-                                  QuillToolbarToggleCheckListButton(
-                                    controller: _quillController,
-                                    options: QuillToolbarToggleCheckListButtonOptions(
-                                        iconData: Icons.check_box,
-                                        iconTheme: QuillIconTheme(
-                                            iconButtonUnselectedData:
-                                                IconButtonData(
-                                                    style: IconButton.styleFrom(
-                                                        foregroundColor:
-                                                            textColor)),
-                                            iconButtonSelectedData:
-                                                IconButtonData(
-                                                    style: IconButton.styleFrom(
-                                                        foregroundColor: theme
-                                                            .colorScheme
-                                                            .onPrimary)))),
-                                  ),
-
-                                  // Blocks (Restored)
                                   QuillToolbarToggleStyleButton(
                                     attribute: Attribute.blockQuote,
                                     controller: _quillController,
@@ -2013,10 +2252,88 @@ $content
                                                             .colorScheme
                                                             .onPrimary)))),
                                   ),
-
                                   IconButton(
-                                    icon: Icon(
-                                        _isListening ? Icons.mic : Icons.mic_none),
+                                    icon: const Icon(Icons.table_chart_outlined),
+                                    tooltip: 'Insert Table',
+                                    onPressed: _showTableInsertionDialog,
+                                    style: IconButton.styleFrom(
+                                      foregroundColor: textColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      // Bottom Toolbar (Pill)
+                      Visibility(
+                        visible: !_isImageSelected,
+                        child: SafeArea(
+                          top: false,
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: isSystemDefault
+                                  ? theme.colorScheme.surfaceContainerHighest
+                                  : ColorScheme.fromSeed(
+                                          seedColor: Color(color),
+                                          brightness: theme.brightness)
+                                      .surfaceContainerHighest,
+                              borderRadius:
+                                  BorderRadius.circular(AppLayout.radiusMAX),
+                              boxShadow: AppLayout.softShadow(context),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  IconButton(
+                                    icon: Icon(_showFormattingBar
+                                        ? Icons.keyboard_hide_outlined
+                                        : Icons.text_fields),
+                                    tooltip: 'Formatting',
+                                    onPressed: () {
+                                      setState(() {
+                                        _showFormattingBar = !_showFormattingBar;
+                                      });
+                                    },
+                                    style: IconButton.styleFrom(
+                                      foregroundColor: _showFormattingBar
+                                          ? theme.colorScheme.primary
+                                          : textColor,
+                                    ),
+                                  ),
+                                  QuillToolbarToggleCheckListButton(
+                                    controller: _quillController,
+                                    options: QuillToolbarToggleCheckListButtonOptions(
+                                        iconData: Icons.check_box_outlined,
+                                        iconTheme: QuillIconTheme(
+                                            iconButtonUnselectedData:
+                                                IconButtonData(
+                                                    style: IconButton.styleFrom(
+                                                        foregroundColor:
+                                                            textColor)),
+                                            iconButtonSelectedData:
+                                                IconButtonData(
+                                                    style: IconButton.styleFrom(
+                                                        foregroundColor: theme
+                                                            .colorScheme
+                                                            .onPrimary)))),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.image_outlined),
+                                    tooltip: 'Attach Image',
+                                    onPressed: _showImageOptions,
+                                    style: IconButton.styleFrom(
+                                      foregroundColor: textColor,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: Icon(_isListening
+                                        ? Icons.mic
+                                        : Icons.mic_none),
                                     tooltip: _isListening
                                         ? 'Stop dictation'
                                         : 'Dictate',
@@ -2027,25 +2344,6 @@ $content
                                           : textColor,
                                     ),
                                   ),
-                                  QuillToolbarSearchButton(
-                                    controller: _quillController,
-                                    options: QuillToolbarSearchButtonOptions(
-                                        iconTheme: QuillIconTheme(
-                                            iconButtonUnselectedData:
-                                                IconButtonData(
-                                                    style: IconButton.styleFrom(
-                                                        foregroundColor:
-                                                            textColor)))),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.attach_file),
-                                    tooltip: 'Attach Image',
-                                    onPressed: _showImageOptions,
-                                    style: IconButton.styleFrom(
-                                      foregroundColor: textColor,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
                                 ],
                               ),
                             ),
@@ -2399,6 +2697,313 @@ class _FullScreenImageViewer extends StatelessWidget {
       body: InteractiveViewer(
         child: Center(
           child: Image(image: imageProvider),
+        ),
+      ),
+    );
+  }
+}
+
+class TableCellFocusNotification extends Notification {
+  final bool isFocused;
+  const TableCellFocusNotification(this.isFocused);
+}
+
+class TableEmbedBuilder extends EmbedBuilder {
+  const TableEmbedBuilder();
+
+  @override
+  String get key => TableBlockEmbed.tableType;
+
+  @override
+  Widget build(BuildContext context, EmbedContext embedContext) {
+    final node = embedContext.node;
+    final controller = embedContext.controller;
+    final readOnly = embedContext.readOnly;
+
+    return TableWidget(
+      rawData: node.value.data,
+      controller: controller,
+      offset: node.offset,
+      readOnly: readOnly,
+    );
+  }
+}
+
+class TableWidget extends StatefulWidget {
+  final String rawData;
+  final QuillController controller;
+  final int offset;
+  final bool readOnly;
+
+  const TableWidget({
+    super.key,
+    required this.rawData,
+    required this.controller,
+    required this.offset,
+    required this.readOnly,
+  });
+
+  @override
+  State<TableWidget> createState() => _TableWidgetState();
+}
+
+class _TableWidgetState extends State<TableWidget> {
+  List<List<String>> _cells = [];
+  List<List<TextEditingController>> _controllers = [];
+  List<List<FocusNode>> _focusNodes = [];
+  Timer? _debounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _parseData();
+  }
+
+  void _parseData() {
+    try {
+      final List<dynamic> outer = jsonDecode(widget.rawData);
+      _cells = outer.map((r) => (r as List).map((c) => c.toString()).toList()).toList();
+    } catch (e) {
+      _cells = [['Header 1', 'Header 2'], ['Cell 1', 'Cell 2']];
+    }
+    _initControllers();
+  }
+
+  void _initControllers() {
+    for (final row in _controllers) {
+      for (final controller in row) {
+        controller.dispose();
+      }
+    }
+    for (final row in _focusNodes) {
+      for (final node in row) {
+        node.dispose();
+      }
+    }
+    _controllers = _cells.map((row) => row.map((cellText) => TextEditingController(text: cellText)).toList()).toList();
+    _focusNodes = _cells.map((row) => row.map((_) {
+      final node = FocusNode();
+      node.addListener(() {
+        if (!mounted) return;
+        debugPrint("TABLE_CELL: node.hasFocus = ${node.hasFocus}");
+        if (node.hasFocus) {
+          const TableCellFocusNotification(true).dispatch(context);
+        } else {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            final anyFocused = _focusNodes.any((r) => r.any((n) => n.hasFocus));
+            debugPrint("TABLE_CELL: anyFocused = $anyFocused");
+            if (!anyFocused) {
+              const TableCellFocusNotification(false).dispatch(context);
+            }
+          });
+        }
+      });
+      return node;
+    }).toList()).toList();
+  }
+
+  @override
+  void didUpdateWidget(covariant TableWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.rawData != widget.rawData) {
+      try {
+        final List<dynamic> outer = jsonDecode(widget.rawData);
+        final newCells = outer.map((r) => (r as List).map((c) => c.toString()).toList()).toList();
+        if (!_areCellsEqual(_cells, newCells)) {
+          _cells = newCells;
+          _initControllers();
+        }
+      } catch (_) {}
+    }
+  }
+
+  bool _areCellsEqual(List<List<String>> a, List<List<String>> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i].length != b[i].length) return false;
+      for (int j = 0; j < a[i].length; j++) {
+        if (a[i][j] != b[i][j]) return false;
+      }
+    }
+    return true;
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    for (final row in _controllers) {
+      for (final controller in row) {
+        controller.dispose();
+      }
+    }
+    for (final row in _focusNodes) {
+      for (final node in row) {
+        node.dispose();
+      }
+    }
+    super.dispose();
+  }
+
+  void _onCellChanged(int rowIndex, int colIndex, String text) {
+    _cells[rowIndex][colIndex] = text;
+    _triggerSave();
+  }
+
+  void _triggerSave() {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      if (!mounted) return;
+      final jsonStr = jsonEncode(_cells);
+      widget.controller.replaceText(
+        widget.offset,
+        1,
+        TableBlockEmbed(jsonStr),
+        null,
+      );
+    });
+  }
+
+  void _addRow() {
+    setState(() {
+      final colCount = _cells[0].length;
+      _cells.add(List.generate(colCount, (_) => 'Cell'));
+      _initControllers();
+    });
+    _triggerSave();
+  }
+
+  void _removeRow() {
+    if (_cells.length <= 1) return;
+    setState(() {
+      _cells.removeLast();
+      _initControllers();
+    });
+    _triggerSave();
+  }
+
+  void _addColumn() {
+    setState(() {
+      for (int i = 0; i < _cells.length; i++) {
+        _cells[i].add(i == 0 ? 'Header ${_cells[i].length + 1}' : 'Cell');
+      }
+      _initControllers();
+    });
+    _triggerSave();
+  }
+
+  void _removeColumn() {
+    if (_cells[0].length <= 1) return;
+    setState(() {
+      for (int i = 0; i < _cells.length; i++) {
+        _cells[i].removeLast();
+      }
+      _initControllers();
+    });
+    _triggerSave();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final borderColor = theme.colorScheme.outlineVariant.withValues(alpha: 0.5);
+
+    return TapRegion(
+      onTapOutside: (event) {
+        debugPrint("TABLE_CELL: onTapOutside triggered");
+        for (final row in _focusNodes) {
+          for (final node in row) {
+            if (node.hasFocus) {
+              debugPrint("TABLE_CELL: unfocusing node");
+              node.unfocus();
+            }
+          }
+        }
+      },
+      child: Material(
+        color: Colors.transparent,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                border: Border.all(color: borderColor),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Table(
+                border: TableBorder.symmetric(
+                  inside: BorderSide(color: borderColor),
+                ),
+                children: List.generate(_cells.length, (rIndex) {
+                  final isHeader = rIndex == 0;
+                  return TableRow(
+                    decoration: BoxDecoration(
+                      color: isHeader
+                          ? theme.colorScheme.secondaryContainer.withValues(alpha: 0.3)
+                          : (rIndex % 2 == 1
+                              ? theme.colorScheme.surface
+                              : theme.colorScheme.surfaceContainerLowest),
+                    ),
+                    children: List.generate(_cells[rIndex].length, (cIndex) {
+                      return TableCell(
+                        verticalAlignment: TableCellVerticalAlignment.middle,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          child: TextField(
+                            controller: _controllers[rIndex][cIndex],
+                            focusNode: _focusNodes[rIndex][cIndex],
+                            readOnly: widget.readOnly,
+                            style: TextStyle(
+                              color: theme.colorScheme.onSurface,
+                              fontSize: 14,
+                              fontWeight: isHeader ? FontWeight.bold : FontWeight.normal,
+                            ),
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: EdgeInsets.symmetric(vertical: 6),
+                            ),
+                            onChanged: (text) => _onCellChanged(rIndex, cIndex, text),
+                          ),
+                        ),
+                      );
+                    }),
+                  );
+                }),
+              ),
+            ),
+            if (!widget.readOnly)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.playlist_add),
+                      tooltip: 'Add Row',
+                      onPressed: _cells.length < 20 ? _addRow : null,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.playlist_remove),
+                      tooltip: 'Remove Row',
+                      onPressed: _cells.length > 1 ? _removeRow : null,
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.view_column_outlined),
+                      tooltip: 'Add Column',
+                      onPressed: _cells[0].length < 10 ? _addColumn : null,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.view_column),
+                      tooltip: 'Remove Column',
+                      onPressed: _cells[0].length > 1 ? _removeColumn : null,
+                    ),
+                  ],
+                ),
+              ),
+          ],
         ),
       ),
     );

@@ -374,7 +374,7 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
 
   await TransactionCategory.reload();
 
-  final transaction = SmsParser.parseMessage(
+  final transaction = await SmsService._parseWithAiFallback(
     body: message.body ?? '',
     address: message.address ?? '',
     messageId: message.id,
