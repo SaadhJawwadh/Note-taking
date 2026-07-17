@@ -1,20 +1,16 @@
 
-### 📁 Folder & Selection Enhancements
-- **Folder Card Selector**: Replaced the dynamic greeting with an interactive folder picker card showing active folder name, note count, and inline dropdown arrow.
-- **Memory-Persistent Folder Creation**: Added folder creation inside the dropdown sheet; empty folders stay in memory until notes are added.
-- **Auto-Inherit Folder Context**: Creating new notes or using templates automatically pre-selects the active folder.
+### 📊 Live Interactive Tables
+- **Inline Table Widget**: Rendered tables directly as beautiful interactive widgets within the Note Editor, replacing raw markdown text.
+- **Dynamic Cell Editing**: Added custom borderless text inputs inside cells, managing focus and debouncing updates to the note automatically.
+- **M3 Row/Column Management**: Touch-optimized action buttons for adding and deleting rows/columns dynamically.
+- **Double Cursor Resolution**: Dynamically hidden the primary editor cursor when a table cell is focused to prevent dual blinking cursors.
+- **Automatic Focus Dismissal**: Wrapped table editor in a TapRegion to automatically clear cell focus and collapse the keyboard when tapping anywhere outside the table boundaries.
 
-### 📝 Templates & Creation Flow
-- **Accessible FAB Options**: Changed the FAB single tap action to show a selection sheet for Blank Notes and Templates, removing the hidden long-press gesture.
-- **Redundancy & UX Cleanup**: Duplicate checkmark buttons and redundant checklist tools removed from the editor headers and toolbar.
+### 📝 Textual Table Previews
+- **Clean Note Card Snippets**: Note list cards on the home screen now display a clean, readable text preview of the table's first two rows, separating columns with ` | ` instead of displaying generic table indicators or messy raw markdown code.
 
-### 📱 Responsive Tablet Layouts
-- **Side Navigation Rail**: Adaptive layout rendering a sleek side navigation rail on screens $\ge 600\text{dp}$.
-- **Two-Column Ledger Dashboard**: Budgets and financial charts display side-by-side on wide displays.
-
-### 💰 Financial Ledger Updates
-- **CSV Transaction Export**: Export all transactions as standard, RFC 4180 compliant CSV spreadsheet files from the ledger app bar.
-
-### ⚡ UI & Performance Polish
-- **Snappy Snackbars**: Deletion and archiving alerts clear existing snackbar queues instantly and dismiss in 3 seconds.
+### ⚙️ Settings Redesign & Feedback
+- **Modern Static Card Layout**: Redesigned settings into clean, scrollable card groupings. Discontinued expansion tiles to let users view all preferences instantly without needing extra clicks.
+- **Removed Redundant Headers**: Deleted the unneeded System Settings card header to reclaim screen space.
+- **Play Store Feedback option**: Added a direct Play Store Rating and Feedback button inside settings to support the app.
 
