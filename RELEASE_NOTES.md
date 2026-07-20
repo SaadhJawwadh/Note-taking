@@ -1,16 +1,13 @@
 
-### 📊 Live Interactive Tables
-- **Inline Table Widget**: Rendered tables directly as beautiful interactive widgets within the Note Editor, replacing raw markdown text.
-- **Dynamic Cell Editing**: Added custom borderless text inputs inside cells, managing focus and debouncing updates to the note automatically.
-- **M3 Row/Column Management**: Touch-optimized action buttons for adding and deleting rows/columns dynamically.
-- **Double Cursor Resolution**: Dynamically hidden the primary editor cursor when a table cell is focused to prevent dual blinking cursors.
-- **Automatic Focus Dismissal**: Wrapped table editor in a TapRegion to automatically clear cell focus and collapse the keyboard when tapping anywhere outside the table boundaries.
+### ⚡ Note Editor — Slash Commands & Glassmorphic Toolbar
+- **Slash Commands (`/`)**: Type `/` anywhere at the start of a line to open a quick action menu. Type `/todo` for checklists, `/table` for data tables, `/code` for monospace code blocks, `/h1`/`/h2` for headings, `/quote` for callouts, and `/bullet`/`/number` for lists.
+- **Floating Glassmorphism Formatting Bar**: Redesigned the formatting bar into a sleek floating island pill with backdrop blur, semi-transparent Material 3 fill, and soft shadows.
+- **Note Details & Stats Sheet**: Added real-time Word Count, Character Count, Estimated Reading Time, Folder path, and Creation/Modification timestamps.
+- **Share & Export Note**: Export notes as Plain Text or Markdown, or copy note content directly to the clipboard.
 
-### 📝 Textual Table Previews
-- **Clean Note Card Snippets**: Note list cards on the home screen now display a clean, readable text preview of the table's first two rows, separating columns with ` | ` instead of displaying generic table indicators or messy raw markdown code.
-
-### ⚙️ Settings Redesign & Feedback
-- **Modern Static Card Layout**: Redesigned settings into clean, scrollable card groupings. Discontinued expansion tiles to let users view all preferences instantly without needing extra clicks.
-- **Removed Redundant Headers**: Deleted the unneeded System Settings card header to reclaim screen space.
-- **Play Store Feedback option**: Added a direct Play Store Rating and Feedback button inside settings to support the app.
+### 🏷️ Category Management Redesign
+- **Editable Category Names & Icons**: Edit category names directly with automatic transaction and recurring rule reassignment.
+- **Icon Picker Grid**: Choose custom icons from a 24-icon grid (Transport, Dining, Subscriptions, Shopping, Utilities, Health, Savings, Work, etc.).
+- **Safe Category Deleting**: Built-in and custom categories can be safely deleted; all associated transactions are automatically reassigned to "Other" so financial history remains complete.
+- **Table Cell Styling**: Removed white box cutouts inside table cells and added a rounded pill container for row/column action controls.
 
