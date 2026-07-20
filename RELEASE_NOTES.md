@@ -1,23 +1,18 @@
 
-### 🏷️ Category Management & Custom Icons
-- **Category Renaming**: Edit category names directly with automatic SQLite migration across all past transactions and recurring rules.
-- **Custom Category Icons**: Choose from a curated grid of 24 Material icons for any built-in or custom category.
-- **Safe Category Deletion**: Delete any category (except 'Other') with automatic reassignment of existing transactions to 'Other' so your financial history stays intact.
+### 🔍 In-Note Search & Text Navigation
+- **Real-Time Search Bar**: Search text inside any note with instant query highlighting, case-sensitivity toggle, and keyboard-friendly next/previous match navigation (`▲` / `▼`).
+- **Match Count Indicator**: Live match position badge (e.g. `1/5`) updates dynamically as you navigate matches or edit content.
 
-### 📝 Note Editor & Canvas Enhancements
-- **Slash Commands (`/`)**: Type `/` at the start of a line to quickly insert checklists, tables, code blocks, headings, quotes, and lists.
-- **Floating Glassmorphism Toolbar**: Redesigned the formatting bar into a sleek floating island with backdrop blur and theme-aware styling.
-- **Note Details & Stats**: View real-time word count, character count, estimated read time, folder placement, and created/modified dates.
-- **Share & Export**: Share notes as Plain Text, Markdown, or copy to clipboard instantly.
-- **Table Cell Polish**: Fixed table header background cutouts and sanitized Unicode character rendering.
+### 🧠 Dual-Engine On-Device AI Architecture
+- **Universal Device Support**: Powered by Android AI Core NPU on supported hardware, with zero-latency smart offline fallback for 100% of all Android devices.
+- **Compact Material 3 AI Sheet**: Redesigned bottom sheet with compact high-density tiles, visual density styling, and instant preset AI tools.
+- **Floating AI Selection Toolbar**: Highlight any text to trigger a floating `✨ AI Assist` toolbar directly over the keyboard.
 
-### 🌙 Period Tracker — Full Redesign
-- **Moon Phase Animation**: A beautiful moon widget now reflects your current cycle phase — new moon during menstrual, crescent during follicular, full moon during ovulation, and waning gibbous during luteal phase.
-- **Logging-First Layout**: The logging card is now at the top of the screen for quick, muscle-memory access. The calendar view is placed below for reference.
-- **Icon-Based Flow Intensity**: Spotting, Light, Medium, and Heavy are now icon+label tiles for faster, more visual selection — fully consistent with the card's colour palette.
-- **Collapsible Symptoms**: The symptoms section starts collapsed to reduce clutter. A live badge shows how many symptoms are active, and the section animates open smoothly on tap.
+### 🏷️ Smart & Reliable AI Tag Suggestions
+- **Whole-Word Boundary Precision**: Replaced naive prefix matching with exact whole-word regex boundaries, eliminating false tag matches.
+- **Dynamic Topic Detection**: Automatically detects note subject matter (e.g. `Movie`, `Work`, `Finance`, `Health`, `Travel`) if no existing tags match.
+- **Dismissable Tag Chips**: Suggested tags render as M3 chips with `✕` dismiss icons for one-tap filtering.
 
-### 🔧 Dark Mode & Visibility Fixes
-- Fixed symptom selector using the same unified `onPeriodColor`-based colour system as flow intensity tiles — no longer renders dark-on-dark in dark mode.
-- Fixed the delete log button being invisible (blending into card background) in dark mode — now clearly shown in red.
+### 📱 Universal Tablet Compatibility
+- **Samsung Galaxy Tab S10+ Support**: Configured `<package android:name="com.google.android.aicore" />` queries and optional hardware flags (`telephony`, `camera`, `microphone` `required="false"`), making the app available on tablets, foldables, and Chromebooks.
 
