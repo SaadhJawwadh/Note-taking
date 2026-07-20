@@ -63,6 +63,10 @@ Execute the automated deploy script to bump, tag, and publish:
   git tag vX.Y.Z
   git push origin vX.Y.Z
   ```
+* **Icon Tree-Shaking Guardrail**: Release builds MUST pass `--no-tree-shake-icons` (`flutter build apk --release --no-tree-shake-icons` and `flutter build appbundle --release --no-tree-shake-icons`) whenever dynamic runtime `IconData` code points are instantiated (such as custom category icon pickers).
+* **Fail-Safe Release Signing**: `android/app/build.gradle.kts` must validate that `storeFile` exists and is non-empty before enabling `signingConfigs.getByName("release")`. If invalid or missing, it must fall back safely to `signingConfigs.getByName("debug")` so CI runs never crash.
+* **Analyzer Rules Sync**: Ensure `analysis_options.yaml` ignores `experimental_member_use` and `non_const_argument_for_const_parameter` so newer Flutter versions on GitHub Actions runners do not trigger false analyzer errors.
+* **Release Notes Pre-Check**: GitHub Actions `release.yml` must explicitly verify `RELEASE_NOTES.md` file existence before passing `body_path` to avoid `ENOENT` crashes.
 
 ---
 
