@@ -43,7 +43,19 @@ Execute the automated deploy script to bump, tag, and publish:
 ```bash
 ./deploy.sh <version>
 ```
-* **Release Notes Extraction**: The script automatically extracts the version's notes from `CHANGELOG.md` into `RELEASE_NOTES.md` and commits it, which GitHub Actions parses to create the release body.
+### Step 4: Play Console Bilingual Release Notes (Mandatory Output)
+With every release, **ALWAYS** generate and present short, bulleted Google Play Console release notes formatted inside `<en-US>` (English) and `<ta-IN>` (Tamil) XML tags so the user can copy and paste directly into Play Console:
+
+```xml
+<en-US>
+• Feature Title: Concise benefit-first description.
+• Feature Title: Concise benefit-first description.
+</en-US>
+<ta-IN>
+• அம்ச தலைப்பு: சுருக்கமான தமிழ் விளக்கம்.
+• அம்ச தலைப்பு: சுருக்கமான தமிழ் விளக்கம்.
+</ta-IN>
+```
 
 ---
 
