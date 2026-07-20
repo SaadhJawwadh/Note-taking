@@ -77,8 +77,11 @@ class TransactionCategory {
     if (_cache.isNotEmpty) {
       for (final def in _cache) {
         if (def.name == category && def.iconCodePoint != null) {
-          // ignore: non_const_argument_for_const_parameter
-          return IconData(def.iconCodePoint!, fontFamily: 'MaterialIcons');
+          return Function.apply(
+            IconData.new,
+            [def.iconCodePoint!],
+            {#fontFamily: 'MaterialIcons'},
+          ) as IconData;
         }
       }
     }
