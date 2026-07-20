@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:gemini_nano_android/gemini_nano_android.dart';
 import 'local_ai_service.dart';
+import 'offline_ai_fallback_service.dart';
 
 class GeminiNanoService implements LocalAiService {
   final GeminiNanoAndroid _gemini = GeminiNanoAndroid();
@@ -41,45 +42,53 @@ Keep it clear and readable.
 Text:
 $text
 """;
-    return generateText(prompt);
+    final result = await generateText(prompt);
+    if (result != null && result.trim().isNotEmpty) {
+      return result;
+    }
+    return OfflineAiFallbackService.summarize(text);
   }
 
   @override
   Future<List<String>> suggestTags(String noteContent, List<String> existingTags) async {
     final existingTagsList = existingTags.join(', ');
     final prompt = """
-You are a tagging assistant. Analyze the note content below and suggest a list of 1 to 3 relevant tags.
+You are an intelligent tagging assistant. Analyze the note content below and select 1 to 3 relevant tags from the provided existing tags list.
 
-Follow these strict tagging rules in order of priority:
-1. You MUST ONLY suggest tags that exist in the provided list of existing tags: [$existingTagsList].
-2. Do NOT suggest any new tags, custom tags, or tags outside of the provided list under any circumstances. If no existing tags are relevant, suggest nothing.
-3. Respond with ONLY a comma-separated list of suggested tags (all lowercase, no hashtags, no explanations, no formatting). If no tags match or are highly relevant, respond with nothing.
+STRICT GUARDRAILS:
+1. ONLY select tags that exist in this exact list: [$existingTagsList].
+2. The selected tag MUST represent the main topic of the note.
+3. Do NOT match tags based on random word prefixes or common English words (for example, do NOT match "Event Summary" just because the word "even" appears).
+4. If no tags in the list match the topic with high confidence, respond with nothing.
+5. Respond with ONLY a comma-separated list of selected tag names.
 
 Note content:
 $noteContent
 """;
 
     final response = await generateText(prompt);
-    if (response == null || response.trim().isEmpty) return [];
-    
-    final cleanedTags = response
-        .split(',')
-        .map((tag) => tag.trim().toLowerCase().replaceAll('#', ''))
-        .map((tag) => tag.replaceAll(RegExp(r'[^a-z0-9_-]'), ''))
-        .where((tag) => tag.length >= 2 && tag != 'all')
-        .toList();
+    if (response != null && response.trim().isNotEmpty) {
+      final cleanedTags = response
+          .split(',')
+          .map((tag) => tag.trim().toLowerCase().replaceAll('#', ''))
+          .map((tag) => tag.replaceAll(RegExp(r'[^a-z0-9_-]'), ''))
+          .where((tag) => tag.length >= 2 && tag != 'all')
+          .toList();
 
-    final result = <String>[];
-    for (final tag in cleanedTags) {
-      final matchedExisting = existingTags.firstWhere(
-        (existing) => existing.trim().toLowerCase() == tag,
-        orElse: () => '',
-      );
-      if (matchedExisting.isNotEmpty) {
-        result.add(matchedExisting.trim());
+      final result = <String>[];
+      for (final tag in cleanedTags) {
+        final matchedExisting = existingTags.firstWhere(
+          (existing) => existing.trim().toLowerCase() == tag,
+          orElse: () => '',
+        );
+        if (matchedExisting.isNotEmpty) {
+          result.add(matchedExisting.trim());
+        }
       }
+      if (result.isNotEmpty) return result;
     }
-    return result;
+
+    return OfflineAiFallbackService.suggestTags(noteContent, existingTags);
   }
 
   @override
@@ -100,42 +109,42 @@ $smsBody
 """;
 
     final response = await generateText(prompt);
-    if (response == null || response.trim().isEmpty) return null;
-    try {
-      var cleaned = response.trim();
-      // Extract the JSON object using brace matching if there's surrounding text or markdown blocks
-      final startIndex = cleaned.indexOf('{');
-      final endIndex = cleaned.lastIndexOf('}');
-      if (startIndex != -1 && endIndex != -1 && endIndex > startIndex) {
-        cleaned = cleaned.substring(startIndex, endIndex + 1);
-      }
-
-      final data = json.decode(cleaned);
-      if (data is Map<String, dynamic>) {
-        String matchedCategory = 'Other';
-        final parsedCat = data['category']?.toString().trim().toLowerCase();
-        if (parsedCat != null) {
-          for (final cat in categories) {
-            if (cat.trim().toLowerCase() == parsedCat) {
-              matchedCategory = cat;
-              break;
-            }
-          }
+    if (response != null && response.trim().isNotEmpty) {
+      try {
+        var cleaned = response.trim();
+        final startIndex = cleaned.indexOf('{');
+        final endIndex = cleaned.lastIndexOf('}');
+        if (startIndex != -1 && endIndex != -1 && endIndex > startIndex) {
+          cleaned = cleaned.substring(startIndex, endIndex + 1);
         }
 
-        final description = data['description']?.toString().trim() ?? data['merchant']?.toString().trim();
-        return {
-          'amount': data['amount'] != null ? double.tryParse(data['amount'].toString()) : null,
-          'merchant': description,
-          'description': description,
-          'category': matchedCategory,
-          'isExpense': data['isExpense'] == true,
-        };
+        final data = json.decode(cleaned);
+        if (data is Map<String, dynamic>) {
+          String matchedCategory = 'Other';
+          final parsedCat = data['category']?.toString().trim().toLowerCase();
+          if (parsedCat != null) {
+            for (final cat in categories) {
+              if (cat.trim().toLowerCase() == parsedCat) {
+                matchedCategory = cat;
+                break;
+              }
+            }
+          }
+
+          final description = data['description']?.toString().trim() ?? data['merchant']?.toString().trim();
+          return {
+            'amount': data['amount'] != null ? double.tryParse(data['amount'].toString()) : null,
+            'merchant': description,
+            'description': description,
+            'category': matchedCategory,
+            'isExpense': data['isExpense'] == true,
+          };
+        }
+      } catch (_) {
+        // Fall through to offline fallback parser
       }
-    } catch (_) {
-      // JSON parsing or structure failure
     }
-    return null;
+    return OfflineAiFallbackService.parseSmsTransaction(smsBody, categories);
   }
 
   @override
@@ -153,14 +162,14 @@ Original SMS: $smsBody
 Respond with ONLY the refined description (max 30 characters). No punctuation at the end.
 """;
     final result = await generateText(prompt);
-    if (result == null) return null;
-    
-    // Clean up any extra noise the LLM might have added
-    var cleaned = result.trim();
-    if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
-      cleaned = cleaned.substring(1, cleaned.length - 1);
+    if (result != null && result.trim().isNotEmpty) {
+      var cleaned = result.trim();
+      if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+        cleaned = cleaned.substring(1, cleaned.length - 1);
+      }
+      return cleaned.length > 35 ? cleaned.substring(0, 35) : cleaned;
     }
-    return cleaned.length > 35 ? cleaned.substring(0, 35) : cleaned;
+    return rawDescription.length > 30 ? rawDescription.substring(0, 30) : rawDescription;
   }
 
   @override
@@ -192,6 +201,22 @@ $instruction
 Text to process:
 $text
 """;
-    return generateText(prompt);
+    final result = await generateText(prompt);
+    if (result != null && result.trim().isNotEmpty) {
+      return result;
+    }
+
+    switch (mode.toLowerCase()) {
+      case 'polish':
+      case 'professional':
+      case 'casual':
+        return OfflineAiFallbackService.proofreadAndPolish(text);
+      case 'shorten':
+        return OfflineAiFallbackService.makeShorter(text);
+      case 'expand':
+        return OfflineAiFallbackService.elaborateAndExpand(text);
+      default:
+        return text;
+    }
   }
 }

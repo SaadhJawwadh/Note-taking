@@ -5,6 +5,28 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- Make hardware features optional so tablets (e.g. Wi-Fi Samsung Galaxy Tab S10+), Chromebooks, and foldable devices are supported -->
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
+    <!-- Enable support for all screen sizes including tablets and foldables -->
+    <supports-screens
+        android:smallScreens="true"
+        android:normalScreens="true"
+        android:largeScreens="true"
+        android:xlargeScreens="true"
+        android:anyDensity="true" />
+    <!-- Package query for Android AI Core (Gemini Nano NPU Service) -->
+    <queries>
+        <package android:name="com.google.android.aicore" />
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+        </intent>
+    </queries>
+
     <application
         android:label="Everything App"
         android:name="${applicationName}"

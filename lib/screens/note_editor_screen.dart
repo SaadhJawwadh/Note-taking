@@ -22,6 +22,7 @@ import 'package:local_auth/local_auth.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:intl/intl.dart';
 import '../services/local_ai_service.dart';
+import '../services/offline_ai_fallback_service.dart';
 import '../services/notification_service.dart';
 import '../providers/note_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -91,16 +92,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
   // AI summary and selection states
   String? _aiSummary;
-  String _selectedText = '';
   List<String> _suggestedTags = [];
   Timer? _debounceTagTimer;
-  bool _isAiProcessing = false;
   bool _isUpdatingProgrammatically = false;
   StreamSubscription? _docSubscription;
 
   // Search and formatting panel state
   bool _showFormattingBar = false;
   bool _isSearching = false;
+  bool _isCaseSensitive = false;
   List<int> _searchOffsets = [];
   int _currentSearchIndex = -1;
   bool _isEditingTableCell = false;
@@ -111,6 +111,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   int _slashLineStart = 0;
 
   static final List<({String label, String command, IconData icon, String description})> _slashCommands = [
+    (label: 'AI Assist', command: 'ai', icon: Icons.auto_awesome, description: 'Launch Gemini AI tools'),
     (label: 'Checklist', command: 'todo', icon: Icons.check_box_outlined, description: 'Interactive to-do checkbox'),
     (label: 'Table', command: 'table', icon: Icons.table_chart_outlined, description: 'Insert 3x3 data grid'),
     (label: 'Code Block', command: 'code', icon: Icons.code, description: 'Monospace code container'),
@@ -213,15 +214,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     if (mounted) {
       setState(() {
         _isImageSelected = _checkIfImageSelected();
-        if (selection.isCollapsed) {
-          _selectedText = '';
-        } else {
-          final text = _quillController.document.toPlainText();
-          if (selection.start >= 0 && selection.end <= text.length) {
-            _selectedText =
-                text.substring(selection.start, selection.end).trim();
-          }
-        }
+        _showFormattingBar = !selection.isCollapsed;
       });
     }
   }
@@ -335,6 +328,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     setState(() => _showSlashMenu = false);
 
     switch (command) {
+      case 'ai':
+        _showAiOptionsSheet();
+        break;
       case 'todo':
         _quillController.formatSelection(Attribute.unchecked);
         break;
@@ -412,52 +408,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     } catch (_) {
       // Ignore background errors
     }
-  }
-
-  Future<void> _refineSelection(String mode) async {
-    final text = _selectedText;
-    if (text.isEmpty) return;
-
-    setState(() {
-      _isAiProcessing = true;
-    });
-
-    final aiService = Provider.of<LocalAiService>(context, listen: false);
-    final result = await aiService.refineText(text, mode);
-
-    if (result != null && result.trim().isNotEmpty) {
-      final selection = _quillController.selection;
-      _quillController.replaceText(
-        selection.start,
-        selection.end - selection.start,
-        result.trim(),
-        null,
-      );
-      await HapticFeedback.lightImpact();
-    }
-
-    setState(() {
-      _isAiProcessing = false;
-      _selectedText = '';
-    });
-  }
-
-  Widget _aiSelectionButton(
-      String label, VoidCallback onPressed, ColorScheme scheme) {
-    return TextButton(
-      onPressed: onPressed,
-      style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        minimumSize: Size.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        foregroundColor: scheme.onSurface,
-        backgroundColor: scheme.surfaceContainerHigh,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppLayout.radiusM)),
-      ),
-      child: Text(label,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-    );
   }
 
   @override
@@ -840,7 +790,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
     final text = _quillController.document.toPlainText();
     final escapedQuery = RegExp.escape(query);
-    final matches = RegExp(escapedQuery, caseSensitive: false).allMatches(text);
+    final matches = RegExp(escapedQuery, caseSensitive: _isCaseSensitive).allMatches(text);
     
     final offsets = matches.map((m) => m.start).toList();
     
@@ -855,16 +805,24 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     });
   }
 
+  void _toggleCaseSensitive() {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _isCaseSensitive = !_isCaseSensitive;
+    });
+    _performSearch(_searchController.text);
+  }
+
   void _jumpToMatch(int offset, int length) {
     _quillController.updateSelection(
       TextSelection(baseOffset: offset, extentOffset: offset + length),
       ChangeSource.local,
     );
-    _focusNode.requestFocus();
   }
 
   void _nextSearchMatch() {
     if (_searchOffsets.isEmpty) return;
+    HapticFeedback.selectionClick();
     setState(() {
       _currentSearchIndex = (_currentSearchIndex + 1) % _searchOffsets.length;
       _jumpToMatch(_searchOffsets[_currentSearchIndex], _searchController.text.length);
@@ -873,10 +831,28 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
   void _previousSearchMatch() {
     if (_searchOffsets.isEmpty) return;
+    HapticFeedback.selectionClick();
     setState(() {
       _currentSearchIndex = (_currentSearchIndex - 1 + _searchOffsets.length) % _searchOffsets.length;
       _jumpToMatch(_searchOffsets[_currentSearchIndex], _searchController.text.length);
     });
+  }
+
+  void _closeSearch() {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _isSearching = false;
+      _searchController.clear();
+      _searchOffsets = [];
+      _currentSearchIndex = -1;
+    });
+    final sel = _quillController.selection;
+    if (sel.isValid) {
+      _quillController.updateSelection(
+        TextSelection.collapsed(offset: sel.extentOffset),
+        ChangeSource.local,
+      );
+    }
   }
 
   Future<void> _showTableInsertionDialog() async {
@@ -1461,265 +1437,627 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     }
   }
 
+  Future<void> _showAiResultSheet({
+    required BuildContext context,
+    required String title,
+    required String resultText,
+    required bool isSelection,
+    required TextSelection? selection,
+  }) async {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: colorScheme.surfaceContainerHigh,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 16,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.auto_awesome, color: Colors.amber, size: 22),
+                    const SizedBox(width: 8),
+                    Text(
+                      title,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(ctx).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  constraints: const BoxConstraints(maxHeight: 240),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                    border: Border.all(
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: SingleChildScrollView(
+                    child: SelectableText(
+                      resultText,
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.end,
+                  children: [
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.copy_outlined, size: 18),
+                      label: const Text('Copy'),
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: resultText));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Copied result to clipboard'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                        Navigator.of(ctx).pop();
+                      },
+                    ),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.post_add_outlined, size: 18),
+                      label: const Text('Insert Below'),
+                      onPressed: () {
+                        final docLen = _quillController.document.length;
+                        final safeLen = docLen > 0 ? docLen - 1 : 0;
+                        final insertPos = isSelection && selection != null
+                            ? selection.end.clamp(0, safeLen)
+                            : safeLen;
+                        _quillController.replaceText(
+                          insertPos,
+                          0,
+                          '\n$resultText',
+                          null,
+                        );
+                        _onContentChanged();
+                        saveNote();
+                        Navigator.of(ctx).pop();
+                      },
+                    ),
+                    FilledButton.icon(
+                      icon: const Icon(Icons.check, size: 18),
+                      label: Text(isSelection ? 'Replace Selection' : 'Replace All'),
+                      onPressed: () {
+                        final docLen = _quillController.document.length;
+                        final safeLen = docLen > 0 ? docLen - 1 : 0;
+                        if (isSelection && selection != null) {
+                          final start = selection.start.clamp(0, safeLen);
+                          final end = selection.end.clamp(start, safeLen);
+                          _quillController.replaceText(
+                            start,
+                            end - start,
+                            resultText,
+                            null,
+                          );
+                        } else {
+                          _quillController.replaceText(
+                            0,
+                            safeLen,
+                            resultText,
+                            null,
+                          );
+                        }
+                        _onContentChanged();
+                        saveNote();
+                        Navigator.of(ctx).pop();
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _showAiOptionsSheet() {
     final aiService = Provider.of<LocalAiService>(context, listen: false);
     bool isLoading = false;
     String? statusText;
 
+    final sel = _quillController.selection;
+    final bool isSelection = sel.isValid && !sel.isCollapsed;
+    final String targetText = isSelection
+        ? _quillController.document.getPlainText(sel.start, sel.end - sel.start).trim()
+        : _quillController.document.toPlainText().trim();
+
     showModalBottomSheet(
       context: context,
       showDragHandle: true,
+      isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) {
+      builder: (sheetContext) {
         return StatefulBuilder(
-          builder: (context, setModalState) {
-            final theme = Theme.of(context);
+          builder: (sheetContext, setModalState) {
+            final theme = Theme.of(sheetContext);
+            final colorScheme = theme.colorScheme;
+
+            Widget buildSectionHeader(String title, IconData icon) {
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(2, 10, 2, 4),
+                child: Row(
+                  children: [
+                    Icon(icon, size: 14, color: colorScheme.primary),
+                    const SizedBox(width: 6),
+                    Text(
+                      title.toUpperCase(),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.7,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
             return SafeArea(
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    left: 24,
-                    right: 24,
-                    top: 8,
-                    bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        'On-Device Gemini AI',
-                        style: theme.textTheme.titleLarge
-                            ?.copyWith(fontWeight: FontWeight.w600),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Powered by Android AI Core • 100% Offline & Private',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 20),
-                      if (statusText != null) ...[
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: Text(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Header Avatar Ring
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: colorScheme.primaryContainer,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: colorScheme.primary.withValues(alpha: 0.15),
+                                  blurRadius: 8,
+                                  spreadRadius: 1,
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.auto_awesome_rounded,
+                              size: 20,
+                              color: colorScheme.onPrimaryContainer,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'On-Device Gemini AI',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.2,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Powered by Android AI Core • 100% Offline & Private',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            fontSize: 11,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Context Badge
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: isSelection
+                                  ? colorScheme.primaryContainer.withValues(alpha: 0.7)
+                                  : colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+                              border: Border.all(
+                                color: isSelection
+                                    ? colorScheme.primary.withValues(alpha: 0.3)
+                                    : colorScheme.outlineVariant.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isSelection ? Icons.select_all_rounded : Icons.description_outlined,
+                                  size: 13,
+                                  color: isSelection
+                                      ? colorScheme.onPrimaryContainer
+                                      : colorScheme.onSurfaceVariant,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  isSelection
+                                      ? 'Targeting selected text (${targetText.length} chars)'
+                                      : 'Targeting entire note content',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: isSelection
+                                        ? colorScheme.onPrimaryContainer
+                                        : colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+
+                        if (statusText != null) ...[
+                          const SizedBox(height: 6),
+                          Text(
                             statusText!,
                             style: TextStyle(
-                              color: theme.colorScheme.primary,
+                              color: colorScheme.primary,
                               fontWeight: FontWeight.w500,
-                              fontSize: 14,
+                              fontSize: 13,
                             ),
                             textAlign: TextAlign.center,
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                      ],
-                      if (isLoading)
-                        Container(
-                          padding: const EdgeInsets.symmetric(vertical: 32),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surfaceContainerHighest
-                                .withValues(alpha: 0.4),
-                            borderRadius:
-                                BorderRadius.circular(AppLayout.radiusL),
-                            border: Border.all(
-                              color: theme.colorScheme.outlineVariant
-                                  .withValues(alpha: 0.2),
+                        ],
+
+                        if (isLoading) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                              border: Border.all(
+                                color: colorScheme.primary.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                LinearProgressIndicator(
+                                  backgroundColor: colorScheme.primary.withValues(alpha: 0.15),
+                                  color: colorScheme.primary,
+                                  borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  statusText ?? 'Processing with Gemini Nano…',
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: colorScheme.primary,
+                                    fontSize: 13,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
                             ),
                           ),
-                          child: const Column(
-                            children: [
-                              CircularProgressIndicator(strokeWidth: 3),
-                              SizedBox(height: 16),
-                              Text('Processing…',
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.w500)),
-                            ],
+                        ] else ...[
+                          // Section 1: Refine & Rewrite
+                          buildSectionHeader('Refine & Rewrite', Icons.edit_note_rounded),
+                          _buildAiTile(
+                            context: context,
+                            icon: Icons.check_box_outlined,
+                            title: 'Extract Action Items',
+                            subtitle: isSelection
+                                ? 'Find to-dos in selection and create checkboxes'
+                                : 'Find to-dos in note and create checkboxes',
+                            onTap: () async {
+                              final editorContext = context;
+                              final navigator = Navigator.of(editorContext);
+                              if (targetText.isEmpty) {
+                                setModalState(() {
+                                  statusText = 'No text to analyze.';
+                                });
+                                return;
+                              }
+                              setModalState(() {
+                                isLoading = true;
+                                statusText = 'Extracting tasks...';
+                              });
+                              final prompt =
+                                  "Extract all actionable tasks, to-dos, or action items from the following text. Format each item on a new line prefixed with '☐ '. Respond ONLY with the list of items:\n\n$targetText";
+                              String actionItemsText = await aiService.generateText(prompt) ?? '';
+                              if (actionItemsText.trim().isEmpty) {
+                                actionItemsText = OfflineAiFallbackService.extractActionItems(targetText);
+                              }
+                              if (actionItemsText.trim().isNotEmpty) {
+                                navigator.pop();
+                                if (mounted) {
+                                  await _showAiResultSheet(
+                                    context: context,
+                                    title: 'Extracted Action Items',
+                                    resultText: actionItemsText.trim(),
+                                    isSelection: isSelection,
+                                    selection: isSelection ? sel : null,
+                                  );
+                                }
+                              } else {
+                                setModalState(() {
+                                  isLoading = false;
+                                  statusText = 'No action items found.';
+                                });
+                              }
+                            },
                           ),
-                        )
-                      else ...[
-                        _buildAiTile(
-                          context: context,
-                          icon: Icons.title_rounded,
-                          title: 'Suggest Title',
-                          subtitle: 'Generate a clean title from note content',
-                          onTap: () async {
-                            final navigator = Navigator.of(context);
-                            setModalState(() {
-                              isLoading = true;
-                              statusText = 'Analyzing content...';
-                            });
-                            final content =
-                                _quillController.document.toPlainText().trim();
-                            if (content.isEmpty) {
-                              setModalState(() {
-                                isLoading = false;
-                                statusText =
-                                    'Note is empty. Add content first!';
-                              });
-                              return;
-                            }
-                            final prompt =
-                                "Generate a short, concise title (maximum 4-5 words) for the following text. If the text is in Tamil, write the title in Tamil. Otherwise, write the title in English. Respond with ONLY the title, no quotes, no explanation, no period:\n\n$content";
-                            final suggested =
-                                await aiService.generateText(prompt);
-                            if (suggested != null &&
-                                suggested.trim().isNotEmpty) {
-                              if (mounted) {
-                                setState(() {
-                                  _titleController.text =
-                                      suggested.trim().replaceAll('"', '');
+                          const SizedBox(height: 6),
+                          _buildAiTile(
+                            context: context,
+                            icon: Icons.auto_fix_high_rounded,
+                            title: 'Proofread & Polish',
+                            subtitle: 'Correct grammar, spelling, and style',
+                            onTap: () async {
+                              final navigator = Navigator.of(context);
+                              if (targetText.isEmpty) {
+                                setModalState(() {
+                                  statusText = 'No text to polish.';
                                 });
-                                _onContentChanged();
-                                navigator.pop();
+                                return;
                               }
-                            } else {
                               setModalState(() {
-                                isLoading = false;
-                                statusText = 'Failed to generate title.';
+                                isLoading = true;
+                                statusText = 'Polishing grammar...';
                               });
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        _buildAiTile(
-                          context: context,
-                          icon: Icons.label_outline_rounded,
-                          title: 'Suggest Tags',
-                          subtitle: 'Auto-detect topics and apply tags',
-                          onTap: () async {
-                            final navigator = Navigator.of(context);
-                            setModalState(() {
-                              isLoading = true;
-                              statusText = 'Identifying topics...';
-                            });
-                            final content =
-                                _quillController.document.toPlainText().trim();
-                            if (content.isEmpty) {
-                              setModalState(() {
-                                isLoading = false;
-                                statusText = 'Note is empty.';
-                              });
-                              return;
-                            }
-                            final suggested =
-                                await aiService.suggestTags(content, _allTags);
-                            if (suggested.isNotEmpty) {
-                              if (mounted) {
-                                setState(() {
-                                  for (final tag in suggested) {
-                                    if (!tags.contains(tag)) {
-                                      tags.add(tag);
-                                    }
-                                  }
+                              final res = await aiService.refineText(targetText, 'polish');
+                              if (res != null && res.trim().isNotEmpty) {
+                                navigator.pop();
+                                if (mounted) {
+                                  await _showAiResultSheet(
+                                    context: context,
+                                    title: 'Polished Text',
+                                    resultText: res.trim(),
+                                    isSelection: isSelection,
+                                    selection: isSelection ? sel : null,
+                                  );
+                                }
+                              } else {
+                                setModalState(() {
+                                  isLoading = false;
+                                  statusText = 'Failed to polish text.';
                                 });
-                                _onContentChanged();
-                                navigator.pop();
                               }
-                            } else {
-                              setModalState(() {
-                                isLoading = false;
-                                statusText = 'No new tags suggested.';
-                              });
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        _buildAiTile(
-                          context: context,
-                          icon: Icons.short_text_rounded,
-                          title: 'Summarize Note',
-                          subtitle: 'Append a bulleted summary to the note',
-                          onTap: () async {
-                            final navigator = Navigator.of(context);
-                            setModalState(() {
-                              isLoading = true;
-                              statusText = 'Generating summary...';
-                            });
-                            final content =
-                                _quillController.document.toPlainText().trim();
-                            if (content.isEmpty) {
-                              setModalState(() {
-                                isLoading = false;
-                                statusText = 'Note is empty.';
-                              });
-                              return;
-                            }
-                            final summary = await aiService.summarize(content);
-                            if (summary != null && summary.trim().isNotEmpty) {
-                              if (mounted) {
-                                setState(() {
-                                  _aiSummary = summary.trim();
+                            },
+                          ),
+                          const SizedBox(height: 6),
+                          _buildAiTile(
+                            context: context,
+                            icon: Icons.compress_rounded,
+                            title: 'Make Shorter / Simplify',
+                            subtitle: 'Condense into clear, direct key points',
+                            onTap: () async {
+                              final navigator = Navigator.of(context);
+                              if (targetText.isEmpty) {
+                                setModalState(() {
+                                  statusText = 'No text to shorten.';
                                 });
-                                navigator.pop();
+                                return;
                               }
-                            } else {
                               setModalState(() {
-                                isLoading = false;
-                                statusText = 'Failed to generate summary.';
+                                isLoading = true;
+                                statusText = 'Simplifying text...';
                               });
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        _buildAiTile(
-                          context: context,
-                          icon: Icons.auto_awesome_outlined,
-                          title: 'Proofread & Polish',
-                          subtitle: 'Correct grammar and spelling errors',
-                          onTap: () async {
-                            final navigator = Navigator.of(context);
-                            setModalState(() {
-                              isLoading = true;
-                              statusText = 'Polishing text...';
-                            });
-                            final content =
-                                _quillController.document.toPlainText().trim();
-                            if (content.isEmpty) {
+                              final res = await aiService.refineText(targetText, 'shorten');
+                              if (res != null && res.trim().isNotEmpty) {
+                                navigator.pop();
+                                if (mounted) {
+                                  await _showAiResultSheet(
+                                    context: context,
+                                    title: 'Simplified Text',
+                                    resultText: res.trim(),
+                                    isSelection: isSelection,
+                                    selection: isSelection ? sel : null,
+                                  );
+                                }
+                              } else {
+                                setModalState(() {
+                                  isLoading = false;
+                                  statusText = 'Failed to shorten text.';
+                                });
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 6),
+                          _buildAiTile(
+                            context: context,
+                            icon: Icons.unfold_more_rounded,
+                            title: 'Elaborate & Expand',
+                            subtitle: 'Flesh out quick notes into structured paragraphs',
+                            onTap: () async {
+                              final navigator = Navigator.of(context);
+                              if (targetText.isEmpty) {
+                                setModalState(() {
+                                  statusText = 'No text to expand.';
+                                });
+                                return;
+                              }
                               setModalState(() {
-                                isLoading = false;
-                                statusText = 'Note is empty.';
+                                isLoading = true;
+                                statusText = 'Expanding text...';
                               });
-                              return;
-                            }
-                            final prompt = """
-Act as a professional editor. Correct any grammar, spelling, punctuation, and style issues in the following text. 
-If the text is in Tamil, correct it in Tamil. Otherwise, correct it in English.
-Maintain the original meaning, format, and structure.
-Respond ONLY with the edited version, with no explanations, introductions, or quotes.
+                              final res = await aiService.refineText(targetText, 'expand');
+                              if (res != null && res.trim().isNotEmpty) {
+                                navigator.pop();
+                                if (mounted) {
+                                  await _showAiResultSheet(
+                                    context: context,
+                                    title: 'Expanded Text',
+                                    resultText: res.trim(),
+                                    isSelection: isSelection,
+                                    selection: isSelection ? sel : null,
+                                  );
+                                }
+                              } else {
+                                setModalState(() {
+                                  isLoading = false;
+                                  statusText = 'Failed to expand text.';
+                                });
+                              }
+                            },
+                          ),
 
-Text to edit:
-$content
-""";
-                            final polished =
-                                await aiService.generateText(prompt);
-                            if (polished != null &&
-                                polished.trim().isNotEmpty) {
-                              if (mounted) {
-                                _quillController.replaceText(
-                                    0,
-                                    _quillController.document.length - 1,
-                                    polished.trim(),
-                                    null);
-                                _onContentChanged();
-                                navigator.pop();
-                              }
-                            } else {
-                              setModalState(() {
-                                isLoading = false;
-                                statusText = 'Failed to proofread.';
-                              });
-                            }
-                          },
-                        ),
+                          // Section 2: Smart Metadata & Organization
+                          if (!isSelection) ...[
+                            buildSectionHeader('Smart Metadata & Organization', Icons.auto_awesome_mosaic_rounded),
+                            _buildAiTile(
+                              context: context,
+                              icon: Icons.title_rounded,
+                              title: 'Suggest Title',
+                              subtitle: 'Generate a clean title from note content',
+                              onTap: () async {
+                                final navigator = Navigator.of(context);
+                                if (targetText.isEmpty) {
+                                  setModalState(() {
+                                    statusText = 'Note is empty.';
+                                  });
+                                  return;
+                                }
+                                setModalState(() {
+                                  isLoading = true;
+                                  statusText = 'Analyzing content...';
+                                });
+                                final prompt =
+                                    "Generate a short, concise title (maximum 4-5 words) for the following text. Respond ONLY with the title:\n\n$targetText";
+                                String? suggested = await aiService.generateText(prompt);
+                                if (suggested == null || suggested.trim().isEmpty) {
+                                  final lines = targetText.split(RegExp(r'\r?\n|\.'));
+                                  final firstLine = lines.firstWhere((l) => l.trim().isNotEmpty, orElse: () => '');
+                                  if (firstLine.trim().isNotEmpty) {
+                                    final clean = firstLine.trim().replaceAll(RegExp(r'^[•\-\*\d+\.\s]+'), '');
+                                    suggested = clean.length > 35 ? '${clean.substring(0, 35)}…' : clean;
+                                  }
+                                }
+                                if (suggested != null && suggested.trim().isNotEmpty) {
+                                  if (mounted) {
+                                    setState(() {
+                                      _titleController.text = suggested!.trim().replaceAll('"', '');
+                                    });
+                                    _onContentChanged();
+                                    await saveNote();
+                                    navigator.pop();
+                                  }
+                                } else {
+                                  setModalState(() {
+                                    isLoading = false;
+                                    statusText = 'Failed to generate title.';
+                                  });
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 6),
+                            _buildAiTile(
+                              context: context,
+                              icon: Icons.label_outline_rounded,
+                              title: 'Suggest Tags',
+                              subtitle: 'Auto-detect topics and apply tags',
+                              onTap: () async {
+                                final navigator = Navigator.of(context);
+                                if (targetText.isEmpty) {
+                                  setModalState(() {
+                                    statusText = 'Note is empty.';
+                                  });
+                                  return;
+                                }
+                                setModalState(() {
+                                  isLoading = true;
+                                  statusText = 'Identifying topics...';
+                                });
+                                final suggested = await aiService.suggestTags(targetText, _allTags);
+                                if (suggested.isNotEmpty) {
+                                  if (mounted) {
+                                    setState(() {
+                                      for (final tag in suggested) {
+                                        if (!tags.contains(tag)) {
+                                          tags.add(tag);
+                                        }
+                                      }
+                                      _updateColorFromTags();
+                                    });
+                                    _onContentChanged();
+                                    await saveNote();
+                                    navigator.pop();
+                                  }
+                                } else {
+                                  setModalState(() {
+                                    isLoading = false;
+                                    statusText = 'No new tags suggested.';
+                                  });
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 6),
+                            _buildAiTile(
+                              context: context,
+                              icon: Icons.short_text_rounded,
+                              title: 'Summarize Note',
+                              subtitle: 'Append a bulleted summary to the note',
+                              onTap: () async {
+                                final navigator = Navigator.of(context);
+                                if (targetText.isEmpty) {
+                                  setModalState(() {
+                                    statusText = 'Note is empty.';
+                                  });
+                                  return;
+                                }
+                                setModalState(() {
+                                  isLoading = true;
+                                  statusText = 'Generating summary...';
+                                });
+                                final summary = await aiService.summarize(targetText);
+                                if (summary != null && summary.trim().isNotEmpty) {
+                                  if (mounted) {
+                                    setState(() {
+                                      _aiSummary = summary.trim();
+                                    });
+                                    navigator.pop();
+                                  }
+                                } else {
+                                  setModalState(() {
+                                    isLoading = false;
+                                    statusText = 'Failed to generate summary.';
+                                  });
+                                }
+                              },
+                            ),
+                          ],
+                        ],
                       ],
-                      const SizedBox(height: 8),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -1738,42 +2076,53 @@ $content
     required VoidCallback onTap,
   }) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Container(
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(AppLayout.radiusL),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(AppLayout.radiusM),
         border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
+          color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+          width: 0.8,
         ),
       ),
       child: ListTile(
+        dense: true,
+        visualDensity: const VisualDensity(horizontal: 0, vertical: -2),
         shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppLayout.radiusL)),
+            borderRadius: BorderRadius.circular(AppLayout.radiusM)),
         leading: Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: theme.colorScheme.primaryContainer.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(AppLayout.radiusM),
+            color: colorScheme.primaryContainer.withValues(alpha: 0.35),
+            borderRadius: BorderRadius.circular(AppLayout.radiusS),
           ),
-          child: Icon(icon, size: 20, color: theme.colorScheme.primary),
+          child: Icon(icon, size: 18, color: colorScheme.primary),
         ),
         title: Text(
           title,
-          style: theme.textTheme.titleMedium?.copyWith(
+          style: theme.textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w600,
-            color: theme.colorScheme.onSurface,
+            color: colorScheme.onSurface,
+            fontSize: 13.5,
           ),
         ),
         subtitle: Text(
           subtitle,
           style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
+            color: colorScheme.onSurfaceVariant,
+            fontSize: 11.5,
+            height: 1.15,
           ),
         ),
         trailing: Icon(Icons.chevron_right_rounded,
-            size: 20, color: theme.colorScheme.primary.withValues(alpha: 0.8)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        onTap: onTap,
+            size: 18, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onTap();
+        },
       ),
     );
   }
@@ -2101,63 +2450,116 @@ $content
                             boxShadow: AppLayout.softShadow(context),
                           ),
                           child: _isSearching
-                              ? Row(
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.arrow_back),
-                                      color: textColor,
-                                      onPressed: () {
-                                        setState(() {
-                                          _isSearching = false;
-                                          _searchController.clear();
-                                          _searchOffsets = [];
-                                          _currentSearchIndex = -1;
-                                        });
-                                      },
-                                    ),
-                                    Expanded(
-                                      child: TextField(
-                                        controller: _searchController,
-                                        focusNode: _searchFocusNode,
-                                        style: TextStyle(color: textColor),
-                                        decoration: InputDecoration(
-                                          hintText: 'Search in note...',
-                                          hintStyle: TextStyle(color: hintColor),
-                                          border: InputBorder.none,
-                                          contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                                        ),
-                                        onChanged: _performSearch,
-                                        onSubmitted: (_) => _nextSearchMatch(),
+                              ? CallbackShortcuts(
+                                  bindings: <ShortcutActivator, VoidCallback>{
+                                    const SingleActivator(LogicalKeyboardKey.escape): _closeSearch,
+                                  },
+                                  child: Row(
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.arrow_back),
+                                        color: textColor,
+                                        tooltip: 'Close search',
+                                        onPressed: _closeSearch,
                                       ),
-                                    ),
-                                    if (_searchOffsets.isNotEmpty) ...[
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                                        child: Text(
-                                          '${_currentSearchIndex + 1}/${_searchOffsets.length}',
-                                          style: TextStyle(color: textColor, fontSize: 12, fontWeight: FontWeight.bold),
+                                      Expanded(
+                                        child: TextField(
+                                          controller: _searchController,
+                                          focusNode: _searchFocusNode,
+                                          style: TextStyle(color: textColor),
+                                          decoration: InputDecoration(
+                                            hintText: 'Search in note...',
+                                            hintStyle: TextStyle(color: hintColor),
+                                            border: InputBorder.none,
+                                            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                                            isDense: true,
+                                          ),
+                                          onChanged: _performSearch,
+                                          onSubmitted: (_) => _nextSearchMatch(),
                                         ),
                                       ),
-                                      IconButton(
-                                        icon: const Icon(Icons.keyboard_arrow_up),
-                                        color: textColor,
-                                        onPressed: _previousSearchMatch,
+                                      Tooltip(
+                                        message: 'Match case',
+                                        child: InkWell(
+                                          onTap: _toggleCaseSensitive,
+                                          borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: _isCaseSensitive
+                                                  ? theme.colorScheme.primaryContainer
+                                                  : Colors.transparent,
+                                              borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                                              border: Border.all(
+                                                color: _isCaseSensitive
+                                                    ? theme.colorScheme.primary
+                                                    : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                                              ),
+                                            ),
+                                            child: Text(
+                                              'Aa',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: _isCaseSensitive ? FontWeight.bold : FontWeight.normal,
+                                                color: _isCaseSensitive
+                                                    ? theme.colorScheme.onPrimaryContainer
+                                                    : textColor.withValues(alpha: 0.8),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                                       ),
-                                      IconButton(
-                                        icon: const Icon(Icons.keyboard_arrow_down),
-                                        color: textColor,
-                                        onPressed: _nextSearchMatch,
-                                      ),
+                                      const SizedBox(width: 4),
+                                      if (_searchController.text.isNotEmpty)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                                          decoration: BoxDecoration(
+                                            color: _searchOffsets.isNotEmpty
+                                                ? theme.colorScheme.secondaryContainer
+                                                : theme.colorScheme.surfaceContainerHighest,
+                                            borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                                          ),
+                                          child: Text(
+                                            _searchOffsets.isNotEmpty
+                                                ? '${_currentSearchIndex + 1}/${_searchOffsets.length}'
+                                                : '0/0',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: _searchOffsets.isNotEmpty
+                                                  ? theme.colorScheme.onSecondaryContainer
+                                                  : hintColor,
+                                            ),
+                                          ),
+                                        ),
+                                      if (_searchOffsets.isNotEmpty) ...[
+                                        IconButton(
+                                          icon: const Icon(Icons.keyboard_arrow_up),
+                                          color: textColor,
+                                          tooltip: 'Previous match',
+                                          onPressed: _previousSearchMatch,
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.keyboard_arrow_down),
+                                          color: textColor,
+                                          tooltip: 'Next match',
+                                          onPressed: _nextSearchMatch,
+                                        ),
+                                      ],
+                                      if (_searchController.text.isNotEmpty)
+                                        IconButton(
+                                          icon: const Icon(Icons.close),
+                                          color: textColor,
+                                          tooltip: 'Clear search text',
+                                          onPressed: () {
+                                            HapticFeedback.selectionClick();
+                                            _searchController.clear();
+                                            _performSearch('');
+                                          },
+                                        ),
                                     ],
-                                    IconButton(
-                                      icon: const Icon(Icons.close),
-                                      color: textColor,
-                                      onPressed: () {
-                                        _searchController.clear();
-                                        _performSearch('');
-                                      },
-                                    ),
-                                  ],
+                                  ),
                                 )
                               : Row(
                                   children: [
@@ -2470,7 +2872,7 @@ $content
                                             color: noteScheme.primary),
                                       ),
                                       ..._suggestedTags.map((tag) {
-                                        return ActionChip(
+                                        return InputChip(
                                           label: Text(tag,
                                               style: TextStyle(
                                                   fontSize: 12,
@@ -2487,6 +2889,17 @@ $content
                                             });
                                             await saveNote();
                                           },
+                                          onDeleted: () async {
+                                            await HapticFeedback.lightImpact();
+                                            setState(() {
+                                              _suggestedTags.remove(tag);
+                                            });
+                                          },
+                                          deleteIcon: Icon(
+                                            Icons.close_rounded,
+                                            size: 14,
+                                            color: noteScheme.primary.withValues(alpha: 0.6),
+                                          ),
                                           backgroundColor: noteScheme
                                               .primaryContainer
                                               .withValues(alpha: 0.15),
@@ -2697,7 +3110,7 @@ $content
                                           .surfaceContainerHigh)
                                   .withValues(alpha: 0.90),
                               borderRadius:
-                                  BorderRadius.circular(AppLayout.radiusXL),
+                                  BorderRadius.circular(AppLayout.radiusMAX),
                               boxShadow: AppLayout.softShadow(context),
                               border: Border.all(
                                 color: noteScheme.outlineVariant.withValues(alpha: 0.35),
@@ -2706,7 +3119,7 @@ $content
                             ),
                             child: ClipRRect(
                               borderRadius:
-                                  BorderRadius.circular(AppLayout.radiusXL),
+                                  BorderRadius.circular(AppLayout.radiusMAX),
                               child: BackdropFilter(
                                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                                 child: SingleChildScrollView(
@@ -2714,6 +3127,29 @@ $content
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                   child: Row(
                                     children: [
+                                      Container(
+                                        margin: const EdgeInsets.only(right: 2),
+                                        child: IconButton.filledTonal(
+                                          icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                                          tooltip: 'Gemini AI Assist',
+                                          onPressed: _showAiOptionsSheet,
+                                          style: IconButton.styleFrom(
+                                            backgroundColor: noteScheme.primaryContainer,
+                                            foregroundColor: noteScheme.onPrimaryContainer,
+                                            padding: const EdgeInsets.all(6),
+                                            minimumSize: const Size(34, 34),
+                                            maximumSize: const Size(34, 34),
+                                          ),
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        height: 20,
+                                        child: VerticalDivider(
+                                          width: 12,
+                                          thickness: 1,
+                                          color: noteScheme.outlineVariant.withValues(alpha: 0.5),
+                                        ),
+                                      ),
                                       QuillToolbarToggleStyleButton(
                                         attribute: Attribute.bold,
                                         controller: _quillController,
@@ -3024,124 +3460,6 @@ $content
                                   ),
                                 ],
                               ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  // Selection-Based AI Toolbar Overlay
-                  if (_selectedText.isNotEmpty &&
-                      settings.useOnDeviceAi &&
-                      !_isAiProcessing)
-                    Positioned(
-                      left: 16,
-                      right: 16,
-                      bottom: 80, // Positioned above the formatting toolbar
-                      child: Card(
-                        color: noteScheme.surfaceContainerHighest,
-                        elevation: 6,
-                        shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppLayout.radiusMAX),
-                          side: BorderSide(
-                            color: noteScheme.primary.withValues(alpha: 0.4),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          child: Row(
-                            children: [
-                              Icon(Icons.auto_awesome,
-                                  color: noteScheme.primary, size: 16),
-                              const SizedBox(width: 8),
-                              Text(
-                                'AI Edit',
-                                style: theme.textTheme.labelMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: noteScheme.primary,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                  width: 1,
-                                  height: 20,
-                                  color: noteScheme.outlineVariant),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: Row(
-                                    children: [
-                                      _aiSelectionButton(
-                                          'Polish',
-                                          () => _refineSelection('polish'),
-                                          noteScheme),
-                                      const SizedBox(width: 6),
-                                      _aiSelectionButton(
-                                          'Shorten',
-                                          () => _refineSelection('shorten'),
-                                          noteScheme),
-                                      const SizedBox(width: 6),
-                                      _aiSelectionButton(
-                                          'Expand',
-                                          () => _refineSelection('expand'),
-                                          noteScheme),
-                                      const SizedBox(width: 6),
-                                      _aiSelectionButton(
-                                          'Formal',
-                                          () =>
-                                              _refineSelection('professional'),
-                                          noteScheme),
-                                      const SizedBox(width: 6),
-                                      _aiSelectionButton(
-                                          'Casual',
-                                          () => _refineSelection('casual'),
-                                          noteScheme),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.close, size: 16),
-                                onPressed: () =>
-                                    setState(() => _selectedText = ''),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  if (_isAiProcessing)
-                    Positioned(
-                      left: 16,
-                      right: 16,
-                      bottom: 80,
-                      child: Card(
-                        color: noteScheme.surfaceContainerHighest,
-                        shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppLayout.radiusXL),
-                          side: BorderSide(
-                              color: noteScheme.outlineVariant
-                                  .withValues(alpha: 0.3)),
-                        ),
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 12),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2)),
-                              SizedBox(width: 12),
-                              Text('AI is processing...',
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.w500)),
                             ],
                           ),
                         ),

@@ -105,21 +105,33 @@ class WhatsNewSheet extends StatelessWidget {
                   children: [
                     _buildFeatureItem(
                       theme,
-                      icon: Icons.category_outlined,
-                      title: "Category Icons & Editing",
-                      desc: "Edit transaction category names, choose custom icons from a curated 24-icon grid, and safely delete categories with automatic transaction reassignment.",
+                      icon: Icons.search_rounded,
+                      title: "In-Note Search & Navigation",
+                      desc: "Find text inside any note instantly with real-time match counters and keyboard-friendly next/previous match navigation.",
                     ),
                     _buildFeatureItem(
                       theme,
-                      icon: Icons.bolt,
-                      title: "Slash Commands & Editor Bar",
-                      desc: "Type '/' in notes to instantly insert checklists, tables, code blocks, or headings. Formatting bar is now a floating glassmorphism pill.",
+                      icon: Icons.psychology_rounded,
+                      title: "Dual-Engine On-Device AI",
+                      desc: "Runs Gemini Nano on Android AI Core hardware, with zero-latency smart offline fallback for 100% of all devices.",
                     ),
                     _buildFeatureItem(
                       theme,
-                      icon: Icons.info_outline,
-                      title: "Note Stats & Share/Export",
-                      desc: "View word counts, character counts, and estimated read time. Export or share notes as Plain Text, Markdown, or copy to clipboard.",
+                      icon: Icons.auto_awesome_rounded,
+                      title: "Floating AI Selection Toolbar",
+                      desc: "Highlight text to quickly proofread, condense, elaborate, or extract checklist to-dos with one tap.",
+                    ),
+                    _buildFeatureItem(
+                      theme,
+                      icon: Icons.label_outlined,
+                      title: "Smart Tag Suggestions",
+                      desc: "Auto-detects note topics with exact word-boundary precision and dismissable M3 tag chips.",
+                    ),
+                    _buildFeatureItem(
+                      theme,
+                      icon: Icons.tablet_android_rounded,
+                      title: "Universal Tablet Compatibility",
+                      desc: "Fully optimized layout and device support for Samsung Galaxy Tab S10+, foldables, and Chromebooks.",
                     ),
                     _buildFeatureItem(
                       theme,
