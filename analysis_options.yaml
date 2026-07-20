@@ -1,10 +1,5 @@
 include: package:flutter_lints/flutter.yaml
 
-analyzer:
-  errors:
-    experimental_member_use: ignore
-    non_const_argument_for_const_parameter: ignore
-
 linter:
   rules:
     prefer_const_constructors: true

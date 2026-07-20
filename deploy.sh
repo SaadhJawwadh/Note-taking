@@ -15,7 +15,7 @@ if [ -z "$NEW_VERSION" ]; then
 fi
 
 # 1. Enforce Git Cleanliness (excluding pubspec.yaml and CHANGELOG.md)
-if ! git diff-index --quiet HEAD --; then
+if ! git diff-index --quiet HEAD -- . ':!pubspec.yaml' ':!CHANGELOG.md'; then
   echo "❌ Error: You have unstaged or uncommitted changes. Please commit or stash them first."
   exit 1
 fi

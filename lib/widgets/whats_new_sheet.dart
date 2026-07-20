@@ -105,33 +105,27 @@ class WhatsNewSheet extends StatelessWidget {
                   children: [
                     _buildFeatureItem(
                       theme,
-                      icon: Icons.bolt,
-                      title: "Slash Commands (/)",
-                      desc: "Type / anywhere at the start of a line to quickly insert checklists (/todo), tables (/table), code blocks (/code), headings (/h1), quotes, and lists.",
-                    ),
-                    _buildFeatureItem(
-                      theme,
-                      icon: Icons.auto_awesome,
-                      title: "Floating Formatting Bar",
-                      desc: "The formatting bar is now a sleek floating island pill with glassmorphism backdrop blur and soft shadows above your keyboard.",
-                    ),
-                    _buildFeatureItem(
-                      theme,
                       icon: Icons.category_outlined,
-                      title: "Category Management",
-                      desc: "Rename categories, pick custom icons from a 24-icon grid, and safely delete categories with automatic transaction reassignment.",
+                      title: "Category Icons & Editing",
+                      desc: "Edit transaction category names, choose custom icons from a curated 24-icon grid, and safely delete categories with automatic transaction reassignment.",
+                    ),
+                    _buildFeatureItem(
+                      theme,
+                      icon: Icons.bolt,
+                      title: "Slash Commands & Editor Bar",
+                      desc: "Type '/' in notes to instantly insert checklists, tables, code blocks, or headings. Formatting bar is now a floating glassmorphism pill.",
                     ),
                     _buildFeatureItem(
                       theme,
                       icon: Icons.info_outline,
-                      title: "Note Details & Stats",
-                      desc: "View real-time Word Count, Character Count, Estimated Reading Time, Folder placement, and creation dates in a new sheet.",
+                      title: "Note Stats & Share/Export",
+                      desc: "View word counts, character counts, and estimated read time. Export or share notes as Plain Text, Markdown, or copy to clipboard.",
                     ),
                     _buildFeatureItem(
                       theme,
-                      icon: Icons.share_outlined,
-                      title: "Share & Export Notes",
-                      desc: "Export notes as Plain Text or Markdown, or copy content directly to your clipboard in one tap.",
+                      icon: Icons.nightlight_round,
+                      title: "Moon Phase Tracker",
+                      desc: "The health tracker displays a live moon animation reflecting your current cycle phase — menstrual, follicular, ovulation, and luteal.",
                     ),
 
                   ],

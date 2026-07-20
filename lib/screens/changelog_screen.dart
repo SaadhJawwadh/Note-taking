@@ -30,49 +30,41 @@ class ChangelogScreen extends StatelessWidget {
           children: [
             _buildVersionSection(
               context,
-              version: 'v2.4.0',
+              version: 'v2.3.0',
               date: 'July 20, 2026',
               isLatest: true,
               changes: [
                 _ChangelogGroup(
-                  title: '⚡ Note Editor — Slash Commands & Floating Toolbar',
+                  title: '🏷️ Category Management & Custom Icons',
                   items: [
-                    'Slash Commands (/): Type "/" anywhere at the start of a line to open a quick action menu for checklists (/todo), tables (/table), code blocks (/code), headings (/h1, /h2), quotes (/quote), and lists.',
-                    'Floating Glassmorphism Toolbar: Redesigned formatting bar into a sleek floating island pill with backdrop blur and soft shadows.',
-                    'Note Details & Stats: View real-time Word Count, Character Count, Estimated Reading Time, Folder path, and Creation/Modification dates.',
-                    'Share & Export Note: Export notes as Plain Text or Markdown, or copy content directly to clipboard.',
+                    'Category Renaming: Edit category names with automatic SQLite migration across past transactions.',
+                    'Custom Category Icons: Pick from 24 Material icons for any category.',
+                    'Safe Category Deletion: Delete categories with automatic transaction reassignment to "Other".',
                   ],
                 ),
                 _ChangelogGroup(
-                  title: '🏷️ Category Management Redesign',
+                  title: '📝 Note Editor & Canvas Polish',
                   items: [
-                    'Editable Category Names & Icons: Rename categories directly with automatic transaction reassignment.',
-                    'Icon Picker Grid: Select custom icons from a curated 24-icon grid.',
-                    'Safe Category Deletion: Deleting built-in or custom categories automatically reassigns matching transactions to "Other".',
+                    'Slash Commands (/): Type "/" to quickly insert checklists, tables, code blocks, or headings.',
+                    'Floating Island Toolbar: Glassmorphism formatting bar with backdrop blur.',
+                    'Note Details & Stats: View word count, character count, read time, and creation dates.',
+                    'Share & Export: Share notes as Plain Text, Markdown, or copy to clipboard.',
                   ],
                 ),
-              ],
-            ),
-            _buildVersionSection(
-              context,
-              version: 'v2.3.0',
-              date: 'July 19, 2026',
-              isLatest: false,
-              changes: [
                 _ChangelogGroup(
                   title: '🌙 Period Tracker — Full Redesign',
                   items: [
-                    'Moon Phase Animation: A beautiful moon widget now reflects your current cycle phase — new moon during menstrual, crescent during follicular, full moon during ovulation, and waning gibbous during luteal phase.',
-                    'Logging-First Layout: The logging card is now at the top of the screen for quick, muscle-memory access. The calendar view is placed below for reference.',
-                    'Icon-Based Flow Intensity: Spotting, Light, Medium, and Heavy are now icon+label tiles for faster, more visual selection.',
-                    'Collapsible Symptoms: The symptoms section starts collapsed to reduce clutter. A live badge shows active symptoms, and the section animates open smoothly on tap.',
+                    'Moon Phase Animation: Live moon widget reflecting current cycle phase.',
+                    'Logging-First Layout: Quick logging card at top of screen.',
+                    'Icon-Based Flow Intensity: Spotting, Light, Medium, and Heavy visual tiles.',
+                    'Collapsible Symptoms: Animated collapsible symptoms card with active count badge.',
                   ],
                 ),
                 _ChangelogGroup(
                   title: '🔧 Dark Mode & Visibility Fixes',
                   items: [
-                    'Unified Chip Palette: Symptom selector chips use the same onPeriodColor-based colour system as flow intensity tiles.',
-                    'Visible Delete Action: Fixed the delete log button icon to be clearly visible in dark mode.',
+                    'Unified Chip Palette: Symptom chips use onPeriodColor palette for dark mode visibility.',
+                    'Visible Delete Action: Fixed log deletion icon visibility in dark mode.',
                   ],
                 ),
               ],

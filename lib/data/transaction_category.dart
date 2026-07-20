@@ -73,15 +73,40 @@ class TransactionCategory {
     return badgeColors[category] ?? const Color(0xFF9E9E9E);
   }
 
+  static const Map<int, IconData> _knownIcons = {
+    0xe1d7: Icons.directions_car_outlined,
+    0xe56c: Icons.restaurant_outlined,
+    0xe616: Icons.subscriptions_outlined,
+    0xe59c: Icons.shopping_bag_outlined,
+    0xe4e8: Icons.power_outlined,
+    0xe3d4: Icons.medical_services_outlined,
+    0xe5e7: Icons.sports_esports_outlined,
+    0xe472: Icons.payment_outlined,
+    0xe57f: Icons.savings_outlined,
+    0xe559: Icons.school_outlined,
+    0xe295: Icons.flight_outlined,
+    0xe318: Icons.home_outlined,
+    0xe28a: Icons.fitness_center_outlined,
+    0xe38c: Icons.local_grocery_store_outlined,
+    0xe14d: Icons.card_giftcard_outlined,
+    0xe496: Icons.pets_outlined,
+    0xe1b8: Icons.computer_outlined,
+    0xe6f2: Icons.work_outlined,
+    0xe180: Icons.child_friendly_outlined,
+    0xe10a: Icons.build_outlined,
+    0xe37d: Icons.local_gas_station_outlined,
+    0xe406: Icons.movie_outlined,
+    0xe4a1: Icons.phone_android_outlined,
+    0xe148: Icons.category_outlined,
+  };
+
   static IconData iconFor(String category) {
     if (_cache.isNotEmpty) {
       for (final def in _cache) {
         if (def.name == category && def.iconCodePoint != null) {
-          return Function.apply(
-            IconData.new,
-            [def.iconCodePoint!],
-            {#fontFamily: 'MaterialIcons'},
-          ) as IconData;
+          final known = _knownIcons[def.iconCodePoint!];
+          if (known != null) return known;
+          return IconData(def.iconCodePoint!, fontFamily: 'MaterialIcons');
         }
       }
     }

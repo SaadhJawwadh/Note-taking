@@ -8,24 +8,11 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// Load release signing config from key.properties if it exists and is valid
+// Load release signing config from key.properties if it exists
 val keyPropertiesFile = rootProject.file("key.properties")
 val keyProperties = Properties()
-var hasValidReleaseKey = false
-
 if (keyPropertiesFile.exists()) {
-    try {
-        keyProperties.load(FileInputStream(keyPropertiesFile))
-        val storePath = keyProperties.getProperty("storeFile")
-        if (!storePath.isNullOrEmpty()) {
-            val keystoreFile = file(storePath)
-            if (keystoreFile.exists() && keystoreFile.length() > 0) {
-                hasValidReleaseKey = true
-            }
-        }
-    } catch (e: Exception) {
-        hasValidReleaseKey = false
-    }
+    keyProperties.load(FileInputStream(keyPropertiesFile))
 }
 
 android {
@@ -52,7 +39,7 @@ android {
     }
 
     signingConfigs {
-        if (hasValidReleaseKey) {
+        if (keyPropertiesFile.exists()) {
             create("release") {
                 storeFile = file(keyProperties["storeFile"] as String)
                 storePassword = keyProperties["storePassword"] as String
@@ -64,7 +51,7 @@ android {
 
     buildTypes {
         release {
-            signingConfig = if (hasValidReleaseKey) {
+            signingConfig = if (keyPropertiesFile.exists()) {
                 signingConfigs.getByName("release")
             } else {
                 signingConfigs.getByName("debug")
