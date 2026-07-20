@@ -8,15 +8,12 @@ import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'settings_screen.dart';
 import 'package:flutter/foundation.dart';
 import '../services/notification_service.dart';
-import 'package:provider/provider.dart';
-import '../data/settings_provider.dart';
 import 'package:flutter/services.dart';
-import 'package:local_auth/local_auth.dart';
-import 'dart:math' as math;
 import '../utils/app_route.dart';
 import '../theme/app_layout.dart';
 import '../theme/app_theme.dart';
 import '../widgets/skeleton_card.dart';
+import '../widgets/moon_phase_painter.dart';
 
 class PeriodTrackerScreen extends StatefulWidget {
   const PeriodTrackerScreen({super.key});
@@ -26,7 +23,7 @@ class PeriodTrackerScreen extends StatefulWidget {
 }
 
 class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
-    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+    with WidgetsBindingObserver {
   DateTime _focusedDay = DateTime.utc(
       DateTime.now().year, DateTime.now().month, DateTime.now().day);
   DateTime? _selectedDay;
@@ -37,28 +34,45 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
   DateTime? _predictedOvulation;
   int? _daysUntilNext;
 
-  // Wave phase animation and privacy state variables
-  late AnimationController _waveController;
-  bool _isPrivacyMasked = true; // Masked by default for privacy
+  // Privacy and cycle state variables
   int _avgCycleLength = 28;
   int? _currentCycleDay;
   String _currentPhase = 'No Data';
   String _phaseDescription = 'Log a period to start prediction.';
 
+  // UI state
+  bool _symptomsExpanded = false;
+
+  static const List<String> _predefinedSymptoms = [
+    'Cramps',
+    'Bloating',
+    'Headache',
+    'Fatigue',
+    'Acne',
+    'Mood Swings',
+    'Nausea',
+    'Backache',
+  ];
+
+  static const List<IconData> _intensityIcons = [
+    Icons.water_drop_outlined,   // Spotting
+    Icons.water_drop,            // Light
+    Icons.water,                 // Medium
+    Icons.flood,                 // Heavy
+  ];
+  static const List<String> _intensityLabels = [
+    'Spotting', 'Light', 'Medium', 'Heavy',
+  ];
+
   @override
   void initState() {
     super.initState();
     _selectedDay = _focusedDay;
-    _waveController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 4),
-    )..repeat();
     _loadData();
   }
 
   @override
   void dispose() {
-    _waveController.dispose();
     super.dispose();
   }
 
@@ -276,6 +290,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
     }
     
     String tempIntensity = log?.intensity ?? 'Medium';
+    List<String> tempSymptoms = List.from(log?.symptoms ?? []);
     bool isOngoing = tempEnd == null;
     
     final result = await showModalBottomSheet<bool>(
@@ -294,149 +309,176 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                 24, 8, 24,
                 24 + MediaQuery.of(context).viewInsets.bottom,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        log != null ? 'Edit Period Log' : 'Add Period Log',
-                        style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  ListTile(
-                    leading: const Icon(Icons.calendar_today),
-                    title: const Text('Start Date'),
-                    subtitle: Text(DateFormat.yMMMMd().format(tempStart)),
-                    trailing: const Icon(Icons.edit_outlined),
-                    onTap: () async {
-                      await HapticFeedback.lightImpact();
-                      if (!context.mounted) return;
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: tempStart,
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime(2030),
-                      );
-                      if (picked != null) {
-                        setModalState(() {
-                          tempStart = DateTime.utc(picked.year, picked.month, picked.day);
-                          if (tempEnd != null && tempStart.isAfter(tempEnd!)) {
-                            tempEnd = null;
-                            isOngoing = true;
-                          }
-                        });
-                      }
-                    },
-                  ),
-                  const Divider(),
-                  
-                  SwitchListTile(
-                    title: const Text('Ongoing Period'),
-                    subtitle: const Text('Still active/no end date yet'),
-                    value: isOngoing,
-                    onChanged: (val) async {
-                      await HapticFeedback.selectionClick();
-                      setModalState(() {
-                        isOngoing = val;
-                        if (val) {
-                          tempEnd = null;
-                        } else {
-                          tempEnd = tempStart.add(const Duration(days: 4));
-                        }
-                      });
-                    },
-                  ),
-                  if (!isOngoing) ...[
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          log != null ? 'Edit Period Log' : 'Add Period Log',
+                          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    
                     ListTile(
-                      leading: const Icon(Icons.calendar_today_outlined),
-                      title: const Text('End Date'),
-                      subtitle: Text(tempEnd != null ? DateFormat.yMMMMd().format(tempEnd!) : 'Select end date'),
+                      leading: const Icon(Icons.calendar_today),
+                      title: const Text('Start Date'),
+                      subtitle: Text(DateFormat.yMMMMd().format(tempStart)),
                       trailing: const Icon(Icons.edit_outlined),
                       onTap: () async {
                         await HapticFeedback.lightImpact();
                         if (!context.mounted) return;
                         final picked = await showDatePicker(
                           context: context,
-                          initialDate: tempEnd ?? tempStart.add(const Duration(days: 4)),
-                          firstDate: tempStart,
+                          initialDate: tempStart,
+                          firstDate: DateTime(2020),
                           lastDate: DateTime(2030),
                         );
                         if (picked != null) {
                           setModalState(() {
-                            tempEnd = DateTime.utc(picked.year, picked.month, picked.day);
+                            tempStart = DateTime.utc(picked.year, picked.month, picked.day);
+                            if (tempEnd != null && tempStart.isAfter(tempEnd!)) {
+                              tempEnd = null;
+                              isOngoing = true;
+                            }
                           });
                         }
                       },
                     ),
-                  ],
-                  const Divider(),
-                  
-                  const SizedBox(height: 16),
-                  Text('Flow Intensity', style: theme.textTheme.titleMedium),
-                  const SizedBox(height: 12),
-                  SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'Spotting', label: Text('Spotting')),
-                      ButtonSegment(value: 'Light', label: Text('Light')),
-                      ButtonSegment(value: 'Medium', label: Text('Medium')),
-                      ButtonSegment(value: 'Heavy', label: Text('Heavy')),
-                    ],
-                    selected: {tempIntensity},
-                    onSelectionChanged: (Set<String> selection) {
-                      HapticFeedback.selectionClick();
-                      setModalState(() {
-                        tempIntensity = selection.first;
-                      });
-                    },
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  FilledButton(
-                    onPressed: () {
-                      HapticFeedback.mediumImpact();
-                      if (!isOngoing && tempEnd != null && tempStart.isAfter(tempEnd!)) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Start date cannot be after end date')),
-                        );
-                        return;
-                      }
-                      
-                      if (_checkOverlap(tempStart, tempEnd, log?.id)) {
-                        showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Overlap Detected'),
-                            content: const Text('The selected dates overlap with an existing logged period. Please adjust the dates.'),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text('OK'),
-                              ),
-                            ],
-                          ),
-                        );
-                        return;
-                      }
-                      
-                      Navigator.pop(context, true);
-                    },
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 54),
+                    const Divider(),
+                    
+                    SwitchListTile(
+                      title: const Text('Ongoing Period'),
+                      subtitle: const Text('Still active/no end date yet'),
+                      value: isOngoing,
+                      onChanged: (val) async {
+                        await HapticFeedback.selectionClick();
+                        setModalState(() {
+                          isOngoing = val;
+                          if (val) {
+                            tempEnd = null;
+                          } else {
+                            tempEnd = tempStart.add(const Duration(days: 4));
+                          }
+                        });
+                      },
                     ),
-                    child: const Text('Save Log'),
-                  ),
-                ],
+                    if (!isOngoing) ...[
+                      ListTile(
+                        leading: const Icon(Icons.calendar_today_outlined),
+                        title: const Text('End Date'),
+                        subtitle: Text(tempEnd != null ? DateFormat.yMMMMd().format(tempEnd!) : 'Select end date'),
+                        trailing: const Icon(Icons.edit_outlined),
+                        onTap: () async {
+                          await HapticFeedback.lightImpact();
+                          if (!context.mounted) return;
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: tempEnd ?? tempStart.add(const Duration(days: 4)),
+                            firstDate: tempStart,
+                            lastDate: DateTime(2030),
+                          );
+                          if (picked != null) {
+                            setModalState(() {
+                              tempEnd = DateTime.utc(picked.year, picked.month, picked.day);
+                            });
+                          }
+                        },
+                      ),
+                    ],
+                    const Divider(),
+                    
+                    const SizedBox(height: 16),
+                    Text('Flow Intensity', style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 12),
+                    SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(value: 'Spotting', label: Text('Spotting')),
+                        ButtonSegment(value: 'Light', label: Text('Light')),
+                        ButtonSegment(value: 'Medium', label: Text('Medium')),
+                        ButtonSegment(value: 'Heavy', label: Text('Heavy')),
+                      ],
+                      selected: {tempIntensity},
+                      onSelectionChanged: (Set<String> selection) {
+                        HapticFeedback.selectionClick();
+                        setModalState(() {
+                          tempIntensity = selection.first;
+                        });
+                      },
+                    ),
+
+                    const SizedBox(height: 20),
+                    Text('Symptoms', style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _predefinedSymptoms.map((symptom) {
+                        final isSelected = tempSymptoms.contains(symptom);
+                        return FilterChip(
+                          label: Text(symptom),
+                          selected: isSelected,
+                          onSelected: (selected) {
+                            HapticFeedback.selectionClick();
+                            setModalState(() {
+                              if (selected) {
+                                tempSymptoms.add(symptom);
+                              } else {
+                                tempSymptoms.remove(symptom);
+                              }
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    FilledButton(
+                      onPressed: () {
+                        HapticFeedback.mediumImpact();
+                        if (!isOngoing && tempEnd != null && tempStart.isAfter(tempEnd!)) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Start date cannot be after end date')),
+                          );
+                          return;
+                        }
+                        
+                        if (_checkOverlap(tempStart, tempEnd, log?.id)) {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Overlap Detected'),
+                              content: const Text('The selected dates overlap with an existing logged period. Please adjust the dates.'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text('OK'),
+                                ),
+                              ],
+                            ),
+                          );
+                          return;
+                        }
+                        
+                        Navigator.pop(context, true);
+                      },
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 54),
+                      ),
+                      child: const Text('Save Log'),
+                    ),
+                  ],
+                ),
               ),
             );
           },
@@ -450,6 +492,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
           startDate: tempStart,
           endDate: isOngoing ? null : tempEnd,
           intensity: tempIntensity,
+          symptoms: tempSymptoms,
         );
         await PeriodRepository.instance.updatePeriodLog(updated);
       } else {
@@ -458,6 +501,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
           startDate: tempStart,
           endDate: isOngoing ? null : tempEnd,
           intensity: tempIntensity,
+          symptoms: tempSymptoms,
         );
         await PeriodRepository.instance.createPeriodLog(newLog);
       }
@@ -533,41 +577,6 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                     const Spacer(),
                     IconButton(
                       icon: Icon(
-                        _isPrivacyMasked ? Icons.lock_outline : Icons.lock_open_outlined,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                      tooltip: _isPrivacyMasked ? 'Reveal tracker' : 'Mask tracker',
-                      onPressed: () async {
-                        if (_isPrivacyMasked) {
-                          final settings = Provider.of<SettingsProvider>(context, listen: false);
-                          if (settings.appLockEnabled) {
-                            final auth = LocalAuthentication();
-                            try {
-                              final didAuth = await auth.authenticate(
-                                localizedReason: 'Authenticate to view tracker details',
-                                options: const AuthenticationOptions(
-                                  stickyAuth: true,
-                                  biometricOnly: false,
-                                ),
-                              );
-                              if (!didAuth) return;
-                            } catch (_) {
-                              return;
-                            }
-                          }
-                          setState(() {
-                            _isPrivacyMasked = false;
-                          });
-                        } else {
-                          setState(() {
-                            _isPrivacyMasked = true;
-                          });
-                        }
-                        await HapticFeedback.lightImpact();
-                      },
-                    ),
-                    IconButton(
-                      icon: Icon(
                         Icons.settings_outlined,
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -580,7 +589,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
               ),
             ),
 
-            // ── Cycle Phase Wave Card ─────────────────────────────────────
+            // ── Cycle Phase Moon Card (Redesigned Dashboard Header) ────────
             SliverToBoxAdapter(
               child: AnimationConfiguration.staggeredList(
                 position: 0,
@@ -590,14 +599,19 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                   child: FadeInAnimation(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                      child: CyclePhaseWaveWidget(
+                      child: CyclePhaseMoonWidget(
                         phase: _currentPhase,
                         description: _phaseDescription,
                         cycleDay: _currentCycleDay,
                         avgCycleLength: _avgCycleLength,
                         phaseColor: _resolvePhaseColor(context),
-                        animation: _waveController,
-                        isMasked: _isPrivacyMasked,
+                        predictionStatus: isPeriodActive
+                            ? 'Period Ongoing'
+                            : (_daysUntilNext == null
+                                ? 'Not enough data'
+                                : (_daysUntilNext! > 0
+                                    ? 'Period in $_daysUntilNext days'
+                                    : 'Period overdue by ${_daysUntilNext!.abs()} days')),
                       ),
                     ),
                   ),
@@ -605,7 +619,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
               ),
             ),
 
-            // ── Prediction Status Card ────────────────────────────────────
+            // ── Logging Dashboard Card (Start/Stop/Intensity/Symptoms Log) ──
             SliverToBoxAdapter(
               child: AnimationConfiguration.staggeredList(
                 position: 1,
@@ -615,83 +629,312 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                   child: FadeInAnimation(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                      child: Card(
-                        elevation: 0,
-                        color: colorScheme.surfaceContainerLow,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppLayout.radiusXL),
-                            side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: colorScheme.secondaryContainer,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(Icons.water_drop,
-                                    color: colorScheme.onSecondaryContainer),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
+                      child: Builder(builder: (context) {
+                        final selectedLog =
+                            _selectedDay != null ? _getLogForDay(_selectedDay!) : null;
+                        final now = DateTime.now();
+                        final today = DateTime.utc(now.year, now.month, now.day);
+                        final isSelectedToday = _selectedDay != null &&
+                            isSameDay(_selectedDay, today);
+
+                        return Card(
+                          elevation: 0,
+                          clipBehavior: Clip.antiAlias,
+                          color: isPeriodActive && isSelectedToday
+                              ? periodColor
+                              : (selectedLog != null
+                                  ? periodColor.withValues(alpha: 0.35)
+                                  : colorScheme.surfaceContainerHighest),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppLayout.radiusXL)),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // ── Header row: title + action buttons ────────────
+                                Row(
                                   children: [
-                                    Text(
-                                      _isPrivacyMasked
-                                          ? '••••••••••'
-                                          : (isPeriodActive
-                                              ? 'Period Ongoing'
-                                              : (_daysUntilNext == null
-                                                  ? 'Not enough data'
-                                                  : (_daysUntilNext! > 0
-                                                      ? 'Period in $_daysUntilNext days'
-                                                      : 'Period overdue by ${_daysUntilNext!.abs()} days'))),
-                                      style: theme.textTheme.titleMedium
-                                          ?.copyWith(
-                                              fontWeight: FontWeight.bold),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    if (_predictedNextPeriod != null &&
-                                        !isPeriodActive &&
-                                        !_isPrivacyMasked)
-                                      Text(
-                                        'Predicted: ${DateFormat.MMMd().format(_predictedNextPeriod!)}',
-                                        style: theme.textTheme.bodyMedium
-                                            ?.copyWith(
-                                                color: colorScheme
-                                                    .onSurfaceVariant),
-                                        textAlign: TextAlign.center,
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            selectedLog != null
+                                                ? 'Period Log'
+                                                : (isSelectedToday
+                                                    ? 'Start your period'
+                                                    : 'No log for this day'),
+                                            style: theme.textTheme.titleMedium?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: selectedLog != null
+                                                  ? onPeriodColor
+                                                  : colorScheme.onSurface,
+                                            ),
+                                          ),
+                                          if (selectedLog != null) ...[
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              selectedLog.endDate != null
+                                                  ? '${DateFormat.MMMd().format(selectedLog.startDate)} – ${DateFormat.MMMd().format(selectedLog.endDate!)}'
+                                                  : '${DateFormat.MMMd().format(selectedLog.startDate)} · Ongoing',
+                                              style: theme.textTheme.bodySmall?.copyWith(
+                                                color: onPeriodColor.withValues(alpha: 0.7),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
                                       ),
+                                    ),
+                                    if (selectedLog != null) ...[
+                                      IconButton(
+                                        onPressed: () => _showLogEditor(selectedLog),
+                                        icon: Icon(Icons.edit_outlined, size: 18, color: onPeriodColor.withValues(alpha: 0.7)),
+                                        tooltip: 'Edit Dates',
+                                        visualDensity: VisualDensity.compact,
+                                      ),
+                                      IconButton(
+                                        onPressed: () => _deleteLog(selectedLog),
+                                        icon: Icon(Icons.delete_outline, size: 18,
+                                            color: Colors.red.shade700),
+                                        tooltip: 'Delete Log',
+                                        visualDensity: VisualDensity.compact,
+                                      ),
+                                    ],
                                   ],
                                 ),
-                              ),
-                              const SizedBox(
-                                  width:
-                                      44), // balance for icon on left for true center
-                            ],
+
+                                if (selectedLog == null && isSelectedToday) ...[
+                                  const SizedBox(height: 12),
+                                  FilledButton.icon(
+                                    onPressed: _togglePeriodStatus,
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: colorScheme.primary,
+                                      foregroundColor: colorScheme.onPrimary,
+                                      minimumSize: const Size(double.infinity, 52),
+                                    ),
+                                    icon: const Icon(Icons.play_arrow),
+                                    label: const Text('Start Period'),
+                                  ),
+                                ],
+                                if (selectedLog == null && !isSelectedToday) ...[
+                                  const SizedBox(height: 12),
+                                  FilledButton.icon(
+                                    onPressed: () => _showLogEditor(null, _selectedDay),
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: colorScheme.primary,
+                                      foregroundColor: colorScheme.onPrimary,
+                                      minimumSize: const Size(double.infinity, 52),
+                                    ),
+                                    icon: const Icon(Icons.add),
+                                    label: const Text('Add Period Log'),
+                                  ),
+                                ],
+
+                                if (selectedLog != null) ...[
+                                  // ── Stop Button ────────────────────────────────
+                                  if (selectedLog.endDate == null && isSelectedToday) ...[
+                                    const SizedBox(height: 10),
+                                    FilledButton.icon(
+                                      onPressed: _togglePeriodStatus,
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: onPeriodColor,
+                                        foregroundColor: periodColor,
+                                        minimumSize: const Size(double.infinity, 52),
+                                      ),
+                                      icon: const Icon(Icons.stop_rounded),
+                                      label: const Text('Stop Period'),
+                                    ),
+                                  ],
+
+                                  const SizedBox(height: 14),
+                                  Divider(height: 1, color: onPeriodColor.withValues(alpha: 0.15)),
+                                  const SizedBox(height: 12),
+
+                                  // ── Flow Intensity (icon-only row, no wrapping) ──
+                                  Text(
+                                    'Flow Intensity',
+                                    style: theme.textTheme.labelLarge?.copyWith(
+                                      color: onPeriodColor.withValues(alpha: 0.8),
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: List.generate(_intensityLabels.length, (i) {
+                                      final label = _intensityLabels[i];
+                                      final icon = _intensityIcons[i];
+                                      final isChosen = selectedLog.intensity == label;
+                                      return Expanded(
+                                        child: GestureDetector(
+                                          onTap: () => _updateIntensity(selectedLog, label),
+                                          child: AnimatedContainer(
+                                            duration: const Duration(milliseconds: 180),
+                                            margin: const EdgeInsets.symmetric(horizontal: 3),
+                                            padding: const EdgeInsets.symmetric(vertical: 10),
+                                            decoration: BoxDecoration(
+                                              color: isChosen
+                                                  ? onPeriodColor
+                                                  : onPeriodColor.withValues(alpha: 0.12),
+                                              borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                                            ),
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  icon,
+                                                  size: 20,
+                                                  color: isChosen ? periodColor : onPeriodColor.withValues(alpha: 0.7),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  label,
+                                                  style: theme.textTheme.labelSmall?.copyWith(
+                                                    color: isChosen ? periodColor : onPeriodColor.withValues(alpha: 0.7),
+                                                    fontWeight: isChosen ? FontWeight.bold : FontWeight.normal,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }),
+                                  ),
+
+                                  const SizedBox(height: 14),
+                                  Divider(height: 1, color: onPeriodColor.withValues(alpha: 0.15)),
+
+                                  // ── Collapsible Symptoms Section ───────────────
+                                  InkWell(
+                                    onTap: () {
+                                      HapticFeedback.selectionClick();
+                                      setState(() => _symptomsExpanded = !_symptomsExpanded);
+                                    },
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 10),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.mood_outlined,
+                                            size: 18,
+                                            color: onPeriodColor.withValues(alpha: 0.8),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Symptoms',
+                                            style: theme.textTheme.labelLarge?.copyWith(
+                                              color: onPeriodColor.withValues(alpha: 0.8),
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                          if (selectedLog.symptoms.isNotEmpty) ...[
+                                            const SizedBox(width: 6),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: onPeriodColor,
+                                                borderRadius: BorderRadius.circular(20),
+                                              ),
+                                              child: Text(
+                                                '${selectedLog.symptoms.length}',
+                                                style: theme.textTheme.labelSmall?.copyWith(
+                                                  color: periodColor,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                          const Spacer(),
+                                          Icon(
+                                            _symptomsExpanded
+                                                ? Icons.keyboard_arrow_up_rounded
+                                                : Icons.keyboard_arrow_down_rounded,
+                                            color: onPeriodColor.withValues(alpha: 0.6),
+                                            size: 20,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  AnimatedSize(
+                                    duration: const Duration(milliseconds: 220),
+                                    curve: Curves.easeInOut,
+                                    alignment: Alignment.topCenter,
+                                    child: _symptomsExpanded
+                                        ? Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              const SizedBox(height: 4),
+                                              Wrap(
+                                                spacing: 6,
+                                                runSpacing: 6,
+                                                children: _predefinedSymptoms.map((symptom) {
+                                                  final isSelected = selectedLog.symptoms.contains(symptom);
+                                                  // Same palette as intensity tiles: onPeriodColor-based.
+                                                  return GestureDetector(
+                                                    onTap: () async {
+                                                      await HapticFeedback.selectionClick();
+                                                      final updatedSymptoms = List<String>.from(selectedLog.symptoms);
+                                                      if (isSelected) {
+                                                        updatedSymptoms.remove(symptom);
+                                                      } else {
+                                                        updatedSymptoms.add(symptom);
+                                                      }
+                                                      final updated = selectedLog.copyWith(symptoms: updatedSymptoms);
+                                                      await PeriodRepository.instance.updatePeriodLog(updated);
+                                                      await _loadData();
+                                                    },
+                                                    child: AnimatedContainer(
+                                                      duration: const Duration(milliseconds: 180),
+                                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                                      decoration: BoxDecoration(
+                                                        color: isSelected
+                                                            ? onPeriodColor
+                                                            : onPeriodColor.withValues(alpha: 0.12),
+                                                        borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                                                      ),
+                                                      child: Text(
+                                                        symptom,
+                                                        style: theme.textTheme.labelMedium?.copyWith(
+                                                          color: isSelected
+                                                              ? periodColor
+                                                              : onPeriodColor.withValues(alpha: 0.85),
+                                                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  );
+                                                }).toList(),
+                                              ),
+                                              const SizedBox(height: 8),
+                                            ],
+                                          )
+                                        : const SizedBox.shrink(),
+                                  ),
+                                ],
+                              ],
+                            ),
                           ),
-                        ),
-                      ),
+                        );
+                      }),
                     ),
                   ),
                 ),
               ),
             ),
 
-            // ── Calendar Card ─────────────────────────────────────────────
+            // ── Calendar Card (History & Predictions) ───────────────────────
             SliverToBoxAdapter(
               child: AnimationConfiguration.staggeredList(
-                position: 1,
+                position: 2,
                 duration: const Duration(milliseconds: 220),
                 child: SlideAnimation(
                   verticalOffset: 24.0,
                   child: FadeInAnimation(
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
                       child: Card(
                         elevation: 0,
                         color: colorScheme.surfaceContainerLow,
@@ -723,7 +966,6 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                           ),
                           calendarBuilders: CalendarBuilders(
                               defaultBuilder: (context, day, focusedDay) {
-                            if (_isPrivacyMasked) return null;
                             final log = _getLogForDay(day);
                             if (log != null) {
                               return _buildMarker(
@@ -742,11 +984,6 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                             }
                             return null;
                           }, selectedBuilder: (context, day, focusedDay) {
-                            if (_isPrivacyMasked) {
-                              return _buildMarker(
-                                  day, colorScheme.primary, colorScheme.onPrimary,
-                                  isFilled: true, isSelected: true);
-                            }
                             final log = _getLogForDay(day);
                             if (log != null) {
                               return _buildMarker(
@@ -757,14 +994,6 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                                 day, colorScheme.primary, colorScheme.onPrimary,
                                 isFilled: true, isSelected: true);
                           }, todayBuilder: (context, day, focusedDay) {
-                            if (_isPrivacyMasked) {
-                              return _buildMarker(
-                                  day,
-                                  colorScheme.surfaceContainerHighest,
-                                  colorScheme.onSurface,
-                                  isFilled: true,
-                                  isToday: true);
-                            }
                             final log = _getLogForDay(day);
                             if (log != null) {
                               return _buildMarker(
@@ -776,209 +1005,10 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                                 colorScheme.surfaceContainerHighest,
                                 colorScheme.onSurface,
                                 isFilled: true,
-                                	isToday: true);
+                                isToday: true);
                           }),
                         ),
                       ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            // ── Selected Day Log Card (Start/Stop/Intensity/Delete) ────────
-            SliverToBoxAdapter(
-              child: AnimationConfiguration.staggeredList(
-                position: 2,
-                duration: const Duration(milliseconds: 220),
-                child: SlideAnimation(
-                  verticalOffset: 24.0,
-                  child: FadeInAnimation(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-                      child: Builder(builder: (context) {
-                        final selectedLog =
-                            _selectedDay != null ? _getLogForDay(_selectedDay!) : null;
-                        final now = DateTime.now();
-                        final today = DateTime.utc(now.year, now.month, now.day);
-                        final isSelectedToday = _selectedDay != null &&
-                            isSameDay(_selectedDay, today);
-
-                        return Card(
-                          elevation: 0,
-                          color: _isPrivacyMasked
-                              ? colorScheme.surfaceContainerHighest
-                              : (isPeriodActive && isSelectedToday
-                                  ? periodColor
-                                  : (selectedLog != null
-                                      ? periodColor.withValues(alpha: 0.5)
-                                      : colorScheme.surfaceContainerHighest)),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppLayout.radiusXL)),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: _isPrivacyMasked
-                                ? Column(
-                                    children: [
-                                      Text(
-                                        'Tracker Locked',
-                                        style: theme.textTheme.titleMedium?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 16),
-                                      Icon(Icons.lock_outline, size: 40, color: colorScheme.onSurfaceVariant),
-                                      const SizedBox(height: 12),
-                                      Text(
-                                        'Unlock to view log details',
-                                        style: theme.textTheme.bodySmall?.copyWith(
-                                          color: colorScheme.onSurfaceVariant,
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                                : Column(
-                                    children: [
-                                      Text(
-                                        selectedLog != null
-                                            ? 'Logged Period'
-                                            : (isSelectedToday
-                                                ? 'Start your period'
-                                                : 'No log for this day'),
-                                        style: theme.textTheme.titleLarge?.copyWith(
-                                          color: selectedLog != null
-                                              ? onPeriodColor
-                                              : colorScheme.onSurface,
-                                        ),
-                                      ),
-                                      if (selectedLog == null && isSelectedToday) ...[
-                                        const SizedBox(height: 16),
-                                        FilledButton.icon(
-                                          onPressed: _togglePeriodStatus,
-                                          style: FilledButton.styleFrom(
-                                            backgroundColor: colorScheme.primary,
-                                            foregroundColor: colorScheme.onPrimary,
-                                            minimumSize: const Size(double.infinity, 56),
-                                          ),
-                                          icon: const Icon(Icons.play_arrow),
-                                          label: const Text(
-                                            'Start Period',
-                                            style: TextStyle(fontSize: 18),
-                                          ),
-                                        ),
-                                      ],
-                                      if (selectedLog == null && !isSelectedToday) ...[
-                                        const SizedBox(height: 16),
-                                        FilledButton.icon(
-                                          onPressed: () => _showLogEditor(null, _selectedDay),
-                                          style: FilledButton.styleFrom(
-                                            backgroundColor: colorScheme.primary,
-                                            foregroundColor: colorScheme.onPrimary,
-                                            minimumSize: const Size(double.infinity, 56),
-                                          ),
-                                          icon: const Icon(Icons.add),
-                                          label: const Text(
-                                            'Add Period Log',
-                                            style: TextStyle(fontSize: 18),
-                                          ),
-                                        ),
-                                      ],
-                                      if (selectedLog != null) ...[
-                                        const SizedBox(height: 16),
-                                        Text(
-                                          'Start: ${DateFormat.yMMMMd().format(selectedLog.startDate)}',
-                                          style: theme.textTheme.bodyLarge?.copyWith(color: onPeriodColor),
-                                        ),
-                                        Text(
-                                          selectedLog.endDate != null
-                                              ? 'End: ${DateFormat.yMMMMd().format(selectedLog.endDate!)}'
-                                              : 'Status: Ongoing',
-                                          style: theme.textTheme.bodyLarge?.copyWith(color: onPeriodColor),
-                                        ),
-                                        if (selectedLog.endDate == null && isSelectedToday) ...[
-                                          const SizedBox(height: 16),
-                                          FilledButton.icon(
-                                            onPressed: _togglePeriodStatus,
-                                            style: FilledButton.styleFrom(
-                                              backgroundColor: onPeriodColor,
-                                              foregroundColor: periodColor,
-                                              minimumSize: const Size(double.infinity, 56),
-                                            ),
-                                            icon: const Icon(Icons.stop),
-                                            label: const Text(
-                                              'Stop Period',
-                                              style: TextStyle(fontSize: 18),
-                                            ),
-                                          ),
-                                        ],
-                                        const SizedBox(height: 16),
-                                        Text(
-                                          'Flow Intensity',
-                                          style: theme.textTheme.titleMedium?.copyWith(color: onPeriodColor),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        SegmentedButton<String>(
-                                          segments: const [
-                                            ButtonSegment(
-                                                value: 'Spotting',
-                                                label: Text('Spotting',
-                                                    style: TextStyle(fontSize: 12))),
-                                            ButtonSegment(
-                                                value: 'Light',
-                                                label: Text('Light',
-                                                    style: TextStyle(fontSize: 12))),
-                                            ButtonSegment(
-                                                value: 'Medium',
-                                                label: Text('Medium',
-                                                    style: TextStyle(fontSize: 12))),
-                                            ButtonSegment(
-                                                value: 'Heavy',
-                                                label: Text('Heavy',
-                                                    style: TextStyle(fontSize: 12))),
-                                          ],
-                                          selected: {selectedLog.intensity},
-                                          onSelectionChanged:
-                                              (Set<String> newSelection) {
-                                            _updateIntensity(
-                                                selectedLog, newSelection.first);
-                                          },
-                                          style: SegmentedButton.styleFrom(
-                                            backgroundColor: periodColor,
-                                            foregroundColor: onPeriodColor,
-                                            selectedForegroundColor: periodColor,
-                                            selectedBackgroundColor: onPeriodColor,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 16),
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                          children: [
-                                            OutlinedButton.icon(
-                                              onPressed: () => _showLogEditor(selectedLog),
-                                              style: OutlinedButton.styleFrom(
-                                                foregroundColor: onPeriodColor,
-                                                side: BorderSide(color: onPeriodColor),
-                                              ),
-                                              icon: const Icon(Icons.edit_outlined),
-                                              label: const Text('Edit Dates'),
-                                            ),
-                                            OutlinedButton.icon(
-                                              onPressed: () => _deleteLog(selectedLog),
-                                              style: OutlinedButton.styleFrom(
-                                                foregroundColor: Colors.red.shade900,
-                                                side: BorderSide(color: Colors.red.shade900),
-                                              ),
-                                              icon: const Icon(Icons.delete_outline),
-                                              label: const Text('Delete Log'),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                          ),
-                        );
-                      }),
                     ),
                   ),
                 ),
@@ -1014,24 +1044,22 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
   }
 }
 
-class CyclePhaseWaveWidget extends StatelessWidget {
+class CyclePhaseMoonWidget extends StatelessWidget {
   final String phase;
   final String description;
   final int? cycleDay;
   final int avgCycleLength;
   final Color phaseColor;
-  final Animation<double> animation;
-  final bool isMasked;
+  final String? predictionStatus;
 
-  const CyclePhaseWaveWidget({
+  const CyclePhaseMoonWidget({
     super.key,
     required this.phase,
     required this.description,
     required this.cycleDay,
     required this.avgCycleLength,
     required this.phaseColor,
-    required this.animation,
-    required this.isMasked,
+    this.predictionStatus,
   });
 
   @override
@@ -1039,77 +1067,75 @@ class CyclePhaseWaveWidget extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    // Calculate phase value (0.0 to 1.0)
+    // 0.0/1.0 is new moon (menstrual start)
+    // 0.5 is full moon (ovulation, usually around day 14 of 28, i.e., avgCycleLength/2)
+    double phaseValue = 0.0;
+    if (cycleDay != null && avgCycleLength > 0) {
+      // Map cycleDay (1 to avgCycleLength) to phaseValue (0.0 to 1.0)
+      phaseValue = (cycleDay! - 1) / avgCycleLength;
+    }
+
     return Card(
       elevation: 0,
       color: theme.colorScheme.surfaceContainerLow,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppLayout.radiusL),
+        borderRadius: BorderRadius.circular(AppLayout.radiusXL),
         side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3)),
       ),
-      child: SizedBox(
-        height: 140,
-        child: Stack(
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Row(
           children: [
-            // Wave Background
-            Positioned.fill(
-              child: AnimatedBuilder(
-                animation: animation,
-                builder: (context, child) {
-                  return CustomPaint(
-                    painter: WavePainter(
-                      animationValue: animation.value,
-                      waveColor: phaseColor.withValues(alpha: 0.15),
-                    ),
-                  );
-                },
-              ),
+            // Moon Visualizer Left
+            MoonPhaseWidget(
+              phase: phaseValue,
+              size: 80,
+              moonColor: phaseColor,
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            const SizedBox(width: 20),
+            // Phase Text Right
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        isMasked ? '•••• ••••' : phase,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: isMasked ? colorScheme.onSurfaceVariant : phaseColor,
-                        ),
-                      ),
-                      if (cycleDay != null && !isMasked)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: phaseColor.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(AppLayout.radiusL),
-                          ),
-                          child: Text(
-                            'Day $cycleDay of $avgCycleLength',
-                            style: TextStyle(
-                              color: phaseColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                    ],
+                  Text(
+                    phase,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: phaseColor,
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: Text(
-                      isMasked
-                          ? 'Biometric protection enabled. Tap the lock icon in the top right to reveal your current cycle phase and biological insights.'
-                          : description,
+                  if (cycleDay != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Day $cycleDay of $avgCycleLength',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant,
-                        height: 1.4,
+                        fontWeight: FontWeight.w600,
                       ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
                     ),
+                  ],
+                  if (predictionStatus != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      predictionStatus!,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: phaseColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  Text(
+                    description,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                      height: 1.3,
+                    ),
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -1119,34 +1145,4 @@ class CyclePhaseWaveWidget extends StatelessWidget {
       ),
     );
   }
-}
-
-class WavePainter extends CustomPainter {
-  final double animationValue;
-  final Color waveColor;
-
-  WavePainter({required this.animationValue, required this.waveColor});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = waveColor
-      ..style = PaintingStyle.fill;
-
-    final path = Path();
-    path.moveTo(0, size.height);
-
-    for (double i = 0.0; i <= size.width; i += 4) {
-      final y = size.height * 0.65 +
-          10 * math.sin((i / size.width * 2.5 * math.pi) + (animationValue * 2 * math.pi));
-      path.lineTo(i, y);
-    }
-
-    path.lineTo(size.width, size.height);
-    path.close();
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

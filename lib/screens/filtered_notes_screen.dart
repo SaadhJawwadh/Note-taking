@@ -39,9 +39,7 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
     _tagColors = colors;
 
     if (widget.filterType == FilterType.archived) {
-      final allNotes = await NoteRepository.instance.readAllNotes();
-      displayedNotes =
-          allNotes.where((n) => n.isArchived && n.deletedAt == null).toList();
+      displayedNotes = await NoteRepository.instance.readAllNotes(isArchived: true);
     } else {
       displayedNotes = await NoteRepository.instance.readTrashedNotes();
     }

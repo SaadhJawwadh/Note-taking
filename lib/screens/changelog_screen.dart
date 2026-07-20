@@ -30,9 +30,86 @@ class ChangelogScreen extends StatelessWidget {
           children: [
             _buildVersionSection(
               context,
+              version: 'v2.4.0',
+              date: 'July 20, 2026',
+              isLatest: true,
+              changes: [
+                _ChangelogGroup(
+                  title: '⚡ Note Editor — Slash Commands & Floating Toolbar',
+                  items: [
+                    'Slash Commands (/): Type "/" anywhere at the start of a line to open a quick action menu for checklists (/todo), tables (/table), code blocks (/code), headings (/h1, /h2), quotes (/quote), and lists.',
+                    'Floating Glassmorphism Toolbar: Redesigned formatting bar into a sleek floating island pill with backdrop blur and soft shadows.',
+                    'Note Details & Stats: View real-time Word Count, Character Count, Estimated Reading Time, Folder path, and Creation/Modification dates.',
+                    'Share & Export Note: Export notes as Plain Text or Markdown, or copy content directly to clipboard.',
+                  ],
+                ),
+                _ChangelogGroup(
+                  title: '🏷️ Category Management Redesign',
+                  items: [
+                    'Editable Category Names & Icons: Rename categories directly with automatic transaction reassignment.',
+                    'Icon Picker Grid: Select custom icons from a curated 24-icon grid.',
+                    'Safe Category Deletion: Deleting built-in or custom categories automatically reassigns matching transactions to "Other".',
+                  ],
+                ),
+              ],
+            ),
+            _buildVersionSection(
+              context,
+              version: 'v2.3.0',
+              date: 'July 19, 2026',
+              isLatest: false,
+              changes: [
+                _ChangelogGroup(
+                  title: '🌙 Period Tracker — Full Redesign',
+                  items: [
+                    'Moon Phase Animation: A beautiful moon widget now reflects your current cycle phase — new moon during menstrual, crescent during follicular, full moon during ovulation, and waning gibbous during luteal phase.',
+                    'Logging-First Layout: The logging card is now at the top of the screen for quick, muscle-memory access. The calendar view is placed below for reference.',
+                    'Icon-Based Flow Intensity: Spotting, Light, Medium, and Heavy are now icon+label tiles for faster, more visual selection.',
+                    'Collapsible Symptoms: The symptoms section starts collapsed to reduce clutter. A live badge shows active symptoms, and the section animates open smoothly on tap.',
+                  ],
+                ),
+                _ChangelogGroup(
+                  title: '🔧 Dark Mode & Visibility Fixes',
+                  items: [
+                    'Unified Chip Palette: Symptom selector chips use the same onPeriodColor-based colour system as flow intensity tiles.',
+                    'Visible Delete Action: Fixed the delete log button icon to be clearly visible in dark mode.',
+                  ],
+                ),
+              ],
+            ),
+            _buildVersionSection(
+              context,
+              version: 'v2.2.0',
+              date: 'July 18, 2026',
+              changes: [
+                _ChangelogGroup(
+                  title: '📊 Live Interactive Tables',
+                  items: [
+                    'Inline Table Widget: Rendered tables directly as beautiful interactive widgets within the Note Editor.',
+                    'Dynamic Cell Editing: Added custom text inputs inside cells, managing focus and updating the note automatically.',
+                    'Row/Column Management: Touch-optimized action buttons for adding and deleting rows/columns dynamically.',
+                    'Automatic Focus Dismissal: Clear cell focus and collapse keyboard when tapping outside the table.',
+                  ],
+                ),
+                _ChangelogGroup(
+                  title: '📝 Textual Table Previews',
+                  items: [
+                    'Clean Note Card Snippets: Note list cards on the home screen display a clean preview of table rows using column separators.',
+                  ],
+                ),
+                _ChangelogGroup(
+                  title: '⚙️ Settings Redesign & Feedback',
+                  items: [
+                    'Modern Static Card Layout: Redesigned settings into clean card groupings for instant access.',
+                    'Play Store Feedback Option: Added a direct Play Store Rating and Feedback button inside settings.',
+                  ],
+                ),
+              ],
+            ),
+            _buildVersionSection(
+              context,
               version: 'v2.1.0',
               date: 'July 15, 2026',
-              isLatest: true,
               changes: [
                 _ChangelogGroup(
                   title: '📁 Folder & Selection Enhancements',

@@ -159,13 +159,61 @@ class TransactionRepository {
   }
 
   Future<void> upsertCategoryDefinition(CategoryDefinition def) async {
+    await renameCategoryDefinition(def.name, def);
+  }
+
+  Future<void> renameCategoryDefinition(String oldName, CategoryDefinition newDef) async {
     final db = await _db;
-    await db.insert(TableNames.categoryDefinitions, def.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+    await db.transaction((txn) async {
+      if (oldName != newDef.name) {
+        await txn.update(
+          TableNames.transactions,
+          {TransactionFields.category: newDef.name},
+          where: '${TransactionFields.category} = ?',
+          whereArgs: [oldName],
+        );
+        await txn.update(
+          TableNames.recurringRules,
+          {RecurringRuleFields.category: newDef.name},
+          where: '${RecurringRuleFields.category} = ?',
+          whereArgs: [oldName],
+        );
+        await txn.delete(
+          TableNames.categoryDefinitions,
+          where: '${CategoryFields.name} = ?',
+          whereArgs: [oldName],
+        );
+      }
+      await txn.insert(
+        TableNames.categoryDefinitions,
+        newDef.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    });
   }
 
   Future<void> deleteCategoryDefinition(String name) async {
+    if (name == CategoryConstants.other) return;
     final db = await _db;
-    await db.delete(TableNames.categoryDefinitions, where: '${CategoryFields.name} = ? AND ${CategoryFields.isBuiltIn} = 0', whereArgs: [name]);
+    await db.transaction((txn) async {
+      await txn.update(
+        TableNames.transactions,
+        {TransactionFields.category: CategoryConstants.other},
+        where: '${TransactionFields.category} = ?',
+        whereArgs: [name],
+      );
+      await txn.update(
+        TableNames.recurringRules,
+        {RecurringRuleFields.category: CategoryConstants.other},
+        where: '${RecurringRuleFields.category} = ?',
+        whereArgs: [name],
+      );
+      await txn.delete(
+        TableNames.categoryDefinitions,
+        where: '${CategoryFields.name} = ?',
+        whereArgs: [name],
+      );
+    });
   }
 
   // SMS Contacts CRUD

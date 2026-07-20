@@ -46,6 +46,7 @@ class CategoryFields {
   static const String color = 'color';
   static const String keywords = 'keywords';
   static const String isBuiltIn = 'isBuiltIn';
+  static const String iconCodePoint = 'iconCodePoint';
 }
 
 class SmsContactFields {
@@ -62,4 +63,5 @@ class PeriodLogFields {
   static const String endDate = 'endDate';
   static const String intensity = 'intensity';
   static const String notes = 'notes';
+  static const String symptoms = 'symptoms';
 }

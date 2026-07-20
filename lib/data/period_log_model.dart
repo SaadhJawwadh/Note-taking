@@ -6,6 +6,7 @@ class PeriodLog {
   final DateTime? endDate;
   final String intensity; // e.g., 'Spotting', 'Light', 'Medium', 'Heavy'
   final String notes;
+  final List<String> symptoms;
 
   PeriodLog({
     required this.id,
@@ -13,6 +14,7 @@ class PeriodLog {
     this.endDate,
     required this.intensity,
     this.notes = '',
+    this.symptoms = const [],
   });
 
   Map<String, dynamic> toMap() {
@@ -22,10 +24,26 @@ class PeriodLog {
       'endDate': endDate?.toIso8601String(),
       'intensity': intensity,
       'notes': notes,
+      'symptoms': jsonEncode(symptoms),
     };
   }
 
   factory PeriodLog.fromMap(Map<String, dynamic> map) {
+    List<String> symptomsList = [];
+    if (map['symptoms'] != null) {
+      try {
+        final decoded = jsonDecode(map['symptoms'] as String);
+        if (decoded is List) {
+          symptomsList = decoded.map((e) => e.toString()).toList();
+        }
+      } catch (_) {
+        // Fallback for list type if it's somehow decoded already
+        if (map['symptoms'] is List) {
+          symptomsList = (map['symptoms'] as List).map((e) => e.toString()).toList();
+        }
+      }
+    }
+
     return PeriodLog(
       id: map['id'] as String,
       startDate: DateTime.parse(map['startDate'] as String),
@@ -34,6 +52,7 @@ class PeriodLog {
           : null,
       intensity: map['intensity'] as String,
       notes: map['notes'] as String? ?? '',
+      symptoms: symptomsList,
     );
   }
 
@@ -48,6 +67,7 @@ class PeriodLog {
     DateTime? endDate,
     String? intensity,
     String? notes,
+    List<String>? symptoms,
   }) {
     return PeriodLog(
       id: id ?? this.id,
@@ -55,6 +75,7 @@ class PeriodLog {
       endDate: endDate ?? this.endDate,
       intensity: intensity ?? this.intensity,
       notes: notes ?? this.notes,
+      symptoms: symptoms ?? this.symptoms,
     );
   }
 
@@ -67,7 +88,8 @@ class PeriodLog {
         other.startDate == startDate &&
         other.endDate == endDate &&
         other.intensity == intensity &&
-        other.notes == notes;
+        other.notes == notes &&
+        listEquals(other.symptoms, symptoms);
   }
 
   @override
@@ -76,6 +98,18 @@ class PeriodLog {
         startDate.hashCode ^
         endDate.hashCode ^
         intensity.hashCode ^
-        notes.hashCode;
+        notes.hashCode ^
+        symptoms.hashCode;
   }
+}
+
+// Simple listEquals helper
+bool listEquals<T>(List<T>? a, List<T>? b) {
+  if (a == null) return b == null;
+  if (b == null || a.length != b.length) return false;
+  if (identical(a, b)) return true;
+  for (int index = 0; index < a.length; index++) {
+    if (a[index] != b[index]) return false;
+  }
+  return true;
 }

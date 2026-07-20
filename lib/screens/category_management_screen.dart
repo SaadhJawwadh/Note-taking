@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import '../data/category_constants.dart';
 import '../data/category_definition.dart';
 import '../data/repositories/transaction_repository.dart';
 import '../data/transaction_category.dart';
@@ -74,10 +75,11 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
   Future<void> _showEditDialog(CategoryDefinition def) async {
     await showDialog<void>(
       context: context,
-      builder: (ctx) => _EditKeywordsDialog(
+      builder: (ctx) => _EditCategoryDialog(
         definition: def,
-        onSave: (updated) async {
-          await TransactionRepository.instance.upsertCategoryDefinition(updated);
+        existingCategories: _categories,
+        onSave: (oldName, updated) async {
+          await TransactionRepository.instance.renameCategoryDefinition(oldName, updated);
           await _saveAndReload();
         },
       ),
@@ -90,7 +92,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
       builder: (ctx) => _AddCategoryDialog(
         existingCategories: _categories,
         onSave: (newDef) async {
-          await TransactionRepository.instance.upsertCategoryDefinition(newDef);
+          await TransactionRepository.instance.renameCategoryDefinition(newDef.name, newDef);
           await _saveAndReload();
         },
       ),
@@ -98,12 +100,18 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
   }
 
   Future<void> _deleteCategory(CategoryDefinition def) async {
+    if (def.name == CategoryConstants.other) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('The "Other" fallback category cannot be deleted.')),
+      );
+      return;
+    }
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Category'),
-        content: Text(
-            'Delete "${def.name}"? Existing transactions with this category will keep their label but will no longer match new transactions.'),
+        title: Text('Delete "${def.name}"?'),
+        content: const Text(
+            'Existing transactions with this category will be reassigned to "Other" so your history stays intact.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -239,16 +247,14 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
                                         Expanded(
                                           child: Text(
                                             cat.name,
-                                            style:
-                                                textTheme.titleSmall?.copyWith(
+                                            style: textTheme.titleSmall?.copyWith(
                                               fontWeight: FontWeight.bold,
                                             ),
                                           ),
                                         ),
-                                        if (!cat.isBuiltIn)
+                                        if (cat.name != CategoryConstants.other)
                                           IconButton(
-                                            icon: const Icon(
-                                                Icons.delete_outline),
+                                            icon: const Icon(Icons.delete_outline),
                                             iconSize: 20,
                                             color: colorScheme.error,
                                             tooltip: 'Delete category',
@@ -261,7 +267,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
                                           icon: const Icon(Icons.edit_outlined),
                                           iconSize: 20,
                                           color: colorScheme.onSurfaceVariant,
-                                          tooltip: 'Edit keywords',
+                                          tooltip: 'Edit category',
                                           onPressed: () async {
                                             await HapticFeedback.lightImpact();
                                             await _showEditDialog(cat);
@@ -276,29 +282,23 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
                                         child: Row(
                                           children: cat.keywords.map((kw) {
                                             return Padding(
-                                              padding: const EdgeInsets.only(
-                                                  right: 6),
+                                              padding: const EdgeInsets.only(right: 6),
                                               child: Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 10,
-                                                        vertical: 4),
+                                                padding: const EdgeInsets.symmetric(
+                                                    horizontal: 10, vertical: 4),
                                                 decoration: BoxDecoration(
-                                                  color: catColor.withValues(
-                                                      alpha: 0.1),
+                                                  color: catColor.withValues(alpha: 0.1),
                                                   borderRadius:
                                                       BorderRadius.circular(AppLayout.radiusXL),
                                                   border: Border.all(
-                                                    color: catColor.withValues(
-                                                        alpha: 0.3),
+                                                    color: catColor.withValues(alpha: 0.3),
                                                     width: 0.5,
                                                   ),
                                                 ),
                                                 child: Text(
                                                   kw,
                                                   style: textTheme.labelSmall
-                                                      ?.copyWith(
-                                                          color: catColor),
+                                                      ?.copyWith(color: catColor),
                                                 ),
                                               ),
                                             );
@@ -344,48 +344,123 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
   }
 }
 
-// ── Edit Keywords Dialog ─────────────────────────────────────────────────────
+// ── Icon Swatches List ────────────────────────────────────────────────────────
 
-class _EditKeywordsDialog extends StatefulWidget {
+const List<IconData> _categoryIconSwatches = [
+  Icons.directions_car_outlined,
+  Icons.restaurant_outlined,
+  Icons.subscriptions_outlined,
+  Icons.shopping_bag_outlined,
+  Icons.power_outlined,
+  Icons.medical_services_outlined,
+  Icons.sports_esports_outlined,
+  Icons.payment_outlined,
+  Icons.savings_outlined,
+  Icons.school_outlined,
+  Icons.flight_outlined,
+  Icons.home_outlined,
+  Icons.fitness_center_outlined,
+  Icons.local_grocery_store_outlined,
+  Icons.card_giftcard_outlined,
+  Icons.pets_outlined,
+  Icons.computer_outlined,
+  Icons.work_outlined,
+  Icons.child_friendly_outlined,
+  Icons.build_outlined,
+  Icons.local_gas_station_outlined,
+  Icons.movie_outlined,
+  Icons.phone_android_outlined,
+  Icons.category_outlined,
+];
+
+const List<Color> _categoryColorSwatches = [
+  Color(0xFFE53935), // Red
+  Color(0xFFE91E63), // Pink
+  Color(0xFF9C27B0), // Purple
+  Color(0xFF673AB7), // Deep Purple
+  Color(0xFF3F51B5), // Indigo
+  Color(0xFF2196F3), // Blue
+  Color(0xFF00BCD4), // Cyan
+  Color(0xFF009688), // Teal
+  Color(0xFF4CAF50), // Green
+  Color(0xFFFF9800), // Orange
+  Color(0xFFFF5722), // Deep Orange
+  Color(0xFF607D8B), // Blue Grey
+];
+
+// ── Edit Category Dialog ─────────────────────────────────────────────────────
+
+class _EditCategoryDialog extends StatefulWidget {
   final CategoryDefinition definition;
-  final Future<void> Function(CategoryDefinition) onSave;
+  final List<CategoryDefinition> existingCategories;
+  final Future<void> Function(String oldName, CategoryDefinition updated) onSave;
 
-  const _EditKeywordsDialog({
+  const _EditCategoryDialog({
     required this.definition,
+    required this.existingCategories,
     required this.onSave,
   });
 
   @override
-  State<_EditKeywordsDialog> createState() => _EditKeywordsDialogState();
+  State<_EditCategoryDialog> createState() => _EditCategoryDialogState();
 }
 
-class _EditKeywordsDialogState extends State<_EditKeywordsDialog> {
+class _EditCategoryDialogState extends State<_EditCategoryDialog> {
+  late TextEditingController _nameController;
+  final _addKeywordController = TextEditingController();
+  late Color _selectedColor;
+  late IconData _selectedIcon;
   late List<String> _keywords;
-  final _addController = TextEditingController();
   bool _saving = false;
+  String? _nameError;
 
   @override
   void initState() {
     super.initState();
+    _nameController = TextEditingController(text: widget.definition.name);
+    _selectedColor = Color(widget.definition.colorValue);
+    _selectedIcon = TransactionCategory.iconFor(widget.definition.name);
     _keywords = List.from(widget.definition.keywords);
   }
 
   @override
   void dispose() {
-    _addController.dispose();
+    _nameController.dispose();
+    _addKeywordController.dispose();
     super.dispose();
   }
 
   void _addKeyword() {
-    final kw = _addController.text.trim().toLowerCase();
+    final kw = _addKeywordController.text.trim().toLowerCase();
     if (kw.isEmpty || _keywords.contains(kw)) return;
     setState(() => _keywords.add(kw));
-    _addController.clear();
+    _addKeywordController.clear();
   }
 
   Future<void> _save() async {
+    final newName = _nameController.text.trim();
+    if (newName.isEmpty) {
+      setState(() => _nameError = 'Category name required');
+      return;
+    }
+    if (newName.toLowerCase() != widget.definition.name.toLowerCase()) {
+      final exists = widget.existingCategories.any(
+        (c) => c.name.toLowerCase() == newName.toLowerCase(),
+      );
+      if (exists) {
+        setState(() => _nameError = 'Category name already exists');
+        return;
+      }
+    }
+
     setState(() => _saving = true);
-    await widget.onSave(widget.definition.copyWith(keywords: _keywords));
+    final updated = widget.definition.copyWith(
+      name: newName,
+      colorValue: _selectedColor.value,
+      keywords: _keywords,
+      iconCodePoint: _selectedIcon.codePoint,
+    );
+    await widget.onSave(widget.definition.name, updated);
     await HapticFeedback.mediumImpact();
     if (mounted) Navigator.pop(context);
   }
@@ -393,94 +468,192 @@ class _EditKeywordsDialogState extends State<_EditKeywordsDialog> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final catColor = Color(widget.definition.colorValue);
+    final textTheme = Theme.of(context).textTheme;
 
     return AlertDialog(
-      title: Row(
-        children: [
-          Container(
-            width: 12,
-            height: 12,
-            decoration: BoxDecoration(
-              color: catColor,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text('${widget.definition.name} Keywords'),
-        ],
-      ),
+      title: const Text('Edit Category'),
       content: SizedBox(
         width: double.maxFinite,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _addController,
-                    decoration: InputDecoration(
-                      hintText: 'Add keyword…',
-                      isDense: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppLayout.radiusM),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Category Name
+              TextField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  labelText: 'Category Name',
+                  errorText: _nameError,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                  ),
+                  isDense: true,
+                ),
+                onChanged: (_) {
+                  if (_nameError != null) setState(() => _nameError = null);
+                },
+              ),
+              const SizedBox(height: 16),
+              // Icon Picker
+              Text(
+                'Icon',
+                style: textTheme.labelMedium
+                    ?.copyWith(color: colorScheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 120,
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 6,
+                    mainAxisSpacing: 8,
+                    crossAxisSpacing: 8,
+                  ),
+                  itemCount: _categoryIconSwatches.length,
+                  itemBuilder: (context, idx) {
+                    final icon = _categoryIconSwatches[idx];
+                    final isSelected = _selectedIcon.codePoint == icon.codePoint;
+                    return GestureDetector(
+                      onTap: () async {
+                        await HapticFeedback.selectionClick();
+                        setState(() => _selectedIcon = icon);
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? _selectedColor.withValues(alpha: 0.2)
+                              : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                          shape: BoxShape.circle,
+                          border: isSelected
+                              ? Border.all(color: _selectedColor, width: 2)
+                              : null,
+                        ),
+                        child: Icon(
+                          icon,
+                          size: 20,
+                          color: isSelected ? _selectedColor : colorScheme.onSurfaceVariant,
+                        ),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 10),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Colour Picker
+              Text(
+                'Colour',
+                style: textTheme.labelMedium
+                    ?.copyWith(color: colorScheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _categoryColorSwatches.map((color) {
+                  final selected = _selectedColor.value == color.value;
+                  return GestureDetector(
+                    onTap: () async {
+                      await HapticFeedback.selectionClick();
+                      setState(() => _selectedColor = color);
+                    },
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                        border: selected
+                            ? Border.all(color: colorScheme.onSurface, width: 2.5)
+                            : null,
+                      ),
+                      child: selected
+                          ? Icon(Icons.check,
+                              size: 16,
+                              color: ThemeData.estimateBrightnessForColor(color) ==
+                                      Brightness.dark
+                                  ? Colors.white
+                                  : Colors.black)
+                          : null,
                     ),
-                    onSubmitted: (_) async {
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+              // Keywords
+              Text(
+                'Keywords',
+                style: textTheme.labelMedium
+                    ?.copyWith(color: colorScheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _addKeywordController,
+                      decoration: InputDecoration(
+                        hintText: 'Add keyword…',
+                        isDense: true,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                      ),
+                      onSubmitted: (_) async {
+                        await HapticFeedback.lightImpact();
+                        _addKeyword();
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.add_circle_outline),
+                    color: colorScheme.primary,
+                    onPressed: () async {
                       await HapticFeedback.lightImpact();
                       _addKeyword();
                     },
                   ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.add_circle_outline),
-                  color: colorScheme.primary,
-                  onPressed: () async {
-                    await HapticFeedback.lightImpact();
-                    _addKeyword();
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (_keywords.isEmpty)
-              Text(
-                'No keywords — this category will only be used explicitly.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                      fontStyle: FontStyle.italic,
-                    ),
-              )
-            else
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: _keywords.map((kw) {
-                  return Chip(
-                    label: Text(kw),
-                    labelStyle: Theme.of(context)
-                        .textTheme
-                        .labelSmall
-                        ?.copyWith(color: catColor),
-                    backgroundColor: catColor.withValues(alpha: 0.1),
-                    side: BorderSide(
-                        color: catColor.withValues(alpha: 0.3), width: 0.5),
-                    deleteIconColor: colorScheme.onSurfaceVariant,
-                    onDeleted: () async {
-                      await HapticFeedback.lightImpact();
-                      setState(() => _keywords.remove(kw));
-                    },
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                  );
-                }).toList(),
+                ],
               ),
-          ],
+              const SizedBox(height: 8),
+              if (_keywords.isEmpty)
+                Text(
+                  'No keywords — this category will only be used explicitly.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontStyle: FontStyle.italic,
+                      ),
+                )
+              else
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: _keywords.map((kw) {
+                    return Chip(
+                      label: Text(kw),
+                      labelStyle: Theme.of(context)
+                          .textTheme
+                          .labelSmall
+                          ?.copyWith(color: _selectedColor),
+                      backgroundColor: _selectedColor.withValues(alpha: 0.1),
+                      side: BorderSide(
+                          color: _selectedColor.withValues(alpha: 0.3), width: 0.5),
+                      deleteIconColor: colorScheme.onSurfaceVariant,
+                      onDeleted: () async {
+                        await HapticFeedback.lightImpact();
+                        setState(() => _keywords.remove(kw));
+                      },
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                    );
+                  }).toList(),
+                ),
+            ],
+          ),
         ),
       ),
       actions: [
@@ -519,24 +692,10 @@ class _AddCategoryDialog extends StatefulWidget {
 }
 
 class _AddCategoryDialogState extends State<_AddCategoryDialog> {
-  static const _colorSwatches = [
-    Color(0xFFE53935), // Red
-    Color(0xFFE91E63), // Pink
-    Color(0xFF9C27B0), // Purple
-    Color(0xFF673AB7), // Deep Purple
-    Color(0xFF3F51B5), // Indigo
-    Color(0xFF2196F3), // Blue
-    Color(0xFF00BCD4), // Cyan
-    Color(0xFF009688), // Teal
-    Color(0xFF4CAF50), // Green
-    Color(0xFFFF9800), // Orange
-    Color(0xFFFF5722), // Deep Orange
-    Color(0xFF607D8B), // Blue Grey
-  ];
-
   final _nameController = TextEditingController();
   final _keywordController = TextEditingController();
-  Color _selectedColor = _colorSwatches[5]; // Blue default
+  Color _selectedColor = _categoryColorSwatches[5]; // Blue default
+  IconData _selectedIcon = _categoryIconSwatches[0];
   final List<String> _keywords = [];
   bool _saving = false;
   String? _nameError;
@@ -562,7 +721,7 @@ class _AddCategoryDialogState extends State<_AddCategoryDialog> {
       return;
     }
     final exists = widget.existingCategories.any(
-      (c) => c.name.toLowerCase() == name.toLowerCase()
+      (c) => c.name.toLowerCase() == name.toLowerCase(),
     );
     if (exists) {
       setState(() => _nameError = 'Category already exists');
@@ -577,6 +736,7 @@ class _AddCategoryDialogState extends State<_AddCategoryDialog> {
       colorValue: _selectedColor.value,
       keywords: _keywords,
       isBuiltIn: false,
+      iconCodePoint: _selectedIcon.codePoint,
     );
     await widget.onSave(def);
     await HapticFeedback.mediumImpact();
@@ -592,133 +752,181 @@ class _AddCategoryDialogState extends State<_AddCategoryDialog> {
       title: const Text('New Category'),
       content: SizedBox(
         width: double.maxFinite,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Name field
-            TextField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                labelText: 'Category name',
-                errorText: _nameError,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppLayout.radiusM),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Name field
+              TextField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  labelText: 'Category name',
+                  errorText: _nameError,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                  ),
+                  isDense: true,
                 ),
-                isDense: true,
+                onChanged: (_) {
+                  if (_nameError != null) {
+                    setState(() => _nameError = null);
+                  }
+                },
               ),
-              onChanged: (_) {
-                if (_nameError != null) {
-                  setState(() => _nameError = null);
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-            // Color picker
-            Text(
-              'Colour',
-              style: textTheme.labelMedium
-                  ?.copyWith(color: colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _colorSwatches.map((color) {
-                final selected = _selectedColor == color;
-                return GestureDetector(
-                  onTap: () async {
-                    await HapticFeedback.selectionClick();
-                    setState(() => _selectedColor = color);
+              const SizedBox(height: 16),
+              // Icon Picker
+              Text(
+                'Icon',
+                style: textTheme.labelMedium
+                    ?.copyWith(color: colorScheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 120,
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 6,
+                    mainAxisSpacing: 8,
+                    crossAxisSpacing: 8,
+                  ),
+                  itemCount: _categoryIconSwatches.length,
+                  itemBuilder: (context, idx) {
+                    final icon = _categoryIconSwatches[idx];
+                    final isSelected = _selectedIcon.codePoint == icon.codePoint;
+                    return GestureDetector(
+                      onTap: () async {
+                        await HapticFeedback.selectionClick();
+                        setState(() => _selectedIcon = icon);
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? _selectedColor.withValues(alpha: 0.2)
+                              : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                          shape: BoxShape.circle,
+                          border: isSelected
+                              ? Border.all(color: _selectedColor, width: 2)
+                              : null,
+                        ),
+                        child: Icon(
+                          icon,
+                          size: 20,
+                          color: isSelected ? _selectedColor : colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    );
                   },
-                  child: Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                      border: selected
-                          ? Border.all(color: colorScheme.onSurface, width: 2.5)
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Color picker
+              Text(
+                'Colour',
+                style: textTheme.labelMedium
+                    ?.copyWith(color: colorScheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _categoryColorSwatches.map((color) {
+                  final selected = _selectedColor == color;
+                  return GestureDetector(
+                    onTap: () async {
+                      await HapticFeedback.selectionClick();
+                      setState(() => _selectedColor = color);
+                    },
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                        border: selected
+                            ? Border.all(color: colorScheme.onSurface, width: 2.5)
+                            : null,
+                      ),
+                      child: selected
+                          ? Icon(Icons.check,
+                              size: 16,
+                              color:
+                                  ThemeData.estimateBrightnessForColor(color) ==
+                                          Brightness.dark
+                                      ? Colors.white
+                                      : Colors.black)
                           : null,
                     ),
-                    child: selected
-                        ? Icon(Icons.check,
-                            size: 16,
-                            color:
-                                ThemeData.estimateBrightnessForColor(color) ==
-                                        Brightness.dark
-                                    ? Colors.white
-                                    : Colors.black)
-                        : null,
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 16),
-            // Keywords
-            Text(
-              'Keywords',
-              style: textTheme.labelMedium
-                  ?.copyWith(color: colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _keywordController,
-                    decoration: InputDecoration(
-                      hintText: 'Add keyword…',
-                      isDense: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+              // Keywords
+              Text(
+                'Keywords',
+                style: textTheme.labelMedium
+                    ?.copyWith(color: colorScheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _keywordController,
+                      decoration: InputDecoration(
+                        hintText: 'Add keyword…',
+                        isDense: true,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 10),
+                      onSubmitted: (_) async {
+                        await HapticFeedback.lightImpact();
+                        _addKeyword();
+                      },
                     ),
-                    onSubmitted: (_) async {
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.add_circle_outline),
+                    color: colorScheme.primary,
+                    onPressed: () async {
                       await HapticFeedback.lightImpact();
                       _addKeyword();
                     },
                   ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.add_circle_outline),
-                  color: colorScheme.primary,
-                  onPressed: () async {
-                    await HapticFeedback.lightImpact();
-                    _addKeyword();
-                  },
+                ],
+              ),
+              if (_keywords.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: _keywords.map((kw) {
+                    return Chip(
+                      label: Text(kw),
+                      labelStyle:
+                          textTheme.labelSmall?.copyWith(color: _selectedColor),
+                      backgroundColor: _selectedColor.withValues(alpha: 0.1),
+                      side: BorderSide(
+                          color: _selectedColor.withValues(alpha: 0.3),
+                          width: 0.5),
+                      deleteIconColor: colorScheme.onSurfaceVariant,
+                      onDeleted: () async {
+                        await HapticFeedback.lightImpact();
+                        setState(() => _keywords.remove(kw));
+                      },
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                    );
+                  }).toList(),
                 ),
               ],
-            ),
-            if (_keywords.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: _keywords.map((kw) {
-                  return Chip(
-                    label: Text(kw),
-                    labelStyle:
-                        textTheme.labelSmall?.copyWith(color: _selectedColor),
-                    backgroundColor: _selectedColor.withValues(alpha: 0.1),
-                    side: BorderSide(
-                        color: _selectedColor.withValues(alpha: 0.3),
-                        width: 0.5),
-                    deleteIconColor: colorScheme.onSurfaceVariant,
-                    onDeleted: () async {
-                      await HapticFeedback.lightImpact();
-                      setState(() => _keywords.remove(kw));
-                    },
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                  );
-                }).toList(),
-              ),
             ],
-          ],
+          ),
         ),
       ),
       actions: [

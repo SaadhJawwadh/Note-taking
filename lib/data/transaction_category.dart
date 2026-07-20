@@ -74,27 +74,55 @@ class TransactionCategory {
   }
 
   static IconData iconFor(String category) {
+    if (_cache.isNotEmpty) {
+      for (final def in _cache) {
+        if (def.name == category && def.iconCodePoint != null) {
+          return IconData(def.iconCodePoint!, fontFamily: 'MaterialIcons');
+        }
+      }
+    }
     switch (category.toLowerCase()) {
       case 'transport':
+      case 'commute':
         return Icons.directions_car_outlined;
       case 'food & dining':
+      case 'food':
         return Icons.restaurant_outlined;
       case 'subscriptions':
         return Icons.subscriptions_outlined;
       case 'shopping':
         return Icons.shopping_bag_outlined;
       case 'utilities':
+      case 'bills':
         return Icons.power_outlined;
       case 'health':
+      case 'medical':
         return Icons.medical_services_outlined;
       case 'entertainment':
+      case 'leisure':
         return Icons.sports_esports_outlined;
       case 'payments':
+      case 'loans':
         return Icons.payment_outlined;
       case 'deposit':
+      case 'income':
+      case 'salary':
         return Icons.savings_outlined;
+      case 'education':
+        return Icons.school_outlined;
+      case 'travel':
+        return Icons.flight_outlined;
+      case 'housing':
+      case 'home':
+        return Icons.home_outlined;
+      case 'fitness':
+        return Icons.fitness_center_outlined;
+      case 'groceries':
+        return Icons.local_grocery_store_outlined;
+      case 'gifts':
+        return Icons.card_giftcard_outlined;
       default:
-        return Icons.help_outline;
+        return Icons.category_outlined;
     }
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_quill/quill_delta.dart';
@@ -23,6 +24,7 @@ import 'package:intl/intl.dart';
 import '../services/local_ai_service.dart';
 import '../services/notification_service.dart';
 import '../providers/note_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../utils/app_globals.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_layout.dart';
@@ -102,6 +104,22 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   List<int> _searchOffsets = [];
   int _currentSearchIndex = -1;
   bool _isEditingTableCell = false;
+
+  // Slash commands state
+  bool _showSlashMenu = false;
+  String _slashQuery = '';
+  int _slashLineStart = 0;
+
+  static final List<({String label, String command, IconData icon, String description})> _slashCommands = [
+    (label: 'Checklist', command: 'todo', icon: Icons.check_box_outlined, description: 'Interactive to-do checkbox'),
+    (label: 'Table', command: 'table', icon: Icons.table_chart_outlined, description: 'Insert 3x3 data grid'),
+    (label: 'Code Block', command: 'code', icon: Icons.code, description: 'Monospace code container'),
+    (label: 'Heading 1', command: 'h1', icon: Icons.title, description: 'Large main heading'),
+    (label: 'Heading 2', command: 'h2', icon: Icons.text_fields, description: 'Medium section heading'),
+    (label: 'Quote', command: 'quote', icon: Icons.format_quote, description: 'Callout blockquote'),
+    (label: 'Bullet List', command: 'bullet', icon: Icons.format_list_bulleted, description: 'Unordered bullet points'),
+    (label: 'Numbered List', command: 'number', icon: Icons.format_list_numbered, description: 'Sequential numbered list'),
+  ];
 
   late TextEditingController _searchController;
   late FocusNode _searchFocusNode;
@@ -248,6 +266,17 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   }
 
   void _onContentChanged() {
+    _checkSlashCommands();
+
+    // Dismiss suggestions immediately when the user is actively typing
+    if (_suggestedTags.isNotEmpty) {
+      if (mounted) {
+        setState(() {
+          _suggestedTags = [];
+        });
+      }
+    }
+
     if (_debounce?.isActive ?? false) _debounce?.cancel();
 
     _debounce = Timer(const Duration(seconds: 2), () {
@@ -260,7 +289,103 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
     _debounceTagTimer?.cancel();
     _debounceTagTimer =
-        Timer(const Duration(seconds: 3), _getAutoTagSuggestions);
+        Timer(const Duration(seconds: 5), _getAutoTagSuggestions);
+  }
+
+  void _checkSlashCommands() {
+    final selection = _quillController.selection;
+    if (selection.isCollapsed && selection.baseOffset > 0) {
+      final plainText = _quillController.document.toPlainText();
+      final cursor = selection.baseOffset;
+      if (cursor <= plainText.length) {
+        final lineStart = plainText.lastIndexOf('\n', cursor - 1) + 1;
+        final linePrefix = plainText.substring(lineStart, cursor);
+        if (linePrefix.startsWith('/')) {
+          final query = linePrefix.substring(1).toLowerCase();
+          if (!_showSlashMenu || _slashQuery != query) {
+            setState(() {
+              _showSlashMenu = true;
+              _slashQuery = query;
+              _slashLineStart = lineStart;
+            });
+          }
+          return;
+        }
+      }
+    }
+    if (_showSlashMenu) {
+      setState(() {
+        _showSlashMenu = false;
+      });
+    }
+  }
+
+  void _executeSlashCommand(String command) {
+    HapticFeedback.lightImpact();
+    final currentCursor = _quillController.selection.baseOffset;
+    final deleteLength = currentCursor - _slashLineStart;
+    if (deleteLength > 0 && deleteLength <= currentCursor) {
+      _quillController.replaceText(
+        _slashLineStart,
+        deleteLength,
+        '',
+        TextSelection.collapsed(offset: _slashLineStart),
+      );
+    }
+    setState(() => _showSlashMenu = false);
+
+    switch (command) {
+      case 'todo':
+        _quillController.formatSelection(Attribute.unchecked);
+        break;
+      case 'table':
+        _insertTableDirect();
+        break;
+      case 'code':
+        _quillController.formatSelection(Attribute.codeBlock);
+        break;
+      case 'h1':
+        _quillController.formatSelection(Attribute.h1);
+        break;
+      case 'h2':
+        _quillController.formatSelection(Attribute.h2);
+        break;
+      case 'quote':
+        _quillController.formatSelection(Attribute.blockQuote);
+        break;
+      case 'bullet':
+        _quillController.formatSelection(Attribute.ul);
+        break;
+      case 'number':
+        _quillController.formatSelection(Attribute.ol);
+        break;
+    }
+  }
+
+  void _insertTableDirect({int rows = 3, int cols = 3}) {
+    final rowsList = List.generate(
+      rows,
+      (rIndex) => List.generate(
+        cols,
+        (cIndex) => rIndex == 0 ? 'Header ${cIndex + 1}' : 'Cell',
+      ),
+    );
+    final jsonStr = jsonEncode(rowsList);
+
+    final index = _quillController.selection.baseOffset;
+    final length = _quillController.selection.extentOffset - index;
+
+    _quillController.replaceText(
+      index,
+      length < 0 ? 0 : length,
+      TableBlockEmbed(jsonStr),
+      null,
+    );
+
+    _quillController.updateSelection(
+      TextSelection.collapsed(offset: index + 1),
+      ChangeSource.local,
+    );
   }
 
   Future<void> _getAutoTagSuggestions() async {
@@ -918,73 +1043,261 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
 
   /// Jump-to-heading navigation for long notes.
-  void _showOutlineSheet() {
-    HapticFeedback.selectionClick();
-    final headings = <({String text, int offset, int level})>[];
-    for (final node in _quillController.document.root.children) {
-      if (node is Line) {
-        final header = node.style.attributes[Attribute.header.key]?.value;
-        final text = node.toPlainText().trim();
-        if (header is int && text.isNotEmpty) {
-          headings.add((text: text, offset: node.documentOffset, level: header));
-        }
-      }
-    }
+  /// Displays word count, character count, reading time, and note timestamps.
+  void _showNoteDetailsSheet() {
+    HapticFeedback.lightImpact();
+    final plainText = _quillController.document.toPlainText().trim();
+    final words = plainText.isEmpty
+        ? 0
+        : plainText.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
+    final chars = plainText.length;
+    final readingTimeMin = (words / 200).ceil();
+    final readingTimeStr = words == 0
+        ? '0 min read'
+        : readingTimeMin <= 1
+            ? '1 min read'
+            : '$readingTimeMin min read';
+
+    final createdAt = widget.note?.dateCreated;
+    final updatedAt = widget.note?.dateModified;
+    final dateFormat = DateFormat('MMM d, yyyy · h:mm a');
 
     showModalBottomSheet(
       context: context,
       showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
-        child: headings.isEmpty
-            ? Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (sheetContext) {
+        final theme = Theme.of(sheetContext);
+        final colorScheme = theme.colorScheme;
+
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Icon(Icons.toc_outlined,
-                        size: 48,
-                        color:
-                            Theme.of(sheetContext).colorScheme.outlineVariant),
-                    const SizedBox(height: 12),
+                    Icon(Icons.info_outline, color: colorScheme.primary, size: 24),
+                    const SizedBox(width: 12),
                     Text(
-                      'No headings yet.\nType "# " at the start of a line to create one.',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
-                          color:
-                              Theme.of(sheetContext).colorScheme.onSurfaceVariant),
+                      'Note Details & Stats',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
-              )
-            : ListView(
-                shrinkWrap: true,
-                children: headings
-                    .map(
-                      (h) => ListTile(
-                        contentPadding: EdgeInsets.only(
-                            left: 16.0 + (h.level - 1) * 20.0, right: 16),
-                        leading: Icon(
-                          h.level == 1
-                              ? Icons.looks_one_outlined
-                              : h.level == 2
-                                  ? Icons.looks_two_outlined
-                                  : Icons.looks_3_outlined,
-                        ),
-                        title: Text(h.text,
-                            maxLines: 1, overflow: TextOverflow.ellipsis),
-                        onTap: () {
-                          Navigator.pop(sheetContext);
-                          _quillController.updateSelection(
-                            TextSelection.collapsed(offset: h.offset),
-                            ChangeSource.local,
-                          );
-                          _focusNode.requestFocus();
-                        },
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    _buildStatCard(
+                      context,
+                      icon: Icons.notes,
+                      value: '$words',
+                      label: 'Words',
+                    ),
+                    const SizedBox(width: 12),
+                    _buildStatCard(
+                      context,
+                      icon: Icons.text_fields,
+                      value: '$chars',
+                      label: 'Characters',
+                    ),
+                    const SizedBox(width: 12),
+                    _buildStatCard(
+                      context,
+                      icon: Icons.timer_outlined,
+                      value: readingTimeStr,
+                      label: 'Read Time',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                    border: Border.all(
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Folder', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant)),
+                          Text(_folder, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
+                        ],
                       ),
-                    )
-                    .toList(),
+                      if (createdAt != null) ...[
+                        const Divider(height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Created', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant)),
+                            Text(dateFormat.format(createdAt), style: theme.textTheme.bodySmall),
+                          ],
+                        ),
+                      ],
+                      if (updatedAt != null) ...[
+                        const Divider(height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Last Modified', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant)),
+                            Text(dateFormat.format(updatedAt), style: theme.textTheme.bodySmall),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStatCard(BuildContext context, {required IconData icon, required String value, required String label}) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(AppLayout.radiusM),
+          border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 20, color: colorScheme.primary),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+
+  /// Displays sharing options for exporting plain text, markdown, or copying to clipboard.
+  void _showShareExportSheet() {
+    HapticFeedback.lightImpact();
+    final title = _titleController.text.trim();
+    final delta = _quillController.document.toDelta();
+    final markdown = RichTextUtils.deltaToMarkdown(delta);
+    final plainText = _quillController.document.toPlainText().trim();
+    final shareContent = title.isEmpty ? plainText : '$title\n\n$plainText';
+
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (sheetContext) {
+        final theme = Theme.of(sheetContext);
+        final colorScheme = theme.colorScheme;
+
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.share_outlined, color: colorScheme.primary, size: 24),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Share & Export Note',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: const Icon(Icons.text_snippet_outlined),
+                  title: const Text('Share as Plain Text'),
+                  subtitle: const Text('Send text to other apps or messaging'),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    if (shareContent.isNotEmpty) {
+                      Share.share(shareContent, subject: title.isEmpty ? 'Note' : title);
+                    }
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.code_outlined),
+                  title: const Text('Share as Markdown'),
+                  subtitle: const Text('Preserve bold, lists, and headers formatting'),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    final mdContent = title.isEmpty ? markdown : '# $title\n\n$markdown';
+                    if (mdContent.isNotEmpty) {
+                      Share.share(mdContent, subject: title.isEmpty ? 'Note' : title);
+                    }
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.copy_outlined),
+                  title: const Text('Copy to Clipboard'),
+                  subtitle: const Text('Copy note content to clipboard'),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(sheetContext);
+                    if (shareContent.isNotEmpty) {
+                      await Clipboard.setData(ClipboardData(text: shareContent));
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Note copied to clipboard')),
+                        );
+                      }
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -1465,39 +1778,253 @@ $content
     );
   }
 
+  Widget _buildSlashMenuOverlay(ThemeData theme, ColorScheme colorScheme) {
+    final filteredCommands = _slashCommands
+        .where((cmd) =>
+            cmd.command.startsWith(_slashQuery) ||
+            cmd.label.toLowerCase().contains(_slashQuery))
+        .toList();
+
+    if (filteredCommands.isEmpty) return const SizedBox.shrink();
+
+    return AnimatedContainer(
+      duration: AppLayout.animShort,
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      constraints: const BoxConstraints(maxHeight: 240),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(AppLayout.radiusXL),
+        boxShadow: AppLayout.softShadow(context),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppLayout.radiusXL),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+                child: Row(
+                  children: [
+                    Icon(Icons.bolt, size: 16, color: colorScheme.primary),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Slash Commands',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      'Type to filter',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  itemCount: filteredCommands.length,
+                  itemBuilder: (context, index) {
+                    final cmd = filteredCommands[index];
+                    return ListTile(
+                      dense: true,
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                      leading: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: colorScheme.primaryContainer.withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                        ),
+                        child: Icon(cmd.icon, size: 18, color: colorScheme.primary),
+                      ),
+                      title: Row(
+                        children: [
+                          Text(
+                            cmd.label,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: colorScheme.surfaceContainerHighest,
+                              borderRadius:
+                                  BorderRadius.circular(AppLayout.radiusS),
+                            ),
+                            child: Text(
+                              '/${cmd.command}',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                fontFamily: 'monospace',
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      subtitle: Text(
+                        cmd.description,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      onTap: () => _executeSlashCommand(cmd.command),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_lockAuthPassed) {
       final cs = Theme.of(context).colorScheme;
       return Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.maybePop(context),
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                cs.surface,
+                cs.surfaceContainerHigh,
+                cs.surfaceContainerHighest,
+              ],
+            ),
           ),
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Stack(
             children: [
-              Icon(Icons.lock_outline, size: 72, color: cs.primary),
-              const SizedBox(height: 20),
-              Text(
-                'This note is locked',
-                style: Theme.of(context).textTheme.headlineSmall,
+              Positioned(
+                top: -100,
+                right: -100,
+                child: Container(
+                  width: 300,
+                  height: 300,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: cs.primary.withValues(alpha: 0.15),
+                  ),
+                ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Authenticate to view it',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: cs.onSurfaceVariant,
+              Positioned(
+                bottom: -150,
+                left: -150,
+                child: Container(
+                  width: 400,
+                  height: 400,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: cs.tertiary.withValues(alpha: 0.1),
+                  ),
+                ),
+              ),
+              SafeArea(
+                child: Column(
+                  children: [
+                    Align(
+                      alignment: Alignment.topLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back),
+                          onPressed: () => Navigator.maybePop(context),
+                        ),
+                      ),
                     ),
-              ),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: _authenticateForLockedNote,
-                icon: const Icon(Icons.fingerprint),
-                label: const Text('Unlock'),
+                    Expanded(
+                      child: Center(
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 24),
+                          padding: const EdgeInsets.all(32),
+                          decoration: BoxDecoration(
+                            color: cs.surface.withValues(alpha: 0.4),
+                            borderRadius: BorderRadius.circular(28),
+                            border: Border.all(
+                              color: cs.outlineVariant.withValues(alpha: 0.2),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(28),
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  TweenAnimationBuilder<double>(
+                                    duration: const Duration(milliseconds: 600),
+                                    tween: Tween(begin: 0.0, end: 1.0),
+                                    builder: (context, value, child) {
+                                      return Transform.scale(
+                                        scale: value,
+                                        child: child,
+                                      );
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: cs.primaryContainer.withValues(alpha: 0.2),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(Icons.lock_outline, size: 48, color: cs.primary),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  Text(
+                                    'This note is locked',
+                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Authenticate to view its content',
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                          color: cs.onSurfaceVariant,
+                                        ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 32),
+                                  FilledButton.icon(
+                                    onPressed: _authenticateForLockedNote,
+                                    icon: const Icon(Icons.fingerprint),
+                                    label: const Text('Unlock Note'),
+                                    style: FilledButton.styleFrom(
+                                      minimumSize: const Size(double.infinity, 54),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -1697,8 +2224,11 @@ $content
                                           case 'folder':
                                             _pickFolder();
                                             break;
-                                          case 'outline':
-                                            _showOutlineSheet();
+                                          case 'details':
+                                            _showNoteDetailsSheet();
+                                            break;
+                                          case 'share':
+                                            _showShareExportSheet();
                                             break;
                                           case 'lock':
                                             _toggleNoteLock();
@@ -1753,11 +2283,19 @@ $content
                                           ),
                                         ),
                                         const PopupMenuItem(
-                                          value: 'outline',
+                                          value: 'details',
                                           child: ListTile(
                                             contentPadding: EdgeInsets.zero,
-                                            leading: Icon(Icons.toc_outlined),
-                                            title: Text('Outline'),
+                                            leading: Icon(Icons.info_outline),
+                                            title: Text('Note Details & Stats'),
+                                          ),
+                                        ),
+                                        const PopupMenuItem(
+                                          value: 'share',
+                                          child: ListTile(
+                                            contentPadding: EdgeInsets.zero,
+                                            leading: Icon(Icons.share_outlined),
+                                            title: Text('Share & Export'),
                                           ),
                                         ),
                                         PopupMenuItem(
@@ -2087,6 +2625,28 @@ $content
                                           ),
                                         ),
                                       ),
+                                      code: DefaultTextBlockStyle(
+                                        TextStyle(
+                                          color: noteScheme.onSurface,
+                                          fontFamily: 'monospace',
+                                          fontSize: 13.5,
+                                          height: 1.4,
+                                        ),
+                                        const HorizontalSpacing(12, 12),
+                                        const VerticalSpacing(8, 8),
+                                        const VerticalSpacing(0, 0),
+                                        BoxDecoration(
+                                          color: noteScheme.surfaceContainerHighest
+                                              .withValues(alpha: 0.5),
+                                          borderRadius:
+                                              BorderRadius.circular(AppLayout.radiusM),
+                                          border: Border.all(
+                                            color: noteScheme.outlineVariant
+                                                .withValues(alpha: 0.4),
+                                            width: 1.0,
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -2116,151 +2676,163 @@ $content
                         ),
                       ),
                     ),
-                      // Secondary Formatting Bar
+                      // Slash Commands Overlay Card
+                      if (_showSlashMenu && !_isImageSelected)
+                        _buildSlashMenuOverlay(theme, noteScheme),
+
+                      // Secondary Floating Glassmorphism Formatting Bar
                       if (_showFormattingBar && !_isImageSelected)
                         SafeArea(
                           top: false,
                           bottom: false,
                           child: AnimatedContainer(
                             duration: AppLayout.animShort,
-                            margin: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 4),
+                            margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                             decoration: BoxDecoration(
-                              color: isSystemDefault
-                                  ? theme.colorScheme.surfaceContainerHigh
-                                  : ColorScheme.fromSeed(
-                                          seedColor: Color(color),
-                                          brightness: theme.brightness)
-                                      .surfaceContainerHigh,
+                              color: (isSystemDefault
+                                      ? theme.colorScheme.surfaceContainerHigh
+                                      : ColorScheme.fromSeed(
+                                              seedColor: Color(color),
+                                              brightness: theme.brightness)
+                                          .surfaceContainerHigh)
+                                  .withValues(alpha: 0.90),
                               borderRadius:
                                   BorderRadius.circular(AppLayout.radiusXL),
                               boxShadow: AppLayout.softShadow(context),
                               border: Border.all(
-                                color: noteScheme.outlineVariant.withValues(alpha: 0.3),
+                                color: noteScheme.outlineVariant.withValues(alpha: 0.35),
+                                width: 1.0,
                               ),
                             ),
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              child: Row(
-                                children: [
-                                  QuillToolbarToggleStyleButton(
-                                    attribute: Attribute.bold,
-                                    controller: _quillController,
-                                    options: QuillToolbarToggleStyleButtonOptions(
-                                        iconData: Icons.format_bold,
-                                        iconTheme: QuillIconTheme(
-                                            iconButtonUnselectedData:
-                                                IconButtonData(
-                                                    style: IconButton.styleFrom(
-                                                        foregroundColor:
-                                                            textColor)),
-                                            iconButtonSelectedData:
-                                                IconButtonData(
-                                                    style: IconButton.styleFrom(
-                                                        foregroundColor: theme
-                                                            .colorScheme
-                                                            .onPrimary)))),
+                            child: ClipRRect(
+                              borderRadius:
+                                  BorderRadius.circular(AppLayout.radiusXL),
+                              child: BackdropFilter(
+                                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  child: Row(
+                                    children: [
+                                      QuillToolbarToggleStyleButton(
+                                        attribute: Attribute.bold,
+                                        controller: _quillController,
+                                        options: QuillToolbarToggleStyleButtonOptions(
+                                            iconData: Icons.format_bold,
+                                            iconTheme: QuillIconTheme(
+                                                iconButtonUnselectedData:
+                                                    IconButtonData(
+                                                        style: IconButton.styleFrom(
+                                                            foregroundColor:
+                                                                textColor)),
+                                                iconButtonSelectedData:
+                                                    IconButtonData(
+                                                        style: IconButton.styleFrom(
+                                                            foregroundColor: theme
+                                                                .colorScheme
+                                                                .onPrimary)))),
+                                      ),
+                                      QuillToolbarToggleStyleButton(
+                                        attribute: Attribute.italic,
+                                        controller: _quillController,
+                                        options: QuillToolbarToggleStyleButtonOptions(
+                                            iconData: Icons.format_italic,
+                                            iconTheme: QuillIconTheme(
+                                                iconButtonUnselectedData:
+                                                    IconButtonData(
+                                                        style: IconButton.styleFrom(
+                                                            foregroundColor:
+                                                                textColor)),
+                                                iconButtonSelectedData:
+                                                    IconButtonData(
+                                                        style: IconButton.styleFrom(
+                                                            foregroundColor: theme
+                                                                .colorScheme
+                                                                .onPrimary)))),
+                                      ),
+                                      QuillToolbarToggleStyleButton(
+                                        attribute: Attribute.ol,
+                                        controller: _quillController,
+                                        options: QuillToolbarToggleStyleButtonOptions(
+                                            iconData: Icons.format_list_numbered,
+                                            iconTheme: QuillIconTheme(
+                                                iconButtonUnselectedData:
+                                                    IconButtonData(
+                                                        style: IconButton.styleFrom(
+                                                            foregroundColor:
+                                                                textColor)),
+                                                iconButtonSelectedData:
+                                                    IconButtonData(
+                                                        style: IconButton.styleFrom(
+                                                            foregroundColor: theme
+                                                                .colorScheme
+                                                                .onPrimary)))),
+                                      ),
+                                      QuillToolbarToggleStyleButton(
+                                        attribute: Attribute.ul,
+                                        controller: _quillController,
+                                        options: QuillToolbarToggleStyleButtonOptions(
+                                            iconData: Icons.format_list_bulleted,
+                                            iconTheme: QuillIconTheme(
+                                                iconButtonUnselectedData:
+                                                    IconButtonData(
+                                                        style: IconButton.styleFrom(
+                                                            foregroundColor:
+                                                                textColor)),
+                                                iconButtonSelectedData:
+                                                    IconButtonData(
+                                                        style: IconButton.styleFrom(
+                                                            foregroundColor: theme
+                                                                .colorScheme
+                                                                .onPrimary)))),
+                                      ),
+                                      QuillToolbarToggleStyleButton(
+                                        attribute: Attribute.blockQuote,
+                                        controller: _quillController,
+                                        options: QuillToolbarToggleStyleButtonOptions(
+                                            iconData: Icons.format_quote,
+                                            iconTheme: QuillIconTheme(
+                                                iconButtonUnselectedData:
+                                                    IconButtonData(
+                                                        style: IconButton.styleFrom(
+                                                            foregroundColor:
+                                                                textColor)),
+                                                iconButtonSelectedData:
+                                                    IconButtonData(
+                                                        style: IconButton.styleFrom(
+                                                            foregroundColor: theme
+                                                                .colorScheme
+                                                                .onPrimary)))),
+                                      ),
+                                      QuillToolbarToggleStyleButton(
+                                        attribute: Attribute.codeBlock,
+                                        controller: _quillController,
+                                        options: QuillToolbarToggleStyleButtonOptions(
+                                            iconData: Icons.code,
+                                            iconTheme: QuillIconTheme(
+                                                iconButtonUnselectedData:
+                                                    IconButtonData(
+                                                        style: IconButton.styleFrom(
+                                                            foregroundColor:
+                                                                textColor)),
+                                                iconButtonSelectedData:
+                                                    IconButtonData(
+                                                        style: IconButton.styleFrom(
+                                                            foregroundColor: theme
+                                                                .colorScheme
+                                                                .onPrimary)))),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.table_chart_outlined),
+                                        tooltip: 'Insert Table',
+                                        onPressed: _showTableInsertionDialog,
+                                        style: IconButton.styleFrom(
+                                          foregroundColor: textColor,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  QuillToolbarToggleStyleButton(
-                                    attribute: Attribute.italic,
-                                    controller: _quillController,
-                                    options: QuillToolbarToggleStyleButtonOptions(
-                                        iconData: Icons.format_italic,
-                                        iconTheme: QuillIconTheme(
-                                            iconButtonUnselectedData:
-                                                IconButtonData(
-                                                    style: IconButton.styleFrom(
-                                                        foregroundColor:
-                                                            textColor)),
-                                            iconButtonSelectedData:
-                                                IconButtonData(
-                                                    style: IconButton.styleFrom(
-                                                        foregroundColor: theme
-                                                            .colorScheme
-                                                            .onPrimary)))),
-                                  ),
-                                  QuillToolbarToggleStyleButton(
-                                    attribute: Attribute.ol,
-                                    controller: _quillController,
-                                    options: QuillToolbarToggleStyleButtonOptions(
-                                        iconData: Icons.format_list_numbered,
-                                        iconTheme: QuillIconTheme(
-                                            iconButtonUnselectedData:
-                                                IconButtonData(
-                                                    style: IconButton.styleFrom(
-                                                        foregroundColor:
-                                                            textColor)),
-                                            iconButtonSelectedData:
-                                                IconButtonData(
-                                                    style: IconButton.styleFrom(
-                                                        foregroundColor: theme
-                                                            .colorScheme
-                                                            .onPrimary)))),
-                                  ),
-                                  QuillToolbarToggleStyleButton(
-                                    attribute: Attribute.ul,
-                                    controller: _quillController,
-                                    options: QuillToolbarToggleStyleButtonOptions(
-                                        iconData: Icons.format_list_bulleted,
-                                        iconTheme: QuillIconTheme(
-                                            iconButtonUnselectedData:
-                                                IconButtonData(
-                                                    style: IconButton.styleFrom(
-                                                        foregroundColor:
-                                                            textColor)),
-                                            iconButtonSelectedData:
-                                                IconButtonData(
-                                                    style: IconButton.styleFrom(
-                                                        foregroundColor: theme
-                                                            .colorScheme
-                                                            .onPrimary)))),
-                                  ),
-                                  QuillToolbarToggleStyleButton(
-                                    attribute: Attribute.blockQuote,
-                                    controller: _quillController,
-                                    options: QuillToolbarToggleStyleButtonOptions(
-                                        iconData: Icons.format_quote,
-                                        iconTheme: QuillIconTheme(
-                                            iconButtonUnselectedData:
-                                                IconButtonData(
-                                                    style: IconButton.styleFrom(
-                                                        foregroundColor:
-                                                            textColor)),
-                                            iconButtonSelectedData:
-                                                IconButtonData(
-                                                    style: IconButton.styleFrom(
-                                                        foregroundColor: theme
-                                                            .colorScheme
-                                                            .onPrimary)))),
-                                  ),
-                                  QuillToolbarToggleStyleButton(
-                                    attribute: Attribute.codeBlock,
-                                    controller: _quillController,
-                                    options: QuillToolbarToggleStyleButtonOptions(
-                                        iconData: Icons.code,
-                                        iconTheme: QuillIconTheme(
-                                            iconButtonUnselectedData:
-                                                IconButtonData(
-                                                    style: IconButton.styleFrom(
-                                                        foregroundColor:
-                                                            textColor)),
-                                            iconButtonSelectedData:
-                                                IconButtonData(
-                                                    style: IconButton.styleFrom(
-                                                        foregroundColor: theme
-                                                            .colorScheme
-                                                            .onPrimary)))),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.table_chart_outlined),
-                                    tooltip: 'Insert Table',
-                                    onPressed: _showTableInsertionDialog,
-                                    style: IconButton.styleFrom(
-                                      foregroundColor: textColor,
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
                             ),
                           ),
@@ -2721,25 +3293,25 @@ class TableEmbedBuilder extends EmbedBuilder {
     final readOnly = embedContext.readOnly;
 
     return TableWidget(
+      node: node,
       rawData: node.value.data,
       controller: controller,
-      offset: node.offset,
       readOnly: readOnly,
     );
   }
 }
 
 class TableWidget extends StatefulWidget {
+  final Embed node;
   final String rawData;
   final QuillController controller;
-  final int offset;
   final bool readOnly;
 
   const TableWidget({
     super.key,
+    required this.node,
     required this.rawData,
     required this.controller,
-    required this.offset,
     required this.readOnly,
   });
 
@@ -2753,6 +3325,13 @@ class _TableWidgetState extends State<TableWidget> {
   List<List<FocusNode>> _focusNodes = [];
   Timer? _debounce;
 
+  static String _cleanText(String text) {
+    return text
+        .replaceAll('\uFFFC', '')
+        .replaceAll('\uFFFD', '')
+        .replaceAll('\uFEFF', '');
+  }
+
   @override
   void initState() {
     super.initState();
@@ -2762,9 +3341,14 @@ class _TableWidgetState extends State<TableWidget> {
   void _parseData() {
     try {
       final List<dynamic> outer = jsonDecode(widget.rawData);
-      _cells = outer.map((r) => (r as List).map((c) => c.toString()).toList()).toList();
+      _cells = outer
+          .map((r) => (r as List).map((c) => _cleanText(c.toString())).toList())
+          .toList();
     } catch (e) {
-      _cells = [['Header 1', 'Header 2'], ['Cell 1', 'Cell 2']];
+      _cells = [
+        ['Header 1', 'Header 2'],
+        ['Cell 1', 'Cell 2']
+      ];
     }
     _initControllers();
   }
@@ -2780,27 +3364,35 @@ class _TableWidgetState extends State<TableWidget> {
         node.dispose();
       }
     }
-    _controllers = _cells.map((row) => row.map((cellText) => TextEditingController(text: cellText)).toList()).toList();
-    _focusNodes = _cells.map((row) => row.map((_) {
-      final node = FocusNode();
-      node.addListener(() {
-        if (!mounted) return;
-        debugPrint("TABLE_CELL: node.hasFocus = ${node.hasFocus}");
-        if (node.hasFocus) {
-          const TableCellFocusNotification(true).dispatch(context);
-        } else {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            final anyFocused = _focusNodes.any((r) => r.any((n) => n.hasFocus));
-            debugPrint("TABLE_CELL: anyFocused = $anyFocused");
-            if (!anyFocused) {
-              const TableCellFocusNotification(false).dispatch(context);
-            }
-          });
-        }
-      });
-      return node;
-    }).toList()).toList();
+    _controllers = _cells
+        .map((row) => row
+            .map((cellText) => TextEditingController(text: _cleanText(cellText)))
+            .toList())
+        .toList();
+    _focusNodes = _cells
+        .map((row) => row.map((_) {
+              final node = FocusNode();
+              node.addListener(() {
+                if (!mounted) return;
+                debugPrint("TABLE_CELL: node.hasFocus = ${node.hasFocus}");
+                if (node.hasFocus) {
+                  const TableCellFocusNotification(true).dispatch(context);
+                } else {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted) return;
+                    final anyFocused =
+                        _focusNodes.any((r) => r.any((n) => n.hasFocus));
+                    debugPrint("TABLE_CELL: anyFocused = $anyFocused");
+                    if (!anyFocused) {
+                      const TableCellFocusNotification(false)
+                          .dispatch(context);
+                    }
+                  });
+                }
+              });
+              return node;
+            }).toList())
+        .toList();
   }
 
   @override
@@ -2809,7 +3401,9 @@ class _TableWidgetState extends State<TableWidget> {
     if (oldWidget.rawData != widget.rawData) {
       try {
         final List<dynamic> outer = jsonDecode(widget.rawData);
-        final newCells = outer.map((r) => (r as List).map((c) => c.toString()).toList()).toList();
+        final newCells = outer
+            .map((r) => (r as List).map((c) => _cleanText(c.toString())).toList())
+            .toList();
         if (!_areCellsEqual(_cells, newCells)) {
           _cells = newCells;
           _initControllers();
@@ -2846,7 +3440,18 @@ class _TableWidgetState extends State<TableWidget> {
   }
 
   void _onCellChanged(int rowIndex, int colIndex, String text) {
-    _cells[rowIndex][colIndex] = text;
+    final cleaned = _cleanText(text);
+    if (cleaned != text) {
+      final controller = _controllers[rowIndex][colIndex];
+      final currentSelection = controller.selection;
+      final newOffset =
+          currentSelection.baseOffset.clamp(0, cleaned.length);
+      controller.value = TextEditingValue(
+        text: cleaned,
+        selection: TextSelection.collapsed(offset: newOffset),
+      );
+    }
+    _cells[rowIndex][colIndex] = cleaned;
     _triggerSave();
   }
 
@@ -2854,9 +3459,13 @@ class _TableWidgetState extends State<TableWidget> {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
       if (!mounted) return;
-      final jsonStr = jsonEncode(_cells);
+      final cleanCells = _cells
+          .map((r) => r.map((c) => _cleanText(c)).toList())
+          .toList();
+      final jsonStr = jsonEncode(cleanCells);
+      final offset = widget.node.offset;
       widget.controller.replaceText(
-        widget.offset,
+        offset,
         1,
         TableBlockEmbed(jsonStr),
         null,
@@ -2940,7 +3549,7 @@ class _TableWidgetState extends State<TableWidget> {
                   return TableRow(
                     decoration: BoxDecoration(
                       color: isHeader
-                          ? theme.colorScheme.secondaryContainer.withValues(alpha: 0.3)
+                          ? theme.colorScheme.surfaceContainerHigh
                           : (rIndex % 2 == 1
                               ? theme.colorScheme.surface
                               : theme.colorScheme.surfaceContainerLowest),
@@ -2949,20 +3558,24 @@ class _TableWidgetState extends State<TableWidget> {
                       return TableCell(
                         verticalAlignment: TableCellVerticalAlignment.middle,
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           child: TextField(
                             controller: _controllers[rIndex][cIndex],
                             focusNode: _focusNodes[rIndex][cIndex],
                             readOnly: widget.readOnly,
                             style: TextStyle(
                               color: theme.colorScheme.onSurface,
-                              fontSize: 14,
-                              fontWeight: isHeader ? FontWeight.bold : FontWeight.normal,
+                              fontSize: 13,
+                              fontWeight: isHeader ? FontWeight.w600 : FontWeight.normal,
                             ),
                             decoration: const InputDecoration(
                               border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              filled: false,
+                              fillColor: Colors.transparent,
                               isDense: true,
-                              contentPadding: EdgeInsets.symmetric(vertical: 6),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                             ),
                             onChanged: (text) => _onCellChanged(rIndex, cIndex, text),
                           ),
@@ -2975,30 +3588,46 @@ class _TableWidgetState extends State<TableWidget> {
             ),
             if (!widget.readOnly)
               Padding(
-                padding: const EdgeInsets.only(top: 4, bottom: 8),
+                padding: const EdgeInsets.only(top: 6, bottom: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.playlist_add),
-                      tooltip: 'Add Row',
-                      onPressed: _cells.length < 20 ? _addRow : null,
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.playlist_remove),
-                      tooltip: 'Remove Row',
-                      onPressed: _cells.length > 1 ? _removeRow : null,
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(Icons.view_column_outlined),
-                      tooltip: 'Add Column',
-                      onPressed: _cells[0].length < 10 ? _addColumn : null,
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.view_column),
-                      tooltip: 'Remove Column',
-                      onPressed: _cells[0].length > 1 ? _removeColumn : null,
+                    Container(
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(AppLayout.radiusL),
+                        border: Border.all(color: borderColor),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.playlist_add, size: 20),
+                            tooltip: 'Add Row',
+                            onPressed: _cells.length < 20 ? _addRow : null,
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.playlist_remove, size: 20),
+                            tooltip: 'Remove Row',
+                            onPressed: _cells.length > 1 ? _removeRow : null,
+                          ),
+                          Container(
+                            height: 16,
+                            width: 1,
+                            color: borderColor,
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.view_column_outlined, size: 20),
+                            tooltip: 'Add Column',
+                            onPressed: _cells[0].length < 10 ? _addColumn : null,
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.view_column, size: 20),
+                            tooltip: 'Remove Column',
+                            onPressed: _cells[0].length > 1 ? _removeColumn : null,
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),

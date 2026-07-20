@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter/services.dart';
 import 'dart:io';
@@ -250,24 +251,89 @@ class AppLockScreenState extends State<AppLockScreen>
 
     if (!_isSessionAuthenticated) {
       return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Theme.of(context).colorScheme.surface,
+                Theme.of(context).colorScheme.surfaceContainerHigh,
+                Theme.of(context).colorScheme.surfaceContainerHighest,
+              ],
+            ),
+          ),
+          child: Stack(
             children: [
-              Icon(Icons.lock_outline,
-                  size: 80, color: Theme.of(context).colorScheme.primary),
-              const SizedBox(height: 24),
-              Text(
-                AppLocalizations.of(context)?.appLocked ?? 'App Locked',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-              const SizedBox(height: 16),
-              if (!_isInBackground)
-                FilledButton.icon(
-                  onPressed: () => _checkAuth(context),
-                  icon: const Icon(Icons.fingerprint),
-                  label: Text(AppLocalizations.of(context)?.unlock ?? 'Unlock'),
+              Positioned(
+                top: -100,
+                right: -100,
+                child: Container(
+                  width: 300,
+                  height: 300,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                  ),
                 ),
+              ),
+              Positioned(
+                bottom: -150,
+                left: -150,
+                child: Container(
+                  width: 400,
+                  height: 400,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.1),
+                  ),
+                ),
+              ),
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TweenAnimationBuilder<double>(
+                      duration: const Duration(milliseconds: 600),
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      builder: (context, value, child) {
+                        return Transform.scale(
+                          scale: value,
+                          child: Opacity(
+                            opacity: value,
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: Icon(
+                        Icons.lock_outline,
+                        size: 80,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      AppLocalizations.of(context)?.appLocked ?? 'App Locked',
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 24),
+                    if (!_isInBackground)
+                      FilledButton.icon(
+                        onPressed: () => _checkAuth(context),
+                        icon: const Icon(Icons.fingerprint),
+                        label: Text(AppLocalizations.of(context)?.unlock ?? 'Unlock'),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -279,19 +345,34 @@ class AppLockScreenState extends State<AppLockScreen>
         children: [
           widget.child,
           Positioned.fill(
-            child: Scaffold(
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.lock_outline,
-                        size: 80, color: Theme.of(context).colorScheme.primary),
-                    const SizedBox(height: 24),
-                    Text(
-                      AppLocalizations.of(context)?.appLocked ?? 'App Locked',
-                      style: Theme.of(context).textTheme.headlineMedium,
+            child: ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 25.0, sigmaY: 25.0),
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.6),
+                  child: Scaffold(
+                    backgroundColor: Colors.transparent,
+                    body: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.lock_outline,
+                            size: 80,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          const SizedBox(height: 24),
+                          Text(
+                            AppLocalizations.of(context)?.appLocked ?? 'App Locked',
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),

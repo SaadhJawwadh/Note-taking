@@ -48,3 +48,7 @@ app.*.map.json
 android/key.properties
 *.jks
 *.keystore
+
+# Test screenshots (auto-generated during smoke tests)
+.agent/screen_*.png
+.agent/screen_*.jpg

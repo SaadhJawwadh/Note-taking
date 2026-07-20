@@ -2,7 +2,34 @@
 
 All notable changes to Everything App are documented here.
 
+## 2.4.0 - 2026-07-20
+
+### ⚡ Note Editor — Slash Commands & Glassmorphic Toolbar
+- **Slash Commands (`/`)**: Type `/` anywhere at the start of a line to open a quick action menu. Type `/todo` for checklists, `/table` for data tables, `/code` for monospace code blocks, `/h1`/`/h2` for headings, `/quote` for callouts, and `/bullet`/`/number` for lists.
+- **Floating Glassmorphism Formatting Bar**: Redesigned the formatting bar into a sleek floating island pill with backdrop blur, semi-transparent Material 3 fill, and soft shadows.
+- **Note Details & Stats Sheet**: Added real-time Word Count, Character Count, Estimated Reading Time, Folder path, and Creation/Modification timestamps.
+- **Share & Export Note**: Export notes as Plain Text or Markdown, or copy note content directly to the clipboard.
+
+### 🏷️ Category Management Redesign
+- **Editable Category Names & Icons**: Edit category names directly with automatic transaction and recurring rule reassignment.
+- **Icon Picker Grid**: Choose custom icons from a 24-icon grid (Transport, Dining, Subscriptions, Shopping, Utilities, Health, Savings, Work, etc.).
+- **Safe Category Deleting**: Built-in and custom categories can be safely deleted; all associated transactions are automatically reassigned to "Other" so financial history remains complete.
+- **Table Cell Styling**: Removed white box cutouts inside table cells and added a rounded pill container for row/column action controls.
+
+## 2.3.0 - 2026-07-19
+
+### 🌙 Period Tracker — Full Redesign
+- **Moon Phase Animation**: A beautiful moon widget now reflects your current cycle phase — new moon during menstrual, crescent during follicular, full moon during ovulation, and waning gibbous during luteal phase.
+- **Logging-First Layout**: The logging card is now at the top of the screen for quick, muscle-memory access. The calendar view is placed below for reference.
+- **Icon-Based Flow Intensity**: Spotting, Light, Medium, and Heavy are now icon+label tiles for faster, more visual selection — fully consistent with the card's colour palette.
+- **Collapsible Symptoms**: The symptoms section starts collapsed to reduce clutter. A live badge shows how many symptoms are active, and the section animates open smoothly on tap.
+
+### 🔧 Dark Mode & Visibility Fixes
+- Fixed symptom selector using the same unified `onPeriodColor`-based colour system as flow intensity tiles — no longer renders dark-on-dark in dark mode.
+- Fixed the delete log button being invisible (blending into card background) in dark mode — now clearly shown in red.
+
 ## 2.2.0 - 2026-07-18
+
 
 ### 📊 Live Interactive Tables
 - **Inline Table Widget**: Rendered tables directly as beautiful interactive widgets within the Note Editor, replacing raw markdown text.

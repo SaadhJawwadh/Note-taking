@@ -95,7 +95,7 @@ class DatabaseHelper {
       return await openDatabase(
         path,
         password: password,
-        version: 15,
+        version: 17,
         onCreate: _createDB,
         onUpgrade: _upgradeDB,
       );
@@ -115,7 +115,7 @@ class DatabaseHelper {
         return await openDatabase(
           path,
           password: password,
-          version: 15,
+          version: 17,
           onCreate: _createDB,
           onUpgrade: _upgradeDB,
         );
@@ -219,7 +219,8 @@ class DatabaseHelper {
         ${CategoryFields.name} TEXT PRIMARY KEY,
         ${CategoryFields.color} INTEGER NOT NULL,
         ${CategoryFields.keywords} TEXT NOT NULL DEFAULT '[]',
-        ${CategoryFields.isBuiltIn} INTEGER NOT NULL DEFAULT 0
+        ${CategoryFields.isBuiltIn} INTEGER NOT NULL DEFAULT 0,
+        ${CategoryFields.iconCodePoint} INTEGER
       )
     ''');
     await DatabaseSeed.seedBuiltInCategories(db);
@@ -241,7 +242,8 @@ class DatabaseHelper {
         ${PeriodLogFields.startDate} TEXT NOT NULL,
         ${PeriodLogFields.endDate} TEXT,
         ${PeriodLogFields.intensity} TEXT NOT NULL,
-        ${PeriodLogFields.notes} TEXT NOT NULL DEFAULT ''
+        ${PeriodLogFields.notes} TEXT NOT NULL DEFAULT '',
+        ${PeriodLogFields.symptoms} TEXT NOT NULL DEFAULT '[]'
       )
     ''');
 
@@ -335,6 +337,16 @@ class DatabaseHelper {
           ${RecurringRuleFields.nextDue} TEXT NOT NULL
         )
       ''');
+    }
+    if (oldVersion < 16) {
+      await db.execute('ALTER TABLE ${TableNames.periodLogs} ADD COLUMN ${PeriodLogFields.symptoms} TEXT NOT NULL DEFAULT "[]"');
+    }
+    if (oldVersion < 17) {
+      final cols = await db.rawQuery('PRAGMA table_info(${TableNames.categoryDefinitions})');
+      final hasIconCol = cols.any((col) => col['name'] == CategoryFields.iconCodePoint);
+      if (!hasIconCol) {
+        await db.execute('ALTER TABLE ${TableNames.categoryDefinitions} ADD COLUMN ${CategoryFields.iconCodePoint} INTEGER');
+      }
     }
   }
 }
