@@ -106,7 +106,7 @@ class TransactionCategory {
         if (def.name == category && def.iconCodePoint != null) {
           final known = _knownIcons[def.iconCodePoint!];
           if (known != null) return known;
-          return IconData(def.iconCodePoint!, fontFamily: 'MaterialIcons');
+          return Icons.category_outlined;
         }
       }
     }
