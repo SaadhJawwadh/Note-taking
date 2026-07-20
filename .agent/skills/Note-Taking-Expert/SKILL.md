@@ -23,7 +23,7 @@ Use this skill when modifying the note editor, home screen note feeds, note tagg
 * **View Modes**: Support switching between Masonry Grid, Uniform Grid, and List Views.
 * **Transitions**: Use `OpenContainer` from the `animations` package for card-to-editor transitions.
 * **Home Chip Exclusions**: Exclude special categories like `'Archived'` or `'Trash'` from the home screen tags filter row. These are handled on their own screens.
-* **AI Tag Guardrails**: suggested tags from Gemini Nano must be strictly filtered against existing database tags. Discard any newly suggested/hallucinated tags that do not exist yet.
+* **Whole-Word & Dynamic Topic Tag Matching**: Tag suggestions must use exact whole-word regex boundaries (`\bword\b`) and multi-word phrase matching to prevent false prefix matches (e.g. matching `"Event Summary"` on `"Even a movie..."`). If no existing tags match the note's subject, fall back to dynamic topic detection (`Movie`, `Work`, `Finance`, `Health`, `Travel`) and render dismissable M3 chips with `✕` close icons.
 
 ## 4. Editor State & Persistence (v2.0 learnings)
 * **Content format**: Notes store lossless **Quill Delta JSON** (legacy Markdown parsed as fallback via `RichTextUtils.contentToDelta`). Inline image embeds (`{'insert': {'image': path}}`) survive round-trips; templates (`lib/data/note_templates.dart`) are hand-built Delta JSON.
