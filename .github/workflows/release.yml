@@ -34,7 +34,7 @@ jobs:
         id: version
         run: |
           TAG="${GITHUB_REF_NAME:-v0.0.0}"
-          # Strip leading 'v' → 1.16.0
+          # Strip leading 'v' → 2.4.0
           VERSION="${TAG#v}"
           # Compute versionCode: major*10000 + minor*100 + patch
           IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
@@ -57,7 +57,7 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 -d > android/app/upload-keystore.jks
+          echo "$KEYSTORE_BASE64" | base64 -d --ignore-garbage > android/app/upload-keystore.jks
           cat > android/key.properties <<EOF
           storePassword=$STORE_PASSWORD
           keyPassword=$KEY_PASSWORD
@@ -70,7 +70,7 @@ jobs:
         run: flutter pub get
 
       - name: Generate Splash
-        run: flutter pub run flutter_native_splash:create
+        run: dart run flutter_native_splash:create
 
       - name: Analyze
         run: flutter analyze
@@ -92,8 +92,19 @@ jobs:
           sha256sum note-book-${{ github.ref_name }}.apk > note-book-${{ github.ref_name }}.apk.sha256
           sha256sum note-book-${{ github.ref_name }}.aab > note-book-${{ github.ref_name }}.aab.sha256
 
+      # ── Check Release Notes File ──────────────────────────────────────
+      - name: Prepare Release Notes
+        id: notes
+        run: |
+          if [ -f RELEASE_NOTES.md ] && [ -s RELEASE_NOTES.md ]; then
+            echo "has_notes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_notes=false" >> "$GITHUB_OUTPUT"
+          fi
+
       # ── Release ──────────────────────────────────────────────────────
-      - name: Create Release
+      - name: Create Release (with Release Notes)
+        if: steps.notes.outputs.has_notes == 'true'
         uses: softprops/action-gh-release@v2
         with:
           files: |
@@ -101,5 +112,16 @@ jobs:
             note-book-${{ github.ref_name }}.aab
             note-book-${{ github.ref_name }}.apk.sha256
             note-book-${{ github.ref_name }}.aab.sha256
-          body_path: ${{ hashFiles('RELEASE_NOTES.md') != '' && 'RELEASE_NOTES.md' || '' }}
+          body_path: RELEASE_NOTES.md
+          generate_release_notes: true
+
+      - name: Create Release (Fallback)
+        if: steps.notes.outputs.has_notes != 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            note-book-${{ github.ref_name }}.apk
+            note-book-${{ github.ref_name }}.aab
+            note-book-${{ github.ref_name }}.apk.sha256
+            note-book-${{ github.ref_name }}.aab.sha256
           generate_release_notes: true
