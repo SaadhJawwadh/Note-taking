@@ -27,7 +27,6 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.38.5"
           channel: "stable"
 
       # ── Derive version from tag ──────────────────────────────────────
@@ -77,10 +76,10 @@ jobs:
         run: flutter analyze
 
       - name: Build APK
-        run: flutter build apk --release
+        run: flutter build apk --release --no-tree-shake-icons
 
       - name: Build App Bundle
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release --no-tree-shake-icons
 
       - name: Rename Artifacts
         run: |
