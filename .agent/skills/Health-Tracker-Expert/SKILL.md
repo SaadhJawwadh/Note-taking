@@ -24,3 +24,9 @@ Use this skill when modifying the menstrual calendar, symptoms log, dynamic cycl
 * **Notification id discipline**: period notifications own ids 1-3; reschedule by cancelling those ids only — `cancelAll()` destroys note reminders and other channels.
 * **Loading**: use the shared `SkeletonCard` list, not a full-screen spinner.
 * **Privacy mask**: tracker details stay masked until device auth when App Lock is on (`_isPrivacyMasked` + LocalAuthentication) — preserve this in any redesign.
+
+## 4. Logging-First Layout & Phase Animations (v2.3)
+* **Logging-First Hierarchy**: Position the daily flow & symptom logging card at the top of the screen for instant muscle-memory access upon opening the tab.
+* **Moon Phase Display**: Render live moon phase animations reflecting cycle phase (new moon for menstrual, crescent for follicular, full moon for ovulation, waning gibbous for luteal).
+* **Collapsible Symptoms & Icon Tiles**: Symptoms card starts collapsed with an active count badge and expands on tap. Flow intensity (Spotting, Light, Medium, Heavy) uses icon+label selector tiles.
+* **Dark Mode Contrast Tokens**: Use `onPeriodColor` palette tokens for chip text and delete log icons so interactive elements remain clearly visible in dark mode.

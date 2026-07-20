@@ -56,6 +56,11 @@ Execute the automated deploy script to bump, tag, and publish:
   -keep class net.sqlcipher.** { *; }
   -keep class net.sqlcipher.database.SQLiteDatabase { *; }
   ```
+* **Flutter Icon Tree-Shaking Rule**:
+  * **Zero Non-Constant `IconData` Calls**: Never instantiate `IconData(codePoint, ...)` using dynamic or runtime variables anywhere in Dart code. Flutter's release AOT compiler statically inspects `IconData` invocations to tree-shake font files and will abort the build with `Error: Avoid non-constant invocations of IconData`.
+  * **Static Lookup Map Pattern**: Always resolve dynamic icon code points via a `const Map<int, IconData>` lookup table mapping code points to `const` icon constants (e.g. `Icons.directions_car_outlined`). Fall back to a `const` icon (e.g. `Icons.category_outlined`).
+  * **CI/CD Flag Guardrail**: In GitHub Actions release workflows (`.github/workflows/release.yml`), always include `--no-tree-shake-icons` for both `flutter build apk --release --no-tree-shake-icons` and `flutter build appbundle --release --no-tree-shake-icons` as an extra fail-safe.
+* **`deploy.sh` Pathspec Exclusion**: When checking git cleanliness before release, exclude version bump files (`pubspec.yaml` and `CHANGELOG.md`) using pathspecs (`git diff-index --quiet HEAD -- . ':!pubspec.yaml' ':!CHANGELOG.md'`).
 * **Replacing Existing Tags**: If a tag needs to be updated or replaced on a new commit:
   ```bash
   git tag -d vX.Y.Z

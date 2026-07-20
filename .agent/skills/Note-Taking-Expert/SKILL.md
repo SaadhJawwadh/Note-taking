@@ -46,3 +46,10 @@ Use this skill when modifying the note editor, home screen note feeds, note tagg
 * **Single source for cold-start shares**: only `AppLockScreen` calls `getInitialMedia()` (it is always mounted); it parks media in `AppLockScreen.pendingSharedMedia` and bumps `sharedMediaTick`. HomeScreen consumes the pending list and handles warm stream events itself when unlocked. Park by ASSIGNMENT (not append) so double-delivery collapses.
 * Copy shared images out of the share cache into documents/`shared_images/` before embedding — cache files get purged.
 * `PROCESS_TEXT` (text-selection menu) flows through MainActivity `pendingSharedText` + the widget channel's `getPendingSharedText`.
+
+
+## 6. Slash Commands, Floating Toolbar & Note Stats (v2.3)
+* **Slash Commands (`/`) Overlay**: Detect typing `/` at line start to trigger a floating Slash Command card above the keyboard. Filter commands in real time (`/todo`, `/table`, `/code`, `/h1`, `/quote`). Tapping a command automatically strips the typed query text and applies block formatting.
+* **Typing Debouncing for Overlay Suggestions**: When displaying overlay suggestions (like tags or slash commands) in the note editor, debounce menu triggers until typing pauses (e.g., 500ms delay) to prevent distracting cursor movement while actively typing.
+* **Floating Glassmorphic Formatting Bar**: Format toolbar uses backdrop blur (`BackdropFilter`), 90% opacity surface fill, rounded corners (`AppLayout.radiusXL`), and a soft elevation shadow, detached from screen edges.
+* **Note Details & Export**: Note details bottom sheet calculates reading time ($\approx 200 \text{ wpm}$), word count, character count, and dates. Share notes in Plain Text, Markdown, or copy to clipboard.
