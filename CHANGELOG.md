@@ -2,21 +2,19 @@
 
 All notable changes to Everything App are documented here.
 
-## 2.4.0 - 2026-07-20
+## 2.3.0 - 2026-07-20
 
-### ⚡ Note Editor — Slash Commands & Glassmorphic Toolbar
-- **Slash Commands (`/`)**: Type `/` anywhere at the start of a line to open a quick action menu. Type `/todo` for checklists, `/table` for data tables, `/code` for monospace code blocks, `/h1`/`/h2` for headings, `/quote` for callouts, and `/bullet`/`/number` for lists.
-- **Floating Glassmorphism Formatting Bar**: Redesigned the formatting bar into a sleek floating island pill with backdrop blur, semi-transparent Material 3 fill, and soft shadows.
-- **Note Details & Stats Sheet**: Added real-time Word Count, Character Count, Estimated Reading Time, Folder path, and Creation/Modification timestamps.
-- **Share & Export Note**: Export notes as Plain Text or Markdown, or copy note content directly to the clipboard.
+### 🏷️ Category Management & Custom Icons
+- **Category Renaming**: Edit category names directly with automatic SQLite migration across all past transactions and recurring rules.
+- **Custom Category Icons**: Choose from a curated grid of 24 Material icons for any built-in or custom category.
+- **Safe Category Deletion**: Delete any category (except 'Other') with automatic reassignment of existing transactions to 'Other' so your financial history stays intact.
 
-### 🏷️ Category Management Redesign
-- **Editable Category Names & Icons**: Edit category names directly with automatic transaction and recurring rule reassignment.
-- **Icon Picker Grid**: Choose custom icons from a 24-icon grid (Transport, Dining, Subscriptions, Shopping, Utilities, Health, Savings, Work, etc.).
-- **Safe Category Deleting**: Built-in and custom categories can be safely deleted; all associated transactions are automatically reassigned to "Other" so financial history remains complete.
-- **Table Cell Styling**: Removed white box cutouts inside table cells and added a rounded pill container for row/column action controls.
-
-## 2.3.0 - 2026-07-19
+### 📝 Note Editor & Canvas Enhancements
+- **Slash Commands (`/`)**: Type `/` at the start of a line to quickly insert checklists, tables, code blocks, headings, quotes, and lists.
+- **Floating Glassmorphism Toolbar**: Redesigned the formatting bar into a sleek floating island with backdrop blur and theme-aware styling.
+- **Note Details & Stats**: View real-time word count, character count, estimated read time, folder placement, and created/modified dates.
+- **Share & Export**: Share notes as Plain Text, Markdown, or copy to clipboard instantly.
+- **Table Cell Polish**: Fixed table header background cutouts and sanitized Unicode character rendering.
 
 ### 🌙 Period Tracker — Full Redesign
 - **Moon Phase Animation**: A beautiful moon widget now reflects your current cycle phase — new moon during menstrual, crescent during follicular, full moon during ovulation, and waning gibbous during luteal phase.
