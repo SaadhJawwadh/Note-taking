@@ -115,4 +115,4 @@ jobs:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.saadhjawwadh.notebook
           releaseFiles: note-book-${{ github.ref_name }}.aab
-          track: internal
+          track: beta
