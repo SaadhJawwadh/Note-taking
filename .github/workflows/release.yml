@@ -27,7 +27,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.38.5"
+          flutter-version: "3.44.x"
           channel: "stable"
 
       # ── Derive version from tag ──────────────────────────────────────
@@ -93,8 +93,8 @@ jobs:
           sha256sum note-book-${{ github.ref_name }}.apk > note-book-${{ github.ref_name }}.apk.sha256
           sha256sum note-book-${{ github.ref_name }}.aab > note-book-${{ github.ref_name }}.aab.sha256
 
-      # ── Release ──────────────────────────────────────────────────────
-      - name: Create Release
+      # ── GitHub Release ───────────────────────────────────────────────
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
@@ -104,3 +104,13 @@ jobs:
             note-book-${{ github.ref_name }}.aab.sha256
           body_path: ${{ hashFiles('RELEASE_NOTES.md') != '' && 'RELEASE_NOTES.md' || '' }}
           generate_release_notes: true
+
+      # ── Upload to Google Play Store ──────────────────────────────────
+      - name: Publish to Google Play
+        if: secrets.PLAY_SERVICE_ACCOUNT_JSON != ''
+        uses: rstudio/actions/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.saadhjawwadh.notebook
+          releaseFiles: note-book-${{ github.ref_name }}.aab
+          track: internal
