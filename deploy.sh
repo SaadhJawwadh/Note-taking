@@ -14,8 +14,8 @@ if [ -z "$NEW_VERSION" ]; then
   exit 1
 fi
 
-# 1. Enforce Git Cleanliness (excluding pubspec.yaml and CHANGELOG.md)
-if ! git diff-index --quiet HEAD -- . ':!pubspec.yaml' ':!CHANGELOG.md'; then
+# 1. Enforce Git Cleanliness (excluding pubspec.yaml, CHANGELOG.md, and PLAY_STORE_NOTES.md)
+if ! git diff-index --quiet HEAD -- . ':!pubspec.yaml' ':!CHANGELOG.md' ':!PLAY_STORE_NOTES.md'; then
   echo "❌ Error: You have unstaged or uncommitted changes. Please commit or stash them first."
   exit 1
 fi
@@ -56,7 +56,7 @@ sed -i '' "s/version: .*/version: $NEW_VERSION+$BUILD_NUMBER/" pubspec.yaml
 
 # 7. Stage and Commit version bump
 echo "Staging changes..."
-git add pubspec.yaml CHANGELOG.md RELEASE_NOTES.md
+git add pubspec.yaml CHANGELOG.md RELEASE_NOTES.md PLAY_STORE_NOTES.md
 git commit -m "chore(release): prepare release v$NEW_VERSION" || echo "No changes to commit, proceeding..."
 
 # 8. Tag (Force update to ensure it points to latest)

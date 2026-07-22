@@ -105,16 +105,23 @@ jobs:
           body_path: ${{ hashFiles('RELEASE_NOTES.md') != '' && 'RELEASE_NOTES.md' || '' }}
           generate_release_notes: true
 
-      # ── Prepare Play Store WhatsNew Release Notes ───────────────────
+      # ── Prepare Play Store WhatsNew Multilingual Release Notes ──────
       - name: Prepare Play Store Release Notes
         run: |
           mkdir -p distribution/whatsnew
-          if [ -f RELEASE_NOTES.md ]; then
+          if [ -f PLAY_STORE_NOTES.md ]; then
+            sed -n '/<en-US>/,/<\/en-US>/p' PLAY_STORE_NOTES.md | grep -v '<en-US>' | grep -v '</en-US>' > distribution/whatsnew/whatsnew-en-US
+            sed -n '/<ta-IN>/,/<\/ta-IN>/p' PLAY_STORE_NOTES.md | grep -v '<ta-IN>' | grep -v '</ta-IN>' > distribution/whatsnew/whatsnew-ta-IN
+            echo "Successfully generated Play Store release notes:"
+            echo "=== whatsnew-en-US ==="
+            cat distribution/whatsnew/whatsnew-en-US
+            echo "=== whatsnew-ta-IN ==="
+            cat distribution/whatsnew/whatsnew-ta-IN
+          elif [ -f RELEASE_NOTES.md ]; then
             cp RELEASE_NOTES.md distribution/whatsnew/whatsnew-en-US
           else
             echo "• Bug fixes and performance improvements." > distribution/whatsnew/whatsnew-en-US
           fi
-          echo "Created Play Store release notes in distribution/whatsnew/whatsnew-en-US"
 
       # ── Upload to Google Play Store ──────────────────────────────────
       - name: Publish to Google Play
