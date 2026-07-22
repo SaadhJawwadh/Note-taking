@@ -54,17 +54,19 @@ class _OnboardingSheetState extends State<OnboardingSheet> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.85,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHigh,
+    return Material(
+      color: theme.colorScheme.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(AppLayout.radiusMAX)),
-        border: Border.all(
+        side: BorderSide(
           color: theme.colorScheme.outlineVariant.withValues(alpha: isDark ? 0.15 : 0.3),
           width: 1.0,
         ),
       ),
-      child: SafeArea(
+      clipBehavior: Clip.antiAlias,
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.85,
+        child: SafeArea(
         child: Column(
           children: [
             // Top Drag Handle & Skip Option
@@ -189,7 +191,8 @@ class _OnboardingSheetState extends State<OnboardingSheet> {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildWelcomePage(ThemeData theme) {
@@ -568,14 +571,15 @@ class _OnboardingSheetState extends State<OnboardingSheet> {
     required ValueChanged<bool> onChanged,
   }) {
     final isDark = theme.brightness == Brightness.dark;
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainer,
+    return Material(
+      color: theme.colorScheme.surfaceContainer,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppLayout.radiusL),
-        border: Border.all(
+        side: BorderSide(
           color: theme.colorScheme.outlineVariant.withValues(alpha: isDark ? 0.15 : 0.3),
         ),
       ),
+      clipBehavior: Clip.antiAlias,
       child: SwitchListTile(
         secondary: Icon(icon, color: theme.colorScheme.primary),
         title: Text(

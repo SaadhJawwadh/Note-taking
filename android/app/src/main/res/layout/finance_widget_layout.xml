@@ -5,38 +5,62 @@
     android:layout_height="match_parent"
     android:background="@drawable/widget_background_shape"
     android:orientation="vertical"
-    android:padding="18dp">
+    android:padding="14dp">
 
     <!-- Header Row -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <TextView
-            android:id="@+id/widget_title"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentStart="true"
             android:layout_centerVertical="true"
-            android:text="Finances"
-            android:textColor="@color/widget_text_primary"
-            android:textSize="17sp"
-            android:letterSpacing="0.01"
-            android:textStyle="bold" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/widget_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/google_sans_text"
+                android:text="Finances"
+                android:textColor="@color/widget_text_primary"
+                android:textSize="16sp"
+                android:letterSpacing="0.01"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/widget_category_chip_shape"
+                android:paddingLeft="6dp"
+                android:paddingRight="6dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:fontFamily="@font/inter"
+                android:text="Analytics"
+                android:textColor="@color/widget_on_primary_container"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/widget_add_button"
-            android:layout_width="34dp"
-            android:layout_height="34dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
             android:background="@drawable/widget_add_button_shape"
             android:clickable="true"
             android:focusable="true"
             android:gravity="center"
+            android:fontFamily="@font/google_sans_text"
             android:text="+"
             android:textColor="@color/widget_on_primary_container"
-            android:textSize="20sp"
+            android:textSize="18sp"
             android:textStyle="bold" />
     </RelativeLayout>
 
@@ -44,7 +68,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="8dp"
         android:orientation="horizontal">
 
         <LinearLayout
@@ -58,18 +82,20 @@
                 android:layout_height="wrap_content"
                 android:text="TODAY"
                 android:textColor="@color/widget_text_secondary"
-                android:textSize="10sp"
+                android:textSize="9sp"
                 android:letterSpacing="0.05"
+                android:fontFamily="@font/inter"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/widget_today_spent"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
+                android:layout_marginTop="1dp"
+                android:fontFamily="@font/google_sans_text"
                 android:text="$0.00"
                 android:textColor="@color/widget_text_primary"
-                android:textSize="15sp"
+                android:textSize="13sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -84,18 +110,20 @@
                 android:layout_height="wrap_content"
                 android:text="SPENT (MO)"
                 android:textColor="@color/widget_text_secondary"
-                android:textSize="10sp"
+                android:textSize="9sp"
                 android:letterSpacing="0.05"
+                android:fontFamily="@font/inter"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/widget_month_spent"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
+                android:layout_marginTop="1dp"
+                android:fontFamily="@font/google_sans_text"
                 android:text="$0.00"
                 android:textColor="@color/widget_text_primary"
-                android:textSize="15sp"
+                android:textSize="13sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -110,309 +138,96 @@
                 android:layout_height="wrap_content"
                 android:text="NET"
                 android:textColor="@color/widget_text_secondary"
-                android:textSize="10sp"
+                android:textSize="9sp"
                 android:letterSpacing="0.05"
+                android:fontFamily="@font/inter"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/widget_month_net"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
+                android:layout_marginTop="1dp"
+                android:fontFamily="@font/google_sans_text"
                 android:text="$0.00"
                 android:textColor="@color/widget_income"
-                android:textSize="15sp"
+                android:textSize="13sp"
                 android:textStyle="bold" />
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Budget progress (shown from medium heights) -->
+    <!-- Analytics Bottom Highlight Card (Linear Regression & Top Category) -->
     <LinearLayout
-        android:id="@+id/widget_budget_section"
+        android:id="@+id/widget_analytics_card"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:orientation="vertical"
-        android:visibility="visible">
-
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentStart="true"
-                android:text="MONTHLY BUDGET"
-                android:textColor="@color/widget_text_secondary"
-                android:textSize="10sp"
-                android:letterSpacing="0.05"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/widget_budget_percent"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentEnd="true"
-                android:text="0%"
-                android:textColor="@color/widget_on_primary_container"
-                android:textSize="10sp"
-                android:textStyle="bold" />
-        </RelativeLayout>
-
-        <ProgressBar
-            android:id="@+id/widget_budget_bar"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="match_parent"
-            android:layout_height="8dp"
-            android:layout_marginTop="4dp"
-            android:max="100"
-            android:progress="0"
-            android:progressDrawable="@drawable/widget_progress_drawable" />
-
-        <TextView
-            android:id="@+id/widget_budget_label"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="3dp"
-            android:text=""
-            android:textColor="@color/widget_text_secondary"
-            android:textSize="10sp" />
-    </LinearLayout>
-
-    <!-- Top spending category (shown on taller sizes) -->
-    <LinearLayout
-        android:id="@+id/widget_top_category_section"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:layout_marginTop="8dp"
+        android:background="@drawable/widget_category_chip_shape"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:visibility="visible">
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp">
 
-        <TextView
-            android:id="@+id/widget_top_category"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@drawable/widget_category_chip_shape"
-            android:paddingLeft="8dp"
-            android:paddingRight="8dp"
-            android:paddingTop="3dp"
-            android:paddingBottom="3dp"
-            android:ellipsize="end"
-            android:singleLine="true"
-            android:text="Top: Food"
-            android:textColor="@color/widget_on_primary_container"
-            android:textSize="11sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/widget_top_category_amount"
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
+            android:layout_weight="1.2"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔮 FORECAST (NEXT MO)"
+                android:textColor="@color/widget_text_secondary"
+                android:textSize="9sp"
+                android:letterSpacing="0.04"
+                android:fontFamily="@font/inter"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/widget_forecast_amount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
+                android:fontFamily="@font/google_sans_text"
+                android:text="$0.00"
+                android:textColor="@color/widget_text_primary"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="end"
-            android:singleLine="true"
-            android:text=""
-            android:textColor="@color/widget_text_primary"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-    </LinearLayout>
-
-    <!-- Recent Transactions List Section (only on the tallest sizes) -->
-    <LinearLayout
-        android:id="@+id/widget_recent_section"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:orientation="vertical"
-        android:visibility="visible">
-
-        <!-- Divider -->
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginTop="6dp"
-            android:layout_marginBottom="6dp"
-            android:background="@color/widget_border" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="6dp"
-            android:text="Recent Transactions"
-            android:textColor="@color/widget_text_secondary"
-            android:textSize="11sp"
-            android:letterSpacing="0.03"
-            android:textStyle="bold" />
-
-        <!-- Empty State -->
-        <TextView
-            android:id="@+id/widget_empty_state"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:padding="8dp"
-            android:text="No recent transactions"
-            android:textColor="@color/widget_text_secondary"
-            android:textSize="12sp"
-            android:textStyle="italic"
-            android:visibility="gone" />
-
-        <!-- Transaction Slot 1 -->
-        <LinearLayout
-            android:id="@+id/widget_slot_1"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginVertical="4dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:orientation="vertical">
 
             <TextView
-                android:id="@+id/widget_slot_1_category"
-                android:layout_width="0dp"
+                android:id="@+id/widget_forecast_trend"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="6dp"
-                android:background="@drawable/widget_category_chip_shape"
-                android:paddingLeft="6dp"
-                android:paddingRight="6dp"
-                android:paddingTop="2dp"
-                android:paddingBottom="2dp"
-                android:ellipsize="end"
-                android:singleLine="true"
-                android:gravity="center"
-                android:text="Food"
-                android:textColor="@color/widget_on_primary_container"
-                android:textSize="11sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/widget_slot_1_desc"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1.8"
-                android:ellipsize="end"
-                android:singleLine="true"
-                android:text="Lunch at bakery"
-                android:textColor="@color/widget_text_primary"
-                android:textSize="12sp" />
-
-            <TextView
-                android:id="@+id/widget_slot_1_amount"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="end"
-                android:text="-$12.00"
+                android:fontFamily="@font/google_sans_text"
+                android:text="+$0/mo"
                 android:textColor="@color/widget_expense"
-                android:textSize="12sp"
+                android:textSize="10sp"
                 android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/widget_top_category"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:singleLine="true"
+                android:fontFamily="@font/inter"
+                android:text="Top: Food (42%)"
+                android:textColor="@color/widget_text_secondary"
+                android:textSize="10sp" />
         </LinearLayout>
-
-        <!-- Transaction Slot 2 -->
-        <LinearLayout
-            android:id="@+id/widget_slot_2"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginVertical="4dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <TextView
-                android:id="@+id/widget_slot_2_category"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="6dp"
-                android:background="@drawable/widget_category_chip_shape"
-                android:paddingLeft="6dp"
-                android:paddingRight="6dp"
-                android:paddingTop="2dp"
-                android:paddingBottom="2dp"
-                android:ellipsize="end"
-                android:singleLine="true"
-                android:gravity="center"
-                android:text="Salary"
-                android:textColor="@color/widget_on_primary_container"
-                android:textSize="11sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/widget_slot_2_desc"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1.8"
-                android:ellipsize="end"
-                android:singleLine="true"
-                android:text="Monthly paycheck"
-                android:textColor="@color/widget_text_primary"
-                android:textSize="12sp" />
-
-            <TextView
-                android:id="@+id/widget_slot_2_amount"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="end"
-                android:text="+$150.00"
-                android:textColor="@color/widget_income"
-                android:textSize="12sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <!-- Transaction Slot 3 -->
-        <LinearLayout
-            android:id="@+id/widget_slot_3"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginVertical="4dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <TextView
-                android:id="@+id/widget_slot_3_category"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="6dp"
-                android:background="@drawable/widget_category_chip_shape"
-                android:paddingLeft="6dp"
-                android:paddingRight="6dp"
-                android:paddingTop="2dp"
-                android:paddingBottom="2dp"
-                android:ellipsize="end"
-                android:singleLine="true"
-                android:gravity="center"
-                android:text="Transport"
-                android:textColor="@color/widget_on_primary_container"
-                android:textSize="11sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/widget_slot_3_desc"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1.8"
-                android:ellipsize="end"
-                android:singleLine="true"
-                android:text="Uber Ride"
-                android:textColor="@color/widget_text_primary"
-                android:textSize="12sp" />
-
-            <TextView
-                android:id="@+id/widget_slot_3_amount"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="end"
-                android:text="-$5.00"
-                android:textColor="@color/widget_expense"
-                android:textSize="12sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
     </LinearLayout>
 
 </LinearLayout>

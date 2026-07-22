@@ -162,27 +162,71 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Manage Tags'),
-        centerTitle: true,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _tags.isEmpty
-              ? Center(
+      body: AnimationLimiter(
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              backgroundColor: Colors.transparent,
+              floating: true,
+              snap: true,
+              toolbarHeight: 84,
+              titleSpacing: 16,
+              automaticallyImplyLeading: false,
+              title: Container(
+                margin: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                height: 64,
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+                  boxShadow: AppLayout.softShadow(context),
+                ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: () async {
+                        await HapticFeedback.lightImpact();
+                        if (!context.mounted) return;
+                        Navigator.pop(context);
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Manage Tags',
+                      style: textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (_isLoading)
+              const SliverFillRemaining(
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_tags.isEmpty)
+              SliverFillRemaining(
+                child: Center(
                   child: Text(
                     'No tags found',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                    style: textTheme.bodyLarge?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                )
-              : AnimationLimiter(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _tags.length,
-                    itemBuilder: (context, index) {
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.all(16),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
                       final tag = _tags[index];
                       final tagColorValue = _tagColors[tag];
                       final tagColor =
@@ -200,60 +244,43 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
                               label: 'Tag: $tag',
                               child: Card(
                                 elevation: 0,
-                                margin: const EdgeInsets.only(bottom: 12),
-                                color: Theme.of(context).colorScheme.surfaceContainerLow,
+                                margin: const EdgeInsets.only(bottom: 8),
+                                color: colorScheme.surfaceContainerLow,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(AppLayout.radiusL),
                                   side: BorderSide(
-                                    color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+                                    color: colorScheme.outlineVariant.withValues(alpha: 0.3),
                                     width: 1.0,
                                   ),
                                 ),
                                 child: ListTile(
                                   leading: Container(
-                                    width: 40,
-                                    height: 40,
+                                    width: 24,
+                                    height: 24,
                                     decoration: BoxDecoration(
-                                      color: (tagColor ?? Theme.of(context).colorScheme.primary).withValues(alpha: 0.15),
+                                      color: tagColor ?? colorScheme.primary,
                                       shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: (tagColor ?? Theme.of(context).colorScheme.primary).withValues(alpha: 0.3),
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: Icon(
-                                      Icons.label_outline,
-                                      color: tagColor ?? Theme.of(context).colorScheme.primary,
-                                      size: 20,
                                     ),
                                   ),
                                   title: Text(tag),
                                   trailing: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Semantics(
-                                        label: 'Edit tag $tag',
-                                        button: true,
-                                        child: IconButton(
-                                          icon: const Icon(Icons.edit_outlined),
-                                          tooltip: 'Edit',
-                                          onPressed: () async {
-                                            await HapticFeedback.lightImpact();
-                                            await _editTag(tag);
-                                          },
-                                        ),
+                                      IconButton(
+                                        icon: const Icon(Icons.edit_outlined),
+                                        tooltip: 'Edit',
+                                        onPressed: () async {
+                                          await HapticFeedback.lightImpact();
+                                          await _editTag(tag);
+                                        },
                                       ),
-                                      Semantics(
-                                        label: 'Delete tag $tag',
-                                        button: true,
-                                        child: IconButton(
-                                          icon: const Icon(Icons.delete_outline),
-                                          tooltip: 'Delete',
-                                          onPressed: () async {
-                                            await HapticFeedback.lightImpact();
-                                            await _deleteTag(tag);
-                                          },
-                                        ),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete_outline),
+                                        tooltip: 'Delete',
+                                        onPressed: () async {
+                                          await HapticFeedback.lightImpact();
+                                          await _deleteTag(tag);
+                                        },
                                       ),
                                     ],
                                   ),
@@ -264,8 +291,13 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
                         ),
                       );
                     },
+                    childCount: _tags.length,
                   ),
                 ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

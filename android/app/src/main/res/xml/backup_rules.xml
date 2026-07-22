@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-    <!-- Include the shared preferences file -->
+    <!-- Include shared preferences and database -->
     <include domain="sharedpref" path="."/>
-    <!-- Exclude secure storage to prevent encryption keys from leaking to cloud -->
+    <include domain="database" path="."/>
+    <!-- Exclude secure storage keys that cannot be restored across devices -->
     <exclude domain="sharedpref" path="FlutterSecureKeyStorage.xml" />
     <exclude domain="sharedpref" path="FlutterSecureStorage.xml" />
-    <!-- Include the database file -->
-    <include domain="database" path="notes.db"/>
+    <!-- Exclude encrypted database file from cloud backup to prevent key mismatch corruption on new devices -->
+    <exclude domain="database" path="notes.db"/>
 </full-backup-content>

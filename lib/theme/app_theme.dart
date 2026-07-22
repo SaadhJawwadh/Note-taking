@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:animations/animations.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'app_layout.dart';
 
 /// Semantic color roles not covered by [ColorScheme] (success/income,
@@ -132,18 +133,21 @@ class AppTheme {
       scheme = dynamicColorScheme;
     }
 
-    final baseTextTheme =
-        (brightness == Brightness.dark ? ThemeData.dark() : ThemeData.light())
-            .textTheme
-            .apply(
-              fontFamily: 'Rubik',
-              bodyColor: scheme.onSurface,
-              displayColor: scheme.onSurface,
-            );
+    final rawBaseTextTheme = (brightness == Brightness.dark
+            ? ThemeData.dark()
+            : ThemeData.light())
+        .textTheme;
+
+    GoogleFonts.config.allowRuntimeFetching = false;
+
+    final baseTextTheme = GoogleFonts.interTextTheme(rawBaseTextTheme).apply(
+      bodyColor: scheme.onSurface,
+      displayColor: scheme.onSurface,
+    );
 
     // Material Expressive pairing: Google Sans Text for display/headline/
-    // titleLarge (hero numbers, screen titles), Rubik stays for everything
-    // else (body copy, labels, smaller titles).
+    // titleLarge (hero numbers, screen titles), Inter for everything else
+    // (body copy, labels, smaller titles).
     final textTheme = baseTextTheme.copyWith(
       displayLarge: baseTextTheme.displayLarge?.copyWith(fontFamily: 'Google Sans Text'),
       displayMedium: baseTextTheme.displayMedium?.copyWith(fontFamily: 'Google Sans Text'),

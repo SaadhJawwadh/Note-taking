@@ -423,18 +423,51 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
     final currency = settings.currency;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.transaction == null
-            ? 'New Transaction'
-            : 'Edit Transaction'),
-        actions: [
-          if (widget.transaction != null)
-            IconButton(
-              icon: const Icon(Icons.delete_outline),
-              color: colorScheme.error,
-              onPressed: _deleteTransaction,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(84),
+        child: SafeArea(
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            height: 64,
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+              boxShadow: AppLayout.softShadow(context),
             ),
-        ],
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () async {
+                    await HapticFeedback.lightImpact();
+                    if (!context.mounted) return;
+                    Navigator.pop(context);
+                  },
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  widget.transaction == null
+                      ? 'New Transaction'
+                      : 'Edit Transaction',
+                  style: textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                if (widget.transaction != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: IconButton(
+                      icon: const Icon(Icons.delete_outline),
+                      color: colorScheme.error,
+                      onPressed: _deleteTransaction,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),

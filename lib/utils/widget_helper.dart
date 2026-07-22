@@ -69,21 +69,64 @@ class WidgetHelper {
           ? '$currency ${numberFormat.format(monthSpent)} of $currency ${numberFormat.format(totalBudget)}'
           : '';
 
-      // Top spending category this month
+      // ── Analytics Breakdown ──
+      // Top spending categories this month sorted by total expense
       final byCategory = <String, double>{};
       for (final t in monthTx.where((t) => t.isExpense)) {
         byCategory[t.category] = (byCategory[t.category] ?? 0) + t.amount;
       }
+
+      final sortedCategories = byCategory.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+
       String topCategory = '';
       String topCategoryAmount = '';
-      if (byCategory.isNotEmpty) {
-        final top =
-            byCategory.entries.reduce((a, b) => a.value >= b.value ? a : b);
-        topCategory = top.key;
-        topCategoryAmount = '$currency ${numberFormat.format(top.value)}';
+      if (sortedCategories.isNotEmpty) {
+        topCategory = sortedCategories.first.key;
+        topCategoryAmount = '$currency ${numberFormat.format(sortedCategories.first.value)}';
       }
 
-      // Top 3 recent transactions
+      final categoryBreakdown = sortedCategories.take(3).map((e) {
+        final pct = monthSpent > 0 ? ((e.value / monthSpent) * 100).round() : 0;
+        return {
+          'name': e.key,
+          'amount': '$currency ${numberFormat.format(e.value)}',
+          'pct': pct,
+        };
+      }).toList();
+
+      // ── Linear Regression Forecast ──
+      String forecastAmountStr = '';
+      String forecastTrendStr = '';
+      bool isTrendingUp = false;
+
+      try {
+        final monthlyData = await repo.getMonthlyTransactionSummary(6);
+        if (monthlyData.length >= 2) {
+          double sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+          final n = monthlyData.length;
+          for (int i = 0; i < n; i++) {
+            final x = (i + 1).toDouble();
+            final y = (monthlyData[i]['totalExpense'] as double? ?? 0.0);
+            sumX += x;
+            sumY += y;
+            sumXY += x * y;
+            sumX2 += x * x;
+          }
+          final denom = (n * sumX2) - (sumX * sumX);
+          final slope = denom != 0 ? ((n * sumXY) - (sumX * sumY)) / denom : 0.0;
+          final intercept = (sumY - (slope * sumX)) / n;
+          final projected = (slope * (n + 1)) + intercept;
+          final safeProj = projected < 0 ? 0.0 : projected;
+
+          isTrendingUp = slope > 0;
+          forecastAmountStr = '~$currency ${numberFormat.format(safeProj)}';
+          forecastTrendStr =
+              '${isTrendingUp ? '+' : '-'}$currency ${numberFormat.format(slope.abs())}/mo';
+        }
+      } catch (_) {}
+
+      // Top 3 recent transactions (kept for backward compatibility)
       final recentList = activeTx.take(3).map((t) {
         return {
           'category': t.category,
@@ -103,6 +146,10 @@ class WidgetHelper {
       await prefs.setString('widget_budget_label', budgetLabel);
       await prefs.setString('widget_top_category', topCategory);
       await prefs.setString('widget_top_category_amount', topCategoryAmount);
+      await prefs.setString('widget_category_breakdown', json.encode(categoryBreakdown));
+      await prefs.setString('widget_forecast_amount', forecastAmountStr);
+      await prefs.setString('widget_forecast_trend', forecastTrendStr);
+      await prefs.setBool('widget_is_trending_up', isTrendingUp);
       await prefs.setString('widget_recent_transactions', json.encode(recentList));
 
       // Trigger update on native side

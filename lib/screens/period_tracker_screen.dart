@@ -1017,6 +1017,22 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
           ],
         ),
       ),
+      floatingActionButton: SizedBox(
+        height: 56,
+        child: FloatingActionButton.extended(
+          heroTag: 'period_fab',
+          onPressed: () async {
+            await HapticFeedback.lightImpact();
+            await _showLogEditor(null, _selectedDay ?? DateTime.now());
+          },
+          icon: const Icon(Icons.add),
+          label: const Text('Log Period'),
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
+          elevation: 0,
+          shape: const StadiumBorder(),
+        ),
+      ),
     );
   }
 

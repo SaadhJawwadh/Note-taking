@@ -14,6 +14,7 @@ import '../data/settings_provider.dart';
 import '../data/transaction_category.dart';
 import '../data/transaction_model.dart';
 import '../data/repositories/transaction_repository.dart';
+import '../data/repositories/recurring_rule_repository.dart';
 import '../utils/rich_text_utils.dart';
 import '../utils/widget_helper.dart';
 import 'sms_service.dart';
@@ -46,13 +47,25 @@ void callbackDispatcher() {
 /// to reading the stored prefs directly (best-effort).
 Future<String> generateBackupJson({Map<String, dynamic>? settingsOverride}) async {
   final db = await DatabaseHelper.instance.database;
+
+  // 1. Force flush SQLite WAL (Write-Ahead Logging) to ensure recent writes are committed
+  try {
+    await db.rawQuery('PRAGMA wal_checkpoint(FULL);');
+  } catch (_) {}
+
+  // 2. Materialize any due recurring transactions before snapshotting
+  try {
+    await RecurringRuleRepository.instance.materializeDueRules();
+  } catch (_) {}
+
   final notes = await db.query('notes');
   final tags = await db.query('tags');
   final noteTags = await db.query('note_tags');
-  final transactions = await db.query('transactions');
+  final transactions = await db.query('transactions', orderBy: 'id ASC');
   final categoryDefinitions = await db.query('category_definitions');
   final smsContacts = await db.query('sms_contacts');
   final periodLogs = await db.query('period_logs');
+  final recurringRules = await db.query('recurring_rules');
 
   final Map<String, dynamic> settingsMap;
   if (settingsOverride != null) {
@@ -86,8 +99,9 @@ Future<String> generateBackupJson({Map<String, dynamic>? settingsOverride}) asyn
     'categoryDefinitions': categoryDefinitions,
     'smsContacts': smsContacts,
     'periodLogs': periodLogs,
+    'recurringRules': recurringRules,
     'settings': settingsMap,
-    'version': 9,
+    'version': 10,
     'exportedAt': DateTime.now().toIso8601String(),
   });
 }
@@ -99,8 +113,7 @@ Future<bool> performAutoBackup() async {
     String? targetPath = prefs.getString('autoBackupPath');
     if (targetPath != null && !await Directory(targetPath).exists()) targetPath = null;
     if (targetPath == null) {
-      final appDir = await getExternalStorageDirectory();
-      if (appDir == null) return false;
+      final appDir = await getApplicationDocumentsDirectory();
       targetPath = appDir.path;
     }
     final jsonContent = await generateBackupJson();
@@ -209,7 +222,7 @@ class BackupService {
         await txn.delete('note_tags');
         await txn.delete('transactions');
         await txn.delete('period_logs');
-        await txn.delete('note_tags'); // Clear explicit associations
+        await txn.delete('recurring_rules');
         // Built-in categories and contacts are kept, but we replace custom ones
         await txn.delete('category_definitions', where: 'isBuiltIn = 0');
         await txn.delete('sms_contacts', where: 'isBuiltIn = 0');
@@ -252,10 +265,14 @@ class BackupService {
         }
         if (data.containsKey('transactions')) {
           for (final row in data['transactions']) {
-            final map = Map<String, Object?>.from(row)
-              ..remove('_id') // Let DB generate ID
-              ..remove('id'); // Ensure no collision with 'id' if exists
-            batch.insert('transactions', map, conflictAlgorithm: ConflictAlgorithm.ignore);
+            final map = Map<String, Object?>.from(row)..remove('_id');
+            batch.insert('transactions', map, conflictAlgorithm: ConflictAlgorithm.replace);
+          }
+        }
+        if (data.containsKey('recurringRules')) {
+          for (final row in data['recurringRules']) {
+            final map = Map<String, Object?>.from(row);
+            batch.insert('recurring_rules', map, conflictAlgorithm: ConflictAlgorithm.replace);
           }
         }
         if (data.containsKey('categoryDefinitions')) {

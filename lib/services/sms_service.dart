@@ -47,6 +47,12 @@ class SmsService {
       }
       // Always delete the reversal transaction itself to keep the DB clean
       await TransactionRepository.instance.deleteTransaction(inserted.id!);
+    } else {
+      await NotificationService.showNotification(
+        id: inserted.id ?? (DateTime.now().millisecondsSinceEpoch ~/ 1000),
+        title: inserted.isExpense ? '💳 Expense Auto-Imported' : '💰 Income Auto-Imported',
+        body: '${inserted.isExpense ? "Spent" : "Received"} ${inserted.amount.toStringAsFixed(0)} • ${inserted.description}',
+      );
     }
   }
 
@@ -127,6 +133,40 @@ class SmsService {
       }
     }
     return count;
+  }
+
+  /// Scans recent inbox SMS for unlisted sender handles that look like financial/bank senders.
+  static Future<List<String>> discoverNewBankSenders() async {
+    if (!await hasPermission()) return [];
+    await reloadSmsContacts();
+
+    final messages = await telephony.getInboxSms(
+      columns: [SmsColumn.ADDRESS, SmsColumn.BODY],
+    );
+
+    final candidates = <String>{};
+    for (var m in messages) {
+      final address = (m.address ?? '').trim();
+      final body = m.body ?? '';
+      if (address.isEmpty || body.isEmpty) continue;
+
+      final addrLower = address.toLowerCase();
+      if (_allowedSenderIds.contains(addrLower) || _blockedSenderIds.contains(addrLower)) {
+        continue;
+      }
+      final isKnownBank = SmsConstants.bankSenders.any((s) => address.toUpperCase().contains(s.toUpperCase()));
+      if (isKnownBank) continue;
+
+      final hasFinancialTerms = SmsConstants.amountRegex.hasMatch(body) ||
+          SmsConstants.bareAmountRegex.hasMatch(body) ||
+          SmsConstants.debitRegex.hasMatch(body) ||
+          SmsConstants.creditRegex.hasMatch(body);
+
+      if (hasFinancialTerms && address.length >= 3) {
+        candidates.add(address);
+      }
+    }
+    return candidates.toList();
   }
 
   static final StreamController<TransactionModel> _smsStreamController = StreamController<TransactionModel>.broadcast();
@@ -389,12 +429,20 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
       return;
     }
     final inserted = await TransactionRepository.instance.createSmsTransaction(transaction);
-    if (inserted != null && transaction.category == SmsConstants.reversalSentinel) {
-      final target = await TransactionRepository.instance.findReversalTarget(transaction.amount, transaction.date);
-      if (target != null) {
-        await TransactionRepository.instance.deleteTransaction(target.id!);
+    if (inserted != null) {
+      if (transaction.category == SmsConstants.reversalSentinel) {
+        final target = await TransactionRepository.instance.findReversalTarget(transaction.amount, transaction.date);
+        if (target != null) {
+          await TransactionRepository.instance.deleteTransaction(target.id!);
+        }
+        await TransactionRepository.instance.deleteTransaction(inserted.id!);
+      } else {
+        await NotificationService.showNotification(
+          id: inserted.id ?? (DateTime.now().millisecondsSinceEpoch ~/ 1000),
+          title: inserted.isExpense ? '💳 Expense Auto-Imported' : '💰 Income Auto-Imported',
+          body: '${inserted.isExpense ? "Spent" : "Received"} ${inserted.amount.toStringAsFixed(0)} • ${inserted.description}',
+        );
       }
-      await TransactionRepository.instance.deleteTransaction(inserted.id!);
     }
   }
 }

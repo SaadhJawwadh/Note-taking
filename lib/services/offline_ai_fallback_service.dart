@@ -230,15 +230,12 @@ class OfflineAiFallbackService {
 
   /// Fallback bank SMS transaction parser.
   static Map<String, dynamic>? parseSmsTransaction(String smsBody, List<String> categories) {
-    if (smsBody.trim().isEmpty) return null;
-
     final bodyLower = smsBody.toLowerCase();
-    final isExpense = bodyLower.contains('debited') ||
-        bodyLower.contains('spent') ||
-        bodyLower.contains('paid') ||
-        bodyLower.contains('withdrawn') ||
-        bodyLower.contains('transfer to') ||
-        bodyLower.contains('purchase');
+    final isCredit = bodyLower.contains('credited') ||
+        bodyLower.contains('received') ||
+        bodyLower.contains('deposited') ||
+        bodyLower.contains('transferred to you');
+    final isExpense = !isCredit;
 
     // Amount extraction
     final amountMatch = RegExp(r'(?:LKR|Rs\.?|USD|\$)\s*([\d,]+(?:\.\d{1,2})?)', caseSensitive: false)

@@ -30,6 +30,9 @@ import '../utils/app_globals.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_layout.dart';
 
+import '../widgets/editor/editor_table_dialog.dart';
+import '../widgets/editor/editor_note_details_sheet.dart';
+
 class NoteEditorScreen extends StatefulWidget {
   final Note? note;
 
@@ -412,6 +415,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
   @override
   void dispose() {
+    _titleController.removeListener(_onContentChanged);
+    _quillController.removeListener(_onContentChanged);
+    _quillController.removeListener(_onSelectionChanged);
     _speech.cancel();
     _docSubscription?.cancel();
     _debounce?.cancel();
@@ -856,86 +862,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   }
 
   Future<void> _showTableInsertionDialog() async {
-    int rows = 3;
-    int cols = 3;
+    final result = await EditorTableDialog.show(context);
 
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return AlertDialog(
-              backgroundColor: Theme.of(ctx).colorScheme.surfaceContainerHigh,
-              title: const Text('Insert Table'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('Choose dimensions for your table:'),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      Column(
-                        children: [
-                          const Text('Columns', style: TextStyle(fontWeight: FontWeight.bold)),
-                          Row(
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.remove),
-                                onPressed: cols > 1 ? () => setModalState(() => cols--) : null,
-                              ),
-                              Text('$cols', style: const TextStyle(fontSize: 18)),
-                              IconButton(
-                                icon: const Icon(Icons.add),
-                                onPressed: cols < 10 ? () => setModalState(() => cols++) : null,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      Column(
-                        children: [
-                          const Text('Rows', style: TextStyle(fontWeight: FontWeight.bold)),
-                          Row(
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.remove),
-                                onPressed: rows > 1 ? () => setModalState(() => rows--) : null,
-                              ),
-                              Text('$rows', style: const TextStyle(fontSize: 18)),
-                              IconButton(
-                                icon: const Icon(Icons.add),
-                                onPressed: rows < 20 ? () => setModalState(() => rows++) : null,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text('Insert'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    if (result == true) {
+    if (result != null) {
       final rowsList = List.generate(
-        rows,
+        result.rows,
         (rIndex) => List.generate(
-          cols,
+          result.cols,
           (cIndex) => rIndex == 0 ? 'Header ${cIndex + 1}' : 'Cell',
         ),
       );
@@ -1022,162 +955,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   /// Displays word count, character count, reading time, and note timestamps.
   void _showNoteDetailsSheet() {
     HapticFeedback.lightImpact();
-    final plainText = _quillController.document.toPlainText().trim();
-    final words = plainText.isEmpty
-        ? 0
-        : plainText.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
-    final chars = plainText.length;
-    final readingTimeMin = (words / 200).ceil();
-    final readingTimeStr = words == 0
-        ? '0 min read'
-        : readingTimeMin <= 1
-            ? '1 min read'
-            : '$readingTimeMin min read';
-
-    final createdAt = widget.note?.dateCreated;
-    final updatedAt = widget.note?.dateModified;
-    final dateFormat = DateFormat('MMM d, yyyy · h:mm a');
-
-    showModalBottomSheet(
-      context: context,
-      showDragHandle: true,
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (sheetContext) {
-        final theme = Theme.of(sheetContext);
-        final colorScheme = theme.colorScheme;
-
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.info_outline, color: colorScheme.primary, size: 24),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Note Details & Stats',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    _buildStatCard(
-                      context,
-                      icon: Icons.notes,
-                      value: '$words',
-                      label: 'Words',
-                    ),
-                    const SizedBox(width: 12),
-                    _buildStatCard(
-                      context,
-                      icon: Icons.text_fields,
-                      value: '$chars',
-                      label: 'Characters',
-                    ),
-                    const SizedBox(width: 12),
-                    _buildStatCard(
-                      context,
-                      icon: Icons.timer_outlined,
-                      value: readingTimeStr,
-                      label: 'Read Time',
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(AppLayout.radiusM),
-                    border: Border.all(
-                      color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Folder', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant)),
-                          Text(_folder, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                      if (createdAt != null) ...[
-                        const Divider(height: 20),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Created', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant)),
-                            Text(dateFormat.format(createdAt), style: theme.textTheme.bodySmall),
-                          ],
-                        ),
-                      ],
-                      if (updatedAt != null) ...[
-                        const Divider(height: 20),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Last Modified', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant)),
-                            Text(dateFormat.format(updatedAt), style: theme.textTheme.bodySmall),
-                          ],
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildStatCard(BuildContext context, {required IconData icon, required String value, required String label}) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(AppLayout.radiusM),
-          border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 20, color: colorScheme.primary),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ),
+    final plainText = _quillController.document.toPlainText();
+    EditorNoteDetailsSheet.show(
+      context,
+      plainText: plainText,
+      folder: _folder,
+      createdAt: widget.note?.dateCreated,
+      updatedAt: widget.note?.dateModified,
     );
   }
 
@@ -2411,6 +2195,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         onPopInvokedWithResult: (didPop, result) async {
           if (didPop) return;
           try {
+            _debounce?.cancel();
+            _debounceTagTimer?.cancel();
             await saveNote();
           } catch (e) {
             debugPrint('Error saving note on pop: $e');
@@ -2454,111 +2240,128 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                   bindings: <ShortcutActivator, VoidCallback>{
                                     const SingleActivator(LogicalKeyboardKey.escape): _closeSearch,
                                   },
-                                  child: Row(
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.arrow_back),
-                                        color: textColor,
-                                        tooltip: 'Close search',
-                                        onPressed: _closeSearch,
-                                      ),
-                                      Expanded(
-                                        child: TextField(
-                                          controller: _searchController,
-                                          focusNode: _searchFocusNode,
-                                          style: TextStyle(color: textColor),
-                                          decoration: InputDecoration(
-                                            hintText: 'Search in note...',
-                                            hintStyle: TextStyle(color: hintColor),
-                                            border: InputBorder.none,
-                                            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                                            isDense: true,
-                                          ),
-                                          onChanged: _performSearch,
-                                          onSubmitted: (_) => _nextSearchMatch(),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                                    child: Row(
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.arrow_back),
+                                          color: theme.colorScheme.onSurfaceVariant,
+                                          tooltip: 'Close search',
+                                          onPressed: _closeSearch,
                                         ),
-                                      ),
-                                      Tooltip(
-                                        message: 'Match case',
-                                        child: InkWell(
-                                          onTap: _toggleCaseSensitive,
-                                          borderRadius: BorderRadius.circular(AppLayout.radiusS),
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: _isCaseSensitive
-                                                  ? theme.colorScheme.primaryContainer
-                                                  : Colors.transparent,
-                                              borderRadius: BorderRadius.circular(AppLayout.radiusS),
-                                              border: Border.all(
-                                                color: _isCaseSensitive
-                                                    ? theme.colorScheme.primary
-                                                    : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                                        Expanded(
+                                          child: TextField(
+                                            controller: _searchController,
+                                            focusNode: _searchFocusNode,
+                                            style: TextStyle(color: theme.colorScheme.onSurface),
+                                            decoration: InputDecoration(
+                                              hintText: 'Search in note...',
+                                              hintStyle: TextStyle(
+                                                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                                               ),
+                                              filled: false,
+                                              fillColor: Colors.transparent,
+                                              border: InputBorder.none,
+                                              enabledBorder: InputBorder.none,
+                                              focusedBorder: InputBorder.none,
+                                              contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                                              isDense: true,
+                                            ),
+                                            onChanged: _performSearch,
+                                            onSubmitted: (_) => _nextSearchMatch(),
+                                          ),
+                                        ),
+                                        Tooltip(
+                                          message: 'Match case',
+                                          child: InkWell(
+                                            onTap: _toggleCaseSensitive,
+                                            borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                                            child: AnimatedContainer(
+                                              duration: const Duration(milliseconds: 150),
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: _isCaseSensitive
+                                                    ? theme.colorScheme.primaryContainer
+                                                    : Colors.transparent,
+                                                borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                                                border: Border.all(
+                                                  color: _isCaseSensitive
+                                                      ? theme.colorScheme.primary
+                                                      : theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                'Aa',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: _isCaseSensitive ? FontWeight.bold : FontWeight.normal,
+                                                  color: _isCaseSensitive
+                                                      ? theme.colorScheme.onPrimaryContainer
+                                                      : theme.colorScheme.onSurfaceVariant,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        if (_searchController.text.isNotEmpty)
+                                          AnimatedContainer(
+                                            duration: const Duration(milliseconds: 150),
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            margin: const EdgeInsets.symmetric(horizontal: 2),
+                                            decoration: BoxDecoration(
+                                              color: _searchOffsets.isNotEmpty
+                                                  ? theme.colorScheme.secondaryContainer
+                                                  : theme.colorScheme.surfaceContainerHighest,
+                                              borderRadius: BorderRadius.circular(AppLayout.radiusM),
                                             ),
                                             child: Text(
-                                              'Aa',
+                                              _searchOffsets.isNotEmpty
+                                                  ? '${_currentSearchIndex + 1}/${_searchOffsets.length}'
+                                                  : '0/0',
                                               style: TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: _isCaseSensitive ? FontWeight.bold : FontWeight.normal,
-                                                color: _isCaseSensitive
-                                                    ? theme.colorScheme.onPrimaryContainer
-                                                    : textColor.withValues(alpha: 0.8),
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: _searchOffsets.isNotEmpty
+                                                    ? theme.colorScheme.onSecondaryContainer
+                                                    : theme.colorScheme.onSurfaceVariant,
                                               ),
                                             ),
                                           ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      if (_searchController.text.isNotEmpty)
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                                          decoration: BoxDecoration(
-                                            color: _searchOffsets.isNotEmpty
-                                                ? theme.colorScheme.secondaryContainer
-                                                : theme.colorScheme.surfaceContainerHighest,
-                                            borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                                        if (_searchOffsets.isNotEmpty) ...[
+                                          IconButton(
+                                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                            padding: EdgeInsets.zero,
+                                            icon: const Icon(Icons.keyboard_arrow_up, size: 20),
+                                            color: theme.colorScheme.onSurfaceVariant,
+                                            tooltip: 'Previous match',
+                                            onPressed: _previousSearchMatch,
                                           ),
-                                          child: Text(
-                                            _searchOffsets.isNotEmpty
-                                                ? '${_currentSearchIndex + 1}/${_searchOffsets.length}'
-                                                : '0/0',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                              color: _searchOffsets.isNotEmpty
-                                                  ? theme.colorScheme.onSecondaryContainer
-                                                  : hintColor,
-                                            ),
+                                          IconButton(
+                                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                            padding: EdgeInsets.zero,
+                                            icon: const Icon(Icons.keyboard_arrow_down, size: 20),
+                                            color: theme.colorScheme.onSurfaceVariant,
+                                            tooltip: 'Next match',
+                                            onPressed: _nextSearchMatch,
                                           ),
-                                        ),
-                                      if (_searchOffsets.isNotEmpty) ...[
-                                        IconButton(
-                                          icon: const Icon(Icons.keyboard_arrow_up),
-                                          color: textColor,
-                                          tooltip: 'Previous match',
-                                          onPressed: _previousSearchMatch,
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.keyboard_arrow_down),
-                                          color: textColor,
-                                          tooltip: 'Next match',
-                                          onPressed: _nextSearchMatch,
-                                        ),
+                                        ],
+                                        if (_searchController.text.isNotEmpty)
+                                          IconButton(
+                                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                            padding: EdgeInsets.zero,
+                                            icon: const Icon(Icons.close, size: 20),
+                                            color: theme.colorScheme.onSurfaceVariant,
+                                            tooltip: 'Clear search text',
+                                            onPressed: () {
+                                              HapticFeedback.selectionClick();
+                                              _searchController.clear();
+                                              _performSearch('');
+                                            },
+                                          ),
                                       ],
-                                      if (_searchController.text.isNotEmpty)
-                                        IconButton(
-                                          icon: const Icon(Icons.close),
-                                          color: textColor,
-                                          tooltip: 'Clear search text',
-                                          onPressed: () {
-                                            HapticFeedback.selectionClick();
-                                            _searchController.clear();
-                                            _performSearch('');
-                                          },
-                                        ),
-                                    ],
+                                    ),
                                   ),
                                 )
                               : Row(
@@ -2930,10 +2733,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                     // Markdown-style typing: '- ', '1. ',
                                     // '# ', '**bold**', and '[] ' for a
                                     // checklist item.
+                                    // ignore: experimental_member_use
                                     characterShortcutEvents:
                                         standardCharactersShortcutEvents,
+                                    // ignore: experimental_member_use
                                     spaceShortcutEvents: [
                                       ...standardSpaceShorcutEvents,
+                                      // ignore: experimental_member_use
                                       SpaceShortcutEvent(
                                         character: '[]',
                                         handler: (node, controller) {

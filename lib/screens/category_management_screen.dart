@@ -331,14 +331,21 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'category_fab',
-        onPressed: () async {
-          await HapticFeedback.lightImpact();
-          await _showAddDialog();
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('New Category'),
+      floatingActionButton: SizedBox(
+        height: 56,
+        child: FloatingActionButton.extended(
+          heroTag: 'category_fab',
+          onPressed: () async {
+            await HapticFeedback.lightImpact();
+            await _showAddDialog();
+          },
+          icon: const Icon(Icons.add),
+          label: const Text('New Category'),
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
+          elevation: 0,
+          shape: const StadiumBorder(),
+        ),
       ),
     );
   }

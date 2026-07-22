@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../data/repositories/transaction_repository.dart';
 import '../data/sms_contact.dart';
@@ -178,24 +179,69 @@ class _SmsContactsScreenState extends State<SmsContactsScreen> {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('SMS Contacts')),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator.adaptive())
-          : AnimationLimiter(
-              child: ListView(
-                children: [
-                  for (int i = 0; i < items.length; i++)
-                    AnimationConfiguration.staggeredList(
+      body: AnimationLimiter(
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              backgroundColor: Colors.transparent,
+              floating: true,
+              snap: true,
+              toolbarHeight: 84,
+              titleSpacing: 16,
+              automaticallyImplyLeading: false,
+              title: Container(
+                margin: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                height: 64,
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+                  boxShadow: AppLayout.softShadow(context),
+                ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: () async {
+                        await HapticFeedback.lightImpact();
+                        if (!context.mounted) return;
+                        Navigator.pop(context);
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'SMS Contacts',
+                      style: tt.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (_loading)
+              const SliverFillRemaining(
+                child: Center(child: CircularProgressIndicator.adaptive()),
+              )
+            else
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, i) {
+                    return AnimationConfiguration.staggeredList(
                       position: i,
                       duration: const Duration(milliseconds: 375),
                       child: SlideAnimation(
                         verticalOffset: 50.0,
                         child: FadeInAnimation(child: items[i]),
                       ),
-                    ),
-                ],
+                    );
+                  },
+                  childCount: items.length,
+                ),
               ),
-            ),
+          ],
+        ),
+      ),
     );
   }
 

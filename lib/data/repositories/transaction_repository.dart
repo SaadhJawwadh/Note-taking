@@ -245,4 +245,44 @@ class TransactionRepository {
     final rows = await db.query(TableNames.transactions, columns: [TransactionFields.id], where: 'amount = ? AND smsId IS NOT NULL AND date >= ? AND date <= ?', whereArgs: [amount, windowStart, windowEnd], limit: 1);
     return rows.isNotEmpty;
   }
+
+  /// Scans SQLite database for duplicate transaction rows with matching amount,
+  /// isExpense, and timestamp window, purging redundant duplicates and
+  /// returning the count of removed items.
+  Future<int> cleanupDuplicates() async {
+    final db = await _db;
+    final allTxns = await readAllTransactions();
+    if (allTxns.length < 2) return 0;
+
+    final toDeleteIds = <int>{};
+    for (int i = 0; i < allTxns.length; i++) {
+      final a = allTxns[i];
+      if (a.id == null || toDeleteIds.contains(a.id)) continue;
+
+      for (int j = i + 1; j < allTxns.length; j++) {
+        final b = allTxns[j];
+        if (b.id == null || toDeleteIds.contains(b.id)) continue;
+
+        final isSameAmount = (a.amount - b.amount).abs() < 0.01;
+        final isSameType = a.isExpense == b.isExpense;
+        final isTimeClose = a.date.difference(b.date).abs() <= const Duration(seconds: 120);
+
+        if (isSameAmount && isSameType && isTimeClose) {
+          toDeleteIds.add(b.id!);
+        }
+      }
+    }
+
+    if (toDeleteIds.isNotEmpty) {
+      final placeholders = List.filled(toDeleteIds.length, '?').join(',');
+      await db.delete(
+        TableNames.transactions,
+        where: '${TransactionFields.id} IN ($placeholders)',
+        whereArgs: toDeleteIds.toList(),
+      );
+      await WidgetHelper.updateWidgetData();
+    }
+
+    return toDeleteIds.length;
+  }
 }

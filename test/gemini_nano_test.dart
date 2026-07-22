@@ -88,6 +88,14 @@ void main() {
       expect(result!['category'], 'Other');
     });
 
+    test('parseSmsTransaction correctly parses ComBank Digital-Transfer as expense', () async {
+      mockResponse = '{"amount": 1727.00, "merchant": "ComBank Digital-Transfer", "category": "Other", "isExpense": true}';
+      final result = await service.parseSmsTransaction('ComBank Digital-Transfer within ComBank LKR 1,727.00 attempted.', categories);
+      expect(result, isNotNull);
+      expect(result!['amount'], 1727.00);
+      expect(result['isExpense'], isTrue);
+    });
+
     test('parseSmsTransaction returns null on invalid JSON', () async {
       mockResponse = 'This is not JSON at all { invalid }';
       final result = await service.parseSmsTransaction('SMS Body', categories);

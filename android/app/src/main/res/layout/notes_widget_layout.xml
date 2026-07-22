@@ -30,6 +30,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
+            android:fontFamily="@font/google_sans_text"
             android:text="@string/shortcut_new_note_short"
             android:textColor="@color/widget_on_primary_container"
             android:textSize="14sp"

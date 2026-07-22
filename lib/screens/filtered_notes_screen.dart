@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:provider/provider.dart';
 import '../data/repositories/note_repository.dart';
 import '../data/note_model.dart';
@@ -77,10 +76,10 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.delete_forever_outlined,
-                      color: Colors.redAccent),
-                  title: const Text('Delete Permanently',
-                      style: TextStyle(color: Colors.redAccent)),
+                  leading:
+                      Icon(Icons.delete_forever_outlined, color: Theme.of(context).colorScheme.error),
+                  title: Text('Delete Permanently',
+                      style: TextStyle(color: Theme.of(context).colorScheme.error)),
                   onTap: () async {
                     Navigator.pop(context);
                     final confirmed = await showDialog<bool>(
@@ -126,9 +125,9 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
                 ),
                 ListTile(
                   leading:
-                      const Icon(Icons.delete_outline, color: Colors.redAccent),
-                  title: const Text('Move to Trash',
-                      style: TextStyle(color: Colors.redAccent)),
+                      Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.error),
+                  title: Text('Move to Trash',
+                      style: TextStyle(color: Theme.of(context).colorScheme.error)),
                   onTap: () async {
                     await NoteRepository.instance.softDeleteNote(note.id);
                     if (!context.mounted) return;
@@ -149,143 +148,124 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
   Widget build(BuildContext context) {
     final title =
         widget.filterType == FilterType.archived ? 'Archived' : 'Trash';
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
 
     return Consumer<SettingsProvider>(builder: (context, settings, child) {
       return Scaffold(
-        appBar: AppBar(
-          title: Text(title),
-          centerTitle: true,
-        ),
-        body: isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : displayedNotes.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          widget.filterType == FilterType.trash
-                              ? Icons.delete_outline
-                              : Icons.archive_outlined,
-                          size: 64,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurfaceVariant
-                              .withValues(alpha: 0.5),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No notes in $title',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyLarge
-                              ?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant),
-                        ),
-                      ],
+        body: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              backgroundColor: Colors.transparent,
+              floating: true,
+              snap: true,
+              toolbarHeight: 84,
+              titleSpacing: 16,
+              automaticallyImplyLeading: false,
+              title: Container(
+                margin: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                height: 64,
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+                  boxShadow: AppLayout.softShadow(context),
+                ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
                     ),
-                  )
-                : Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: AnimationLimiter(
-                      child: settings.isGridView
-                          ? MasonryGridView.count(
-                              crossAxisCount: (MediaQuery.sizeOf(context).width / 220)
-                                  .floor()
-                                  .clamp(2, 4),
-                              mainAxisSpacing: 12,
-                              crossAxisSpacing: 12,
-                              itemCount: displayedNotes.length,
-                              itemBuilder: (context, index) {
-                                final note = displayedNotes[index];
-                                return AnimationConfiguration.staggeredGrid(
-                                  position: index,
-                                  duration: const Duration(milliseconds: 375),
-                                  columnCount: (MediaQuery.sizeOf(context).width / 220)
-                                      .floor()
-                                      .clamp(2, 4),
-                                  child: ScaleAnimation(
-                                    child: FadeInAnimation(
-                                      child: OpenContainer<bool>(
-                                        transitionType:
-                                            ContainerTransitionType.fade,
-                                        openBuilder: (context, _) =>
-                                            NoteEditorScreen(note: note),
-                                        closedElevation: 0,
-                                        closedColor: Colors.transparent,
-                                        closedShape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(AppLayout.radiusXL)),
-                                        onClosed: (returned) async {
-                                          if (returned == true) {
-                                            await refreshNotes();
-                                          }
-                                        },
-                                        closedBuilder:
-                                            (context, openContainer) {
-                                          return NoteCard(
-                                            note: note,
-                                            onTap: openContainer,
-                                            tagColors: _tagColors,
-                                            onLongPress: () =>
-                                                _showNoteActions(note),
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            )
-                          : ListView.builder(
-                              itemCount: displayedNotes.length,
-                              itemBuilder: (context, index) {
-                                final note = displayedNotes[index];
-                                return AnimationConfiguration.staggeredList(
-                                  position: index,
-                                  duration: const Duration(milliseconds: 375),
-                                  child: SlideAnimation(
-                                    verticalOffset: 50.0,
-                                    child: FadeInAnimation(
-                                      child: Padding(
-                                        padding:
-                                            const EdgeInsets.only(bottom: 12.0),
-                                        child: OpenContainer<bool>(
-                                          transitionType:
-                                              ContainerTransitionType.fade,
-                                          openBuilder: (context, _) =>
-                                              NoteEditorScreen(note: note),
-                                          closedElevation: 0,
-                                          closedColor: Colors.transparent,
-                                          closedShape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(AppLayout.radiusXL)),
-                                          onClosed: (returned) async {
-                                            if (returned == true) {
-                                              await refreshNotes();
-                                            }
-                                          },
-                                          closedBuilder:
-                                              (context, openContainer) {
-                                            return NoteCard(
-                                              note: note,
-                                              onTap: openContainer,
-                                              tagColors: _tagColors,
-                                              onLongPress: () =>
-                                                  _showNoteActions(note),
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
+                    const SizedBox(width: 8),
+                    Text(
+                      title,
+                      style: textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
+                  ],
+                ),
+              ),
+            ),
+            if (isLoading)
+              const SliverFillRemaining(
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (displayedNotes.isEmpty)
+              SliverFillRemaining(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        widget.filterType == FilterType.trash
+                            ? Icons.delete_outline
+                            : Icons.archive_outlined,
+                        size: 64,
+                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No notes in $title',
+                        style: textTheme.bodyLarge?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.all(16.0),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final note = displayedNotes[index];
+                      return AnimationConfiguration.staggeredList(
+                        position: index,
+                        duration: const Duration(milliseconds: 375),
+                        child: SlideAnimation(
+                          verticalOffset: 50.0,
+                          child: FadeInAnimation(
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 12.0),
+                              child: OpenContainer<bool>(
+                                transitionType: ContainerTransitionType.fade,
+                                openBuilder: (context, _) => NoteEditorScreen(note: note),
+                                closedElevation: 0,
+                                closedColor: Colors.transparent,
+                                closedShape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(AppLayout.radiusXL),
+                                ),
+                                onClosed: (returned) async {
+                                  if (returned == true) {
+                                    await refreshNotes();
+                                  }
+                                },
+                                closedBuilder: (context, openContainer) {
+                                  return NoteCard(
+                                    note: note,
+                                    onTap: openContainer,
+                                    tagColors: _tagColors,
+                                    onLongPress: () => _showNoteActions(note),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                    childCount: displayedNotes.length,
+                  ),
+                ),
+              ),
+          ],
+        ),
       );
     });
   }

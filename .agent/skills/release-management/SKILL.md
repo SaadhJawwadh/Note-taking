@@ -22,8 +22,9 @@ Ensures that any code being pushed to production is functional, stable, and veri
 Before bumping the version, ensure all of the following are done:
 * `flutter analyze` → **zero errors/warnings**. CI/CD will fail on any lint issues.
 * `flutter test` → **all tests passing**. Running the full test suite locally is mandatory to catch regressions.
-* `CHANGELOG.md` entry is documented under `## X.Y.Z - YYYY-MM-DD` (without brackets around the version number). This ensures the automated deploy script's exact match string check (`grep -q "## $NEW_VERSION"`) passes successfully, while regex-based release notes extractors still capture the version segment.
-* **What's New sheet (MANDATORY for every release)**: Update the feature cards in `lib/widgets/whats_new_sheet.dart` to describe THIS release's user-facing features in friendly, benefit-first language (5-7 cards max, lead with the biggest features). The sheet auto-fires once per version — it's gated on `SettingsProvider.lastSeenVersion` vs `PackageInfo` version in `home_screen._maybeShowWhatsNew` — so stale content from a previous release WILL be shown to every updating user. Never ship a release without refreshing it.
+* `CHANGELOG.md` entry is documented under `## X.Y.Z - YYYY-MM-DD` (without brackets around the version number). Keep release notes ultra-concise, punchy, and benefit-first (3-4 bullets max, single short line per feature).
+* **Changelog Screen (MANDATORY for every release)**: Update `lib/screens/changelog_screen.dart` by adding a new `_buildVersionSection(context, version: 'vX.Y.Z', date: '...', isLatest: true, changes: [...])` entry at the top of the list, and setting `isLatest: false` on the preceding section. This guarantees the in-app Settings Changelog page matches `CHANGELOG.md` 100%.
+* **What's New sheet (MANDATORY for every release)**: Update the feature cards in `lib/widgets/whats_new_sheet.dart` to describe THIS release's user-facing features in short, friendly, benefit-first language (3-5 cards max, single line per card). The sheet auto-fires once per version — it's gated on `SettingsProvider.lastSeenVersion` vs `PackageInfo` version in `home_screen._maybeShowWhatsNew` — so stale content from a previous release WILL be shown to every updating user. Never ship a release without refreshing it.
 * Version number in `pubspec.yaml` is bumped using the project convention:
   * **Minor bump** (new features): `1.X.0+Y` where `Y = X * 10000` (e.g. `1.34.0+13400`)
   * **Patch bump** (bug fixes): `1.X.Y+Z` (e.g. `1.33.1+13301`)
@@ -44,16 +45,19 @@ Execute the automated deploy script to bump, tag, and publish:
 ./deploy.sh <version>
 ```
 ### Step 4: Play Console Bilingual Release Notes (Mandatory Output)
-With every release, **ALWAYS** generate and present short, bulleted Google Play Console release notes formatted inside `<en-US>` (English) and `<ta-IN>` (Tamil) XML tags so the user can copy and paste directly into Play Console:
+With every release, **ALWAYS** generate and present ultra-concise, short, and to-the-point Google Play Console release notes formatted inside `<en-US>` (English) and `<ta-IN>` (Tamil) XML tags for immediate copy-pasting into Play Console:
+
+* Keep notes ultra-concise, direct, and under 4 bullet points total.
+* Focus purely on user benefits in a single short sentence per point (no technical jargon or long text).
 
 ```xml
 <en-US>
-• Feature Title: Concise benefit-first description.
-• Feature Title: Concise benefit-first description.
+• Feature: Short, direct user benefit.
+• Fix: Quick one-line fix summary.
 </en-US>
 <ta-IN>
-• அம்ச தலைப்பு: சுருக்கமான தமிழ் விளக்கம்.
-• அம்ச தலைப்பு: சுருக்கமான தமிழ் விளக்கம்.
+• அம்சம்: நேரடிப் பயனர் விளக்கம்.
+• திருத்தம்: சுருக்கமான பிழைத்திருத்தம்.
 </ta-IN>
 ```
 

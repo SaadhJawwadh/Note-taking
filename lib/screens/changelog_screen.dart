@@ -7,33 +7,99 @@ class ChangelogScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
 
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
-      appBar: AppBar(
-        title: const Text(
-          'Changelog',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        centerTitle: false,
-        elevation: 0,
-        backgroundColor: theme.colorScheme.surface,
-        foregroundColor: theme.colorScheme.onSurface,
-      ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppLayout.spaceXL,
-            vertical: AppLayout.spaceL,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverAppBar(
+            backgroundColor: Colors.transparent,
+            floating: true,
+            snap: true,
+            toolbarHeight: 84,
+            titleSpacing: 16,
+            automaticallyImplyLeading: false,
+            title: Container(
+              margin: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              height: 64,
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+                boxShadow: AppLayout.softShadow(context),
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Changelog',
+                    style: textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-          physics: const BouncingScrollPhysics(),
-          children: [
-            _buildVersionSection(
-              context,
-              version: 'v2.3.0',
-              date: 'July 20, 2026',
-              isLatest: true,
-              changes: [
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppLayout.spaceXL,
+              vertical: AppLayout.spaceL,
+            ),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                _buildVersionSection(
+                  context,
+                  version: 'v2.4.0',
+                  date: 'July 22, 2026',
+                  isLatest: true,
+                  changes: [
+                    _ChangelogGroup(
+                      title: '🔍 In-Note Search & Text Navigation',
+                      items: [
+                        'Real-Time Search Bar: Search inside any note with instant query highlighting, case-sensitivity toggle, and match navigation.',
+                        'Match Count Indicator: Live match position badge (e.g. 1/5) updates dynamically.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🧠 Dual-Engine On-Device AI',
+                      items: [
+                        'Universal Device Support: Powered by Android AI Core NPU on supported hardware, with zero-latency offline fallback.',
+                        'Floating AI Assist Toolbar: Highlight text to trigger an instant floating AI assist toolbar over the keyboard.',
+                        'Smart Tag Suggestions: Whole-word boundary precision with dynamic topic detection.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '💳 Ledger Engine & SMS Auto-Discovery',
+                      items: [
+                        '1-Tap Ledger Deduplication: Purge duplicate transaction entries within 120-second windows.',
+                        'Smart Bank Sender Auto-Discovery: Discover new bank senders and whitelist them with one tap.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🎨 Universal UI/UX Consistency Pass',
+                      items: [
+                        'Floating Pill App Bars: Standardized top app bars across all sub-screens and settings.',
+                        'Aligned Action Buttons: Unified floating action buttons (FAB) with stadium border styling across modules.',
+                      ],
+                    ),
+                  ],
+                ),
+                _buildVersionSection(
+                  context,
+                  version: 'v2.3.0',
+                  date: 'July 20, 2026',
+                  isLatest: false,
+                  changes: [
                 _ChangelogGroup(
                   title: '🏷️ Category Management & Custom Icons',
                   items: [
@@ -172,7 +238,7 @@ class ChangelogScreen extends StatelessWidget {
                 _ChangelogGroup(
                   title: '🎨 Material Expressive Design',
                   items: [
-                    'Font Pairing: Google Sans Display paired with Rubik body text.',
+                    'Font Pairing: Google Sans Display paired with Inter body text.',
                     'Predictive Back Motion: Integrated shared-axis navigation transitions.',
                     'Tamil Language: Full localization infrastructure for Tamil text support.',
                   ],
@@ -193,10 +259,12 @@ class ChangelogScreen extends StatelessWidget {
                 ),
               ],
             ),
-          ],
+          ]),
         ),
       ),
-    );
+    ],
+  ),
+);
   }
 
   Widget _buildVersionSection(

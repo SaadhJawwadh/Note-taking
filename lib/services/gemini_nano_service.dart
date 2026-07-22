@@ -100,7 +100,7 @@ Respond with ONLY a raw JSON object with keys:
 "amount" (decimal number/float, without currency symbol or commas, e.g., 1500.50),
 "description" (string, a refined, clean, and professional description of the transaction, max 30 chars. Extract the actual merchant name, utility provider, or peer-to-peer transfer details like "Transfer to [Name]" or "Received from [Name]". For ATM withdrawals, use "ATM Withdrawal"),
 "category" (string, MUST be exactly one of these values: [$categoriesStr]. Select the category that best matches the transaction description or purpose),
-"isExpense" (boolean, true if debited/spent/withdrawn/transferred out, false if credited/received/deposited).
+"isExpense" (boolean, true if debited/spent/withdrawn/transferred out or for all bank digital transfers like "Digital-Transfer", false ONLY if credited/received/deposited).
 
 No formatting, no markdown code block (like ```json), no other text. Just the JSON object.
 

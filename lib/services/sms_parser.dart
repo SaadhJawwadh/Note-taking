@@ -88,8 +88,7 @@ class SmsParser {
 
     if (!isReversal && !isDebit && !isCredit && !hasInstalment && !isTransfer) return null;
 
-    final isQPlusTransfer = senderLower.contains('q+') && SmsConstants.transferRegex.hasMatch(body);
-    final isExpense = isDebit || hasInstalment || isQPlusTransfer || (!isCredit && !isReversal);
+    final isExpense = !isCredit && !isReversal;
 
     final description = buildDescription(body, address, amount, isExpense: isExpense);
     final category = isReversal

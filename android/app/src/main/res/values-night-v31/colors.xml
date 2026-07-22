@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- M3 Material You Dynamic Colors (Dark Mode / Night) -->
+    <color name="ic_launcher_background">@android:color/system_neutral1_900</color>
     <color name="widget_background">@android:color/system_neutral1_900</color>
-    <color name="widget_surface">@android:color/system_neutral1_1000</color>
+    <color name="widget_surface">@android:color/system_neutral2_800</color>
     <color name="widget_primary">@android:color/system_accent1_200</color>
     <color name="widget_primary_container">@android:color/system_accent1_700</color>
     <color name="widget_on_primary_container">@android:color/system_accent1_100</color>
     <color name="widget_accent">@android:color/system_accent2_200</color>
-    <color name="widget_text_primary">@android:color/system_neutral1_10</color>
-    <color name="widget_text_secondary">@android:color/system_neutral2_300</color>
-    <color name="widget_border">@android:color/system_neutral1_800</color>
-    <color name="widget_income">@android:color/system_accent3_300</color>
-    <color name="widget_expense">#FF453A</color>
+    <color name="widget_text_primary">@android:color/system_neutral1_50</color>
+    <color name="widget_text_secondary">@android:color/system_neutral2_200</color>
+    <color name="widget_border">@android:color/system_neutral2_700</color>
+    <color name="widget_income">#81C784</color>
+    <color name="widget_expense">#E57373</color>
 </resources>

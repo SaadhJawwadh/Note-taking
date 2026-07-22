@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'dart:io';
 import 'dart:async';
@@ -279,8 +278,6 @@ class SettingsScreen extends StatelessWidget {
                                 trailing: Icon(Icons.open_in_new_rounded, size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
                                 onTap: () => _launchUrl('https://play.google.com/store/apps/details?id=com.saadhjawwadh.notebook'),
                               ),
-                              const _Divider(),
-                              SettingsTile(icon: FontAwesomeIcons.github, title: 'GitHub Repository', subtitle: 'View source code & contribute', trailing: Icon(Icons.open_in_new_rounded, size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant), onTap: () => _launchUrl(AppConstants.repoUrl)),
                               const _Divider(),
                               SettingsTile(
                                 icon: Icons.history_rounded,
