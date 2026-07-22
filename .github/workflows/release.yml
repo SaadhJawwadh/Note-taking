@@ -107,7 +107,9 @@ jobs:
 
       # ── Upload to Google Play Store ──────────────────────────────────
       - name: Publish to Google Play
-        if: secrets.PLAY_SERVICE_ACCOUNT_JSON != ''
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        if: env.PLAY_SERVICE_ACCOUNT_JSON != ''
         uses: rstudio/actions/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
