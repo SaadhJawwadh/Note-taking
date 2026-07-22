@@ -105,6 +105,17 @@ jobs:
           body_path: ${{ hashFiles('RELEASE_NOTES.md') != '' && 'RELEASE_NOTES.md' || '' }}
           generate_release_notes: true
 
+      # ── Prepare Play Store WhatsNew Release Notes ───────────────────
+      - name: Prepare Play Store Release Notes
+        run: |
+          mkdir -p distribution/whatsnew
+          if [ -f RELEASE_NOTES.md ]; then
+            cp RELEASE_NOTES.md distribution/whatsnew/whatsnew-en-US
+          else
+            echo "• Bug fixes and performance improvements." > distribution/whatsnew/whatsnew-en-US
+          fi
+          echo "Created Play Store release notes in distribution/whatsnew/whatsnew-en-US"
+
       # ── Upload to Google Play Store ──────────────────────────────────
       - name: Publish to Google Play
         env:
@@ -116,3 +127,4 @@ jobs:
           packageName: com.saadhjawwadh.notebook
           releaseFiles: note-book-${{ github.ref_name }}.aab
           track: beta
+          whatsNewDirectory: distribution/whatsnew
