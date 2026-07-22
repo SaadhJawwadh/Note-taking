@@ -59,9 +59,45 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
-                  version: 'v2.4.0',
+                  version: 'v2.5.0',
                   date: 'July 22, 2026',
                   isLatest: true,
+                  changes: [
+                    _ChangelogGroup(
+                      title: '🔤 Offline Google Sans Text & Inter Typography',
+                      items: [
+                        'Embedded Asset Fonts: Google Sans Text and Inter typography embedded into app assets and Android res/font/ resources.',
+                        'Zero Network Fetching: Enforced 100% offline font rendering across all app screens and Android Home Widgets.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '💳 Ledger Engine & SMS Auto-Discovery',
+                      items: [
+                        '1-Tap Ledger Deduplication: Purge duplicate transaction entries within 120-second import windows.',
+                        'Smart Bank Sender Auto-Discovery: Discover new bank senders and whitelist them with one tap.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '⚙️ Streamlined UI & SMS Import Rules',
+                      items: [
+                        'Single-View SMS Rules: Streamlined rules page focusing on transaction types with direct link to Category Management.',
+                        'Render Overflow & Layout Fixes: Fixed top bar status padding calculations and cleaned Settings About section.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🔒 Security & CI/CD Automation',
+                      items: [
+                        'Backup Rule Safety: Resolved Android FullBackupContent lint rules for encrypted database backups.',
+                        'Automated Play Console Deployment: Configured GitHub Actions release workflow with Google Play API automation.',
+                      ],
+                    ),
+                  ],
+                ),
+                _buildVersionSection(
+                  context,
+                  version: 'v2.4.0',
+                  date: 'July 20, 2026',
+                  isLatest: false,
                   changes: [
                     _ChangelogGroup(
                       title: '🔍 In-Note Search & Text Navigation',
