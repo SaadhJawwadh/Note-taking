@@ -27,7 +27,7 @@
                 android:fontFamily="@font/google_sans_text"
                 android:text="Finances"
                 android:textColor="@color/widget_text_primary"
-                android:textSize="16sp"
+                android:textSize="17sp"
                 android:letterSpacing="0.01"
                 android:textStyle="bold" />
 
@@ -43,7 +43,7 @@
                 android:fontFamily="@font/inter"
                 android:text="Analytics"
                 android:textColor="@color/widget_on_primary_container"
-                android:textSize="10sp"
+                android:textSize="11sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -60,7 +60,7 @@
             android:fontFamily="@font/google_sans_text"
             android:text="+"
             android:textColor="@color/widget_on_primary_container"
-            android:textSize="18sp"
+            android:textSize="20sp"
             android:textStyle="bold" />
     </RelativeLayout>
 
@@ -82,7 +82,7 @@
                 android:layout_height="wrap_content"
                 android:text="TODAY"
                 android:textColor="@color/widget_text_secondary"
-                android:textSize="9sp"
+                android:textSize="11sp"
                 android:letterSpacing="0.05"
                 android:fontFamily="@font/inter"
                 android:textStyle="bold" />
@@ -95,7 +95,7 @@
                 android:fontFamily="@font/google_sans_text"
                 android:text="$0.00"
                 android:textColor="@color/widget_text_primary"
-                android:textSize="13sp"
+                android:textSize="15.5sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -110,7 +110,7 @@
                 android:layout_height="wrap_content"
                 android:text="SPENT (MO)"
                 android:textColor="@color/widget_text_secondary"
-                android:textSize="9sp"
+                android:textSize="11sp"
                 android:letterSpacing="0.05"
                 android:fontFamily="@font/inter"
                 android:textStyle="bold" />
@@ -123,7 +123,7 @@
                 android:fontFamily="@font/google_sans_text"
                 android:text="$0.00"
                 android:textColor="@color/widget_text_primary"
-                android:textSize="13sp"
+                android:textSize="15.5sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -138,7 +138,7 @@
                 android:layout_height="wrap_content"
                 android:text="NET"
                 android:textColor="@color/widget_text_secondary"
-                android:textSize="9sp"
+                android:textSize="11sp"
                 android:letterSpacing="0.05"
                 android:fontFamily="@font/inter"
                 android:textStyle="bold" />
@@ -151,7 +151,7 @@
                 android:fontFamily="@font/google_sans_text"
                 android:text="$0.00"
                 android:textColor="@color/widget_income"
-                android:textSize="13sp"
+                android:textSize="15.5sp"
                 android:textStyle="bold" />
         </LinearLayout>
     </LinearLayout>
@@ -182,7 +182,7 @@
                 android:layout_height="wrap_content"
                 android:text="🔮 FORECAST (NEXT MO)"
                 android:textColor="@color/widget_text_secondary"
-                android:textSize="9sp"
+                android:textSize="11sp"
                 android:letterSpacing="0.04"
                 android:fontFamily="@font/inter"
                 android:textStyle="bold" />
@@ -195,7 +195,7 @@
                 android:fontFamily="@font/google_sans_text"
                 android:text="$0.00"
                 android:textColor="@color/widget_text_primary"
-                android:textSize="13sp"
+                android:textSize="15.5sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -213,7 +213,7 @@
                 android:fontFamily="@font/google_sans_text"
                 android:text="+$0/mo"
                 android:textColor="@color/widget_expense"
-                android:textSize="10sp"
+                android:textSize="11.5sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -226,7 +226,7 @@
                 android:fontFamily="@font/inter"
                 android:text="Top: Food (42%)"
                 android:textColor="@color/widget_text_secondary"
-                android:textSize="10sp" />
+                android:textSize="11.5sp" />
         </LinearLayout>
     </LinearLayout>
 

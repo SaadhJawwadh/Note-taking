@@ -126,6 +126,16 @@ class DatabaseHelper {
 
 
   static Future<bool> _isUnencryptedDb(String path) async {
+    final file = File(path);
+    if (!await file.exists()) return false;
+    try {
+      final bytes = await file.openRead(0, 16).first;
+      final header = String.fromCharCodes(bytes);
+      if (!header.startsWith('SQLite format 3')) return false;
+    } catch (_) {
+      return false;
+    }
+
     Database? db;
     try {
       db = await openDatabase(path, readOnly: true, singleInstance: false);

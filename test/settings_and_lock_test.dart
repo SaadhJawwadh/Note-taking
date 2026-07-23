@@ -51,10 +51,24 @@ void main() {
       expect(newSettings.appLockTimeout, 30);
     });
 
-    test('toBackupMap includes appLockTimeout', () {
+    test('toBackupMap includes appLockTimeout and smsSyncFrequency', () {
       final map = settings.toBackupMap();
       expect(map.containsKey('appLockTimeout'), isTrue);
       expect(map['appLockTimeout'], 0);
+      expect(map['smsSyncFrequency'], '12');
+    });
+
+    test('setSmsSyncFrequency updates value, persists and restores', () async {
+      await settings.setSmsSyncFrequency('24');
+      expect(settings.smsSyncFrequency, '24');
+
+      final backup = settings.toBackupMap();
+      expect(backup['smsSyncFrequency'], '24');
+
+      final newSettings = SettingsProvider();
+      await Future.delayed(const Duration(milliseconds: 100));
+      await newSettings.restoreFromBackupMap({'smsSyncFrequency': '12'});
+      expect(newSettings.smsSyncFrequency, '12');
     });
 
     test('restoreFromBackupMap ignores app lock security configurations', () async {

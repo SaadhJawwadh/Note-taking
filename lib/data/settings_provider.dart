@@ -88,6 +88,9 @@ class SettingsProvider extends ChangeNotifier {
   String _dailySyncTime = '20:00';
   String get dailySyncTime => _dailySyncTime;
 
+  String _smsSyncFrequency = '12';
+  String get smsSyncFrequency => _smsSyncFrequency;
+
   String _lastSeenVersion = '';
   String get lastSeenVersion => _lastSeenVersion;
 
@@ -135,6 +138,7 @@ class SettingsProvider extends ChangeNotifier {
     _useOnDeviceAi = prefs.getBool('useOnDeviceAi') ?? false;
     _dailySyncEnabled = prefs.getBool('dailySyncEnabled') ?? false;
     _dailySyncTime = prefs.getString('dailySyncTime') ?? '20:00';
+    _smsSyncFrequency = prefs.getString('smsSyncFrequency') ?? '12';
     _lastSeenVersion = prefs.getString('lastSeenVersion') ?? '';
 
     final budgetsStr = prefs.getString('categoryBudgets');
@@ -343,6 +347,14 @@ class SettingsProvider extends ChangeNotifier {
     await SmsService.syncDailySyncSchedule();
   }
 
+  Future<void> setSmsSyncFrequency(String frequency) async {
+    _smsSyncFrequency = frequency;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('smsSyncFrequency', frequency);
+    notifyListeners();
+    await SmsService.syncDailySyncSchedule();
+  }
+
   ThemeMode _getThemeModeFromInt(int value) {
     switch (value) {
       case 1:
@@ -382,6 +394,7 @@ class SettingsProvider extends ChangeNotifier {
         'useOnDeviceAi': _useOnDeviceAi,
         'dailySyncEnabled': _dailySyncEnabled,
         'dailySyncTime': _dailySyncTime,
+        'smsSyncFrequency': _smsSyncFrequency,
       };
 
   Future<void> restoreFromBackupMap(Map<String, dynamic> map) async {
@@ -461,6 +474,10 @@ class SettingsProvider extends ChangeNotifier {
       if (map.containsKey('dailySyncTime')) {
         final val = map['dailySyncTime'];
         if (val is String) await setDailySyncTime(val);
+      }
+      if (map.containsKey('smsSyncFrequency')) {
+        final val = map['smsSyncFrequency'];
+        if (val is String) await setSmsSyncFrequency(val);
       }
       notifyListeners();
     } catch (_) {

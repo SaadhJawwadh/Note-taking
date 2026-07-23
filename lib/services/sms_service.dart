@@ -332,21 +332,34 @@ class SmsService {
 
       if (!enabled) return;
 
-      final timeStr = prefs.getString('dailySyncTime') ?? '20:00';
-      final delay = calculateDailySyncDelay(timeStr);
-
-      await Workmanager().registerOneOffTask(
-        kDailySyncTaskName,
-        kDailySyncTaskName,
-        initialDelay: delay,
-        constraints: Constraints(
-          networkType: NetworkType.notRequired,
-          requiresBatteryNotLow: true,
-        ),
-      );
-      debugPrint('Daily sync task scheduled with delay: $delay');
+      final freqStr = prefs.getString('smsSyncFrequency') ?? '12';
+      if (freqStr == '24') {
+        final timeStr = prefs.getString('dailySyncTime') ?? '20:00';
+        final delay = calculateDailySyncDelay(timeStr);
+        await Workmanager().registerOneOffTask(
+          kDailySyncTaskName,
+          kDailySyncTaskName,
+          initialDelay: delay,
+          constraints: Constraints(
+            networkType: NetworkType.notRequired,
+            requiresBatteryNotLow: true,
+          ),
+        );
+        debugPrint('Daily SMS Auto-Sync task scheduled for $timeStr with delay: $delay');
+      } else {
+        await Workmanager().registerPeriodicTask(
+          kDailySyncTaskName,
+          kDailySyncTaskName,
+          frequency: const Duration(hours: 12),
+          constraints: Constraints(
+            networkType: NetworkType.notRequired,
+            requiresBatteryNotLow: true,
+          ),
+        );
+        debugPrint('Periodic SMS Auto-Sync task scheduled: every 12 hours');
+      }
     } catch (e) {
-      debugPrint('Error scheduling daily sync: $e');
+      debugPrint('Error scheduling SMS auto-sync: $e');
     }
   }
 
@@ -358,33 +371,38 @@ class SmsService {
       if (!(prefs.getBool('dailySyncEnabled') ?? false)) return true;
       if (!await hasPermission()) return true;
 
-      // Sync transactions from the past 24 hours
+      final freqStr = prefs.getString('smsSyncFrequency') ?? '12';
+      final hours = int.tryParse(freqStr) ?? 12;
+      final lookbackHours = hours == 12 ? 14 : 26;
+
+      // Sync transactions matching the lookback duration (with a small safety margin)
       final now = DateTime.now();
-      final oneDayAgo = now.subtract(const Duration(days: 1));
-      final count = await syncInboxFrom(oneDayAgo);
+      final fromTime = now.subtract(Duration(hours: lookbackHours));
+      final count = await syncInboxFrom(fromTime);
 
       // Notify the user if new transactions were synced
       if (count > 0) {
         await NotificationService.showNotification(
           id: 101,
-          title: 'Daily SMS Sync Complete',
+          title: 'SMS Auto-Sync Complete',
           body: 'Synced $count new transaction${count == 1 ? "" : "s"} from your messages.',
         );
       }
 
-      // Schedule next execution 24 hours later
-      final timeStr = prefs.getString('dailySyncTime') ?? '20:00';
-      final delay = calculateDailySyncDelay(timeStr);
-
-      await Workmanager().registerOneOffTask(
-        kDailySyncTaskName,
-        kDailySyncTaskName,
-        initialDelay: delay,
-        constraints: Constraints(
-          networkType: NetworkType.notRequired,
-          requiresBatteryNotLow: true,
-        ),
-      );
+      // If set to 24h daily sync, schedule next run for tomorrow's target time
+      if (freqStr == '24') {
+        final timeStr = prefs.getString('dailySyncTime') ?? '20:00';
+        final delay = calculateDailySyncDelay(timeStr);
+        await Workmanager().registerOneOffTask(
+          kDailySyncTaskName,
+          kDailySyncTaskName,
+          initialDelay: delay,
+          constraints: Constraints(
+            networkType: NetworkType.notRequired,
+            requiresBatteryNotLow: true,
+          ),
+        );
+      }
 
       return true;
     } catch (e) {

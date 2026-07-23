@@ -115,10 +115,26 @@ class SettingsScreen extends StatelessWidget {
                                 const _Divider(),
                                 SettingsTile(icon: Icons.rule_folder_outlined, title: 'SMS Import Rules', subtitle: 'Manage auto-categorization and transaction type rules', showArrow: true, onTap: () => AppRoute.push(context, const SmsRulesScreen())),
                                 const _Divider(),
-                                SettingsSwitchTile(icon: Icons.sync_outlined, title: 'Daily SMS Auto-Sync', subtitle: 'Import bank transactions automatically daily', value: settings.dailySyncEnabled, onChanged: settings.setDailySyncEnabled),
+                                SettingsSwitchTile(icon: Icons.sync_outlined, title: 'SMS Auto-Sync', subtitle: 'Import bank transactions automatically in background', value: settings.dailySyncEnabled, onChanged: settings.setDailySyncEnabled),
                                 if (settings.dailySyncEnabled) ...[
                                   const _Divider(),
-                                  SettingsTile(icon: Icons.schedule_outlined, title: 'Auto-Sync Time', subtitle: _formatTimeOfDay(context, settings.dailySyncTime), onTap: () => _showTimePicker(context, settings)),
+                                  SettingsTile(
+                                    icon: Icons.schedule_outlined,
+                                    title: 'Sync Frequency',
+                                    subtitle: settings.smsSyncFrequency == '12'
+                                        ? 'Every 12 Hours (Twice Daily)'
+                                        : 'Every 24 Hours (Daily)',
+                                    onTap: () => _showSmsSyncFrequencyPicker(context, settings),
+                                  ),
+                                  if (settings.smsSyncFrequency == '24') ...[
+                                    const _Divider(),
+                                    SettingsTile(
+                                      icon: Icons.access_time_outlined,
+                                      title: 'Auto-Sync Time',
+                                      subtitle: _formatTimeOfDay(context, settings.dailySyncTime),
+                                      onTap: () => _showTimePicker(context, settings),
+                                    ),
+                                  ],
                                 ],
                               ],
                             ),
@@ -495,6 +511,64 @@ class SettingsScreen extends StatelessWidget {
           }).toList(),
         ),
       ),
+    );
+  }
+
+  void _showSmsSyncFrequencyPicker(BuildContext context, SettingsProvider settings) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppLayout.radiusXXL)),
+      ),
+      builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Text(
+                    'Auto-Sync Frequency',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                RadioListTile<String>(
+                  title: const Text('Every 12 Hours (Twice Daily)'),
+                  subtitle: Text('Recommended: Morning & Evening updates', style: TextStyle(color: colorScheme.onSurfaceVariant)),
+                  value: '12',
+                  // ignore: deprecated_member_use
+                  groupValue: settings.smsSyncFrequency,
+                  // ignore: deprecated_member_use
+                  onChanged: (val) {
+                    if (val != null) {
+                      settings.setSmsSyncFrequency(val);
+                      Navigator.pop(context);
+                    }
+                  },
+                ),
+                RadioListTile<String>(
+                  title: const Text('Every 24 Hours (Daily)'),
+                  subtitle: Text('Once a day background sync', style: TextStyle(color: colorScheme.onSurfaceVariant)),
+                  value: '24',
+                  // ignore: deprecated_member_use
+                  groupValue: settings.smsSyncFrequency,
+                  // ignore: deprecated_member_use
+                  onChanged: (val) {
+                    if (val != null) {
+                      settings.setSmsSyncFrequency(val);
+                      Navigator.pop(context);
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

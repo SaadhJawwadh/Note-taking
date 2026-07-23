@@ -1,0 +1,4 @@
+• Offline Typography: Google Sans Text and Inter typography embedded 100% offline across app and home widgets.
+• Ledger Engine: 1-Tap transaction deduplication within 120s windows and smart bank sender auto-discovery.
+• Streamlined SMS Rules: Focused single-view rules page linked directly to Category Management.
+• Security & CI/CD: Enhanced SQLCipher database backup rules and automated Google Play API deployment.

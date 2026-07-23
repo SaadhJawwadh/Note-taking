@@ -266,7 +266,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                           noteProvider.selectedFolder ?? 'All folders',
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
-                                fontSize: 14,
+                                fontSize: 15,
                               ),
                         ),
                         const SizedBox(width: 4),
@@ -285,7 +285,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                       ),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontSize: 10,
+                            fontSize: 11.5,
                           ),
                     ),
                   ],

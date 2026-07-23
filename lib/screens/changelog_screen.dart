@@ -59,9 +59,33 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
+                  version: 'v2.6.0',
+                  date: 'July 23, 2026',
+                  isLatest: true,
+                  changes: [
+                    _ChangelogGroup(
+                      title: '🔄 Flexible Duration & Scheduled SMS Auto-Sync',
+                      items: [
+                        'Periodic Interval Sync: Configure background SMS auto-sync every 12 hours (twice daily) or every 24 hours (daily).',
+                        'Conditional Auto-Sync Time: Specify exact target sync time when 24-hour daily frequency is selected.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '📝 Note Editor Quality of Life & Link Previews',
+                      items: [
+                        'Auto Keyboard Focus: Automatically focuses the text editor on brand new note creation.',
+                        'Auto Unfocus on Scroll: Smoothly dismisses the soft keyboard when dragging down long notes.',
+                        'Dismissed Link Preview Protection: Link previews dismissed via X stay permanently hidden when typing.',
+                        'Fixed Image Removal: Long-press Remove Image targets exact document offset for reliable image deletion.',
+                      ],
+                    ),
+                  ],
+                ),
+                _buildVersionSection(
+                  context,
                   version: 'v2.5.0',
                   date: 'July 22, 2026',
-                  isLatest: true,
+                  isLatest: false,
                   changes: [
                     _ChangelogGroup(
                       title: '🔤 Offline Google Sans Text & Inter Typography',

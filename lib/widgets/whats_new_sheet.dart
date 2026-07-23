@@ -105,27 +105,21 @@ class WhatsNewSheet extends StatelessWidget {
                   children: [
                     _buildFeatureItem(
                       theme,
-                      icon: Icons.font_download_rounded,
-                      title: "100% Offline Asset Typography",
-                      desc: "Google Sans Text and Inter typography are now fully embedded in the app bundle and home widgets for fast, 100% offline rendering.",
+                      icon: Icons.sync_rounded,
+                      title: "Flexible Duration SMS Auto-Sync",
+                      desc: "Configure background SMS auto-sync every 12 hours (twice daily) or daily with exact target time selection.",
                     ),
                     _buildFeatureItem(
                       theme,
-                      icon: Icons.cleaning_services_rounded,
-                      title: "1-Tap Ledger Deduplication",
-                      desc: "Automatically detect and purge duplicate transaction entries within 120-second import windows.",
+                      icon: Icons.keyboard_rounded,
+                      title: "Smart Note Editor Keyboard UX",
+                      desc: "Auto-focus editor on new note creation, and unfocus automatically when dragging down long notes.",
                     ),
                     _buildFeatureItem(
                       theme,
-                      icon: Icons.mark_email_read_rounded,
-                      title: "Smart Bank Auto-Discovery",
-                      desc: "Automatically discover new bank SMS senders and whitelist them with one tap.",
-                    ),
-                    _buildFeatureItem(
-                      theme,
-                      icon: Icons.rule_rounded,
-                      title: "Streamlined Rules & Overflow Fixes",
-                      desc: "SMS import rules now focus purely on transaction types with direct navigation to Category Management.",
+                      icon: Icons.link_off_rounded,
+                      title: "Link Preview & Image Removal Fixes",
+                      desc: "Dismissed link previews stay permanently hidden while editing, and image long-press deletion now targets exact document positions.",
                     ),
 
                   ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -95,8 +96,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
   // AI summary and selection states
   String? _aiSummary;
-  List<String> _suggestedTags = [];
-  Timer? _debounceTagTimer;
+  final Set<String> _dismissedUrls = {};
   bool _isUpdatingProgrammatically = false;
   StreamSubscription? _docSubscription;
 
@@ -164,6 +164,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     if (!_lockAuthPassed) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _authenticateForLockedNote();
+      });
+    } else if (widget.note == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_focusNode.hasFocus) {
+          _focusNode.requestFocus();
+        }
       });
     }
     _loadTags();
@@ -255,7 +261,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       if (RegExp(r'[.,;:)\]]+$').hasMatch(url)) {
         url = url.replaceAll(RegExp(r'[.,;:)\]]+$'), '');
       }
-      if (url.isNotEmpty && !urls.contains(url)) urls.add(url);
+      if (url.isNotEmpty && !urls.contains(url) && !_dismissedUrls.contains(url)) {
+        urls.add(url);
+      }
       if (urls.length >= 3) break;
     }
     return urls;
@@ -263,15 +271,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
   void _onContentChanged() {
     _checkSlashCommands();
-
-    // Dismiss suggestions immediately when the user is actively typing
-    if (_suggestedTags.isNotEmpty) {
-      if (mounted) {
-        setState(() {
-          _suggestedTags = [];
-        });
-      }
-    }
 
     if (_debounce?.isActive ?? false) _debounce?.cancel();
 
@@ -282,10 +281,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       }
       saveNote();
     });
-
-    _debounceTagTimer?.cancel();
-    _debounceTagTimer =
-        Timer(const Duration(seconds: 5), _getAutoTagSuggestions);
   }
 
   void _checkSlashCommands() {
@@ -387,31 +382,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     );
   }
 
-  Future<void> _getAutoTagSuggestions() async {
-    if (!mounted) return;
-    final settings = Provider.of<SettingsProvider>(context, listen: false);
-    if (!settings.useOnDeviceAi) return;
 
-    final plainText = _quillController.document.toPlainText().trim();
-    if (plainText.isEmpty || plainText.length < 20) {
-      if (mounted && _suggestedTags.isNotEmpty) {
-        setState(() => _suggestedTags = []);
-      }
-      return;
-    }
-
-    final aiService = Provider.of<LocalAiService>(context, listen: false);
-    try {
-      final suggestions = await aiService.suggestTags(plainText, _allTags);
-      if (mounted) {
-        setState(() {
-          _suggestedTags = suggestions.where((t) => !tags.contains(t)).toList();
-        });
-      }
-    } catch (_) {
-      // Ignore background errors
-    }
-  }
 
   @override
   void dispose() {
@@ -421,7 +392,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     _speech.cancel();
     _docSubscription?.cancel();
     _debounce?.cancel();
-    _debounceTagTimer?.cancel();
     _titleController.dispose();
     _quillController.dispose();
     _focusNode.dispose();
@@ -2196,7 +2166,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           if (didPop) return;
           try {
             _debounce?.cancel();
-            _debounceTagTimer?.cancel();
             await saveNote();
           } catch (e) {
             debugPrint('Error saving note on pop: $e');
@@ -2658,93 +2627,44 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                     }).toList(),
                                   ),
                                 ),
-                              if (_suggestedTags.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 12),
-                                  child: Wrap(
-                                    spacing: 8,
-                                    runSpacing: 4,
-                                    crossAxisAlignment:
-                                        WrapCrossAlignment.center,
-                                    children: [
-                                      Padding(
-                                        padding:
-                                            const EdgeInsets.only(right: 4),
-                                        child: Icon(Icons.auto_awesome_outlined,
-                                            size: 16,
-                                            color: noteScheme.primary),
-                                      ),
-                                      ..._suggestedTags.map((tag) {
-                                        return InputChip(
-                                          label: Text(tag,
-                                              style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: noteScheme.primary)),
-                                          avatar: Icon(Icons.add,
-                                              size: 12,
-                                              color: noteScheme.primary),
-                                          onPressed: () async {
-                                            await HapticFeedback.lightImpact();
-                                            setState(() {
-                                              tags.add(tag);
-                                              _suggestedTags.remove(tag);
-                                              _updateColorFromTags();
-                                            });
-                                            await saveNote();
-                                          },
-                                          onDeleted: () async {
-                                            await HapticFeedback.lightImpact();
-                                            setState(() {
-                                              _suggestedTags.remove(tag);
-                                            });
-                                          },
-                                          deleteIcon: Icon(
-                                            Icons.close_rounded,
-                                            size: 14,
-                                            color: noteScheme.primary.withValues(alpha: 0.6),
-                                          ),
-                                          backgroundColor: noteScheme
-                                              .primaryContainer
-                                              .withValues(alpha: 0.15),
-                                          shape: const StadiumBorder(),
-                                          side: BorderSide(
-                                              color: noteScheme.primary
-                                                  .withValues(alpha: 0.2)),
-                                        );
-                                      }),
-                                    ],
-                                  ),
-                                ),
                               Expanded(
-                                child: NotificationListener<TableCellFocusNotification>(
-                                  onNotification: (notification) {
-                                    setState(() {
-                                      _isEditingTableCell = notification.isFocused;
-                                    });
-                                    return true;
-                                  },
-                                  child: QuillEditor.basic(
-                                    controller: _quillController,
-                                    focusNode: _focusNode,
-                                    config: QuillEditorConfig(
-                                      padding: const EdgeInsets.only(bottom: 16),
-                                      autoFocus: false,
-                                      showCursor: !_isEditingTableCell,
-                                    // Markdown-style typing: '- ', '1. ',
-                                    // '# ', '**bold**', and '[] ' for a
-                                    // checklist item.
-                                    // ignore: experimental_member_use
-                                    characterShortcutEvents:
-                                        standardCharactersShortcutEvents,
-                                    // ignore: experimental_member_use
-                                    spaceShortcutEvents: [
-                                      ...standardSpaceShorcutEvents,
-                                      // ignore: experimental_member_use
-                                      SpaceShortcutEvent(
-                                        character: '[]',
-                                        handler: (node, controller) {
-                                          // Same key-phrase dance the
-                                          // package uses internally for
+                                 child: NotificationListener<UserScrollNotification>(
+                                   onNotification: (scrollNotification) {
+                                     if (scrollNotification.direction ==
+                                             ScrollDirection.reverse &&
+                                         _focusNode.hasFocus) {
+                                       FocusScope.of(context).unfocus();
+                                     }
+                                     return false;
+                                   },
+                                   child: NotificationListener<TableCellFocusNotification>(
+                                     onNotification: (notification) {
+                                       setState(() {
+                                         _isEditingTableCell = notification.isFocused;
+                                       });
+                                       return true;
+                                     },
+                                     child: QuillEditor.basic(
+                                       controller: _quillController,
+                                       focusNode: _focusNode,
+                                       config: QuillEditorConfig(
+                                         padding: const EdgeInsets.only(bottom: 16),
+                                         autoFocus: false,
+                                         showCursor: !_isEditingTableCell,
+                                       // Markdown-style typing: '- ', '1. ',
+                                       // '# ', '**bold**', and '[] ' for a
+                                       // checklist item.
+                                       // ignore: experimental_member_use
+                                       characterShortcutEvents:
+                                           standardCharactersShortcutEvents,
+                                       // ignore: experimental_member_use
+                                       spaceShortcutEvents: [
+                                         ...standardSpaceShorcutEvents,
+                                         // ignore: experimental_member_use
+                                         SpaceShortcutEvent(
+                                           character: '[]',
+                                           handler: (node, controller) {
+                                             // package uses internally for
                                           // '- ' → bullet, via public APIs.
                                           controller.replaceText(
                                               controller
@@ -2869,24 +2789,63 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                     ),
                                   ),
                                 ),
-                              ),
-                            ),
-                              ..._noteUrls.map(
+                               ),
+                             ),
+                           ),
+                               ..._noteUrls.map(
                                 (url) => Padding(
                                   padding: const EdgeInsets.only(bottom: 12),
-                                  child: AnyLinkPreview(
-                                    link: url,
-                                    displayDirection:
-                                        UIDirection.uiDirectionHorizontal,
-                                    cache: const Duration(hours: 1),
-                                    backgroundColor: Theme.of(context)
-                                        .colorScheme
-                                        .surfaceContainer,
-                                    errorWidget: const SizedBox.shrink(),
-                                    errorImage:
-                                        "https://via.placeholder.com/150",
-                                    removeElevation: true,
-                                    borderRadius: 12,
+                                  child: Stack(
+                                    children: [
+                                      AnyLinkPreview(
+                                        link: url,
+                                        displayDirection:
+                                            UIDirection.uiDirectionHorizontal,
+                                        cache: const Duration(hours: 1),
+                                        backgroundColor: Theme.of(context)
+                                            .colorScheme
+                                            .surfaceContainer,
+                                        errorWidget: const SizedBox.shrink(),
+                                        errorImage:
+                                            "https://via.placeholder.com/150",
+                                        removeElevation: true,
+                                        borderRadius: 12,
+                                      ),
+                                      Positioned(
+                                        top: 6,
+                                        right: 6,
+                                        child: Tooltip(
+                                          message: 'Remove Link Preview',
+                                          child: Material(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .surfaceContainerHighest
+                                                .withValues(alpha: 0.9),
+                                            shape: const CircleBorder(),
+                                            elevation: 2,
+                                            child: InkWell(
+                                              customBorder:
+                                                  const CircleBorder(),
+                                              onTap: () async {
+                                                await HapticFeedback
+                                                    .lightImpact();
+                                                setState(() {
+                                                  _dismissedUrls.add(url);
+                                                  _noteUrls.remove(url);
+                                                });
+                                              },
+                                              child: const Padding(
+                                                padding: EdgeInsets.all(6),
+                                                child: Icon(
+                                                  Icons.close_rounded,
+                                                  size: 16,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
@@ -3314,9 +3273,12 @@ class RoundedImageEmbedBuilder extends EmbedBuilder {
           ),
         );
       },
-      onLongPress: () {
+      onLongPress: () async {
         if (!embedContext.readOnly) {
-          _showImageActions(context, controller, node.offset);
+          await HapticFeedback.mediumImpact();
+          if (context.mounted) {
+            _showImageActions(context, controller, node, imageUrl, isUrl, file);
+          }
         }
       },
       child: Container(
@@ -3332,7 +3294,12 @@ class RoundedImageEmbedBuilder extends EmbedBuilder {
   }
 
   void _showImageActions(
-      BuildContext context, QuillController controller, int offset) {
+      BuildContext context,
+      QuillController controller,
+      Embed node,
+      String imageUrl,
+      bool isUrl,
+      File? file) {
     showModalBottomSheet(
       context: context,
       showDragHandle: true,
@@ -3350,12 +3317,15 @@ class RoundedImageEmbedBuilder extends EmbedBuilder {
                 title: const Text('View Full Image'),
                 onTap: () {
                   Navigator.pop(context);
-                  // Trigger tap logic again or separate it.
-                  // Since we can't easily trigger the onTap from here, we rely on the user knowing Tap views it,
-                  // or we pass the view logic. For complexity, let's just leave Remove here.
-                  // Actually, let's be kind and offer View here too.
-                  // We need the logic from build... which is not accessible easily.
-                  // Let's just keep 'Remove' and 'Cancel' to be simple as per request options.
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => _FullScreenImageViewer(
+                        imageProvider: isUrl
+                            ? NetworkImage(imageUrl)
+                            : FileImage(file!) as ImageProvider,
+                      ),
+                    ),
+                  );
                 },
               ),
               ListTile(
@@ -3365,6 +3335,7 @@ class RoundedImageEmbedBuilder extends EmbedBuilder {
                     style:
                         TextStyle(color: Theme.of(context).colorScheme.error)),
                 onTap: () {
+                  final offset = node.documentOffset;
                   controller.replaceText(offset, 1, '', null);
                   Navigator.pop(context);
                 },

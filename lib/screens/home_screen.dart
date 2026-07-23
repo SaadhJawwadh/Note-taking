@@ -867,7 +867,7 @@ class NoteCard extends StatelessWidget {
                           bg = scheme.primaryContainer;
                           fg = scheme.onPrimaryContainer;
                         }
-                        return Container(padding: const EdgeInsets.symmetric(horizontal: AppLayout.spaceS, vertical: AppLayout.spaceXS), decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(AppLayout.radiusM)), child: Text(tag, style: TextStyle(fontSize: 10, color: fg, fontWeight: FontWeight.w600)));
+                        return Container(padding: const EdgeInsets.symmetric(horizontal: AppLayout.spaceS, vertical: AppLayout.spaceXS), decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(AppLayout.radiusM)), child: Text(tag, style: TextStyle(fontSize: 11.5, color: fg, fontWeight: FontWeight.w600)));
                       }),
                       if (note.tags.length > 3)
                         Container(
@@ -878,7 +878,7 @@ class NoteCard extends StatelessWidget {
                           ),
                           child: Text(
                             '+${note.tags.length - 3}',
-                            style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w600),
+                            style: TextStyle(fontSize: 11.5, color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w600),
                           ),
                         ),
                     ],
