@@ -31,6 +31,7 @@ Use this skill to execute QA verifications, unit/widget tests, security audits, 
   ```
 * **Context safety**: Ensure all asynchronous callback gates check `context.mounted` or state `mounted` before executing context operations.
 * **Async Provider Constructor Races**: `SettingsProvider` loads `SharedPreferences` asynchronously in its constructor (`loadSettings()`). In unit tests where a new instance is instantiated (`newSettings = SettingsProvider()`), insert `await Future.delayed(const Duration(milliseconds: 100))` before invoking methods like `restoreFromBackupMap` to prevent `loadSettings()` from finishing later and overwriting mock test state.
+* **Widget Test Localization Delegates**: Any widget test rendering screens that reference `AppLocalizations.of(context)` (e.g. `SettingsScreen`) must include `localizationsDelegates: AppLocalizations.localizationsDelegates` and `supportedLocales: AppLocalizations.supportedLocales` inside `MaterialApp` in the test widget tree to prevent `null` localization exceptions.
 
 ## 3. Data Integrity & Backups Audit
 * **Backup Completeness**: Ensure `BackupService.generateBackupJson` uses `SettingsProvider.toBackupMap()` to export settings. Never hardcode individual SharedPreferences keys, which go stale as new options are added.

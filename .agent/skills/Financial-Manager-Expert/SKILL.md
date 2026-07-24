@@ -34,3 +34,8 @@ Use this skill when modifying the financial dashboard, category management, tran
 * **Cascading Category Renaming**: Renaming a category must execute cascading SQLite updates across both `transactions` (`UPDATE transactions SET category = ... WHERE category = ...`) and `recurring_transactions` (`UPDATE recurring_rules SET category = ... WHERE category = ...`).
 * **Custom Icon Persistence**: Store category icons as integer `iconCodePoint` in SQLite. Resolve icon displays using `TransactionCategory.iconFor(name)` with a `const Map<int, IconData>` lookup map to satisfy Flutter release tree-shaking rules.
 * **Safe Category Deletion**: Non-'Other' categories can be deleted; always execute an automatic reassignment query updating past transactions and recurring rules to `'Other'` before dropping the category definition. 'Other' must remain protected from deletion.
+
+## 6. On-Device Trend Forecasting & Robust Regression (v2.7)
+* **Exponentially-Weighted Linear Regression**: Models spending trends using recency weights $w_i = \gamma^{n - 1 - i}$.
+* **Huber-Style Outlier Dampening**: Detects single spending anomalies ($Z > 1.8\sigma$) and reduces their regression weight by 75% so one-off spikes don't distort future predictions. Displays a `🛡️ Outlier Dampened` badge on the visual card when active.
+* **On-Device Self-Tuning Model**: Evaluates optimal decay factor $\gamma \in [0.70 \dots 0.95]$ dynamically on local transaction history using Leave-One-Out cross-validation.

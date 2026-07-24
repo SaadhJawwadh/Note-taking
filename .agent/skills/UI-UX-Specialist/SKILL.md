@@ -28,6 +28,9 @@ Use this skill when designing, implementing, or refining layouts, micro-animatio
 * **Icons**: Semantic accuracy is critical. Do not use AI-associated icons (`Icons.auto_awesome`, `Icons.sparkles`) for non-AI tasks. Use standard icons like `Icons.shuffle` for random selections, and reserve AI icons strictly for actual AI services.
 * **Settings Cards Layout**: Avoid expandable menus (`ExpansionTile`) in settings screens to eliminate automatic expansion bugs. Instead, display settings in static card containers grouped under clear uppercase header labels with sub-icons and letter spacing.
 * **Analytics Sub-Segment Navigation**: Large multi-card analytics screens must be organized into `SegmentedButton` sub-views (`Trends 📈` -> `Breakdown 🍩` -> `Budgets 🎯`) to reduce vertical page height by 60%+ and eliminate cognitive overload on mobile.
+* **Chart Y-Axis Alignment Parity (`fl_chart`)**: When displaying vertically stacked analytics charts (e.g. Trend Line Chart over Monthly Bar Chart), both charts MUST share the exact same `reservedSize` (e.g. `reservedSize: 52`) on `leftTitles` to guarantee their plot areas align pixel-for-pixel vertically.
+* **Multi-Line Tooltip Bounds (`fl_chart`)**: In `LineTouchTooltipData`, format multi-field text as structured two-line `TextSpan` blocks and explicitly set `fitInsideHorizontally: true` and `fitInsideVertically: true` to prevent tooltip text from clipping off-screen or awkwardly wrapping inside line dots.
+* **Dynamic Wallpaper Theme Opt-Out**: When implementing dynamic Monet palette extraction via `dynamic_color`, provide a user preference setting (e.g. `useDynamicColor`) that passes `null` for `lightDynamic` / `darkDynamic` into `ThemeData` creation so users can opt out of wallpaper theming and stick to static Material 3 palettes.
 
 ## 3. Gestures, Motion & Layout
 * **Snappy Transitions**: Use snappy transitions like `OpenContainer` (from `package:animations`) with durations around ~300ms.
