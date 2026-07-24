@@ -16,7 +16,7 @@ import 'dart:io';
 class SmsService {
   static final Telephony telephony = Telephony.instance;
 
-  static Future<void> _handleNewSms(SmsMessage sms) async {
+  static Future<TransactionModel?> _handleNewSms(SmsMessage sms) async {
     await TransactionCategory.reload();
     final transaction = await _parseWithAiFallback(
       body: sms.body ?? '',
@@ -29,15 +29,15 @@ class SmsService {
       customIncomeRules: _customIncomeRules,
     );
     if (transaction == null || transaction.smsId == null) {
-      return;
+      return null;
     }
     if (await TransactionRepository.instance.hasCrossSenderDuplicate(transaction.amount, transaction.date)) {
-      return;
+      return null;
     }
 
     final inserted = await TransactionRepository.instance.createSmsTransaction(transaction);
     if (inserted == null) {
-      return;
+      return null;
     }
 
     if (transaction.category == SmsConstants.reversalSentinel) {
@@ -47,12 +47,14 @@ class SmsService {
       }
       // Always delete the reversal transaction itself to keep the DB clean
       await TransactionRepository.instance.deleteTransaction(inserted.id!);
+      return null;
     } else {
       await NotificationService.showNotification(
         id: inserted.id ?? (DateTime.now().millisecondsSinceEpoch ~/ 1000),
         title: inserted.isExpense ? '💳 Expense Auto-Imported' : '💰 Income Auto-Imported',
         body: '${inserted.isExpense ? "Spent" : "Received"} ${inserted.amount.toStringAsFixed(0)} • ${inserted.description}',
       );
+      return inserted;
     }
   }
 
@@ -185,19 +187,9 @@ class SmsService {
       onNewMessage: (SmsMessage message) async {
         await reloadSmsContacts();
         await TransactionCategory.reload();
-        await _handleNewSms(message);
-        final t = await _parseWithAiFallback(
-          body: message.body ?? '',
-          address: message.address ?? '',
-          messageId: message.id,
-          messageDate: message.date,
-          allowedSenderIds: _allowedSenderIds,
-          blockedSenderIds: _blockedSenderIds,
-          customExpenseRules: _customExpenseRules,
-          customIncomeRules: _customIncomeRules,
-        );
-        if (t != null) {
-          _smsStreamController.add(t);
+        final inserted = await _handleNewSms(message);
+        if (inserted != null) {
+          _smsStreamController.add(inserted);
         }
       },
       onBackgroundMessage: backgroundMessageHandler,

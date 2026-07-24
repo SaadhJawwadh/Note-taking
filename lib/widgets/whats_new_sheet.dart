@@ -105,21 +105,21 @@ class WhatsNewSheet extends StatelessWidget {
                   children: [
                     _buildFeatureItem(
                       theme,
-                      icon: Icons.sync_rounded,
-                      title: "Flexible Duration SMS Auto-Sync",
-                      desc: "Configure background SMS auto-sync every 12 hours (twice daily) or daily with exact target time selection.",
+                      icon: Icons.search_rounded,
+                      title: "Real-Time Settings Search",
+                      desc: "Instant search across all 29 settings options, features, and preferences directly from the Settings header.",
                     ),
                     _buildFeatureItem(
                       theme,
-                      icon: Icons.keyboard_rounded,
-                      title: "Smart Note Editor Keyboard UX",
-                      desc: "Auto-focus editor on new note creation, and unfocus automatically when dragging down long notes.",
+                      icon: Icons.auto_graph_rounded,
+                      title: "Self-Tuning Outlier Forecasts",
+                      desc: "Robust regression model dampens single purchase spikes by 75% and self-tunes recency weighting locally.",
                     ),
                     _buildFeatureItem(
                       theme,
-                      icon: Icons.link_off_rounded,
-                      title: "Link Preview & Image Removal Fixes",
-                      desc: "Dismissed link previews stay permanently hidden while editing, and image long-press deletion now targets exact document positions.",
+                      icon: Icons.color_lens_rounded,
+                      title: "Dynamic Wallpaper Theme Control",
+                      desc: "Easily toggle Monet wallpaper dynamic color extraction ON or OFF in Appearance settings.",
                     ),
 
                   ],

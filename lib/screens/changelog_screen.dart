@@ -59,9 +59,37 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
+                  version: 'v2.7.0',
+                  date: 'July 24, 2026',
+                  isLatest: true,
+                  changes: [
+                    _ChangelogGroup(
+                      title: '🔍 Real-Time Settings Search',
+                      items: [
+                        'Instant Option Filtering: Search across all 29 app settings, features, and preferences directly from the Settings top header bar.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '📈 Robust Trend Forecasting & Local Self-Tuning',
+                      items: [
+                        'Robust Outlier Filtering: Automatically detects and dampens one-off purchase spikes by 75% for accurate baseline trend predictions.',
+                        'On-Device Self-Tuning Model: Dynamically tunes recency decay parameters (gamma) via Leave-One-Out validation on local transaction history.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🎨 Material 3 Pixel Alignment & Dynamic Palette Control',
+                      items: [
+                        'Dynamic Theme Switch: Toggle Monet dynamic wallpaper color extraction ON or OFF under Appearance & UI.',
+                        'Pixel-Aligned Chart Overlays: Unified Y-axis margins (52px) and multi-line WCAG AAA contrast tooltips across line and bar charts.',
+                      ],
+                    ),
+                  ],
+                ),
+                _buildVersionSection(
+                  context,
                   version: 'v2.6.0',
                   date: 'July 23, 2026',
-                  isLatest: true,
+                  isLatest: false,
                   changes: [
                     _ChangelogGroup(
                       title: '🔄 Flexible Duration & Scheduled SMS Auto-Sync',

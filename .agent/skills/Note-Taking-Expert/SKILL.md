@@ -39,6 +39,8 @@ Use this skill when modifying the note editor, home screen note feeds, note tagg
 * **Interactive Embed Cursors & Focus**: When embedding custom interactive blocks (like tables) containing internal text fields inside a scrollable `QuillEditor`, isolate cursors and handle focus dismissals cleanly:
   * Notify the parent editor to toggle `showCursor = false` when an internal cell is focused, preventing duplicate blinking cursors.
   * Wrap the embed widget in a `TapRegion` to capture clicks outside the block and clear cell focus.
+* **Dismissed Link Preview Protection**: When detecting URLs via `_extractUrls()`, filter out `_dismissedUrls` (`!_dismissedUrls.contains(url)`). Otherwise, subsequent text editing will re-detect the document text and re-populate dismissed link previews.
+* **Quill Embed Document Offsets**: When performing text/embed replacement actions (e.g. deleting an image or table embed via `controller.replaceText(offset, 1, '', null)`), always use `node.documentOffset` (absolute document position), NOT `node.offset` (which returns offset relative only to the line container).
 
 
 ## 5. Share-Into-Notes Pipeline

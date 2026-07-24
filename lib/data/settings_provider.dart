@@ -22,6 +22,9 @@ class SettingsProvider extends ChangeNotifier {
     return 'Medium';
   }
 
+  bool _useDynamicColor = true;
+  bool get useDynamicColor => _useDynamicColor;
+
   NoteViewMode _noteViewMode = NoteViewMode.grid;
 
   NoteViewMode get noteViewMode => _noteViewMode;
@@ -136,6 +139,7 @@ class SettingsProvider extends ChangeNotifier {
     _customIncomeRules = prefs.getStringList('customIncomeRules') ?? [];
 
     _useOnDeviceAi = prefs.getBool('useOnDeviceAi') ?? false;
+    _useDynamicColor = prefs.getBool('useDynamicColor') ?? true;
     _dailySyncEnabled = prefs.getBool('dailySyncEnabled') ?? false;
     _dailySyncTime = prefs.getString('dailySyncTime') ?? '20:00';
     _smsSyncFrequency = prefs.getString('smsSyncFrequency') ?? '12';
@@ -286,6 +290,13 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setUseDynamicColor(bool value) async {
+    _useDynamicColor = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('useDynamicColor', value);
+    notifyListeners();
+  }
+
   Future<void> setIsPeriodTrackerEnabled(bool enabled) async {
     _isPeriodTrackerEnabled = enabled;
     final prefs = await SharedPreferences.getInstance();
@@ -392,6 +403,7 @@ class SettingsProvider extends ChangeNotifier {
         'customExpenseRules': _customExpenseRules,
         'customIncomeRules': _customIncomeRules,
         'useOnDeviceAi': _useOnDeviceAi,
+        'useDynamicColor': _useDynamicColor,
         'dailySyncEnabled': _dailySyncEnabled,
         'dailySyncTime': _dailySyncTime,
         'smsSyncFrequency': _smsSyncFrequency,
@@ -450,6 +462,10 @@ class SettingsProvider extends ChangeNotifier {
       if (map.containsKey('useOnDeviceAi')) {
         final val = map['useOnDeviceAi'];
         if (val is bool) await setUseOnDeviceAi(val);
+      }
+      if (map.containsKey('useDynamicColor')) {
+        final val = map['useDynamicColor'];
+        if (val is bool) await setUseDynamicColor(val);
       }
       if (map.containsKey('customExpenseRules')) {
         final rules = map['customExpenseRules'];

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/repositories/transaction_repository.dart';
+import '../services/financial_regression_engine.dart';
 
 /// Workmanager task that recomputes widget data in the background so the
 /// TODAY figure rolls over at midnight without the app being opened.
@@ -103,26 +104,16 @@ class WidgetHelper {
       try {
         final monthlyData = await repo.getMonthlyTransactionSummary(6);
         if (monthlyData.length >= 2) {
-          double sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
-          final n = monthlyData.length;
-          for (int i = 0; i < n; i++) {
-            final x = (i + 1).toDouble();
-            final y = (monthlyData[i]['totalExpense'] as double? ?? 0.0);
-            sumX += x;
-            sumY += y;
-            sumXY += x * y;
-            sumX2 += x * x;
-          }
-          final denom = (n * sumX2) - (sumX * sumX);
-          final slope = denom != 0 ? ((n * sumXY) - (sumX * sumY)) / denom : 0.0;
-          final intercept = (sumY - (slope * sumX)) / n;
-          final projected = (slope * (n + 1)) + intercept;
-          final safeProj = projected < 0 ? 0.0 : projected;
+          final expenses = monthlyData
+              .map((d) => (d['totalExpense'] as double? ?? 0.0))
+              .toList();
+          final forecast = FinancialRegressionEngine.computeForecast(expenses);
 
-          isTrendingUp = slope > 0;
-          forecastAmountStr = '~$currency ${numberFormat.format(safeProj)}';
+          isTrendingUp = forecast.isTrendingUp;
+          forecastAmountStr =
+              '~$currency ${numberFormat.format(forecast.projectedExpense)}';
           forecastTrendStr =
-              '${isTrendingUp ? '+' : '-'}$currency ${numberFormat.format(slope.abs())}/mo';
+              '${isTrendingUp ? '+' : '-'}$currency ${numberFormat.format(forecast.monthlySlope.abs())}/mo';
         }
       } catch (_) {}
 

@@ -36,6 +36,7 @@ Future<void> main() async {
       unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
       SystemChrome.setSystemUIOverlayStyle(
         const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
           systemNavigationBarColor: Colors.transparent,
           systemNavigationBarDividerColor: Colors.transparent,
         ),
@@ -116,8 +117,10 @@ class NoteApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           navigatorKey: appNavigatorKey,
           scaffoldMessengerKey: appScaffoldMessengerKey,
-          theme: AppTheme.createTheme(lightDynamic, Brightness.light),
-          darkTheme: AppTheme.createTheme(darkDynamic, Brightness.dark),
+          theme: AppTheme.createTheme(
+              settings.useDynamicColor ? lightDynamic : null, Brightness.light),
+          darkTheme: AppTheme.createTheme(
+              settings.useDynamicColor ? darkDynamic : null, Brightness.dark),
           themeMode: settings.themeMode,
           home: const HomeScreen(),
           builder: (context, child) {

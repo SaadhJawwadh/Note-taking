@@ -60,7 +60,7 @@ class SmsParser {
     final matchesExpenseRule = customExpenseRules.any((r) => bodyLower.contains(r.toLowerCase()));
     final matchesIncomeRule = customIncomeRules.any((r) => bodyLower.contains(r.toLowerCase()));
 
-    final isBank = SmsConstants.bankSenders.any((s) => address.contains(s));
+    final isBank = SmsConstants.bankSenders.any((s) => address.toUpperCase().contains(s.toUpperCase()));
     final isKnownSender = isBank ||
         allowedSenderIds.any((s) => senderLower.contains(s));
     

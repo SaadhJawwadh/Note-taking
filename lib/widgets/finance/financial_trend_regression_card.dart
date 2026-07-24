@@ -1,10 +1,12 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../../theme/app_layout.dart';
+import '../../services/financial_regression_engine.dart';
 
-/// A Material 3 Card computing Linear Regression ($y = mx + c$) over 6-month
-/// expense data points to plot a trend line and forecast next month's spend.
+/// A Material 3 Card leveraging [FinancialRegressionEngine] for storage-friendly
+/// exponentially-weighted linear regression forecasting and confidence bands.
 class FinancialTrendRegressionCard extends StatelessWidget {
   final List<Map<String, dynamic>> monthlyData;
   final String currency;
@@ -24,52 +26,41 @@ class FinancialTrendRegressionCard extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    // Extract monthly expenses for regression computation
-    final points = <({double x, double y})>[];
-    double sumX = 0;
-    double sumY = 0;
-    double sumXY = 0;
-    double sumX2 = 0;
     final int n = monthlyData.length;
+    final expenses = monthlyData
+        .map((d) => (d['totalExpense'] as double? ?? 0.0))
+        .toList();
 
-    for (int i = 0; i < n; i++) {
-      final x = (i + 1).toDouble();
-      final y = (monthlyData[i]['totalExpense'] as double? ?? 0.0);
-      points.add((x: x, y: y));
-      sumX += x;
-      sumY += y;
-      sumXY += x * y;
-      sumX2 += x * x;
-    }
-
-    // Compute Ordinary Least Squares Linear Regression: y = m*x + c
-    final denominator = (n * sumX2) - (sumX * sumX);
-    final double slope =
-        denominator != 0 ? ((n * sumXY) - (sumX * sumY)) / denominator : 0.0;
-    final double intercept = (sumY - (slope * sumX)) / n;
-
-    // Projected Next Month Expenditure (x = n + 1)
-    final double projectedNextMonth = (slope * (n + 1)) + intercept;
-    final double safeProjected = projectedNextMonth < 0 ? 0.0 : projectedNextMonth;
+    final forecastResult = FinancialRegressionEngine.computeForecast(expenses);
 
     final monthLabels = monthlyData
         .map((d) => DateFormat.MMM().format(d['month'] as DateTime))
         .toList();
 
-    // Line Spots for actual monthly expense data
-    final actualSpots = points.map((p) => FlSpot(p.x - 1, p.y)).toList();
+    final numberFormat = NumberFormat('#,##0');
 
-    // Line Spots for regression line from x = 0 to x = n (projected point)
-    final regressionSpots = [
-      FlSpot(0, (slope * 1) + intercept < 0 ? 0 : (slope * 1) + intercept),
-      FlSpot((n - 1).toDouble(), (slope * n) + intercept < 0 ? 0 : (slope * n) + intercept),
-      FlSpot(n.toDouble(), safeProjected),
-    ];
+    // Line Spots for actual monthly expense data
+    final actualSpots = List.generate(
+      n,
+      (i) => FlSpot(i.toDouble(), expenses[i]),
+    );
+
+    // Compute slope & intercept for plotting the regression line across chart coordinates
+    final slope = forecastResult.monthlySlope;
+    // Calculate intercept based on actual values
+    final intercept = expenses.isNotEmpty ? expenses.first - (slope * 1) : 0.0;
+
+    final regressionSpots = List.generate(
+      n + 1,
+      (i) => FlSpot(i.toDouble(), max(0.0, (slope * (i + 1)) + intercept)),
+    );
 
     // Compute max Y for chart scaling
-    final maxY = points.map((p) => p.y).fold(safeProjected, (a, b) => a > b ? a : b) * 1.2;
+    final maxY = expenses
+            .fold(forecastResult.upperBound, (a, b) => a > b ? a : b) *
+        1.2;
 
-    final isTrendingUp = slope > 0;
+    final isTrendingUp = forecastResult.isTrendingUp;
     final absSlope = slope.abs();
 
     return Card(
@@ -83,18 +74,25 @@ class FinancialTrendRegressionCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.auto_graph, color: colorScheme.primary, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Trend & Forecast',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Row(
+                    children: [
+                      Icon(Icons.auto_graph, color: colorScheme.primary, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Weighted Trend & Forecast',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
@@ -107,9 +105,7 @@ class FinancialTrendRegressionCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        isTrendingUp
-                            ? Icons.trending_up
-                            : Icons.trending_down,
+                        isTrendingUp ? Icons.trending_up : Icons.trending_down,
                         size: 14,
                         color: isTrendingUp
                             ? colorScheme.onErrorContainer
@@ -134,7 +130,7 @@ class FinancialTrendRegressionCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // Predictive Next Month Card Badge
+            // Predictive Next Month Card Badge with Confidence Interval
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -160,18 +156,66 @@ class FinancialTrendRegressionCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Next Month Forecast',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 4, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: colorScheme.tertiaryContainer,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                '${(forecastResult.rSquared * 100).toStringAsFixed(0)}% Fit',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: colorScheme.onTertiaryContainer,
+                                ),
+                              ),
+                            ),
+                            if (forecastResult.outlierCount > 0) ...[
+                              const SizedBox(width: 4),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 4, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.secondaryContainer,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  '🛡️ Outlier Dampened',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.onSecondaryContainer,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 2),
                         Text(
-                          'Next Month Forecast',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
+                          '~$currency ${numberFormat.format(forecastResult.projectedExpense)}',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '~$currency ${NumberFormat('#,##0').format(safeProjected)}',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.onSurface,
+                          'Expected Range: $currency ${numberFormat.format(forecastResult.lowerBound)} – $currency ${numberFormat.format(forecastResult.upperBound)}',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontSize: 10,
+                            color: colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -194,6 +238,45 @@ class FinancialTrendRegressionCard extends StatelessWidget {
               height: 160,
               child: LineChart(
                 LineChartData(
+                  lineTouchData: LineTouchData(
+                    enabled: true,
+                    touchTooltipData: LineTouchTooltipData(
+                      getTooltipColor: (touchedSpot) =>
+                          colorScheme.surfaceContainerHighest,
+                      tooltipRoundedRadius: 12,
+                      tooltipBorder: BorderSide(
+                        color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                        width: 1.0,
+                      ),
+                      fitInsideHorizontally: true,
+                      fitInsideVertically: true,
+                      getTooltipItems: (touchedSpots) {
+                        return touchedSpots.map((spot) {
+                          final isActual = spot.barIndex == 0;
+                          final label = isActual ? 'Actual' : 'Forecast';
+                          final color = isActual
+                              ? colorScheme.error
+                              : colorScheme.primary;
+                          return LineTooltipItem(
+                            '$label\n',
+                            theme.textTheme.labelSmall?.copyWith(
+                                  color: colorScheme.onSurfaceVariant,
+                                ) ??
+                                const TextStyle(),
+                            children: [
+                              TextSpan(
+                                text: '$currency ${numberFormat.format(spot.y)}',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: color,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList();
+                      },
+                    ),
+                  ),
                   minX: 0,
                   maxX: n.toDouble(),
                   minY: 0,
@@ -209,6 +292,7 @@ class FinancialTrendRegressionCard extends StatelessWidget {
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
+                        interval: 1,
                         getTitlesWidget: (value, meta) {
                           final idx = value.toInt();
                           if (idx < 0 || idx > n) return const SizedBox.shrink();
@@ -232,8 +316,28 @@ class FinancialTrendRegressionCard extends StatelessWidget {
                         reservedSize: 24,
                       ),
                     ),
-                    leftTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false)),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 52,
+                        getTitlesWidget: (value, meta) {
+                          if (value == 0 || value == meta.min) {
+                            return const SizedBox.shrink();
+                          }
+                          final formatted = value >= 1000
+                              ? '${(value / 1000).toStringAsFixed(value % 1000 == 0 ? 0 : 1)}K'
+                              : value.toStringAsFixed(0);
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 4),
+                            child: Text(
+                              formatted,
+                              style: theme.textTheme.labelSmall
+                                  ?.copyWith(color: colorScheme.onSurfaceVariant),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                     topTitles: const AxisTitles(
                         sideTitles: SideTitles(showTitles: false)),
                     rightTitles: const AxisTitles(
@@ -264,7 +368,7 @@ class FinancialTrendRegressionCard extends StatelessWidget {
                       ),
                     ),
 
-                    // Linear Regression Line Overlay
+                    // Weighted Linear Regression Line Overlay
                     LineChartBarData(
                       spots: regressionSpots,
                       isCurved: false,

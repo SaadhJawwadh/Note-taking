@@ -242,7 +242,13 @@ class TransactionRepository {
     final db = await _db;
     final windowStart = date.subtract(const Duration(minutes: 5)).toIso8601String();
     final windowEnd = date.add(const Duration(minutes: 5)).toIso8601String();
-    final rows = await db.query(TableNames.transactions, columns: [TransactionFields.id], where: 'amount = ? AND smsId IS NOT NULL AND date >= ? AND date <= ?', whereArgs: [amount, windowStart, windowEnd], limit: 1);
+    final rows = await db.query(
+      TableNames.transactions,
+      columns: [TransactionFields.id],
+      where: 'amount >= ? AND amount <= ? AND smsId IS NOT NULL AND date >= ? AND date <= ?',
+      whereArgs: [amount - 0.005, amount + 0.005, windowStart, windowEnd],
+      limit: 1,
+    );
     return rows.isNotEmpty;
   }
 

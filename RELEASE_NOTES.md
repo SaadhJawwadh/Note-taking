@@ -1,11 +1,12 @@
 
-### 🔄 Flexible Duration & Scheduled SMS Auto-Sync
-- **Periodic Interval Sync**: Configure background SMS auto-sync every 12 hours (twice daily) or every 24 hours (daily).
-- **Conditional Auto-Sync Time**: Specify exact target sync time when 24-hour daily frequency is selected.
+### 🔍 Real-Time Settings Search
+- **Instant Option Filtering**: Real-time search across all 29 app settings, features, and preferences directly from the Settings top header bar.
 
-### 📝 Note Editor Quality of Life & Link Previews
-- **Auto Keyboard Focus**: Automatically focuses the text editor on brand new note creation.
-- **Auto Unfocus on Scroll**: Smoothly dismisses the soft keyboard when dragging down long notes.
-- **Dismissed Link Preview Protection**: Link previews dismissed via `X` stay permanently hidden when typing.
-- **Fixed Image Removal**: Long-press *"Remove Image"* targets exact document offset for reliable image deletion.
+### 📈 Robust Trend Forecasting & Local Self-Tuning
+- **Robust Outlier Filtering**: Automatically detects and dampens one-off purchase spikes ($Z > 1.8\sigma$) by 75% for accurate baseline trend predictions.
+- **On-Device Self-Tuning Model**: Dynamically tunes recency decay parameters ($\gamma$) via Leave-One-Out validation on local transaction history.
+
+### 🎨 Material 3 Pixel Alignment & Dynamic Palette Control
+- **Dynamic Theme Switch**: Toggle Monet dynamic wallpaper color extraction ON or OFF under Appearance & UI.
+- **Pixel-Aligned Chart Overlays**: Unified Y-axis margins ($52\text{px}$) and multi-line WCAG AAA contrast tooltips across line and bar charts.
 

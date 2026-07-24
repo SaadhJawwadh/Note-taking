@@ -736,22 +736,62 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Last 6 Months',
-              style: tt.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _legendDot(cs.tertiary),
-                const SizedBox(width: 4),
-                Text('Income',
-                    style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
-                const SizedBox(width: 12),
-                _legendDot(cs.error),
-                const SizedBox(width: 4),
-                Text('Expense',
-                    style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Icon(Icons.bar_chart, color: cs.primary, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Last 6 Months',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: tt.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                    border: Border.all(
+                      color: cs.outlineVariant.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _legendDot(cs.tertiary),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Income',
+                        style: tt.labelSmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      _legendDot(cs.error),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Expense',
+                        style: tt.labelSmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -764,6 +804,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
+                        interval: 1,
                         getTitlesWidget: (value, meta) {
                           final idx = value.toInt();
                           if (idx < 0 || idx >= monthLabels.length) {
@@ -784,7 +825,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                     leftTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
-                        reservedSize: 40,
+                        reservedSize: 52,
                         getTitlesWidget: (value, meta) {
                           if (value == 0 || value == meta.min) {
                             return const SizedBox.shrink();
@@ -905,8 +946,8 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     final lastMonth = _monthlyData[_monthlyData.length - 2];
 
     double pctChange(double current, double previous) {
-      if (previous == 0) return current > 0 ? 100.0 : 0.0;
-      return ((current - previous) / previous) * 100.0;
+      if (previous == 0) return current > 0 ? 100.0 : (current < 0 ? -100.0 : 0.0);
+      return ((current - previous) / previous.abs()) * 100.0;
     }
 
     final thisIncome = thisMonth['totalIncome'] as double;
