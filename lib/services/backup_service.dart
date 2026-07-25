@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 import '../data/database_helper.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:share_plus/share_plus.dart';
 import '../screens/app_lock_screen.dart';
 import 'package:provider/provider.dart';
 import '../data/settings_provider.dart';
@@ -63,7 +64,7 @@ Future<String> generateBackupJson({Map<String, dynamic>? settingsOverride}) asyn
   final notes = await db.query('notes');
   final tags = await db.query('tags');
   final noteTags = await db.query('note_tags');
-  final transactions = await db.query('transactions', orderBy: 'id ASC');
+  final transactions = await db.query('transactions', orderBy: '${TransactionFields.id} ASC');
   final categoryDefinitions = await db.query('category_definitions');
   final smsContacts = await db.query('sms_contacts');
   final periodLogs = await db.query('period_logs');
@@ -180,24 +181,54 @@ class BackupService {
           : null;
       final json = await generateBackupJson(settingsOverride: settingsMap);
       AppLockScreen.ignoreNextResumeLock();
-      final dir = await FilePicker.platform.getDirectoryPath();
+      
+      String? dir;
+      try {
+        dir = await FilePicker.platform.getDirectoryPath();
+      } catch (_) {
+        dir = null;
+      }
+
+      final dateStr = DateTime.now().toString().replaceAll(RegExp(r'[: ]'), '_').split('.')[0];
+      
       if (dir != null) {
-        final dateStr = DateTime.now().toString().replaceAll(RegExp(r'[: ]'), '_').split('.')[0];
         final file = File('$dir/notebook_backup_$dateStr.json');
         await file.writeAsString(json);
-        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Backup saved to ${file.path}'), behavior: SnackBarBehavior.floating));
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Backup saved to ${file.path}'), behavior: SnackBarBehavior.floating),
+          );
+        }
+      } else {
+        // Fallback to temp file + Share sheet if directory picker is unavailable or cancelled
+        final tempDir = await getTemporaryDirectory();
+        final file = File('${tempDir.path}/notebook_backup_$dateStr.json');
+        await file.writeAsString(json);
+        await Share.shareXFiles([XFile(file.path)], text: 'Everything App Backup ($dateStr)');
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e'), backgroundColor: Theme.of(context).colorScheme.error, behavior: SnackBarBehavior.floating));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
   static Future<void> importBackup(BuildContext context) async {
     try {
-      AppLockScreen.ignoreNextResumeLock();
-      var result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['json']);
-      if (result == null || result.files.isEmpty || result.files.single.path == null) {
-        result = await FilePicker.platform.pickFiles(type: FileType.any);
+      FilePickerResult? result;
+      try {
+        result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['json'],
+        );
+      } catch (e) {
+        debugPrint('JSON pickFiles error: $e');
       }
       if (result == null || result.files.isEmpty || result.files.single.path == null) return;
       final file = File(result.files.single.path!);
@@ -411,9 +442,16 @@ class BackupService {
       }
 
       AppLockScreen.ignoreNextResumeLock();
-      final dir = await FilePicker.platform.getDirectoryPath();
+      String? dir;
+      try {
+        dir = await FilePicker.platform.getDirectoryPath();
+      } catch (_) {
+        dir = null;
+      }
+
+      final dateStr = DateTime.now().toString().replaceAll(RegExp(r'[: ]'), '_').split('.')[0];
+
       if (dir != null) {
-        final dateStr = DateTime.now().toString().replaceAll(RegExp(r'[: ]'), '_').split('.')[0];
         final file = File('$dir/transactions_export_$dateStr.csv');
         await file.writeAsString(csvBuffer.toString());
         if (context.mounted) {
@@ -424,6 +462,12 @@ class BackupService {
             ),
           );
         }
+      } else {
+        // Fallback to temp file + Share sheet if directory picker is unavailable or cancelled
+        final tempDir = await getTemporaryDirectory();
+        final file = File('${tempDir.path}/transactions_export_$dateStr.csv');
+        await file.writeAsString(csvBuffer.toString());
+        await Share.shareXFiles([XFile(file.path)], text: 'Transaction Ledger Export ($dateStr)');
       }
     } catch (e) {
       if (context.mounted) {
@@ -506,10 +550,14 @@ class BackupService {
 
   static Future<void> importTransactionsFromCsv(BuildContext context) async {
     try {
-      AppLockScreen.ignoreNextResumeLock();
-      var result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['csv']);
-      if (result == null || result.files.isEmpty || result.files.single.path == null) {
-        result = await FilePicker.platform.pickFiles(type: FileType.any);
+      FilePickerResult? result;
+      try {
+        result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['csv', 'txt'],
+        );
+      } catch (e) {
+        debugPrint('CSV pickFiles error: $e');
       }
       if (result == null || result.files.isEmpty || result.files.single.path == null) return;
       final file = File(result.files.single.path!);

@@ -45,6 +45,8 @@ class HighlightedText extends StatelessWidget {
   final String query;
   final TextStyle style;
   final TextStyle highlightStyle;
+  final int? maxLines;
+  final TextOverflow? overflow;
 
   const HighlightedText({
     super.key,
@@ -52,17 +54,33 @@ class HighlightedText extends StatelessWidget {
     required this.query,
     required this.style,
     required this.highlightStyle,
+    this.maxLines,
+    this.overflow,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (query.trim().isEmpty) return Text(text, style: style);
+    if (query.trim().isEmpty) {
+      return Text(
+        text,
+        style: style,
+        maxLines: maxLines,
+        overflow: overflow,
+      );
+    }
 
     final q = query.trim().toLowerCase();
     final tLower = text.toLowerCase();
     final index = tLower.indexOf(q);
 
-    if (index == -1) return Text(text, style: style);
+    if (index == -1) {
+      return Text(
+        text,
+        style: style,
+        maxLines: maxLines,
+        overflow: overflow,
+      );
+    }
 
     final before = text.substring(0, index);
     final match = text.substring(index, index + q.length);
@@ -76,6 +94,8 @@ class HighlightedText extends StatelessWidget {
           TextSpan(text: after, style: style),
         ],
       ),
+      maxLines: maxLines,
+      overflow: overflow,
     );
   }
 }
@@ -546,6 +566,8 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
           highlightStyle: TextStyle(
               fontWeight: FontWeight.bold, fontSize: 14, color: primaryColor),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         subtitle: HighlightedText(
           text: s.subtitle,
@@ -554,6 +576,8 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
               fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
           highlightStyle: TextStyle(
               fontSize: 12, fontWeight: FontWeight.bold, color: primaryColor),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
         trailing: s.trailingWidget ??
             Icon(Icons.arrow_forward_ios,
@@ -599,6 +623,8 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
           highlightStyle: TextStyle(
               fontSize: 14, fontWeight: FontWeight.bold, color: primaryColor),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text("${t.category} • ${DateFormat.yMMMd().format(t.date)}",
             style: const TextStyle(fontSize: 12)),
@@ -650,6 +676,8 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
           highlightStyle: TextStyle(
               fontSize: 14, fontWeight: FontWeight.bold, color: primaryColor),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text("Started: ${DateFormat.yMMMd().format(log.startDate)}",
             style: const TextStyle(fontSize: 12)),

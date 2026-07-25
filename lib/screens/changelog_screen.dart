@@ -59,7 +59,7 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
-                  version: 'v2.8.0',
+                  version: 'v2.8.1',
                   date: 'July 25, 2026',
                   isLatest: true,
                   changes: [
@@ -69,7 +69,14 @@ class ChangelogScreen extends StatelessWidget {
                         'Universal Search: Search Notes, Settings & Tools, Financial Transactions, and Health Logs in-place directly on the home screen.',
                         'Category Scope Chips: Filter search results down to Settings, Notes, Finances, or Health with a single tap.',
                         'Inline Quick Actions: Toggle App Lock, run SMS sync, or import CSV files directly inside search cards.',
-                        'Highlighting & Fuzzy Match: Substring query highlighting in bold primary color with smart typo tolerance.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🛠️ Export Engine & UI Card Truncation Fixes',
+                      items: [
+                        'Backup & Ledger Export Fix: Resolved database primary key query error during JSON backup export and added graceful native file share fallbacks.',
+                        'Note Card Layout Clamp: Restored multi-line maxLines and ellipsis truncation on home screen note card previews.',
+                        'Handwriting Keyboard Support: Full IME compatibility for Samsung S-Pen Direct Writing, GBoard Handwriting, and Apple Scribble.',
                       ],
                     ),
                   ],

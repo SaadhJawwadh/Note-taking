@@ -854,6 +854,8 @@ class NoteCard extends StatelessWidget {
                           query: searchQuery,
                           style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold) ?? const TextStyle(),
                           highlightStyle: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary) ?? const TextStyle(),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (note.isPinned) Padding(padding: const EdgeInsets.only(left: AppLayout.spaceS), child: Icon(Icons.push_pin, size: AppLayout.iconS, color: theme.colorScheme.primary)),
@@ -881,6 +883,8 @@ class NoteCard extends StatelessWidget {
                       query: searchQuery,
                       style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant) ?? const TextStyle(),
                       highlightStyle: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary) ?? const TextStyle(),
+                      maxLines: 6,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 if (note.tags.isNotEmpty) ...[

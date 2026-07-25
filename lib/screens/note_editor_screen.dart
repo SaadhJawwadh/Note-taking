@@ -27,6 +27,7 @@ import '../services/offline_ai_fallback_service.dart';
 import '../services/notification_service.dart';
 import '../providers/note_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import '../utils/app_globals.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_layout.dart';
@@ -1002,6 +1003,23 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                     if (mdContent.isNotEmpty) {
                       Share.share(mdContent, subject: title.isEmpty ? 'Note' : title);
                     }
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.file_download_outlined),
+                  title: const Text('Export as File (.txt / .md)'),
+                  subtitle: const Text('Save note as markdown file to device or apps'),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(sheetContext);
+                    final safeTitle = (title.isEmpty ? 'note' : title).replaceAll(RegExp(r'[^\w\s\-]'), '_');
+                    final mdContent = title.isEmpty ? markdown : '# $title\n\n$markdown';
+                    final tempDir = await getTemporaryDirectory();
+                    final file = File('${tempDir.path}/$safeTitle.md');
+                    await file.writeAsString(mdContent);
+                    await Share.shareXFiles([XFile(file.path)], text: title.isEmpty ? 'Note Export' : title);
                   },
                 ),
                 ListTile(
