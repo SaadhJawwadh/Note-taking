@@ -21,6 +21,7 @@ import 'package:file_picker/file_picker.dart';
 import 'app_lock_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/backup_service.dart';
+import '../services/sms_service.dart';
 import '../widgets/settings_widgets.dart';
 import '../widgets/sms_import_sheet.dart';
 import '../widgets/recurring_rules_sheet.dart';
@@ -499,12 +500,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
         'Manage auto-categorization and transaction type rules',
       );
       addTile(
+        SettingsTile(icon: Icons.file_upload_outlined, title: 'Import Transactions (CSV)', subtitle: 'Import ledger records from a CSV file', showArrow: true, onTap: () => BackupService.importTransactionsFromCsv(context)),
+        'Import Transactions (CSV)',
+        'Import ledger records from a CSV file',
+      );
+      addTile(
         SettingsSwitchTile(icon: Icons.sync_outlined, title: 'SMS Auto-Sync', subtitle: 'Import bank transactions automatically in background', value: settings.dailySyncEnabled, onChanged: settings.setDailySyncEnabled),
         'SMS Auto-Sync',
         'Import bank transactions automatically in background',
       );
       if (settings.dailySyncEnabled) {
-        final syncSub = settings.smsSyncFrequency == '12' ? 'Every 12 Hours (Twice Daily)' : 'Every 24 Hours (Daily)';
+        final syncSub = settings.smsSyncFrequency == '12' ? 'Every 12 Hours (9 AM & 9 PM)' : 'Every 24 Hours (Daily)';
         addTile(
           SettingsTile(icon: Icons.schedule_outlined, title: 'Sync Frequency', subtitle: syncSub, onTap: () => _showSmsSyncFrequencyPicker(context, settings)),
           'Sync Frequency',
@@ -518,6 +524,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
             timeSub,
           );
         }
+        addTile(
+          SettingsTile(
+            icon: Icons.sync,
+            title: 'Test Auto-Sync Now',
+            subtitle: 'Run background SMS sync test now to verify functionality',
+            onTap: () async {
+              await HapticFeedback.mediumImpact();
+              if (!context.mounted) return;
+              final messenger = ScaffoldMessenger.of(context);
+              messenger.showSnackBar(const SnackBar(content: Text('Running SMS sync test...')));
+              final success = await SmsService.performDailyTransactionSync();
+              messenger.showSnackBar(SnackBar(
+                content: Text(success ? 'SMS sync test completed successfully.' : 'SMS sync test completed.'),
+              ));
+            },
+          ),
+          'Test Auto-Sync Now',
+          'Run background SMS sync test now',
+        );
       }
     }
 

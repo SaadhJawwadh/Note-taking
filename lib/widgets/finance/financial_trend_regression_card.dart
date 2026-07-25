@@ -235,7 +235,7 @@ class FinancialTrendRegressionCard extends StatelessWidget {
 
             // Regression Chart
             SizedBox(
-              height: 160,
+              height: 180,
               child: LineChart(
                 LineChartData(
                   lineTouchData: LineTouchData(
@@ -244,12 +244,13 @@ class FinancialTrendRegressionCard extends StatelessWidget {
                       getTooltipColor: (touchedSpot) =>
                           colorScheme.surfaceContainerHighest,
                       tooltipRoundedRadius: 12,
+                      tooltipMargin: 12,
                       tooltipBorder: BorderSide(
                         color: colorScheme.outlineVariant.withValues(alpha: 0.3),
                         width: 1.0,
                       ),
                       fitInsideHorizontally: true,
-                      fitInsideVertically: true,
+                      fitInsideVertically: false,
                       getTooltipItems: (touchedSpots) {
                         return touchedSpots.map((spot) {
                           final isActual = spot.barIndex == 0;

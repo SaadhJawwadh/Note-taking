@@ -64,3 +64,17 @@ Use this skill when designing, implementing, or refining layouts, micro-animatio
 * **Material You Dynamic Colors (Android 12+)**: Define `res/values-v31/colors.xml` and `res/values-night-v31/colors.xml` using Android system Monet tokens (`@android:color/system_accent1_...`, `@android:color/system_neutral1_...`) so widgets dynamically match the user's phone wallpaper.
 * **RemoteViews Inflation Guardrails**: Generic `<View>` tags are forbidden in `RemoteViews` layouts and will crash the system launcher with an `InflateException`. Always use supported containers like `<FrameLayout>` or `<ImageView>` with a solid background color.
 * **Type-Safe Bridge Data**: Flutter SharedPreferences can write numerical values in formats that Kotlin `SharedPreferences.getFloat()` fail to cast. Format all numbers/arrays into JSON strings or clean string representations before saving.
+
+## 7. Context-Aware Text Handling Rules (Wrapping vs. Truncation)
+* **Top App Bars & Toolbars**: Always use single-line with `TextOverflow.ellipsis` (`...`) wrapped inside `Expanded` or `Flexible` containers. Guaranteed room for trailing action icons so layout overflows (`OVERFLOWED BY X PIX`) never occur.
+* **Cards & List Tiles (Note Cards, Ledger Rows, Period Log Items)**: Use multi-line natural text wrapping (`maxLines: 2` for titles, `maxLines: 4–6` for body snippets, `maxLines: 2` for list item descriptions) ending with `TextOverflow.ellipsis` to keep card/tile bounds balanced.
+* **Filter Chips & Badges**: Use single-line with `TextOverflow.ellipsis` or auto-fit text so tag/filter chip rows scroll horizontally smoothly without expanding chip heights vertically.
+* **Editor, Full Detail Views & Dialog Bodies**: Always use 100% full multi-line text wrapping (`maxLines: null`) with zero truncation so users read full content without missing text.
+
+## 8. In-Place Universal Search & High-Performance Motion Rules
+* **In-Place Search Morphing**: Avoid opening `showSearch()` routes which trigger abrupt Material route pushes. Morph the top bar in-place into a Search Pill using `AnimatedSwitcher` (`180ms Curves.fastOutSlowIn`).
+* **System Back Gesture Integration (`PopScope`)**: Always wrap scaffolds containing active search pills with `PopScope(canPop: query.isEmpty, onPopInvokedWithResult: ...)`. Intercept back gestures when `query.isNotEmpty` to clear the search query and restore normal feed view smoothly without popping the screen.
+* **150ms Debounced Input**: Search text fields MUST debounce `onChanged` events by `150ms` using `Timer` to eliminate intermediate pipeline rebuilds and frame stutter while typing rapidly.
+* **Substring Fast-Path & Zero-Allocation Fuzzy Match**: Fuzzy match algorithms must evaluate an instant `contains()` substring check first (fast path for 99% of queries) and restrict Levenshtein distance calculations to queries $\ge 4$ characters to prevent matrix memory allocation churn during fast typing.
+* **Inline Quick Actions & Scope Filters**: Universal search overlays must feature category scope filter chips (`All`, `Settings`, `Notes`, `Finances`, `Health`) and embed interactive controls (e.g. `Switch.adaptive` for App Lock) directly inside search result cards.
+

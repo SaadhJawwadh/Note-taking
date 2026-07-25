@@ -20,7 +20,7 @@ class NoteProvider extends ChangeNotifier {
   bool _hasMoreNotes = true;
   String _sortMode = 'modified'; // modified | created | title | color
   Map<String, int> _tagCounts = {};
-  String? _selectedFolder; // null = all folders
+  String? _selectedFolder = 'Notes'; // default view = Notes folder
   List<String> _folders = [];
   final List<String> _emptyFolders = [];
 
@@ -50,7 +50,7 @@ class NoteProvider extends ChangeNotifier {
 
   void createFolder(String name) {
     final cleaned = name.trim();
-    if (cleaned.isEmpty || cleaned == 'All Notes' || cleaned == 'All folders') return;
+    if (cleaned.isEmpty || cleaned == 'All Notes' || cleaned == 'Notes' || cleaned == 'All folders') return;
     if (!_folders.contains(cleaned) && !_emptyFolders.contains(cleaned)) {
       _emptyFolders.add(cleaned);
     }
@@ -100,9 +100,9 @@ class NoteProvider extends ChangeNotifier {
       _folderCounts = await _noteRepository.getFolderCounts();
       _folders = await _noteRepository.getAllFolders();
       _emptyFolders.removeWhere((f) => _folders.contains(f));
-      final allAvailableFolders = [..._folders, ..._emptyFolders];
+      final allAvailableFolders = ['Notes', 'All Notes', ..._folders, ..._emptyFolders];
       if (_selectedFolder != null && !allAvailableFolders.contains(_selectedFolder)) {
-        _selectedFolder = null;
+        _selectedFolder = 'Notes';
       }
 
       _allTags = ['All', ...tags];
@@ -112,7 +112,7 @@ class NoteProvider extends ChangeNotifier {
 
       _tagColors = colors;
       _notes = fetchedNotes;
-      _filteredNotes = List.from(_notes);
+      _applySearchFilter();
       
       _isLoading = false;
       if (fetchedNotes.length < _pageSize) {
@@ -123,6 +123,28 @@ class NoteProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       debugPrint('Error refreshing notes: $e');
+    }
+  }
+
+  String _searchQuery = '';
+  String get searchQuery => _searchQuery;
+
+  void setSearchQuery(String query) {
+    _searchQuery = query.trim().toLowerCase();
+    _applySearchFilter();
+    notifyListeners();
+  }
+
+  void _applySearchFilter() {
+    if (_searchQuery.isEmpty) {
+      _filteredNotes = List.from(_notes);
+    } else {
+      _filteredNotes = _notes.where((note) {
+        final titleMatch = note.title.toLowerCase().contains(_searchQuery);
+        final contentMatch = note.content.toLowerCase().contains(_searchQuery);
+        final tagMatch = note.tags.any((t) => t.toLowerCase().contains(_searchQuery));
+        return titleMatch || contentMatch || tagMatch;
+      }).toList();
     }
   }
 

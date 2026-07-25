@@ -58,9 +58,14 @@ class NoteRepository {
         whereArgs.add(tag);
       }
 
-      if (folder != null) {
-        whereClause += ' AND ${NoteFields.category} = ?';
-        whereArgs.add(folder);
+      if (folder != null && folder != 'All Notes') {
+        if (folder == 'Notes') {
+          whereClause += ' AND (${NoteFields.category} IS NULL OR ${NoteFields.category} = ? OR ${NoteFields.category} = ? OR ${NoteFields.category} = ?)';
+          whereArgs.addAll(['Notes', 'All Notes', '']);
+        } else {
+          whereClause += ' AND ${NoteFields.category} = ?';
+          whereArgs.add(folder);
+        }
       }
     }
 
@@ -129,13 +134,13 @@ class NoteRepository {
     return await db.update(TableNames.notes, {NoteFields.deletedAt: null}, where: '${NoteFields.id} = ?', whereArgs: [id]);
   }
 
-  /// Distinct folder names in use by active notes (excluding the default).
+  /// Distinct folder names in use by active notes (excluding 'All Notes' and 'Notes').
   Future<List<String>> getAllFolders() async {
     final db = await _db;
     final rows = await db.rawQuery(
         "SELECT DISTINCT ${NoteFields.category} AS c FROM ${TableNames.notes} "
         "WHERE ${NoteFields.deletedAt} IS NULL AND ${NoteFields.category} IS NOT NULL "
-        "AND ${NoteFields.category} != 'All Notes' ORDER BY c COLLATE NOCASE");
+        "AND ${NoteFields.category} != 'All Notes' AND ${NoteFields.category} != 'Notes' AND ${NoteFields.category} != '' ORDER BY c COLLATE NOCASE");
     return rows.map((r) => r['c'] as String).toList();
   }
 
@@ -167,9 +172,24 @@ class NoteRepository {
       WHERE ${NoteFields.deletedAt} IS NULL AND ${NoteFields.isArchived} = 0 AND ${NoteFields.category} IS NOT NULL
       GROUP BY ${NoteFields.category}
     ''');
-    return <String, int>{
-      for (final r in rows) r['folder'] as String: r['cnt'] as int,
-    };
+    final map = <String, int>{};
+    for (final r in rows) {
+      final f = r['folder'] as String;
+      final cnt = r['cnt'] as int;
+      if (f != 'All Notes' && f != 'Notes' && f != '') {
+        map[f] = cnt;
+      }
+    }
+    final defaultTotal = Sqflite.firstIntValue(await db.rawQuery(
+      "SELECT COUNT(*) FROM ${TableNames.notes} WHERE ${NoteFields.deletedAt} IS NULL AND ${NoteFields.isArchived} = 0 AND (${NoteFields.category} IS NULL OR ${NoteFields.category} = 'All Notes' OR ${NoteFields.category} = 'Notes' OR ${NoteFields.category} = '')"
+    ));
+    final allTotal = Sqflite.firstIntValue(await db.rawQuery(
+      "SELECT COUNT(*) FROM ${TableNames.notes} WHERE ${NoteFields.deletedAt} IS NULL AND ${NoteFields.isArchived} = 0"
+    ));
+
+    map['Notes'] = defaultTotal ?? 0;
+    map['All Notes'] = allTotal ?? 0;
+    return map;
   }
 
   Future<void> bulkSetPinned(List<String> ids, bool pinned) async {

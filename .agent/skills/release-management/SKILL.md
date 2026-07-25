@@ -44,8 +44,8 @@ Execute the automated deploy script to bump, tag, and publish:
 ```bash
 ./deploy.sh <version>
 ```
-### Step 4: Play Console Bilingual Release Notes (Mandatory Output)
-With every release, **ALWAYS** generate and present ultra-concise, short, and to-the-point Google Play Console release notes formatted inside `<en-US>` (English) and `<ta-IN>` (Tamil) XML tags for immediate copy-pasting into Play Console:
+### Step 4: Play Console Bilingual Release Notes (Mandatory File & Output)
+With every release, **ALWAYS** write the latest release notes to `PLAY_STORE_NOTES.md` at the project root before running `./deploy.sh`. Format them inside `<en-US>` (English) and `<ta-IN>` (Tamil) XML tags:
 
 * Keep notes ultra-concise, direct, and under 4 bullet points total.
 * Focus purely on user benefits in a single short sentence per point (no technical jargon or long text).
@@ -60,6 +60,7 @@ With every release, **ALWAYS** generate and present ultra-concise, short, and to
 • திருத்தம்: சுருக்கமான பிழைத்திருத்தம்.
 </ta-IN>
 ```
+`./deploy.sh` and GitHub Actions will read `PLAY_STORE_NOTES.md` to automatically publish multilingual WhatsNew notes directly to Google Play Console.
 
 ---
 

@@ -109,20 +109,21 @@ class AppTheme {
     } else {
       // Fallback Schemes
       if (brightness == Brightness.dark) {
-        scheme = const ColorScheme.dark(
-          primary: primaryPurple,
-          secondary: accentPink,
-          surface: darkBackground, // Set absolute background
-          surfaceContainer: darkSurface, // High contrast surface
-          surfaceContainerHigh: Color(0xFF252529),
-          surfaceContainerHighest: Color(0xFF2C2C30),
-          onSurface: textPrimary,
-          onSurfaceVariant: textSecondary,
-          error: errorRed,
+        scheme = ColorScheme.fromSeed(
+          seedColor: const Color(0xFF6750A4), // M3 Violet Dusk Seed
+          brightness: Brightness.dark,
+        ).copyWith(
+          surface: const Color(0xFF141318), // Soft Charcoal Dark Slate
+          surfaceContainerLow: const Color(0xFF1C1A22),
+          surfaceContainer: const Color(0xFF211F28),
+          surfaceContainerHigh: const Color(0xFF2B2834),
+          surfaceContainerHighest: const Color(0xFF363442),
+          onSurface: const Color(0xFFE6E1E5),
+          onSurfaceVariant: const Color(0xFFCAC4D0),
         );
       } else {
         scheme = ColorScheme.fromSeed(
-          seedColor: primaryPurple,
+          seedColor: const Color(0xFF6750A4),
           brightness: brightness,
         );
       }

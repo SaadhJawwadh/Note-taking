@@ -73,32 +73,39 @@ class TransactionCategory {
     return badgeColors[category] ?? const Color(0xFF9E9E9E);
   }
 
-  static const Map<int, IconData> _knownIcons = {
-    0xe1d7: Icons.directions_car_outlined,
-    0xe56c: Icons.restaurant_outlined,
-    0xe616: Icons.subscriptions_outlined,
-    0xe59c: Icons.shopping_bag_outlined,
-    0xe4e8: Icons.power_outlined,
-    0xe3d4: Icons.medical_services_outlined,
-    0xe5e7: Icons.sports_esports_outlined,
-    0xe472: Icons.payment_outlined,
-    0xe57f: Icons.savings_outlined,
-    0xe559: Icons.school_outlined,
-    0xe295: Icons.flight_outlined,
-    0xe318: Icons.home_outlined,
-    0xe28a: Icons.fitness_center_outlined,
-    0xe38c: Icons.local_grocery_store_outlined,
-    0xe14d: Icons.card_giftcard_outlined,
-    0xe496: Icons.pets_outlined,
-    0xe1b8: Icons.computer_outlined,
-    0xe6f2: Icons.work_outlined,
-    0xe180: Icons.child_friendly_outlined,
-    0xe10a: Icons.build_outlined,
-    0xe37d: Icons.local_gas_station_outlined,
-    0xe406: Icons.movie_outlined,
-    0xe4a1: Icons.phone_android_outlined,
-    0xe148: Icons.category_outlined,
-  };
+  static const List<IconData> swatches = [
+    Icons.directions_car_outlined,
+    Icons.restaurant_outlined,
+    Icons.subscriptions_outlined,
+    Icons.shopping_bag_outlined,
+    Icons.power_outlined,
+    Icons.medical_services_outlined,
+    Icons.sports_esports_outlined,
+    Icons.payment_outlined,
+    Icons.savings_outlined,
+    Icons.school_outlined,
+    Icons.flight_outlined,
+    Icons.home_outlined,
+    Icons.fitness_center_outlined,
+    Icons.local_grocery_store_outlined,
+    Icons.card_giftcard_outlined,
+    Icons.pets_outlined,
+    Icons.computer_outlined,
+    Icons.work_outlined,
+    Icons.child_friendly_outlined,
+    Icons.build_outlined,
+    Icons.local_gas_station_outlined,
+    Icons.movie_outlined,
+    Icons.phone_android_outlined,
+    Icons.category_outlined,
+  ];
+
+  static Map<int, IconData>? _knownIconsCache;
+  static Map<int, IconData> get _knownIcons {
+    return _knownIconsCache ??= {
+      for (final icon in swatches) icon.codePoint: icon,
+    };
+  }
 
   static IconData iconFor(String category) {
     if (_cache.isNotEmpty) {
@@ -106,7 +113,6 @@ class TransactionCategory {
         if (def.name == category && def.iconCodePoint != null) {
           final known = _knownIcons[def.iconCodePoint!];
           if (known != null) return known;
-          return Icons.category_outlined;
         }
       }
     }

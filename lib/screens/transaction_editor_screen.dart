@@ -338,6 +338,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
   Future<void> _showNewCategoryDialog() async {
     String name = '';
     Color selectedColor = _colorSwatches[5];
+    IconData selectedIcon = TransactionCategory.swatches[0];
 
     final created = await showDialog<bool>(
       context: context,
@@ -346,43 +347,89 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
           builder: (context, setDialogState) {
             return AlertDialog(
               title: const Text('New Category'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    autofocus: true,
-                    textCapitalization: TextCapitalization.words,
-                    decoration: const InputDecoration(
-                      labelText: 'Category name',
-                      hintText: 'e.g., Groceries',
-                      border: OutlineInputBorder(),
-                    ),
-                    onChanged: (v) => name = v.trim(),
-                  ),
-                  const SizedBox(height: 16),
-                  Text('Color', style: Theme.of(context).textTheme.labelLarge),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _colorSwatches.map((c) {
-                      final isSelected =
-                          c.toARGB32() == selectedColor.toARGB32();
-                      return GestureDetector(
-                        onTap: () => setDialogState(() => selectedColor = c),
-                        child: CircleAvatar(
-                          radius: 16,
-                          backgroundColor: c,
-                          child: isSelected
-                              ? const Icon(Icons.check,
-                                  size: 16, color: Colors.white)
-                              : null,
+              content: SizedBox(
+                width: double.maxFinite,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextField(
+                        autofocus: true,
+                        textCapitalization: TextCapitalization.words,
+                        decoration: const InputDecoration(
+                          labelText: 'Category name',
+                          hintText: 'e.g., Groceries',
+                          border: OutlineInputBorder(),
                         ),
-                      );
-                    }).toList(),
+                        onChanged: (v) => name = v.trim(),
+                      ),
+                      const SizedBox(height: 16),
+                      Text('Icon', style: Theme.of(context).textTheme.labelLarge),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 120,
+                        child: GridView.builder(
+                          shrinkWrap: true,
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 6,
+                            mainAxisSpacing: 8,
+                            crossAxisSpacing: 8,
+                          ),
+                          itemCount: TransactionCategory.swatches.length,
+                          itemBuilder: (context, idx) {
+                            final icon = TransactionCategory.swatches[idx];
+                            final isSelected = selectedIcon.codePoint == icon.codePoint;
+                            return GestureDetector(
+                              onTap: () {
+                                HapticFeedback.selectionClick();
+                                setDialogState(() => selectedIcon = icon);
+                              },
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? selectedColor.withValues(alpha: 0.2)
+                                      : Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                                  shape: BoxShape.circle,
+                                  border: isSelected
+                                      ? Border.all(color: selectedColor, width: 2)
+                                      : null,
+                                ),
+                                child: Icon(
+                                  icon,
+                                  size: 20,
+                                  color: isSelected ? selectedColor : Theme.of(context).colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text('Color', style: Theme.of(context).textTheme.labelLarge),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _colorSwatches.map((c) {
+                          final isSelected =
+                              c.toARGB32() == selectedColor.toARGB32();
+                          return GestureDetector(
+                            onTap: () => setDialogState(() => selectedColor = c),
+                            child: CircleAvatar(
+                              radius: 16,
+                              backgroundColor: c,
+                              child: isSelected
+                                  ? const Icon(Icons.check,
+                                      size: 16, color: Colors.white)
+                                  : null,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
               actions: [
                 TextButton(
@@ -408,6 +455,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
         name: name,
         colorValue: selectedColor.toARGB32(),
         keywords: [],
+        iconCodePoint: selectedIcon.codePoint,
       );
       await TransactionRepository.instance.upsertCategoryDefinition(def);
       await TransactionCategory.reload();

@@ -17,6 +17,7 @@ import '../theme/app_layout.dart';
 import '../widgets/tag_filter_bar.dart';
 import '../widgets/home/home_app_bar.dart';
 import '../widgets/home/note_view_builder.dart';
+import '../widgets/home/universal_search_overlay.dart';
 import 'note_editor_screen.dart';
 import 'search_delegate.dart';
 import 'financial_manager_screen.dart';
@@ -618,27 +619,40 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildNotesScaffold(BuildContext context, SettingsProvider settings) {
     final noteProvider = context.watch<NoteProvider>();
-    return Scaffold(
-      body: CustomScrollView(
-        controller: _scrollController,
-        slivers: [
-          HomeAppBar(
-            onClearSelection: () => noteProvider.clearSelection(),
-            onBulkArchive: () => noteProvider.bulkArchive(),
-            onBulkDelete: () => _bulkDeleteWithUndo(noteProvider),
-            onBulkTag: bulkTag,
-            onCycleViewMode: () => _cycleViewMode(settings),
-            onRefresh: refreshNotes,
-          ),
-          SliverToBoxAdapter(child: TagFilterBar(onTagLongPress: _showTagOptions)),
-          NoteViewBuilder(
-            onRefresh: refreshNotes,
-            onNoteTap: onNoteTap,
-            onNoteLongPress: onNoteLongPress,
-          ),
-        ],
+    return PopScope(
+      canPop: noteProvider.searchQuery.isEmpty,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (noteProvider.searchQuery.isNotEmpty) {
+          noteProvider.setSearchQuery('');
+        }
+      },
+      child: Scaffold(
+        body: CustomScrollView(
+          controller: _scrollController,
+          slivers: [
+            HomeAppBar(
+              onClearSelection: () => noteProvider.clearSelection(),
+              onBulkArchive: () => noteProvider.bulkArchive(),
+              onBulkDelete: () => _bulkDeleteWithUndo(noteProvider),
+              onBulkTag: bulkTag,
+              onCycleViewMode: () => _cycleViewMode(settings),
+              onRefresh: refreshNotes,
+            ),
+            if (noteProvider.searchQuery.isNotEmpty)
+              SliverToBoxAdapter(
+                child: UniversalSearchOverlay(query: noteProvider.searchQuery),
+              ),
+            SliverToBoxAdapter(child: TagFilterBar(onTagLongPress: _showTagOptions)),
+            NoteViewBuilder(
+              onRefresh: refreshNotes,
+              onNoteTap: onNoteTap,
+              onNoteLongPress: onNoteLongPress,
+            ),
+          ],
+        ),
+        floatingActionButton: _buildFAB(context),
       ),
-      floatingActionButton: _buildFAB(context),
     );
   }
 
@@ -804,6 +818,8 @@ class NoteCard extends StatelessWidget {
       borderColor = scheme.outline.withValues(alpha: 0.2);
     }
 
+    final searchQuery = context.watch<NoteProvider>().searchQuery;
+
     return BouncingWidget(
       onTap: () {
         HapticFeedback.lightImpact();
@@ -832,7 +848,14 @@ class NoteCard extends StatelessWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(child: Text(note.title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold), maxLines: 2, overflow: TextOverflow.ellipsis)),
+                      Expanded(
+                        child: HighlightedText(
+                          text: note.title,
+                          query: searchQuery,
+                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold) ?? const TextStyle(),
+                          highlightStyle: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary) ?? const TextStyle(),
+                        ),
+                      ),
                       if (note.isPinned) Padding(padding: const EdgeInsets.only(left: AppLayout.spaceS), child: Icon(Icons.push_pin, size: AppLayout.iconS, color: theme.colorScheme.primary)),
                     ],
                   ),
@@ -848,11 +871,18 @@ class NoteCard extends StatelessWidget {
                 ],
                 if (!note.isLocked && note.imagePath != null) ...[
                   const SizedBox(height: AppLayout.spaceM),
-                  ClipRRect(borderRadius: BorderRadius.circular(AppLayout.radiusL), child: Image.file(File(note.imagePath!), height: 120, width: double.infinity, fit: BoxFit.cover, alignment: Alignment.topCenter, errorBuilder: (c, e, s) => const SizedBox.shrink())),
+                  ClipRRect(borderRadius: BorderRadius.circular(AppLayout.radiusL), child: Image.file(File(note.imagePath!), cacheWidth: 400, height: 120, width: double.infinity, fit: BoxFit.cover, alignment: Alignment.topCenter, errorBuilder: (c, e, s) => const SizedBox.shrink())),
                 ],
                 const SizedBox(height: AppLayout.spaceS),
                 if (!note.isLocked && ((note.previewText?.isNotEmpty ?? false) || note.content.isNotEmpty))
-                  Flexible(child: Text(note.previewText ?? '...', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant), maxLines: 6, overflow: TextOverflow.ellipsis)),
+                  Flexible(
+                    child: HighlightedText(
+                      text: note.previewText ?? '...',
+                      query: searchQuery,
+                      style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant) ?? const TextStyle(),
+                      highlightStyle: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary) ?? const TextStyle(),
+                    ),
+                  ),
                 if (note.tags.isNotEmpty) ...[
                   const SizedBox(height: AppLayout.spaceM),
                   Wrap(

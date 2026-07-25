@@ -59,9 +59,26 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
+                  version: 'v2.8.0',
+                  date: 'July 25, 2026',
+                  isLatest: true,
+                  changes: [
+                    _ChangelogGroup(
+                      title: '🔍 Universal Spotlight Search & Scope Filters',
+                      items: [
+                        'Universal Search: Search Notes, Settings & Tools, Financial Transactions, and Health Logs in-place directly on the home screen.',
+                        'Category Scope Chips: Filter search results down to Settings, Notes, Finances, or Health with a single tap.',
+                        'Inline Quick Actions: Toggle App Lock, run SMS sync, or import CSV files directly inside search cards.',
+                        'Highlighting & Fuzzy Match: Substring query highlighting in bold primary color with smart typo tolerance.',
+                      ],
+                    ),
+                  ],
+                ),
+                _buildVersionSection(
+                  context,
                   version: 'v2.7.0',
                   date: 'July 24, 2026',
-                  isLatest: true,
+                  isLatest: false,
                   changes: [
                     _ChangelogGroup(
                       title: '🔍 Real-Time Settings Search',

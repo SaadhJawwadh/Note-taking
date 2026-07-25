@@ -1,12 +1,7 @@
 
-### 🔍 Real-Time Settings Search
-- **Instant Option Filtering**: Real-time search across all 29 app settings, features, and preferences directly from the Settings top header bar.
-
-### 📈 Robust Trend Forecasting & Local Self-Tuning
-- **Robust Outlier Filtering**: Automatically detects and dampens one-off purchase spikes ($Z > 1.8\sigma$) by 75% for accurate baseline trend predictions.
-- **On-Device Self-Tuning Model**: Dynamically tunes recency decay parameters ($\gamma$) via Leave-One-Out validation on local transaction history.
-
-### 🎨 Material 3 Pixel Alignment & Dynamic Palette Control
-- **Dynamic Theme Switch**: Toggle Monet dynamic wallpaper color extraction ON or OFF under Appearance & UI.
-- **Pixel-Aligned Chart Overlays**: Unified Y-axis margins ($52\text{px}$) and multi-line WCAG AAA contrast tooltips across line and bar charts.
+### 🔍 In-Place Universal Search Engine & Scope Filter Chips
+- **Universal Spotlight Search**: Search Notes, Settings & Tools, Financial Transactions, and Health Logs in-place directly on the home screen.
+- **Category Scope Chips**: Scope search results down to Settings, Notes, Finances, or Health with a single tap.
+- **Inline Interactive Quick Actions**: Toggle App Lock, test SMS auto-sync, or import CSV files directly inside search cards.
+- **Highlighting & Typo Tolerance**: Substring highlighting in bold primary color with smart Levenshtein fuzzy match typo tolerance.
 

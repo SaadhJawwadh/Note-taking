@@ -2539,6 +2539,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                         fontWeight: FontWeight.bold,
                                       ),
                                 ),
+                                enableInteractiveSelection: true,
+                                textCapitalization: TextCapitalization.sentences,
+                                autocorrect: true,
                                 maxLines: null,
                               ),
                               if (_reminderAt != null || _isNoteLocked || _folder != 'All Notes')

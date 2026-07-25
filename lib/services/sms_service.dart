@@ -313,6 +313,21 @@ class SmsService {
     }
   }
 
+  static Duration calculateTwiceDailySyncDelay() {
+    final now = DateTime.now();
+    final morning = DateTime(now.year, now.month, now.day, 9, 0);
+    final evening = DateTime(now.year, now.month, now.day, 21, 0);
+
+    if (now.isBefore(morning)) {
+      return morning.difference(now);
+    } else if (now.isBefore(evening)) {
+      return evening.difference(now);
+    } else {
+      final nextMorning = morning.add(const Duration(days: 1));
+      return nextMorning.difference(now);
+    }
+  }
+
   static Future<void> syncDailySyncSchedule() async {
     if (kIsWeb || !(Platform.isAndroid || Platform.isIOS)) return;
     try {
@@ -339,16 +354,18 @@ class SmsService {
         );
         debugPrint('Daily SMS Auto-Sync task scheduled for $timeStr with delay: $delay');
       } else {
+        final initialDelay = calculateTwiceDailySyncDelay();
         await Workmanager().registerPeriodicTask(
           kDailySyncTaskName,
           kDailySyncTaskName,
           frequency: const Duration(hours: 12),
+          initialDelay: initialDelay,
           constraints: Constraints(
             networkType: NetworkType.notRequired,
             requiresBatteryNotLow: true,
           ),
         );
-        debugPrint('Periodic SMS Auto-Sync task scheduled: every 12 hours');
+        debugPrint('Twice Daily (12h) SMS Auto-Sync scheduled with initial delay $initialDelay targeting 9 AM / 9 PM');
       }
     } catch (e) {
       debugPrint('Error scheduling SMS auto-sync: $e');
@@ -371,6 +388,9 @@ class SmsService {
       final now = DateTime.now();
       final fromTime = now.subtract(Duration(hours: lookbackHours));
       final count = await syncInboxFrom(fromTime);
+
+      await prefs.setString('lastSmsSyncTime', now.toIso8601String());
+      await prefs.setInt('lastSmsSyncCount', count);
 
       // Notify the user if new transactions were synced
       if (count > 0) {

@@ -1,6 +1,7 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
@@ -15,6 +16,7 @@ import '../data/transaction_category.dart';
 import '../data/transaction_model.dart';
 import '../data/repositories/transaction_repository.dart';
 import '../data/repositories/recurring_rule_repository.dart';
+import '../providers/note_provider.dart';
 import '../utils/rich_text_utils.dart';
 import '../utils/widget_helper.dart';
 import 'sms_service.dart';
@@ -46,16 +48,16 @@ void callbackDispatcher() {
 /// from an isolate (auto-backup) where BuildContext is unavailable, falls back
 /// to reading the stored prefs directly (best-effort).
 Future<String> generateBackupJson({Map<String, dynamic>? settingsOverride}) async {
-  final db = await DatabaseHelper.instance.database;
-
-  // 1. Force flush SQLite WAL (Write-Ahead Logging) to ensure recent writes are committed
-  try {
-    await db.rawQuery('PRAGMA wal_checkpoint(FULL);');
-  } catch (_) {}
-
-  // 2. Materialize any due recurring transactions before snapshotting
+  // 1. Materialize any due recurring transactions before snapshotting
   try {
     await RecurringRuleRepository.instance.materializeDueRules();
+  } catch (_) {}
+
+  final db = await DatabaseHelper.instance.database;
+
+  // 2. Passive SQLite WAL checkpoint to ensure writes are committed without blocking
+  try {
+    await db.rawQuery('PRAGMA wal_checkpoint(PASSIVE);');
   } catch (_) {}
 
   final notes = await db.query('notes');
@@ -193,9 +195,14 @@ class BackupService {
   static Future<void> importBackup(BuildContext context) async {
     try {
       AppLockScreen.ignoreNextResumeLock();
-      final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['json']);
-      if (result == null || result.files.single.path == null) return;
-      final content = await File(result.files.single.path!).readAsString();
+      var result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['json']);
+      if (result == null || result.files.isEmpty || result.files.single.path == null) {
+        result = await FilePicker.platform.pickFiles(type: FileType.any);
+      }
+      if (result == null || result.files.isEmpty || result.files.single.path == null) return;
+      final file = File(result.files.single.path!);
+      if (!await file.exists()) return;
+      final content = await file.readAsString();
       final data = Map<String, dynamic>.from(jsonDecode(content) as Map);
 
       if (context.mounted) {
@@ -232,24 +239,41 @@ class BackupService {
         if (data.containsKey('notes')) {
           for (final row in data['notes']) {
             final map = Map<String, Object?>.from(row)..remove('tags'); // Omit legacy tags column
+            if (map['isArchived'] is bool) {
+              map['isArchived'] = (map['isArchived'] as bool) ? 1 : 0;
+            }
+            if (map['isPinned'] is bool) {
+              map['isPinned'] = (map['isPinned'] as bool) ? 1 : 0;
+            }
             if (!map.containsKey('previewText') || map['previewText'] == null) {
               final content = map['content'] as String? ?? '';
               map['previewText'] = RichTextUtils.contentToPlainText(content, maxLines: 6);
+            }
+            if (!map.containsKey('category') || map['category'] == null || (map['category'] as String).isEmpty) {
+              map['category'] = 'Notes';
             }
             batch.insert('notes', map, conflictAlgorithm: ConflictAlgorithm.replace);
           }
         }
         if (data.containsKey('tags')) {
           for (final row in data['tags']) {
-            batch.insert('tags', Map<String, Object?>.from(row), conflictAlgorithm: ConflictAlgorithm.replace);
+            final map = Map<String, Object?>.from(row);
+            if (map['name'] != null) {
+              batch.insert('tags', map, conflictAlgorithm: ConflictAlgorithm.replace);
+            }
           }
         }
         if (data.containsKey('noteTags')) {
           for (final row in data['noteTags']) {
-            batch.insert('note_tags', Map<String, Object?>.from(row), conflictAlgorithm: ConflictAlgorithm.replace);
+            final map = Map<String, Object?>.from(row);
+            final tagName = map['tag_name'] as String?;
+            if (tagName != null && tagName.isNotEmpty) {
+              batch.insert('tags', {'name': tagName}, conflictAlgorithm: ConflictAlgorithm.ignore);
+            }
+            batch.insert('note_tags', map, conflictAlgorithm: ConflictAlgorithm.replace);
           }
         } else if (data.containsKey('notes')) {
-          // Fallback for older backups: reconstruct note_tags from notes column
+          // Fallback for older backups: reconstruct note_tags and tags from notes column
           for (final row in data['notes']) {
             final id = row['id'] as String?;
             final tagsJson = row['tags'] as String?;
@@ -257,7 +281,11 @@ class BackupService {
               try {
                 final List<dynamic> tags = jsonDecode(tagsJson);
                 for (final tag in tags) {
-                  batch.insert('note_tags', {'note_id': id, 'tag_name': tag.toString()}, conflictAlgorithm: ConflictAlgorithm.ignore);
+                  final tagName = tag.toString().trim();
+                  if (tagName.isNotEmpty) {
+                    batch.insert('tags', {'name': tagName}, conflictAlgorithm: ConflictAlgorithm.ignore);
+                    batch.insert('note_tags', {'note_id': id, 'tag_name': tagName}, conflictAlgorithm: ConflictAlgorithm.ignore);
+                  }
                 }
               } catch (_) {}
             }
@@ -266,24 +294,40 @@ class BackupService {
         if (data.containsKey('transactions')) {
           for (final row in data['transactions']) {
             final map = Map<String, Object?>.from(row)..remove('_id');
+            if (map['isExpense'] is bool) {
+              map['isExpense'] = (map['isExpense'] as bool) ? 1 : 0;
+            }
+            if (!map.containsKey('category') || map['category'] == null) {
+              map['category'] = 'Other';
+            }
             batch.insert('transactions', map, conflictAlgorithm: ConflictAlgorithm.replace);
           }
         }
         if (data.containsKey('recurringRules')) {
           for (final row in data['recurringRules']) {
             final map = Map<String, Object?>.from(row);
+            if (map['isExpense'] is bool) {
+              map['isExpense'] = (map['isExpense'] as bool) ? 1 : 0;
+            }
             batch.insert('recurring_rules', map, conflictAlgorithm: ConflictAlgorithm.replace);
           }
         }
         if (data.containsKey('categoryDefinitions')) {
           for (final row in data['categoryDefinitions']) {
             final map = Map<String, Object?>.from(row);
+            if (map['isBuiltIn'] is bool) {
+              map['isBuiltIn'] = (map['isBuiltIn'] as bool) ? 1 : 0;
+            }
             batch.insert('category_definitions', map, conflictAlgorithm: ConflictAlgorithm.replace);
           }
         }
         if (data.containsKey('smsContacts')) {
           for (final row in data['smsContacts']) {
-            batch.insert('sms_contacts', Map<String, Object?>.from(row), conflictAlgorithm: ConflictAlgorithm.replace);
+            final map = Map<String, Object?>.from(row);
+            if (map['isBuiltIn'] is bool) {
+              map['isBuiltIn'] = (map['isBuiltIn'] as bool) ? 1 : 0;
+            }
+            batch.insert('sms_contacts', map, conflictAlgorithm: ConflictAlgorithm.replace);
           }
         }
         if (data.containsKey('periodLogs')) {
@@ -298,6 +342,14 @@ class BackupService {
       await TransactionCategory.reload();
       await SmsService.reloadSmsContacts();
       await WidgetHelper.updateWidgetData();
+
+      if (context.mounted) {
+        try {
+          await Provider.of<NoteProvider>(context, listen: false).refreshNotes();
+        } catch (e) {
+          debugPrint('NoteProvider refresh error: $e');
+        }
+      }
 
       if (context.mounted && data.containsKey('settings')) {
         await Provider.of<SettingsProvider>(context, listen: false).restoreFromBackupMap(Map<String, dynamic>.from(data['settings'] as Map));
@@ -391,5 +443,137 @@ class BackupService {
       return '"${value.replaceAll('"', '""')}"';
     }
     return value;
+  }
+
+  static List<Map<String, dynamic>> _parseCsvBufferInIsolate(String content) {
+    final lines = const LineSplitter().convert(content);
+    final results = <Map<String, dynamic>>[];
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i].trim();
+      if (line.isEmpty) continue;
+      if (i == 0 && (line.toLowerCase().contains('date') || line.toLowerCase().contains('amount'))) {
+        continue;
+      }
+
+      final fields = _parseCsvLine(line);
+      if (fields.length < 3) continue;
+
+      DateTime? date;
+      double? amount;
+      bool isExpense = true;
+      String category = 'Other';
+      String description = 'CSV Imported';
+
+      for (final field in fields) {
+        final trimmed = field.trim();
+        if (amount == null) {
+          final parsedAmt = double.tryParse(trimmed.replaceAll(',', ''));
+          if (parsedAmt != null && parsedAmt > 0) {
+            amount = parsedAmt;
+            continue;
+          }
+        }
+        if (date == null) {
+          final parsedDate = DateTime.tryParse(trimmed);
+          if (parsedDate != null) {
+            date = parsedDate;
+            continue;
+          }
+        }
+        if (trimmed.toLowerCase() == 'income' || trimmed.toLowerCase() == 'credit') {
+          isExpense = false;
+        } else if (trimmed.toLowerCase() == 'expense' || trimmed.toLowerCase() == 'debit') {
+          isExpense = true;
+        } else if (category == 'Other' && TransactionCategory.allNames.contains(trimmed)) {
+          category = trimmed;
+        } else if (description == 'CSV Imported' && trimmed.isNotEmpty && double.tryParse(trimmed) == null) {
+          description = trimmed;
+        }
+      }
+
+      if (amount != null) {
+        results.add({
+          'amount': amount,
+          'description': description,
+          'date': (date ?? DateTime.now()).toIso8601String(),
+          'isExpense': isExpense,
+          'category': category,
+        });
+      }
+    }
+    return results;
+  }
+
+  static Future<void> importTransactionsFromCsv(BuildContext context) async {
+    try {
+      AppLockScreen.ignoreNextResumeLock();
+      var result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['csv']);
+      if (result == null || result.files.isEmpty || result.files.single.path == null) {
+        result = await FilePicker.platform.pickFiles(type: FileType.any);
+      }
+      if (result == null || result.files.isEmpty || result.files.single.path == null) return;
+      final file = File(result.files.single.path!);
+      if (!await file.exists()) return;
+      final content = await file.readAsString();
+      if (content.trim().isEmpty) return;
+
+      int importedCount = 0;
+      final repository = TransactionRepository.instance;
+
+      final parsedData = kIsWeb
+          ? _parseCsvBufferInIsolate(content)
+          : await Isolate.run(() => _parseCsvBufferInIsolate(content));
+
+      for (final item in parsedData) {
+        await repository.createTransaction(TransactionModel(
+          amount: item['amount'] as double,
+          description: item['description'] as String,
+          date: DateTime.parse(item['date'] as String),
+          isExpense: item['isExpense'] as bool,
+          category: item['category'] as String,
+        ));
+        importedCount++;
+      }
+
+      await WidgetHelper.updateWidgetData();
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Successfully imported $importedCount transactions from CSV'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('CSV import failed: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  static List<String> _parseCsvLine(String line) {
+    final result = <String>[];
+    final buffer = StringBuffer();
+    bool insideQuotes = false;
+    for (int i = 0; i < line.length; i++) {
+      final char = line[i];
+      if (char == '"') {
+        insideQuotes = !insideQuotes;
+      } else if (char == ',' && !insideQuotes) {
+        result.add(buffer.toString());
+        buffer.clear();
+      } else {
+        buffer.write(char);
+      }
+    }
+    result.add(buffer.toString());
+    return result;
   }
 }

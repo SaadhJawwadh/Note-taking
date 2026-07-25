@@ -1,12 +1,12 @@
 <en-US>
-• Offline Typography: Google Sans Text and Inter typography embedded 100% offline across app and home widgets.
-• Ledger Engine: 1-Tap transaction deduplication within 120s windows and smart bank sender auto-discovery.
-• Streamlined SMS Rules: Focused single-view rules page linked directly to Category Management.
-• Security & CI/CD: Enhanced SQLCipher database backup rules and automated Google Play API deployment.
+• Feature: Universal Spotlight Search for Notes, Settings, Finances & Health logs.
+• Feature: Category scope chips and interactive inline quick action cards.
+• Feature: Smart typo tolerance and query substring highlighting in bold primary color.
+• Feature: Full handwriting keyboard support (GBoard, Samsung S-Pen, Apple Scribble).
 </en-US>
 <ta-IN>
-• ஆஃப்லைன் எழுத்துருக்கள்: ஆப் மற்றும் விட்ஜெட்டுகளுக்கு கூகிள் சான்ஸ் மற்றும் இன்டர் எழுத்துருக்கள் 100% ஆஃப்லைனில் செயல்படும்.
-• கணக்கு ஏடு: ஒரே தட்டலில் போலிப் பரிவர்த்தனை நீக்கம் மற்றும் வங்கி அனுப்புநர் தானியங்கி கண்டறிதல்.
-• எஸ்எம்எஸ் விதிகள்: எளிமையாக்கப்பட்ட எஸ்எம்எஸ் விதிப் பக்கம் மற்றும் வகை மேலாண்மை இணைப்பு.
-• பாதுகாப்பு மேம்பாடு: பாதுகாப்பான தரவுத்தள காப்புப்பிரதி விதிகள் மற்றும் தானியங்கி வெளியீடு.
+• அம்சம்: குறிப்புகள், அமைப்புகள், நிதி மற்றும் சுகாதாரப் பதிவுகளுக்கான ஒட்டுமொத்த தேடல்.
+• அம்சம்: வகைப் வடிகட்டி பொத்தான்கள் மற்றும் நேரடி விரைவுச் செயல் அட்டைகள்.
+• அம்சம்: எழுத்துப்பிழை சகிப்புத்தன்மை மற்றும் தேடல் முக்கியச் சொல் சிறப்பம்சங்கள்.
+• அம்சம்: சாம்சங் S-Pen, GBoard மற்றும் ஆப்பிள் கையெழுத்து விசைப்பலகை ஆதரவு.
 </ta-IN>

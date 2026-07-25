@@ -20,6 +20,13 @@ if ! grep -q "## $NEW_VERSION" CHANGELOG.md; then
   exit 1
 fi
 
+# 2b. Verify PLAY_STORE_NOTES.md update
+if [ ! -f PLAY_STORE_NOTES.md ] || ! grep -q "<en-US>" PLAY_STORE_NOTES.md || ! grep -q "<ta-IN>" PLAY_STORE_NOTES.md; then
+  echo "❌ Error: PLAY_STORE_NOTES.md is missing or does not contain <en-US> and <ta-IN> tags."
+  echo "Please update PLAY_STORE_NOTES.md with current bilingual release notes before deploying."
+  exit 1
+fi
+
 # 3. Quality Gate: Run static analysis
 echo "🔍 Running static analysis..."
 if ! flutter analyze; then

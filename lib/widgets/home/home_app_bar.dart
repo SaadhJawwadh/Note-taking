@@ -1,15 +1,15 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../data/settings_provider.dart';
 import '../../providers/note_provider.dart';
 import '../../screens/settings_screen.dart';
-import '../../screens/search_delegate.dart';
 import '../../theme/app_layout.dart';
 import '../../utils/app_route.dart';
 import '../../l10n/app_localizations.dart';
 
-class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
+class HomeAppBar extends StatefulWidget implements PreferredSizeWidget {
   final VoidCallback onClearSelection;
   final VoidCallback onBulkArchive;
   final VoidCallback onBulkDelete;
@@ -26,6 +26,25 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.onCycleViewMode,
     required this.onRefresh,
   });
+
+  @override
+  State<HomeAppBar> createState() => _HomeAppBarState();
+
+  @override
+  Size get preferredSize => const Size.fromHeight(84);
+}
+
+class _HomeAppBarState extends State<HomeAppBar> {
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _debounceTimer;
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,9 +69,16 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
           borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
           boxShadow: AppLayout.softShadow(context),
         ),
-        child: noteProvider.isSelectionMode
-            ? _buildSelectionMode(context, noteProvider)
-            : _buildNormalMode(context, settings),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 180),
+          switchInCurve: Curves.fastOutSlowIn,
+          switchOutCurve: Curves.fastOutSlowIn,
+          child: noteProvider.isSelectionMode
+              ? KeyedSubtree(key: const ValueKey('selection_mode'), child: _buildSelectionMode(context, noteProvider))
+              : _isSearching
+                  ? KeyedSubtree(key: const ValueKey('search_mode'), child: _buildSearchMode(context))
+                  : KeyedSubtree(key: const ValueKey('normal_mode'), child: _buildNormalMode(context, settings)),
+        ),
       ),
     );
   }
@@ -65,7 +91,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
           icon: const Icon(Icons.close),
           onPressed: () {
             HapticFeedback.selectionClick();
-            onClearSelection();
+            widget.onClearSelection();
           },
         ),
         const SizedBox(width: 8),
@@ -90,7 +116,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
           tooltip: 'Archive selected',
           onPressed: () {
             HapticFeedback.lightImpact();
-            onBulkArchive();
+            widget.onBulkArchive();
           },
         ),
         IconButton(
@@ -98,7 +124,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
           tooltip: 'Tag selected',
           onPressed: () {
             HapticFeedback.selectionClick();
-            onBulkTag();
+            widget.onBulkTag();
           },
         ),
         IconButton(
@@ -107,9 +133,80 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
           color: Theme.of(context).colorScheme.error,
           onPressed: () {
             HapticFeedback.mediumImpact();
-            onBulkDelete();
+            widget.onBulkDelete();
           },
         ),
+      ],
+    );
+  }
+
+  Widget _buildSearchMode(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Row(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Close search',
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            context.read<NoteProvider>().setSearchQuery('');
+            setState(() {
+              _isSearching = false;
+              _searchController.clear();
+            });
+          },
+        ),
+        Expanded(
+          child: TextField(
+            controller: _searchController,
+            autofocus: true,
+            style: theme.textTheme.titleMedium,
+            enableInteractiveSelection: true,
+            textCapitalization: TextCapitalization.sentences,
+            autocorrect: true,
+            decoration: InputDecoration(
+              hintText: 'Search notes, settings, tags...',
+              hintStyle: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+              ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+            ),
+            onChanged: (val) {
+              _debounceTimer?.cancel();
+              _debounceTimer = Timer(const Duration(milliseconds: 150), () {
+                if (mounted) {
+                  context.read<NoteProvider>().setSearchQuery(val);
+                }
+              });
+              setState(() {});
+            },
+            onSubmitted: (query) {
+              FocusScope.of(context).unfocus();
+            },
+          ),
+        ),
+        if (_searchController.text.isNotEmpty)
+          IconButton(
+            icon: const Icon(Icons.close, size: 20),
+            tooltip: 'Clear query',
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              _searchController.clear();
+              context.read<NoteProvider>().setSearchQuery('');
+              setState(() {});
+            },
+          ),
+        IconButton(
+          icon: const Icon(Icons.search),
+          tooltip: 'Search',
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            FocusScope.of(context).unfocus();
+          },
+        ),
+        const SizedBox(width: 4),
       ],
     );
   }
@@ -164,8 +261,8 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        final folders = ['All folders', ...noteProvider.folders];
-        final currentFolder = noteProvider.selectedFolder ?? 'All folders';
+        final folders = ['Notes', 'All Notes', ...noteProvider.folders];
+        final currentFolder = noteProvider.selectedFolder ?? 'Notes';
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 20),
           child: Column(
@@ -204,7 +301,11 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                     final isSelected = folder == currentFolder;
                     return ListTile(
                       leading: Icon(
-                        index == 0 ? Icons.folder_open_outlined : Icons.folder,
+                        folder == 'Notes'
+                            ? Icons.folder_open_outlined
+                            : folder == 'All Notes'
+                                ? Icons.folder_copy_outlined
+                                : Icons.folder,
                         color: isSelected ? Theme.of(context).colorScheme.primary : null,
                       ),
                       title: Text(
@@ -219,7 +320,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                           : null,
                       onTap: () {
                         HapticFeedback.selectionClick();
-                        noteProvider.setFolder(index == 0 ? null : folder);
+                        noteProvider.setFolder(folder);
                         Navigator.pop(context);
                       },
                     );
@@ -235,69 +336,76 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   Widget _buildNormalMode(BuildContext context, SettingsProvider settings) {
     final noteProvider = context.watch<NoteProvider>();
+    final displayFolder = noteProvider.selectedFolder ?? 'Notes';
+    final count = noteProvider.folderCounts[displayFolder] ?? noteProvider.tagCounts['All'] ?? 0;
+
     return Row(
       children: [
-        const SizedBox(width: 8),
-        InkWell(
-          borderRadius: BorderRadius.circular(AppLayout.radiusM),
-          onTap: () {
-            HapticFeedback.selectionClick();
-            _showFolderPicker(context, noteProvider);
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  noteProvider.selectedFolder != null ? Icons.folder : Icons.folder_open_outlined,
-                  size: 20,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
+        const SizedBox(width: 4),
+        Expanded(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppLayout.radiusM),
+            onTap: () {
+              HapticFeedback.selectionClick();
+              _showFolderPicker(context, noteProvider);
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+              child: Row(
+                children: [
+                  Icon(
+                    noteProvider.selectedFolder != null ? Icons.folder : Icons.folder_open_outlined,
+                    size: 20,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          noteProvider.selectedFolder ?? 'All folders',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                displayFolder,
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
                               ),
+                            ),
+                            const SizedBox(width: 2),
+                            Icon(
+                              Icons.arrow_drop_down,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              size: 16,
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.arrow_drop_down,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          size: 16,
+                        Text(
+                          AppLocalizations.of(context)!.noteCount(count),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                fontSize: 11.5,
+                              ),
                         ),
                       ],
                     ),
-                    Text(
-                      AppLocalizations.of(context)!.noteCount(
-                        noteProvider.selectedFolder == null
-                            ? (noteProvider.tagCounts['All'] ?? 0)
-                            : (noteProvider.folderCounts[noteProvider.selectedFolder] ?? 0),
-                      ),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontSize: 11.5,
-                          ),
-                    ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-        const Spacer(),
         PopupMenuButton<String>(
           icon: const Icon(Icons.sort),
           tooltip: 'Sort notes',
+          padding: EdgeInsets.zero,
           initialValue: noteProvider.sortMode,
           onSelected: (mode) {
             HapticFeedback.selectionClick();
@@ -313,31 +421,37 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
         IconButton(
           icon: Icon(_getIconForMode(settings.noteViewMode)),
           tooltip: _getTooltipForMode(settings.noteViewMode),
+          padding: EdgeInsets.zero,
+          visualDensity: VisualDensity.compact,
           onPressed: () {
             HapticFeedback.selectionClick();
-            onCycleViewMode();
+            widget.onCycleViewMode();
           },
         ),
         IconButton(
           icon: const Icon(Icons.search),
           tooltip: 'Global search',
+          padding: EdgeInsets.zero,
+          visualDensity: VisualDensity.compact,
           onPressed: () {
             HapticFeedback.selectionClick();
-            showSearch(context: context, delegate: GlobalSearchDelegate());
+            setState(() {
+              _isSearching = true;
+            });
           },
         ),
-        Padding(
-          padding: const EdgeInsets.only(right: 4),
-          child: IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Settings',
-            onPressed: () {
-              HapticFeedback.selectionClick();
-              AppRoute.push(context, const SettingsScreen())
-                  .then((_) => onRefresh());
-            },
-          ),
-        )
+        IconButton(
+          icon: const Icon(Icons.settings_outlined),
+          tooltip: 'Settings',
+          padding: EdgeInsets.zero,
+          visualDensity: VisualDensity.compact,
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            AppRoute.push(context, const SettingsScreen())
+                .then((_) => widget.onRefresh());
+          },
+        ),
+        const SizedBox(width: 4),
       ],
     );
   }
@@ -359,7 +473,4 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
         return 'Switch to list view';
     }
   }
-
-  @override
-  Size get preferredSize => const Size.fromHeight(84);
 }

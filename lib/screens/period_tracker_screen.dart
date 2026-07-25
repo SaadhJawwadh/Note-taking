@@ -568,13 +568,15 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                 ),
                 child: Row(
                   children: [
-                    Text(
-                      'Tracker',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: Text(
+                        'Period Tracker',
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                    const Spacer(),
                     IconButton(
                       icon: Icon(
                         Icons.settings_outlined,
