@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../../data/repositories/transaction_repository.dart';
-import '../../data/repositories/period_repository.dart';
+import '../../features/finances/data/transaction_repository.dart';
+import '../../features/health/data/period_repository.dart';
 import '../../data/transaction_model.dart';
 import '../../data/period_log_model.dart';
 import '../../data/transaction_category.dart';
@@ -11,13 +11,13 @@ import '../../providers/note_provider.dart';
 import '../../features/finances/finances.dart';
 import '../../features/health/health.dart';
 import '../../features/settings/settings.dart';
-import '../../screens/manage_tags_screen.dart';
-import '../../screens/filtered_notes_screen.dart';
+import 'package:note_taking_app/features/notes/presentation/screens/manage_tags_screen.dart';
+import 'package:note_taking_app/features/notes/presentation/screens/filtered_notes_screen.dart';
 import '../recurring_rules_sheet.dart';
 import '../../services/backup_service.dart';
 import '../../services/sms_service.dart';
 import '../../utils/app_route.dart';
-import '../../theme/app_layout.dart';
+import '../../core/theme/app_layout.dart';
 
 class SettingsSearchResult {
   final String title;

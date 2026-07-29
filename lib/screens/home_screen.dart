@@ -13,21 +13,20 @@ import '../data/note_model.dart';
 import '../data/note_templates.dart';
 import '../data/settings_provider.dart';
 import '../providers/note_provider.dart';
-import '../theme/app_theme.dart';
-import '../theme/app_layout.dart';
+import '../core/theme/app_theme.dart';
+import '../core/theme/app_layout.dart';
 import '../widgets/tag_filter_bar.dart';
 import '../widgets/home/home_app_bar.dart';
 import '../widgets/home/note_view_builder.dart';
 import '../widgets/home/universal_search_overlay.dart';
-import 'note_editor_screen.dart';
-import 'search_delegate.dart';
-import 'financial_manager_screen.dart';
-import 'period_tracker_screen.dart';
+import 'package:note_taking_app/features/notes/presentation/screens/note_editor_screen.dart';
+import 'package:note_taking_app/features/finances/presentation/screens/financial_manager_screen.dart';
+import 'package:note_taking_app/features/health/presentation/screens/period_tracker_screen.dart';
 import 'app_lock_screen.dart';
-import 'category_management_screen.dart';
-import 'transaction_editor_screen.dart';
+import 'package:note_taking_app/features/finances/presentation/screens/category_management_screen.dart';
+import 'package:note_taking_app/features/finances/presentation/screens/transaction_editor_screen.dart';
 import '../utils/app_route.dart';
-import '../data/repositories/note_repository.dart';
+import '../features/notes/data/note_repository.dart';
 import '../widgets/bouncing_widget.dart';
 import '../widgets/onboarding_sheet.dart';
 import '../utils/widget_helper.dart';
@@ -228,9 +227,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         );
       } else if (action == 'search' && mounted) {
-        unawaited(
-          showSearch(context: context, delegate: GlobalSearchDelegate()),
-        );
+        HomeAppBar.searchRequestedNotifier.value = true;
       } else if (action == 'process_text' && mounted) {
         final String? sharedText =
             await widgetChannel.invokeMethod<String>('getPendingSharedText');

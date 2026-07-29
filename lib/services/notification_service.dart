@@ -5,8 +5,8 @@ import 'period_prediction_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
-import '../data/repositories/note_repository.dart';
-import '../screens/note_editor_screen.dart';
+import '../features/notes/data/note_repository.dart';
+import 'package:note_taking_app/features/notes/presentation/screens/note_editor_screen.dart';
 import '../utils/app_globals.dart';
 
 class NotificationService {

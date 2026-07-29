@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:provider/provider.dart';
 import '../data/settings_provider.dart';
-import '../theme/app_layout.dart';
+import '../core/theme/app_layout.dart';
 import '../widgets/bouncing_widget.dart';
 
 class WhatsNewSheet extends StatelessWidget {
@@ -32,27 +32,27 @@ class WhatsNewSheet extends StatelessWidget {
     final featureItems = [
       _buildFeatureItem(
         theme,
-        icon: Icons.view_headline_rounded,
-        title: "Unified Frosted Glass Headers",
-        desc: "Reusable, borderless frosted glass top bars across all 7+ sub-screens for 100% visual symmetry.",
+        icon: Icons.dashboard_customize_rounded,
+        title: "Feature-Driven Modular Architecture",
+        desc: "Decoupled domain modules (Notes, Finances, Health, Settings) for faster load times and smoother navigation.",
       ),
       _buildFeatureItem(
         theme,
-        icon: Icons.add_circle_outline_rounded,
-        title: "Single Outer Scaffold FAB System",
-        desc: "Centralized floating action delegate floating 16dp above the navigation bar across all tabs.",
+        icon: Icons.palette_outlined,
+        title: "Single Source of Truth UI System",
+        desc: "Unified design tokens and core UI cards delivering 100% visual harmony across all screens.",
       ),
       _buildFeatureItem(
         theme,
-        icon: Icons.folder_open_outlined,
-        title: "Default Launch Folder Persistence",
-        desc: "Persists your chosen default folder selection on app startup.",
+        icon: Icons.font_download_outlined,
+        title: "Variable Font & Lightweight App",
+        desc: "Streamlined single-binary variable font for sharper typography and a smaller app size.",
       ),
       _buildFeatureItem(
         theme,
-        icon: Icons.align_horizontal_left_rounded,
-        title: "Pixel-Aligned Layout & Light Mode Fix",
-        desc: "20px left title alignment and borderless frosted glass eliminating double-container light mode shadow artifacts.",
+        icon: Icons.check_box_outlined,
+        title: "Reliable Rich Checklists",
+        desc: "Fixed interactive checklist toggling, state preservation, and text alignment in the note editor.",
       ),
     ];
 

@@ -3,7 +3,7 @@ import '../database_helper.dart';
 import '../database_constants.dart';
 import '../recurring_rule_model.dart';
 import '../transaction_model.dart';
-import 'transaction_repository.dart';
+import '../../features/finances/data/transaction_repository.dart';
 
 class RecurringRuleRepository {
   static final RecurringRuleRepository instance = RecurringRuleRepository._init();

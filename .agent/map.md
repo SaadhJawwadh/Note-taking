@@ -1,126 +1,312 @@
-# Codebase Knowledge Graph & Developer Map (`map.md`)
-> **Target Audience:** AI Coding Assistants (Antigravity, Cursor, Copilot, Claude)
-> **App Domain:** Local-First Note-Taking, Financial Management, & Health Tracking System
-> **Framework:** Flutter 3.x+ (Dart) | **Database:** Encrypted SQLCipher SQLite
+# Everything App 📝 — Developer Map & Rules
+
+> [!IMPORTANT]
+> **COMPULSORY RULES FOR AGENT EXECUTION:**
+> 1. **Map Files First**: Before reading or editing files for any task, refer to the directory and module maps in this `map.md` file to target only the necessary files. Do not scan the entire workspace unless absolutely required. This is critical for token efficiency.
+> 2. **Single Source of Truth**: All layout spacing, border radii, animation curves, and component tokens MUST be referenced from `AppLayout` and `AppTheme` (`lib/core/theme/`). Reusable UI primitives live in `lib/core/ui/`.
+> 3. **Feature-Driven Architecture**: Code is organized into explicit domain modules under `lib/features/` (`notes`, `finances`, `health`, `settings`), with decoupled providers and repositories.
+> 4. **Build and Test**: Once you implement any change, you must run the build and automated test suite (`flutter test` / `flutter analyze`) to verify the implementation.
+> 5. **Haptics and Motion**: Maintain smooth haptics and Material 3 micro-animations on all user interactions.
+> 6. **No Direct Commits/Pushes**: Always request explicit, real-time user permission before running `git commit` or `git push`.
 
 ---
 
-## 1. High-Level Architecture Overview
+## 🗺️ Architectural Overview & File Map
+
+The application is built using **Flutter (Dart 3)** and follows a **Feature-Driven Repository-Service-Provider** architecture. Data is stored locally in an encrypted SQLCipher database, and state is managed reactively using `package:provider` and feature `ChangeNotifier` providers.
 
 ```
-[UI Layer (Screens & Widgets)]
-       │
-       ▼
-[State Management (ChangeNotifier Providers)]
- ├── NoteProvider (lib/providers/note_provider.dart)
- └── SettingsProvider (lib/data/settings_provider.dart)
-       │
-       ▼
-[Repositories & Services]
- ├── NoteRepository, TransactionRepository, PeriodLogRepository, RecurringRuleRepository
- ├── BackupService, NotificationService, SmsService, GeminiNanoService
- └── PeriodPredictionService, FinancialRegressionEngine
-       │
-       ▼
-[Data Layer (SQLCipher DB & SharedPreferences)]
- ├── DatabaseHelper (lib/data/database_helper.dart) ── Encrypted SQLite (AES-256)
- └── SharedPreferences (App settings, folder/tag filters, widget bridge values)
+lib/
+├── core/                             # Core Infrastructure & Shared Design System
+│   ├── constants/
+│   │   └── app_constants.dart        # Global app links and static constants
+│   ├── routes/
+│   │   └── app_router.dart           # Centralized route strings and M3 shared-axis transitions
+│   ├── theme/
+│   │   ├── app_layout.dart           # Single Source of Truth: spacing, padding, radii, motion curves
+│   │   └── app_theme.dart            # Single Source of Truth: ColorSchemes & M3 Expressive typography
+│   └── ui/                           # Shared Atomic UI Component Library
+│       ├── app_bottom_sheet.dart     # Standardized drag-handled modal sheet
+│       ├── app_card.dart             # Standardized surface card container
+│       ├── app_chip.dart             # Standardized pill/chip widget (tags, categories, phases)
+│       ├── app_dialog.dart           # Standardized M3 confirmation & input dialogs
+│       └── frosted_sliver_app_bar.dart# Glassmorphic edge-to-edge top app bar
+├── features/                         # Modular Domain Feature Bundles
+│   ├── finances/                     # Financial Manager Feature Module
+│   │   ├── data/
+│   │   │   └── transaction_repository.dart# Transactions, categories, SMS senders CRUD
+│   │   ├── presentation/
+│   │   │   ├── screens/
+│   │   │   │   └── financial_manager_screen.dart# Ledger, analytics, category breakdowns
+│   │   │   └── widgets/              # Feature-specific finance UI widgets
+│   │   └── providers/
+│   │       └── financial_manager_provider.dart# Income/expense calculations, filters, state
+│   ├── health/                       # Health & Period Tracker Feature Module
+│   │   ├── data/
+│   │   │   └── period_repository.dart# Period logs database operations
+│   │   ├── presentation/
+│   │   │   ├── screens/
+│   │   │   │   └── period_tracker_screen.dart# Menstrual calendar & cycle predictions UI
+│   │   │   └── widgets/              # Cycle header and symptom picker widgets
+│   │   └── providers/
+│   │       └── period_tracker_provider.dart# Cycle predictions, symptom state
+│   ├── notes/                        # Notes & WYSIWYG Editor Feature Module
+│   │   ├── data/
+│   │   │   └── note_repository.dart  # Note database CRUD, tagging, trash rotation
+│   │   ├── presentation/
+│   │   │   ├── screens/
+│   │   │   │   ├── note_editor_screen.dart# WYSIWYG Quill editor, AI actions, toolbar
+│   │   │   │   └── notes_list_screen.dart # Dedicated notes feed viewer
+│   │   │   └── widgets/              # Editor toolbar & header widgets
+│   │   └── providers/
+│   │       └── note_editor_provider.dart# Editor state, dirty tracking, auto-save timer
+│   └── settings/                     # App Settings & Preferences Feature Module
+│       ├── presentation/
+│       │   └── screens/
+│       │       └── settings_screen.dart# App options, backup/restore, security controls
+│       └── providers/
+│           └── settings_provider.dart# SharedPreferences state & global app options
+├── data/                             # Models, Database Helpers & Legacy Compatibility Exports
+│   ├── repositories/                 # Re-exports feature repositories for backward compatibility
+│   ├── category_constants.dart       # Built-in transaction categories and colors
+│   ├── category_definition.dart      # Category model (custom names, keywords, colors)
+│   ├── database_constants.dart       # Table and column database key names
+│   ├── database_helper.dart          # SQLCipher setup, KeyStore/SecureStorage integration
+│   ├── database_seed.dart            # Seeds default banks and financial categories
+│   ├── note_model.dart               # Note entity model
+│   ├── period_log_model.dart         # Period tracker menstrual entry model
+│   ├── sms_contact.dart              # SMS contact bank & custom sender rules model
+│   ├── transaction_category.dart     # Category matching logic (compound priority)
+│   └── transaction_model.dart        # Financial transaction record model
+├── providers/                        # Global State Managers
+│   └── note_provider.dart            # Note UI state provider (filtering, selection, pagination)
+├── services/                         # Business Logic & Platform Integrations
+│   ├── backup_service.dart           # AES-256 JSON manual and periodic auto-backups
+│   ├── gemini_nano_service.dart      # Android AI Core & Gemini Nano text refining, tagging
+│   ├── local_ai_service.dart         # AI Core interface definitions
+│   ├── notification_service.dart     # Local notifications scheduling (period predictions)
+│   ├── sms_constants.dart            # Sri Lankan bank SMS regex & sender mappings
+│   ├── sms_parser.dart               # Rules-based SMS debit/credit parser
+│   ├── sms_service.dart              # Telephony SMS listener, duplicates, reversals dispatcher
+│   └── update_service.dart           # Queries GitHub Release API and triggers OTA updates
+├── theme/                            # Legacy Theme Compatibility Exports (Re-exports lib/core/theme/)
+│   ├── app_layout.dart               # Re-exports lib/core/theme/app_layout.dart
+│   └── app_theme.dart                # Re-exports lib/core/theme/app_theme.dart
+├── utils/                            # App Utilities & Helpers
+│   ├── app_constants.dart            # Global Constants
+│   ├── app_route.dart                # Re-exports lib/core/routes/app_router.dart (AppRoute alias)
+│   ├── rich_text_utils.dart          # Delta-to-Markdown & Plain Text preview helpers
+│   └── widget_helper.dart            # Android widget data updater
+├── widgets/                          # Reusable UI Widgets & Legacy Compatibility Exports
+│   ├── home/
+│   │   ├── home_app_bar.dart         # Responsive search & custom selection toolbar
+│   │   └── note_view_builder.dart    # Grid/List layouts with OpenContainer transitions
+│   ├── bouncing_widget.dart          # Micro-interaction feedback wrapper
+│   ├── calculator_dialog.dart        # Financial inline calculations pop-up
+│   ├── frosted_glass_sliver_app_bar.dart# Re-exports lib/core/ui/frosted_sliver_app_bar.dart
+│   ├── settings_widgets.dart         # Helper UI segments for settings options
+│   ├── sms_import_sheet.dart         # Sheet to query & parse SMS inbox history
+│   └── tag_filter_bar.dart           # Multi-tag scrollable selection list
+└── screens/                          # Top-Level App Screens & Legacy Compatibility Exports
+    ├── app_lock_screen.dart          # PIN/Biometric App Lock session supervisor
+    ├── category_management_screen.dart# Custom financial categories controller
+    ├── filtered_notes_screen.dart    # Dedicated viewer for Archive and Trash notes
+    ├── financial_manager_screen.dart # Re-exports lib/features/finances/presentation/screens/
+    ├── home_screen.dart              # Primary multi-tab container & note feed
+    ├── manage_tags_screen.dart       # Tag editor (renaming, deleting)
+    ├── note_editor_screen.dart       # Re-exports lib/features/notes/presentation/screens/
+    ├── period_tracker_screen.dart    # Re-exports lib/features/health/presentation/screens/
+    ├── search_delegate.dart          # Real-time notes searching delegate
+    ├── settings_screen.dart          # Re-exports lib/features/settings/presentation/screens/
+    ├── sms_contacts_screen.dart      # SMS Sender list (block list & custom senders)
+    ├── sms_rules_screen.dart         # Custom SMS pattern definition editor
+    └── transaction_editor_screen.dart# Expense/Income creator/editor panel
 ```
 
 ---
 
-## 2. Comprehensive Directory & File Mapping
+## 🛠️ Core Modules & Feature Breakdown
 
-### A. Data Layer (`lib/data/`)
-* **`database_helper.dart`**: Core SQLCipher SQLite connection manager, schema initialization (version 17), migrations (`onUpgrade`), and raw query executions.
-* **`database_constants.dart`**: Table names (`notes`, `note_tags`, `transactions`, `period_logs`, `recurring_rules`, `sms_contacts`, `category_definitions`) and column keys.
-* **`database_seed.dart`**: Default category seeds and initial configuration.
-* **`settings_provider.dart`**: Master `ChangeNotifier` managing app preferences (App Lock, theme, active folder/tag, dynamic Monet colors, notification settings, SMS sync interval).
-* **Models**:
-  * `note_model.dart` (`Note`, Quill Delta content, `previewText`, `isLocked`, `reminderAt`, `category`).
-  * `transaction_model.dart` (`Transaction`, amount, type `income`/`expense`, category, date, `smsSender`).
-  * `period_log_model.dart` (`PeriodLog`, startDate, endDate, symptoms, flow intensity).
-  * `recurring_rule_model.dart` (`RecurringRule`, category, amount, frequency, nextDue).
-  * `transaction_category.dart` (`TransactionCategory`, `iconCodePoint` mapping, system vs custom categories).
-  * `category_definition.dart` & `category_constants.dart`: Category metadata and defaults.
-  * `note_templates.dart`: Pre-configured Quill Delta JSON templates.
-  * `sms_contact.dart`: Bank SMS sender rules.
-* **Repositories (`lib/data/repositories/`)**:
-  * `note_repository.dart`: Note CRUD, SQL joins for tags, `clearOldTrash()` (7-day purge).
-  * `transaction_repository.dart`: Transaction CRUD, income/expense aggregation queries.
-  * `period_log_repository.dart`: Period log CRUD and rolling history fetchers.
-  * `recurring_rule_repository.dart`: Materialize due recurring transactions (idempotent 36-period catch-up loop).
+### 1. Notes & WYSIWYG Editor Module (`lib/features/notes/`)
+Manages note creation, organization, formatting, auto-saving, and viewing modes.
+*   **Key Features**:
+    *   **WYSIWYG Editing**: Uses `flutter_quill` for rich-text delta formats.
+    *   **Decoupled State**: `NoteEditorProvider` manages dirty state tracking, auto-save timers (2s), and content mutations.
+    *   **Lossless Storage**: Stored in SQLite as Delta JSON arrays, falling back to raw Markdown for legacy notes via `RichTextUtils`.
+    *   **Smart Preview**: Renders checklist states (☐/☑) and formats up to 6 lines of plain text directly on home note cards.
+    *   **Trash Auto-Purge**: Deleted notes are soft-deleted and automatically purged after 7 days via `clearOldTrash()`.
+*   **Key Files**:
+    *   Feature Screen: `lib/features/notes/presentation/screens/note_editor_screen.dart`
+    *   State Manager: `lib/features/notes/providers/note_editor_provider.dart`
+    *   Database CRUD: `lib/features/notes/data/note_repository.dart`
+    *   Entity Model: `lib/data/note_model.dart`
+    *   Format Conversions: `lib/utils/rich_text_utils.dart`
 
-### B. Business Services (`lib/services/`)
-* **`backup_service.dart`**: Full JSON backup export/import (notes, tags, transactions, recurring rules, categories) with password encryption. Health logs excluded for privacy.
-* **`notification_service.dart`**: Local notifications (Note reminders: ID range `0x4E000000 | hash`; Period alerts: IDs 1–3).
-* **`sms_service.dart`**: Android SMS receiver listener, notification dispatcher, 5-minute transaction deduplication, and 7-day reversal handling (`__reversal__`).
-* **`sms_parser.dart`**: Stateless regex extractor parsing bank alerts (Commercial Bank, Sampath Bank, HNB, Nations Trust, BOC, HSBC).
-* **`sms_constants.dart`**: Centralized regex patterns, credit/debit keywords, and sender IDs.
-* **`gemini_nano_service.dart`**: On-device AI (Gemini Nano AICore channel) for text polishing, note summarization, tag suggestions, and fallback SMS parsing.
-* **`offline_ai_fallback_service.dart`**: Rule-based fallback parsing when Gemini Nano is unavailable.
-* **`period_prediction_service.dart`**: Menstrual cycle prediction algorithm computing 3–7 log rolling averages (excluding cycles $<15$ or $>60$ days) and luteal phase ovulation offset (14 days prior).
-* **`financial_regression_engine.dart`**: Exponentially-weighted linear regression ($w_i = \gamma^{n-1-i}$) with Huber-style outlier dampening ($Z > 1.8\sigma$) for trend forecasting.
-* **`update_rating_service.dart`**: In-app rating prompts and version update notifications.
+### 2. Financial Manager Module (`lib/features/finances/`)
+A private ledger to track expenses, earnings, and financial habits.
+*   **Key Features**:
+    *   **Decoupled State**: `FinancialManagerProvider` manages balance calculations, range filters, and transactions reactively.
+    *   **Tabular Figures & Typography**: All financial ledgers, numbers, and balance cards use `Inter` with tabular figures (`fontFeatures: [FontFeature.tabularFigures()]`).
+    *   **Inline Calculator**: Accessible during expense creation inside `CalculatorDialog`.
+    *   **Trend Visuals & Regression**: Exponentially-weighted linear regression with Huber-style outlier dampening.
+    *   **Double-Level Categorization**: Auto-categorization matches transaction descriptions using keyword rules.
+*   **Key Files**:
+    *   Main UI: `lib/features/finances/presentation/screens/financial_manager_screen.dart`
+    *   State Manager: `lib/features/finances/providers/financial_manager_provider.dart`
+    *   Database CRUD: `lib/features/finances/data/transaction_repository.dart`
+    *   Editor Panel: `lib/screens/transaction_editor_screen.dart`
+    *   Custom Categories UI: `lib/screens/category_management_screen.dart`
 
-### C. State Management (`lib/providers/`)
-* **`note_provider.dart`**: `ChangeNotifier` managing note feed state, active folder (`selectedFolder`), active tag (`selectedTag`), view mode (Masonry vs List), search query, and batch operations.
+### 3. Health & Period Tracker Module (`lib/features/health/`)
+A fully offline, privacy-first menstrual cycle tracker.
+*   **Key Features**:
+    *   **Prediction Algorithm**: Computes average cycle length based on the last 3 to 7 logs, dynamically filtering out outliers (unrealistic cycles $<15$ days or $>60$ days).
+    *   **Ovulation Calculator**: Predicts ovulation dates exactly 14 days prior to the estimated start date of the next period.
+    *   **Semantic Phase Colors**: Phase colors resolved at build time via `AppSemanticColors` (`ThemeExtension`).
+    *   **Discreet Notifications**: Schedules upcoming cycle alerts locally using customizable discreet text (e.g. `"Check the app"`).
+*   **Key Files**:
+    *   UI Screen: `lib/features/health/presentation/screens/period_tracker_screen.dart`
+    *   Database Operations: `lib/features/health/data/period_repository.dart`
+    *   Cycle Predictions Logic: `lib/services/period_prediction_service.dart`
+    *   Log Entity: `lib/data/period_log_model.dart`
 
-### D. Screens & Views (`lib/screens/`)
-* **`home_screen.dart`**: App entry Scaffold, top app bar, bottom `NavigationBar`, note feed tabs, and `UniversalSearchOverlay` entrypoint.
-* **`note_editor_screen.dart`**: Full Quill Delta rich text editor, slash commands overlay, floating formatting toolbar, image/table embeds, and word count stats.
-* **`financial_manager_screen.dart`**: Financial dashboard, balance cards, `SegmentedButton` sub-views (`Ledger`, `Trends`, `Breakdown`, `Budgets`), and trend charts (`fl_chart`).
-* **`transaction_editor_screen.dart`**: Income/expense logger with M3 **Split Buttons** and inline mathematical calculator.
-* **`category_management_screen.dart`**: Custom category manager, icon picker, and cascading category rename/reassignment.
-* **`period_tracker_screen.dart`**: Menstrual calendar, logging-first flow tiles (`FilledButton.tonal`), symptom chips, and moon phase illumination painter.
-* **`settings_screen.dart`**: Settings cards layout, dynamic Monet toggle, module visibility toggles, backup export/import, and app lock configuration.
-* **`app_lock_screen.dart`**: Stack overlay preserving state during app pause, handling biometric/PIN auth and native picker lock bypasses.
-* **`changelog_screen.dart`**: Version release notes history viewer.
-* **`filtered_notes_screen.dart`**, **`manage_tags_screen.dart`**, **`sms_contacts_screen.dart`**, **`sms_rules_screen.dart`**.
+### 4. Settings & App Preferences Module (`lib/features/settings/`)
+Consolidates global app configuration, security timeouts, and data backups.
+*   **Key Features**:
+    *   **Global Provider**: `SettingsProvider` handles dark/light theme modes, dynamic colors, currency preferences, custom rules, and category budgets.
+    *   **Backup & Recovery**: Encrypted JSON backups via `BackupService`. Excludes sensitive biometric settings to prevent override via untrusted files.
+*   **Key Files**:
+    *   UI Screen: `lib/features/settings/presentation/screens/settings_screen.dart`
+    *   State Manager: `lib/features/settings/providers/settings_provider.dart`
 
-### E. Widgets & UI Components (`lib/widgets/`)
-* **`universal_search_overlay.dart`**: Unified search overlay morphing top bar into Search Bar pill with debounced fuzzy matching across Notes, Transactions, and Settings.
-* **`whats_new_sheet.dart`**: Release notification bottom sheet with version pills and staggered entrance animations.
-* **`sms_import_sheet.dart`**: SMS auto-import verification sheet.
-* **`moon_phase_painter.dart`**: Custom painter rendering live illuminated moon phase rings.
-* **`skeleton_card.dart`**: Shared skeleton loading placeholders replacing circular progress spinners.
-* **`home/`**: `home_app_bar.dart`, `note_card.dart`, `folder_drawer.dart`.
-
-### F. Theme & Utilities (`lib/theme/` & `lib/utils/`)
-* **`app_theme.dart`**: Material 3 `ThemeData` setup, `ColorScheme.fromSeed`, 30-style M3 typography scale, and `AppSemanticColors` (`ThemeExtension`).
-* **`app_layout.dart`**: Design system tokens (`radiusS/M/L/XL/XXL/MAX`, spacing tokens, theme-aware soft shadows).
-* **`app_globals.dart`**: Global keys (`appNavigatorKey`, `appScaffoldMessengerKey`).
-* **`app_route.dart`**: SharedAxis horizontal transition route pusher.
-* **`widget_helper.dart`**: Android Home Screen Widget SharedPreferences bridge writer.
-
----
-
-## 3. Platform Integrations & System Channels
-
-### Native Android Bridge (`android/`)
-* **`MainActivity.kt`**: Native biometric auth channels, share intent handlers (`PROCESS_TEXT`, `SEND`), and PendingIntent shortcuts.
-* **`WidgetProvider.kt`**: Android Home Screen RemoteViews widget provider (3x2 and 4x2 fixed grid lock) reading system Monet colors (`res/values-v31/colors.xml`).
-* **`AndroidManifest.xml`**: Hardware features (`telephony`, `camera` marked `required="false"`), permissions, and WorkManager receiver declarations.
+### 5. Core Design System & UI Components (`lib/core/`)
+*   **Single Source of Truth**: All layout spacing, border radii, animation curves, and colors are defined in `AppLayout` and `AppTheme` (`lib/core/theme/`).
+*   **Atomic UI Library**: Reusable UI components in `lib/core/ui/`:
+    *   `AppCard`: Standardized card container with single-source-of-truth surface fills and touch feedback.
+    *   `AppBottomSheet`: Standardized modal sheet container with drag handle and width constraints.
+    *   `AppChip`: Standardized pill/chip widget for tags, categories, phase badges, and filters.
+    *   `AppDialog`: Standardized responsive confirmation and input dialogs.
+    *   `FrostedGlassSliverAppBar`: Glassmorphic top bar with edge-to-edge blur.
 
 ---
 
-## 4. Key Cross-Module Dependency Rules & Flow Mapping
+## 🗄️ Database Schema Map
 
+All tables are defined and created inside `database_helper.dart`.
+
+```mermaid
+erDiagram
+    notes {
+        text id PK
+        text title
+        text content
+        text dateCreated
+        text dateModified
+        integer color
+        integer isPinned
+        integer isArchived
+        text imagePath
+        text category
+        text tags
+        text previewText
+        text deletedAt
+    }
+    tags {
+        text name PK
+        integer color
+    }
+    note_tags {
+        text note_id PK, FK
+        text tag_name PK, FK
+    }
+    transactions {
+        integer _id PK
+        real amount
+        text description
+        text date
+        integer isExpense
+        text category
+        text smsId UK
+    }
+    category_definitions {
+        text name PK
+        integer color
+        text keywords
+        integer isBuiltIn
+    }
+    sms_contacts {
+        text id PK
+        text senderIds
+        text label
+        integer isBuiltIn
+        integer isBlocked
+    }
+    period_logs {
+        text id PK
+        text startDate
+        text endDate
+        text intensity
+        text notes
+    }
+
+    notes ||--o{ note_tags : "has"
+    tags ||--o{ note_tags : "groups"
 ```
-[Search Trigger / Widget Shortcut]
-       │
-       ▼
-[UniversalSearchOverlay] ──(150ms debounce)──► [NoteProvider / DB Query]
-       │
-       ▼
-[AppLockScreen Overlay]
-  ├── Intercepts App Pause / Resume
-  ├── Bypassed by AppLockScreen.ignoreNextResumeLock() before FilePicker/UrlLaunch
-  └── Queues shared media in AppLockScreen.pendingSharedMedia
+
+---
+
+## 🔄 Core Workflows & Integrations
+
+### SMS Transaction Auto-Import Workflow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Telephony as OS Telephony API
+    participant Service as SmsService
+    participant Parser as SmsParser
+    participant AI as GeminiNanoService
+    participant DB as TransactionRepository
+    participant UI as State Provider / UI Stream
+
+    Telephony->>Service: Incoming SMS Event
+    Note over Service: Reads sender name & body
+    Service->>Parser: parseMessage()
+    
+    alt Regex Matches
+        Parser-->>Service: Return TransactionModel
+    else Regex Fails & AI Enabled
+        Service->>AI: parseSmsTransaction(body)
+        AI-->>Service: Return AI Parsed Fields
+        Service->>Parser: Build Transaction
+    end
+
+    alt Is Transaction Valid?
+        Service->>DB: hasCrossSenderDuplicate(amount, date)
+        
+        alt No Duplicate Found
+            Service->>DB: createSmsTransaction(transaction)
+            
+            alt Is Reversal Sentence?
+                Service->>DB: findReversalTarget(amount, date)
+                DB-->>Service: Target Found
+                Service->>DB: deleteTransaction(Target ID)
+                Service->>DB: deleteTransaction(Reversal ID)
+            end
+            
+            Service->>UI: Emit to incomingTransactions Stream
+            UI->>UI: Update Ledger Balance UI
+        end
+    end
 ```
 
 ---
 
-## 5. Automated Map Maintenance Protocol
-1. **Skill Trainer Trigger**: Whenever `skill-trainer` extracts new session learnings, it MUST check and update `.agent/map.md` to map any new files, database columns, or service interfaces.
-2. **Release Workflow Trigger**: Whenever `release-management` runs `./deploy.sh`, it MUST verify that `.agent/map.md` reflects all architectural changes made in that version.
+## 🚀 Deployment & CI/CD Pipeline
+
+*   **Version Automation (`deploy.sh`)**:
+    *   Run the script: `./deploy.sh 1.34.0`
+    *   **Version Code Generation**: Computes numeric build code:
+        $$\text{buildNumber} = (\text{major} \times 10000) + (\text{minor} \times 100) + \text{patch}$$
+    *   **YAML Updates**: Replaces version in `pubspec.yaml`.
+    *   **Automated Tagging**: Commits changes, tags release, and pushes tag to GitHub, triggering CI/CD.

@@ -1,7 +1,7 @@
 name: note_taking_app
 description: "Everything App: A fully local offline-first note-taking, financial manager, and health tracker app with offline AI and SMS auto-import."
 publish_to: "none"
-version: 2.9.1+20901
+version: 2.10.0+21000
 
 
 environment:
@@ -95,21 +95,13 @@ flutter:
     - assets/app_icon.png
     - assets/app_icon_monochrome.png
   fonts:
-    - family: Rubik
+    - family: Google Sans Flex
       fonts:
-        - asset: assets/fonts/Rubik-VariableFont_wght.ttf
-        - asset: assets/fonts/Rubik-Italic-VariableFont_wght.ttf
-          style: italic
-    - family: Google Sans Text
-      fonts:
-        - asset: assets/fonts/GoogleSansText-Regular.ttf
-        - asset: assets/fonts/GoogleSansText-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/GoogleSansText-Bold.ttf
+        - asset: assets/fonts/GoogleSansFlex-VariableFont_GRAD,ROND,opsz,slnt,wdth,wght.ttf
     - family: Inter
       fonts:
         - asset: assets/fonts/Inter-Regular.ttf
-    - family: Google Sans Code
-      fonts:
-        - asset: assets/fonts/GoogleSansCode-Variable.ttf
+
+
+
 

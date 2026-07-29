@@ -1,4 +1,4 @@
-import '../data/repositories/period_repository.dart';
+import '../features/health/data/period_repository.dart';
 
 class PeriodPredictionService {
   static const int normalCycleLengthDays = 28;

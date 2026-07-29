@@ -1,45 +1,64 @@
-# AI Rules and Guidelines for Note Book
+# Master Rules & Developer Guidelines for Note Book
 
-All AI coding assistants (including Cursor, Copilot, Antigravity, and other LLM agents) working on this repository must strictly adhere to the following rules:
-
----
-
-## 🚀 Rule 1: Use the Developer Map first to Save Tokens
-Before executing any search queries, reading random files, or writing any code modifications, the AI **MUST** first read and reference the Developer Map/Knowledge Base file:
-*   [.agent/map.md](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/.agent/map.md).
-
-**Process**:
-1.  Read the Developer Map to find which files, databases, or services are responsible for the requested feature or bug.
-2.  Identify the specific narrow set of files that need to be read or edited.
-3.  Only query, read, or edit those targeted files. Avoid broad directory-wide grep searches or opening unrelated files. This is critical for token conservation and context window management.
+All AI coding assistants (including Cursor, Antigravity, Copilot, and LLM agents) working on this repository must strictly adhere to the following master rules:
 
 ---
 
-## 📱 Rule 2: Mandatorily Test Implementations in the Emulator
-After implementing any new feature, code modification, or bug fix, the AI **MUST** run the app on an emulator/simulator or device and verify the implementation.
+## 🚀 Rule 1: Consult Developer Map First (Token Savings)
+Before executing search queries, reading random files, or modifying code, the agent **MUST** first inspect the Developer Map:
+*   [map.md](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/map.md) / [.agent/map.md](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/.agent/map.md).
 
 **Process**:
-1.  **List Devices & Apps**: Use tools to list available devices or check running apps (e.g. `list_devices`, `list_running_apps`).
-2.  **Launch & Sync**: Launch the app (e.g. `launch_app`) or perform a Hot Restart/Hot Reload (e.g. `hot_restart`, `hot_reload`) to sync the changes.
-3.  **Validate Outcomes**: Read logs (e.g. `get_app_logs`) and look for runtime errors (e.g. `get_runtime_errors`) to proactively resolve issues.
-4.  **Confirm Correctness**: Do not declare a task done until it has been verified to compile and run correctly on the device/emulator.
+1. Read the Developer Map to identify exact files, providers, and database schemas responsible for the requested feature or fix.
+2. Target strictly the necessary set of files. Avoid broad workspace grep searches or scanning unrelated directories.
 
 ---
 
-## 🛡️ Rule 3: Maintain R8 ProGuard Rules for Native Dependencies
-When adding any new native Android plugin or dependency to `pubspec.yaml`, the AI **MUST** ensure R8 release builds will not strip required native classes or reflection entry points.
+## 🎨 Rule 2: Single Source of Truth Theme & Core UI Primitives
+Never hardcode layout margins, padding, border radii, animation curves, or colors directly inside screen widgets.
 
 **Process**:
-1.  **Check ProGuard Rules**: Inspect `android/app/proguard-rules.pro` and add explicit `-keep class <package_name>.** { *; }` rules for any new native plugin.
-2.  **Verify Release Compilation**: Before finalizing release-related tasks, run `flutter build apk --release` to confirm that R8 code and resource shrinking finish with zero errors.
+1. **Design Tokens**: Reference tokens from `AppLayout` and `AppTheme` (`lib/core/theme/`).
+2. **Shared UI Primitives**: Use standardized UI components from `lib/core/ui/`:
+   - `AppCard`: Standardized card container with single-source-of-truth surface fills.
+   - `AppBottomSheet`: Standardized drag-handled modal sheet with responsive width limits.
+   - `AppChip`: Standardized chip/pill widget for tags, categories, phase badges, and filters.
+   - `AppDialog`: Standardized responsive confirmation and input dialogs.
+   - `FrostedGlassSliverAppBar`: Standardized glassmorphic top header.
+3. **Typography**: Pair `Google Sans Flex` / `Inter` for UI text with **`Inter`** tabular figures (`fontFeatures: [FontFeature.tabularFigures()]`) for financial ledgers and data numbers.
+4. **Touch & Motion**: Wrap tactile buttons using `bouncing_widget.dart` or expressive pressables (`scaleFactor: 0.96`, `150ms`, `Curves.easeOutBack`).
 
 ---
 
-## 🎨 Rule 4: Material 3 Expressive UI/UX Enforcement
-When creating or refactoring any UI component, screen, or theme in this application, the AI **MUST** refer to [.agent/skills/UI-UX-Specialist/design.md](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/.agent/skills/UI-UX-Specialist/design.md).
+## 📁 Rule 3: Feature-Driven Domain Architecture
+New features and domain logic MUST follow the feature-driven architecture under `lib/features/`:
+*   `lib/features/notes/`: Note model, `NoteRepository`, `NoteEditorProvider`, and editor/list screens.
+*   `lib/features/finances/`: Transaction model, `TransactionRepository`, `FinancialManagerProvider`, and financial screens.
+*   `lib/features/health/`: Period log model, `PeriodRepository`, `PeriodTrackerProvider`, and cycle prediction screens.
+*   `lib/features/settings/`: `SettingsProvider`, backup services, app lock, and settings screens.
+*   **Decoupled Providers**: Keep business logic, auto-save timers, filtering, and queries inside `ChangeNotifier` providers rather than monolithic widget `State` classes.
+
+---
+
+## 📱 Rule 4: Mandatory Static Analysis & Verification
+After implementing any feature or fix, the agent **MUST** verify code correctness.
 
 **Process**:
-1.  **5-Tier Surface Container Tokens**: Use `surfaceContainerLow` $\rightarrow$ `surfaceContainerHighest` and `#000000` for OLED pitch black. Never write raw `Color(0xFF...)` inside screen widgets.
-2.  **Component Specs**: Use standard M3 Expressive components: **FAB Menu**, **Split Buttons**, **Floating Glassmorphic Toolbars**, **SegmentedButton**, `SearchBar`, and `Badge.count`.
-3.  **Typography**: Pair `Google Sans Text` / `Plus Jakarta Sans` for UI controls and headers with **`Inter`** tabular figures (`fontFeatures: [FontFeature.tabularFigures()]`) for financial ledgers and data numbers.
-4.  **Spring Physics & Touch Targets**: Wrap tactile buttons in `buildExpressivePressable` (`scaleFactor: 0.96`, `150ms`, `Curves.easeOutBack`) and ensure all clickable icon buttons meet the minimum $48 \times 48\text{ dp}$ tap target size.
+1. Run `flutter analyze` to ensure **0 static analysis errors and warnings**.
+2. Run `flutter test` to ensure all unit and widget tests pass cleanly.
+3. Verify runtime execution via hot reload/hot restart on running devices/emulators.
+
+---
+
+## 🛡️ Rule 5: R8 ProGuard Rules for Native Dependencies
+When adding native Android plugins to `pubspec.yaml`, the agent **MUST** ensure R8 release builds will not strip required native classes or reflection entry points.
+
+**Process**:
+1. Inspect `android/app/proguard-rules.pro` and add explicit `-keep class <package_name>.** { *; }` rules for new native plugins.
+2. Verify release build compilation via `flutter build apk --release` when requested.
+
+---
+
+## 🔒 Rule 6: Security & User Consent
+* **Local Data First**: Data and encrypted backups remain local. Exclude sensitive biometric/auth settings from backup restoration.
+* **No Unprompted Commits/Pushes**: Always obtain explicit user permission before executing `git commit` or `git push`.

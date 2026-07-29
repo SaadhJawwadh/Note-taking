@@ -6,10 +6,10 @@ import 'package:animations/animations.dart';
 import '../../data/note_model.dart';
 import '../../data/settings_provider.dart';
 import '../../providers/note_provider.dart';
-import '../../screens/note_editor_screen.dart';
+import 'package:note_taking_app/features/notes/presentation/screens/note_editor_screen.dart';
 import '../../screens/home_screen.dart'; // For NoteCard for now, maybe move it too
-import '../../data/repositories/note_repository.dart';
-import '../../theme/app_layout.dart';
+import '../../features/notes/data/note_repository.dart';
+import '../../core/theme/app_layout.dart';
 import '../skeleton_card.dart';
 
 class NoteViewBuilder extends StatelessWidget {

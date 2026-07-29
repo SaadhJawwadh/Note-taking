@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../theme/app_layout.dart';
+import '../core/theme/app_layout.dart';
 
 class SettingsSection extends StatelessWidget {
   final String title;

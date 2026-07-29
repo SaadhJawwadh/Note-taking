@@ -1,62 +1,56 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_quill/quill_delta.dart';
 import 'package:note_taking_app/utils/quill_checklist_helper.dart';
-import 'package:flutter/material.dart';
 
 void main() {
   group('QuillChecklistHelper Tests', () {
-    test('syncChecklists - checked items get struck out, unchecked items get strike cleared, and sorted', () {
+    test('getChecklistStats - calculates correct totals and completion percentages', () {
       final doc = Document.fromDelta(Delta()
-        ..insert('Task 1')
-        ..insert('\n', {'list': 'checked'})
-        ..insert('Task 2')
-        ..insert('\n', {'list': 'unchecked'})
+        ..insert('Task 1\n', {'list': 'checked'})
+        ..insert('Task 2\n', {'list': 'checked'})
+        ..insert('Task 3\n', {'list': 'unchecked'})
+        ..insert('Task 4\n', {'list': 'unchecked'})
+      );
+
+      final stats = QuillChecklistHelper.getChecklistStats(doc);
+      expect(stats.totalCount, equals(4));
+      expect(stats.checkedCount, equals(2));
+      expect(stats.uncheckedCount, equals(2));
+      expect(stats.completionPercentage, equals(0.5));
+      expect(stats.completionPercentInt, equals(50));
+    });
+
+    test('extractAndRemoveCheckedLines - extracts checked text and cleans document', () {
+      final doc = Document.fromDelta(Delta()
+        ..insert('Task 1\n', {'list': 'unchecked'})
+        ..insert('Task 2\n', {'list': 'checked'})
       );
       final controller = QuillController(
         document: doc,
         selection: const TextSelection.collapsed(offset: 0),
       );
 
-      QuillChecklistHelper.syncChecklists(controller);
-
-      final docDelta = controller.document.toDelta();
-      final ops = docDelta.toList();
-
-      // Check Task 2 (should be first, unchecked, not struck)
-      expect(ops[0].data, equals('Task 2'));
-      expect(ops[0].attributes?['strike'], isNull);
-
-      // Check Task 1 (should be second, checked, struck)
-      expect(ops[2].data, equals('Task 1'));
-      expect(ops[2].attributes?['strike'], isTrue);
+      final extracted = QuillChecklistHelper.extractAndRemoveCheckedLines(controller);
+      expect(extracted, equals(['Task 2']));
+      expect(controller.document.toPlainText().trim(), equals('Task 1'));
     });
 
-    test('syncChecklists - reorders contiguous checklists so checked items go to bottom', () {
+    test('restoreUncheckedItem - inserts text as unchecked item at end of document', () {
+      final doc = Document.fromDelta(Delta()
+        ..insert('Task 1\n', {'list': 'unchecked'})
+      );
       final controller = QuillController(
-        document: Document.fromDelta(Delta()
-          ..insert('Task 1')
-          ..insert('\n', {'list': 'checked'})
-          ..insert('Task 2')
-          ..insert('\n', {'list': 'unchecked'})
-        ),
-        selection: const TextSelection.collapsed(offset: 13), // End of Task 2
+        document: doc,
+        selection: const TextSelection.collapsed(offset: 0),
       );
 
-      QuillChecklistHelper.syncChecklists(controller);
+      QuillChecklistHelper.restoreUncheckedItem(controller, 'Task 2');
 
-      final text = controller.document.toPlainText();
-      expect(text, equals('Task 2\nTask 1\n'));
-
-      // Check that Task 1 is struck and Task 2 is not
-      final ops = controller.document.toDelta().toList();
-      expect(ops[0].data, equals('Task 2'));
-      expect(ops[0].attributes?['strike'], isNull);
-      expect(ops[2].data, equals('Task 1'));
-      expect(ops[2].attributes?['strike'], isTrue);
-
-      // Verify selection mapping: original offset 13 was at the end of 'Task 2', which moved to offset 6.
-      expect(controller.selection.baseOffset, equals(6));
+      final stats = QuillChecklistHelper.getChecklistStats(controller.document);
+      expect(stats.uncheckedCount, equals(2));
+      expect(controller.document.toPlainText().startsWith('Task 1\nTask 2\n'), isTrue);
     });
   });
 }

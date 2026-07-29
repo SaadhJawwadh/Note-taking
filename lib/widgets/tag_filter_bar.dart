@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/note_provider.dart';
 import 'package:flutter/services.dart';
-import '../theme/app_layout.dart';
+import '../core/theme/app_layout.dart';
 
 class TagFilterBar extends StatelessWidget {
   final Function(String) onTagLongPress;

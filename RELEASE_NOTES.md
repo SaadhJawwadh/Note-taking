@@ -1,10 +1,9 @@
 
-### 🏛️ Unified Frosted Glass Headers & Single-Scaffold Architecture
-- **Reusable `FrostedGlassSliverAppBar` Component**: Modularized top header architecture across all 7+ sub-screens for 100% visual symmetry, 20px title alignment, and zero-border light/dark mode glassmorphism.
-- **Single Outer Scaffold FAB Architecture**: Centralized floating action bar delegate floating 16dp above the bottom navigation bar across all tabs without clipping or double-padding.
-- **Default Launch Folder Persistence**: Persists user default folder selection (`settings.defaultFolder`) on app launch.
+### 🏛️ Feature-Driven Modular Architecture & Single Source of Truth UI
+- **Feature-Driven Core Migration**: Restructured code into modular domain packages (`lib/features/notes/`, `finances/`, `health/`, `settings/`) and shared design tokens (`lib/core/`).
+- **Unified Core UI Components**: Streamlined reusable UI primitives (`AppCard`, `AppBottomSheet`, `AppChip`, `AppDialog`) for 100% design symmetry across the entire app.
 
-### 🎨 Pixel-Aligned Header Layout & Light Mode Artifact Fixes
-- **Borderless Glassmorphism**: Removed hard horizontal border strokes and double-container inner pills to resolve light-mode shadow artifacts.
-- **Standardized Side Padding**: Aligned left title margins to `20px` and normalized right action buttons to standard `48x48dp` Material touch targets.
+### ⚡ Variable Font Asset Optimization & Checklists Fix
+- **Single Variable Font Binary**: Replaced 6 static font files with `GoogleSansFlex` variable font, drastically reducing app bundle size.
+- **Quill Checklist Processing**: Fixed interactive checklist item toggling, state preservation, and delta export stability.
 

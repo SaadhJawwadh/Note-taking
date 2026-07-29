@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:note_taking_app/screens/settings_screen.dart';
+import 'package:note_taking_app/features/settings/presentation/screens/settings_screen.dart';
 import 'package:note_taking_app/data/settings_provider.dart';
 import 'package:note_taking_app/l10n/app_localizations.dart';
 

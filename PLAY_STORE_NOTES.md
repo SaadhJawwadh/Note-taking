@@ -1,12 +1,12 @@
 <en-US>
-• Feature: Reusable frosted glass top headers across all sub-screens for 100% visual symmetry.
-• Feature: Centralized floating action bar delegating quick actions 16dp above the bottom navigation bar.
-• Feature: Remembers chosen default launch folder preference on startup.
-• Fix: Borderless glassmorphism resolving light-mode shadow artifacts and normalizing 20px title margins.
+• Feature: Upgraded to modular feature architecture for faster performance and smoother navigation.
+• UI: Unified design system providing consistent cards, dialogs, and sheets app-wide.
+• Optimization: Streamlined variable font rendering for reduced app download size.
+• Fix: Enhanced checklist editor with seamless toggling and reliable state preservation.
 </en-US>
 <ta-IN>
-• அம்சம்: 100% காட்சி சமச்சீர்நிலைக்கு அனைத்து துணைத் திரைகளிலும் மீண்டும் பயன்படுத்தக்கூடிய உறைந்த கண்ணாடி தலைப்புகள்.
-• அம்சம்: வழிசெலுத்தல் பட்டிக்கு மேலே 16dp தூரத்தில் வேகமான செயல்களுக்கான மையப்படுத்தப்பட்ட மிதக்கும் பொத்தான்.
-• அம்சம்: பயன்பாட்டுத் தொடக்கத்தில் இயல்புநிலை கோப்புறை விருப்பத்தை நினைவில் கொள்கிறது.
-• திருத்தம்: ஒளி முறை நிழல் கலைப்பொருட்களைச் சரிசெய்து 20px தலைப்பு விளிம்புகளை இயல்பாக்கும் விளிம்பற்ற கண்ணாடி வடிவமைப்பு.
+• அம்சம்: அதிவேக இயக்கம் மற்றும் எளிதான வழிசெலுத்தலுக்கு மாற்றியமைக்கப்பட்ட கட்டமைப்பு.
+• இடைமுகம்: பயன்பாடு முழுவதும் ஒரே மாதிரியான அட்டைகள் மற்றும் உரையாடல் பெட்டிகள்.
+• மேம்பாடு: பயன்பாட்டின் அளவைக் குறைக்க மேம்படுத்தப்பட்ட எழுத்துருக்கள்.
+• திருத்தம்: குறிப்புகள் எடிட்டரில் சரிபார்ப்புப் பட்டியலின் சீரான செயல்பாடு.
 </ta-IN>

@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../data/repositories/transaction_repository.dart';
+import '../features/finances/data/transaction_repository.dart';
 import '../services/financial_regression_engine.dart';
 
 /// Workmanager task that recomputes widget data in the background so the

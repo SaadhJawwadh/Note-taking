@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/app_layout.dart';
+import '../core/theme/app_layout.dart';
 
 /// A softly pulsing placeholder card shown while content loads.
 class SkeletonCard extends StatefulWidget {

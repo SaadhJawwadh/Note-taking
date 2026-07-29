@@ -5,8 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../data/settings_provider.dart';
 import '../../providers/note_provider.dart';
-import '../../screens/settings_screen.dart';
-import '../../theme/app_layout.dart';
+import 'package:note_taking_app/features/settings/presentation/screens/settings_screen.dart';
+import '../../core/theme/app_layout.dart';
 import '../../utils/app_route.dart';
 import '../../l10n/app_localizations.dart';
 import '../bouncing_widget.dart';
@@ -18,6 +18,8 @@ class HomeAppBar extends StatefulWidget implements PreferredSizeWidget {
   final VoidCallback onBulkTag;
   final VoidCallback onCycleViewMode;
   final VoidCallback onRefresh;
+
+  static final ValueNotifier<bool> searchRequestedNotifier = ValueNotifier<bool>(false);
 
   const HomeAppBar({
     super.key,
@@ -42,7 +44,23 @@ class _HomeAppBarState extends State<HomeAppBar> {
   Timer? _debounceTimer;
 
   @override
+  void initState() {
+    super.initState();
+    HomeAppBar.searchRequestedNotifier.addListener(_handleSearchRequest);
+  }
+
+  void _handleSearchRequest() {
+    if (HomeAppBar.searchRequestedNotifier.value && mounted) {
+      setState(() {
+        _isSearching = true;
+      });
+      HomeAppBar.searchRequestedNotifier.value = false;
+    }
+  }
+
+  @override
   void dispose() {
+    HomeAppBar.searchRequestedNotifier.removeListener(_handleSearchRequest);
     _debounceTimer?.cancel();
     _searchController.dispose();
     super.dispose();

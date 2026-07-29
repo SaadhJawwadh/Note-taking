@@ -2,7 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-import '../../theme/app_layout.dart';
+import '../../core/theme/app_layout.dart';
 import '../../services/financial_regression_engine.dart';
 
 /// A Material 3 Card leveraging [FinancialRegressionEngine] for storage-friendly

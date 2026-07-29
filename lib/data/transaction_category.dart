@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'category_definition.dart';
-import 'repositories/transaction_repository.dart';
+import '../features/finances/data/transaction_repository.dart';
 import 'category_constants.dart';
 
 class TransactionCategory {

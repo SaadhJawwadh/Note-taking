@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:another_telephony/telephony.dart' hide NetworkType;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../data/repositories/transaction_repository.dart';
+import '../features/finances/data/transaction_repository.dart';
 import '../data/transaction_model.dart';
 import '../data/transaction_category.dart';
 import 'sms_parser.dart';

@@ -22,10 +22,10 @@ The app utilizes a dark, high-contrast palette with vibrant accents to create a 
 - **Text Secondary**: `#8E8E93` (Medium emphasis, subtitles)
 
 ## 2. Typography
-- **Primary Font Family**: `Rubik`
-- **Headings**: High contrast, bold (`FontWeight.bold`), crisp edges.
-- **Body Text**: Medium weight (`FontWeight.w500`), subtle and highly readable.
-- **Labels**: Small, precise, semi-bold.
+- **Headings & Display**: `Google Sans Text` (High contrast, bold, crisp edges).
+- **Body Text & Labels**: `Inter` (Medium/Regular weight, highly readable).
+- **Code Blocks**: System monospace.
+
 
 ## 3. Shapes & Radii
 The interface avoids sharp edges in favor of soft, approachable curves.

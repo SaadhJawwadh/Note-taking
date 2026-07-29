@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../data/settings_provider.dart';
-import '../theme/app_layout.dart';
+import '../core/theme/app_layout.dart';
 import '../widgets/bouncing_widget.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 

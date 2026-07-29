@@ -15,7 +15,7 @@ import 'package:provider/provider.dart';
 import '../data/settings_provider.dart';
 import '../data/transaction_category.dart';
 import '../data/transaction_model.dart';
-import '../data/repositories/transaction_repository.dart';
+import '../features/finances/data/transaction_repository.dart';
 import '../data/repositories/recurring_rule_repository.dart';
 import '../providers/note_provider.dart';
 import '../utils/rich_text_utils.dart';

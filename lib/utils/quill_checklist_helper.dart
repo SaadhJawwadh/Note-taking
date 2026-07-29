@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
-import 'package:flutter_quill/quill_delta.dart';
 
 class QuillChecklistHelper {
   /// Returns a list of all Line nodes in the document.
@@ -20,182 +19,113 @@ class QuillChecklistHelper {
     return lines;
   }
 
-  /// Check if the block is a checklist block.
-  static bool isChecklistBlock(Block block) {
-    final val = block.style.attributes['list']?.value;
-    return val == 'checked' || val == 'unchecked';
-  }
-
-  /// Check if a line needs formatting under the checked/unchecked state.
-  static bool needsStrikeFormatting(Line line, bool checked) {
-    if (line.length <= 1) return false;
-    
-    if (checked) {
-      for (final child in line.children) {
-        if (child is Leaf) {
-          if (child.style.attributes['strike']?.value != true) {
-            return true;
-          }
-        }
-      }
-      return false;
-    } else {
-      for (final child in line.children) {
-        if (child is Leaf) {
-          if (child.style.attributes['strike']?.value == true) {
-            return true;
-          }
-        }
-      }
-      return false;
-    }
-  }
-
-  /// Scans the document, updates checklist strikethroughs, and groups/sorts
-  /// contiguous checklist items with unchecked first, followed by checked items.
-  static void syncChecklists(QuillController controller) {
-    final doc = controller.document;
-    final allLines = getDocumentLines(doc);
-
-    // Phase 1: Formatting updates (apply strike to checked, clear from unchecked)
-    for (final line in allLines) {
+  /// Returns statistics about the checklists in the document.
+  static ChecklistStats getChecklistStats(Document doc) {
+    int checked = 0;
+    int unchecked = 0;
+    for (final line in getDocumentLines(doc)) {
       final listAttr = line.style.attributes['list']?.value;
       if (listAttr == 'checked') {
-        if (needsStrikeFormatting(line, true)) {
-          doc.format(line.documentOffset, line.length - 1, Attribute.strikeThrough);
-        }
+        checked++;
       } else if (listAttr == 'unchecked') {
-        if (needsStrikeFormatting(line, false)) {
-          final clearStrike = Attribute.clone(Attribute.strikeThrough, null);
-          doc.format(line.documentOffset, line.length - 1, clearStrike);
-        }
+        unchecked++;
       }
     }
-
-    // Phase 2: Reordering contiguous checklist blocks
-    // Fetch root children and document delta after formatting phase to avoid stale/detached nodes
-    final currentDocDelta = doc.toDelta();
-    final rootChildren = doc.root.children.toList();
-    
-    int i = 0;
-    while (i < rootChildren.length) {
-      final child = rootChildren[i];
-      if (child is Block && isChecklistBlock(child)) {
-        // Find contiguous checklist group
-        int startIndex = i;
-        int endIndex = i;
-        while (endIndex < rootChildren.length - 1) {
-          final next = rootChildren[endIndex + 1];
-          if (next is Block && isChecklistBlock(next)) {
-            endIndex++;
-          } else {
-            break;
-          }
-        }
-
-        final contiguousBlocks = rootChildren.sublist(startIndex, endIndex + 1).cast<Block>();
-        final groupLines = <Line>[];
-        for (final b in contiguousBlocks) {
-          groupLines.addAll(b.children.cast<Line>());
-        }
-
-        // Check if group is already sorted (unchecked first, then checked)
-        bool seenChecked = false;
-        bool alreadySorted = true;
-        for (final line in groupLines) {
-          final isChecked = line.style.attributes['list']?.value == 'checked';
-          if (isChecked) {
-            seenChecked = true;
-          } else {
-            if (seenChecked) {
-              alreadySorted = false;
-              break;
-            }
-          }
-        }
-
-        if (!alreadySorted) {
-          // Partition lines
-          final uncheckedLines = <Line>[];
-          final checkedLines = <Line>[];
-          for (final line in groupLines) {
-            final isChecked = line.style.attributes['list']?.value == 'checked';
-            if (isChecked) {
-              checkedLines.add(line);
-            } else {
-              uncheckedLines.add(line);
-            }
-          }
-
-          final groupStart = groupLines.first.documentOffset;
-          final groupLength = (groupLines.last.documentOffset + groupLines.last.length) - groupStart;
-
-          // Build sorted delta
-          var sortedDelta = Delta();
-          for (final line in uncheckedLines) {
-            final sliced = currentDocDelta.slice(line.documentOffset, line.documentOffset + line.length);
-            sortedDelta = sortedDelta.concat(sliced);
-          }
-          for (final line in checkedLines) {
-            final sliced = currentDocDelta.slice(line.documentOffset, line.documentOffset + line.length);
-            sortedDelta = sortedDelta.concat(sliced);
-          }
-
-          // Build change delta
-          final changeDelta = Delta();
-          if (groupStart > 0) {
-            changeDelta.retain(groupStart);
-          }
-          changeDelta.delete(groupLength);
-          for (final op in sortedDelta.toList()) {
-            changeDelta.push(op);
-          }
-
-          // Compute new cursor/selection positions
-          final selection = controller.selection;
-          
-          int mapSelectionIndex(int selIndex) {
-            if (selIndex < groupStart) return selIndex;
-            if (selIndex > groupStart + groupLength) return selIndex;
-            
-            for (final line in groupLines) {
-              final lineStart = line.documentOffset;
-              final lineEnd = lineStart + line.length;
-              if (selIndex >= lineStart && selIndex <= lineEnd) {
-                final relative = selIndex - lineStart;
-                
-                int currentOffset = groupStart;
-                final sortedLines = [...uncheckedLines, ...checkedLines];
-                for (final sortedLine in sortedLines) {
-                  if (sortedLine == line) {
-                    return currentOffset + relative;
-                  }
-                  currentOffset += sortedLine.length;
-                }
-              }
-            }
-            return selIndex;
-          }
-
-          final newBase = mapSelectionIndex(selection.baseOffset);
-          final newExtent = mapSelectionIndex(selection.extentOffset);
-
-          // Apply reordering change
-          doc.compose(changeDelta, ChangeSource.local);
-
-          // Update selection
-          controller.updateSelection(
-            TextSelection(baseOffset: newBase, extentOffset: newExtent),
-            ChangeSource.local,
-          );
-
-          break;
-        }
-
-        i = endIndex + 1;
-      } else {
-        i++;
-      }
-    }
+    return ChecklistStats(
+      totalCount: checked + unchecked,
+      checkedCount: checked,
+      uncheckedCount: unchecked,
+    );
   }
+
+  /// Extracts all completed (checked) checklist items from the controller's document,
+  /// removes them from the document, and returns their text contents.
+  static List<String> extractAndRemoveCheckedLines(QuillController controller) {
+    final extracted = <String>[];
+    final doc = controller.document;
+    final lines = getDocumentLines(doc).reversed;
+
+    for (final line in lines) {
+      if (line.style.attributes['list']?.value == 'checked') {
+        final start = line.documentOffset;
+        final len = line.length;
+        final plainText = doc.toPlainText();
+        String text = '';
+        if (start < plainText.length) {
+          final end = (start + len).clamp(0, plainText.length);
+          text = plainText.substring(start, end).replaceAll('\n', '').trim();
+        }
+        if (text.isNotEmpty) {
+          extracted.add(text);
+        }
+        doc.delete(start, len);
+      }
+    }
+
+    // Clamp selection offset so it never exceeds doc.length - 1
+    if (extracted.isNotEmpty) {
+      final sel = controller.selection;
+      final maxOffset = (doc.length - 1).clamp(0, double.infinity).toInt();
+      if (sel.baseOffset > maxOffset || sel.extentOffset > maxOffset) {
+        final safeOffset = sel.baseOffset.clamp(0, maxOffset);
+        controller.updateSelection(
+          TextSelection.collapsed(offset: safeOffset),
+          ChangeSource.local,
+        );
+      }
+    }
+
+    return extracted.reversed.toList();
+  }
+
+  /// Restores a text string back into the controller document as an unchecked checklist item.
+  static void restoreUncheckedItem(QuillController controller, String text) {
+    final doc = controller.document;
+    final plainText = doc.toPlainText();
+    int lastNewlinePos = plainText.lastIndexOf('\n');
+    if (lastNewlinePos <= 0) {
+      lastNewlinePos = plainText.length > 1 ? plainText.length - 1 : 0;
+    }
+    if (lastNewlinePos > 0 && plainText[lastNewlinePos - 1] == '\n') {
+      lastNewlinePos--;
+    }
+
+    // 1. Insert leading newline + item text
+    doc.insert(lastNewlinePos, '\n$text');
+
+    // 2. Format line-ending newline with Attribute.unchecked (block attribute)
+    final lineEndPos = lastNewlinePos + 1 + text.length;
+    if (lineEndPos < doc.length) {
+      doc.format(lineEndPos, 1, Attribute.unchecked);
+    }
+
+    // 3. Clear strikethrough from text characters (inline attribute) if present
+    final clearStrike = Attribute.clone(Attribute.strikeThrough, null);
+    if (text.isNotEmpty) {
+      doc.format(lastNewlinePos + 1, text.length, clearStrike);
+    }
+
+    // 4. Safely update selection to avoid stale node cursor exceptions
+    controller.updateSelection(
+      TextSelection.collapsed(offset: (lastNewlinePos + 1 + text.length).clamp(0, doc.length - 1)),
+      ChangeSource.local,
+    );
+  }
+}
+
+class ChecklistStats {
+  final int totalCount;
+  final int checkedCount;
+  final int uncheckedCount;
+
+  const ChecklistStats({
+    required this.totalCount,
+    required this.checkedCount,
+    required this.uncheckedCount,
+  });
+
+  double get completionPercentage =>
+      totalCount == 0 ? 0.0 : (checkedCount / totalCount);
+
+  int get completionPercentInt => (completionPercentage * 100).round();
 }

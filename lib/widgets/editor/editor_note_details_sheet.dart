@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../theme/app_layout.dart';
+import '../../core/theme/app_layout.dart';
 
 /// A Material 3 bottom sheet showing statistics (words, chars, read time)
 /// and metadata (folder, created date, modified date) for a note.

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/app_layout.dart';
+import '../core/theme/app_layout.dart';
 import '../widgets/frosted_glass_sliver_app_bar.dart';
 
 class ChangelogScreen extends StatelessWidget {
@@ -27,9 +27,31 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
+                  version: 'v2.10.0',
+                  date: 'July 30, 2026',
+                  isLatest: true,
+                  changes: [
+                    _ChangelogGroup(
+                      title: '🏛️ Feature-Driven Architecture & Single Source UI',
+                      items: [
+                        'Modular Feature Packages: Restructured code into decoupled domain modules (notes, finances, health, settings).',
+                        'Unified Core UI: Single source of truth UI system (AppCard, AppBottomSheet, AppChip, AppDialog).',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '⚡ Variable Font & Quill Checklist Fixes',
+                      items: [
+                        'GoogleSansFlex Variable Font: Single font binary replacement reducing total app binary footprint.',
+                        'Interactive Checklist Stability: Improved checklist item toggling and markdown parsing state preservation.',
+                      ],
+                    ),
+                  ],
+                ),
+                _buildVersionSection(
+                  context,
                   version: 'v2.9.1',
                   date: 'July 29, 2026',
-                  isLatest: true,
+                  isLatest: false,
                   changes: [
                     _ChangelogGroup(
                       title: '🏛️ Unified Frosted Glass Headers & Single-Scaffold Architecture',

@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:note_taking_app/data/database_helper.dart';
 import 'package:note_taking_app/services/backup_service.dart';
 import 'package:note_taking_app/data/transaction_model.dart';
-import 'package:note_taking_app/data/repositories/transaction_repository.dart';
+import 'package:note_taking_app/features/finances/data/transaction_repository.dart';
 import 'dart:convert';
 
 void main() {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../data/repositories/note_repository.dart';
+import '../features/notes/data/note_repository.dart';
 import '../data/note_model.dart';
 
 class NoteProvider extends ChangeNotifier {

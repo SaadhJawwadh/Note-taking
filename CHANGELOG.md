@@ -2,6 +2,16 @@
 
 All notable changes to Everything App are documented here.
 
+## 2.10.0 - 2026-07-30
+
+### 🏛️ Feature-Driven Modular Architecture & Single Source of Truth UI
+- **Feature-Driven Core Migration**: Restructured code into modular domain packages (`lib/features/notes/`, `finances/`, `health/`, `settings/`) and shared design tokens (`lib/core/`).
+- **Unified Core UI Components**: Streamlined reusable UI primitives (`AppCard`, `AppBottomSheet`, `AppChip`, `AppDialog`) for 100% design symmetry across the entire app.
+
+### ⚡ Variable Font Asset Optimization & Checklists Fix
+- **Single Variable Font Binary**: Replaced 6 static font files with `GoogleSansFlex` variable font, drastically reducing app bundle size.
+- **Quill Checklist Processing**: Fixed interactive checklist item toggling, state preservation, and delta export stability.
+
 ## 2.9.1 - 2026-07-29
 
 ### 🏛️ Unified Frosted Glass Headers & Single-Scaffold Architecture

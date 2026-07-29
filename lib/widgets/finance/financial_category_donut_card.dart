@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../../data/transaction_category.dart';
-import '../../theme/app_layout.dart';
+import '../../core/theme/app_layout.dart';
 
 /// An interactive Material 3 Card rendering a Category Expense Donut Chart
 /// (`fl_chart`) with touch selection and a ranked category legend list.
