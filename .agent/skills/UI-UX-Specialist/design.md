@@ -106,7 +106,8 @@ Widget buildExpressivePressable({required Widget child, required VoidCallback on
 
 ### E. Search & Input Fields
 * **In-Place Search Morphing:** Morph top bar in-place into `SearchBar` pill using `AnimatedSwitcher` (`180ms Curves.fastOutSlowIn`).
-* **Input Fields:** `TextField` with M3 filled or outlined styles using `surfaceContainerHighest` background fill.
+* **TextField Container Transparency:** When embedding `TextField` inside custom containers or pill headers, explicitly override `InputDecoration` with `filled: false`, `fillColor: Colors.transparent`, `border: InputBorder.none`, `enabledBorder: InputBorder.none`, and `focusedBorder: InputBorder.none` to prevent global `inputDecorationTheme` fill color artifacts.
+* **Symmetric Navigation Bars:** Pair frosted glass app headers with matching frosted glass bottom navigation bars (`ClipRect` + `BackdropFilter` `16px` blur) and `extendBody: true` on `Scaffold` for edge-to-edge scrolling depth.
 
 ---
 

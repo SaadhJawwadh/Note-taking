@@ -55,14 +55,6 @@ class _HomeAppBarState extends State<HomeAppBar> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final statusBarHeight = MediaQuery.of(context).padding.top;
 
-    final backgroundColor = (noteProvider.isSelectionMode
-            ? Theme.of(context).colorScheme.primaryContainer
-            : Color.alphaBlend(
-                Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
-                Theme.of(context).colorScheme.surfaceContainerHigh,
-              ))
-        .withValues(alpha: 0.88);
-
     final totalHeight = statusBarHeight + 68.0;
 
     return SliverAppBar(
@@ -88,26 +80,13 @@ class _HomeAppBarState extends State<HomeAppBar> {
             decoration: BoxDecoration(
               color: Theme.of(context)
                   .colorScheme
-                  .surface
+                  .surfaceContainerLow
                   .withValues(alpha: isDark ? 0.82 : 0.88),
             ),
             child: Align(
               alignment: Alignment.center,
-              child: Container(
+              child: SizedBox(
                 height: 56,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  color: backgroundColor,
-                  borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-                  border: Border.all(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .outlineVariant
-                        .withValues(alpha: 0.3),
-                    width: 1,
-                  ),
-                  boxShadow: AppLayout.softShadow(context),
-                ),
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 180),
                   switchInCurve: Curves.fastOutSlowIn,
@@ -119,7 +98,26 @@ class _HomeAppBarState extends State<HomeAppBar> {
                       : _isSearching
                           ? KeyedSubtree(
                               key: const ValueKey('search_mode'),
-                              child: _buildSearchMode(context))
+                              child: Container(
+                                height: 48,
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .surfaceContainerHigh
+                                      .withValues(alpha: 0.85),
+                                  borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+                                  border: Border.all(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .outlineVariant
+                                        .withValues(alpha: 0.3),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: _buildSearchMode(context),
+                              ),
+                            )
                           : KeyedSubtree(
                               key: const ValueKey('normal_mode'),
                               child: _buildNormalMode(context, settings)),

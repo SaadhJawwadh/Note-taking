@@ -32,27 +32,27 @@ class WhatsNewSheet extends StatelessWidget {
     final featureItems = [
       _buildFeatureItem(
         theme,
-        icon: Icons.palette_outlined,
-        title: "Material 3 Expressive UI",
-        desc: "Modern M3 Expressive tokens, elevated floating surfaces, and tactile spring motion physics.",
+        icon: Icons.view_headline_rounded,
+        title: "Unified Frosted Glass Headers",
+        desc: "Reusable, borderless frosted glass top bars across all 7+ sub-screens for 100% visual symmetry.",
       ),
       _buildFeatureItem(
         theme,
-        icon: Icons.blur_on_rounded,
-        title: "Frosted Glass Navigation Bars",
-        desc: "Symmetric top and bottom glassmorphic navigation bars (16px blur) with edge-to-edge content depth.",
+        icon: Icons.add_circle_outline_rounded,
+        title: "Single Outer Scaffold FAB System",
+        desc: "Centralized floating action delegate floating 16dp above the navigation bar across all tabs.",
       ),
       _buildFeatureItem(
         theme,
-        icon: Icons.touch_app_rounded,
-        title: "Tactile Button Haptics & Fixes",
-        desc: "Instant button press response, spring bounce haptics, and borderless search bar text field styling.",
+        icon: Icons.folder_open_outlined,
+        title: "Default Launch Folder Persistence",
+        desc: "Persists your chosen default folder selection on app startup.",
       ),
       _buildFeatureItem(
         theme,
-        icon: Icons.water_drop_outlined,
-        title: "Period Log Readability & Moon Painter",
-        desc: "High-contrast card fills, M3 flow tiles, and illuminated outer stroke ring for dark-mode moon phase painter.",
+        icon: Icons.align_horizontal_left_rounded,
+        title: "Pixel-Aligned Layout & Light Mode Fix",
+        desc: "20px left title alignment and borderless frosted glass eliminating double-container light mode shadow artifacts.",
       ),
     ];
 

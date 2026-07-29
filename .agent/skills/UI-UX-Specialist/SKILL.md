@@ -14,3 +14,5 @@ Refer to [design.md](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/.ag
 * **A11y Touch Targets**: All clickable icons must meet the minimum $48 \times 48\text{ dp}$ tap target.
 * **Tactile Spring Physics**: Micro-interactions and press states must use `buildExpressivePressable` (`scaleFactor: 0.96`, `150ms`, `Curves.easeOutBack`).
 * **Text Wrapping Parity**: App bars use single-line `TextOverflow.ellipsis`; feed cards use multi-line wrapping (`maxLines: 2–6`); editor views use `maxLines: null`.
+* **TextField Container Transparency**: When embedding `TextField` inside custom-styled containers (like stadium search pills), set `filled: false`, `fillColor: Colors.transparent`, and borderless `InputBorder` properties on `InputDecoration` to prevent global `inputDecorationTheme` from applying a dark rectangular fill background artifact.
+* **Symmetric Frosted Glass Navigation**: Pair frosted glass top app bars with matching frosted glass bottom navigation bars (`ClipRect` + `BackdropFilter` `16px` blur) and `extendBody: true` on `Scaffold` for edge-to-edge content depth.

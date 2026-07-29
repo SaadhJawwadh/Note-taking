@@ -1,12 +1,10 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../data/repositories/transaction_repository.dart';
 import '../data/sms_contact.dart';
 import '../services/sms_service.dart';
 import '../theme/app_layout.dart';
-import '../widgets/bouncing_widget.dart';
+import '../widgets/frosted_glass_sliver_app_bar.dart';
 
 class SmsContactsScreen extends StatefulWidget {
   const SmsContactsScreen({super.key});
@@ -184,77 +182,9 @@ class _SmsContactsScreenState extends State<SmsContactsScreen> {
       body: AnimationLimiter(
         child: CustomScrollView(
           slivers: [
-            SliverAppBar(
-              pinned: true,
-              floating: false,
-              snap: false,
-              primary: false,
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              toolbarHeight: MediaQuery.of(context).padding.top + 68.0,
-              titleSpacing: 0,
-              automaticallyImplyLeading: false,
-              flexibleSpace: ClipRect(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                  child: Container(
-                    padding: EdgeInsets.only(
-                      top: MediaQuery.of(context).padding.top + 6,
-                      left: 16,
-                      right: 16,
-                      bottom: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .surface
-                          .withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.82 : 0.88),
-                    ),
-                    child: Align(
-                      alignment: Alignment.center,
-                      child: Container(
-                        height: 56,
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        decoration: BoxDecoration(
-                          color: cs.surfaceContainerHigh.withValues(alpha: 0.85),
-                          borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-                          border: Border.all(
-                            color: cs.outlineVariant.withValues(alpha: 0.3),
-                            width: 1,
-                          ),
-                          boxShadow: AppLayout.softShadow(context),
-                        ),
-                        child: Row(
-                          children: [
-                            BouncingWidget(
-                              onTap: () async {
-                                await HapticFeedback.lightImpact();
-                                if (!context.mounted) return;
-                                Navigator.pop(context);
-                              },
-                              child: IconButton(
-                                icon: const Icon(Icons.arrow_back),
-                                onPressed: () async {
-                                  await HapticFeedback.lightImpact();
-                                  if (!context.mounted) return;
-                                  Navigator.pop(context);
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'SMS Contacts',
-                              style: tt.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+            const FrostedGlassSliverAppBar(
+              titleText: 'SMS Contacts',
+              showBackButton: true,
             ),
             if (_loading)
               const SliverFillRemaining(

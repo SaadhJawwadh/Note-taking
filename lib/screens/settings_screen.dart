@@ -1,11 +1,9 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'dart:io';
-import 'dart:async';
 import 'package:provider/provider.dart';
 import '../data/settings_provider.dart';
 import 'manage_tags_screen.dart';
@@ -18,7 +16,7 @@ import '../utils/app_constants.dart';
 import '../utils/widget_helper.dart';
 import '../utils/app_route.dart';
 import '../theme/app_layout.dart';
-import '../widgets/bouncing_widget.dart';
+import '../widgets/frosted_glass_sliver_app_bar.dart';
 import 'package:file_picker/file_picker.dart';
 import 'app_lock_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -63,8 +61,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final isDark = theme.brightness == Brightness.dark;
-
     return Scaffold(
       backgroundColor: colorScheme.surface,
       body: Consumer<SettingsProvider>(
@@ -75,112 +71,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
           return AnimationLimiter(
             child: CustomScrollView(
               slivers: [
-                SliverAppBar(
-                  pinned: true,
-                  floating: false,
-                  snap: false,
-                  primary: false,
-                  backgroundColor: Colors.transparent,
-                  elevation: 0,
-                  toolbarHeight: MediaQuery.of(context).padding.top + 68.0,
-                  titleSpacing: 0,
-                  automaticallyImplyLeading: false,
-                  flexibleSpace: ClipRect(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                      child: Container(
-                        padding: EdgeInsets.only(
-                          top: MediaQuery.of(context).padding.top + 6,
-                          left: 16,
-                          right: 16,
-                          bottom: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surface
-                              .withValues(alpha: isDark ? 0.82 : 0.88),
-                        ),
-                        child: Align(
-                          alignment: Alignment.center,
-                          child: Container(
-                            height: 56,
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            decoration: BoxDecoration(
-                              color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.85),
-                              borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-                              border: Border.all(
-                                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-                                width: 1,
-                              ),
-                              boxShadow: AppLayout.softShadow(context),
-                            ),
-                            child: Row(
-                              children: [
-                                BouncingWidget(
-                                  onTap: () {
-                                    HapticFeedback.selectionClick();
-                                    Navigator.pop(context);
-                                  },
-                                  child: IconButton(
-                                    icon: const Icon(Icons.arrow_back),
-                                    onPressed: () {
-                                      HapticFeedback.selectionClick();
-                                      Navigator.pop(context);
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: TextField(
-                                    controller: _searchController,
-                                    onChanged: (val) {
-                                      setState(() {
-                                        _searchQuery = val;
-                                      });
-                                    },
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    decoration: InputDecoration(
-                                      hintText: '${AppLocalizations.of(context)!.settingsTitle} / Search...',
-                                      hintStyle: theme.textTheme.titleMedium?.copyWith(
-                                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                                      ),
-                                      filled: false,
-                                      fillColor: Colors.transparent,
-                                      border: InputBorder.none,
-                                      enabledBorder: InputBorder.none,
-                                      focusedBorder: InputBorder.none,
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                                    ),
-                                  ),
-                                ),
-                                if (_searchQuery.isNotEmpty)
-                                  IconButton(
-                                    icon: const Icon(Icons.close),
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      setState(() {
-                                        _searchQuery = '';
-                                      });
-                                    },
-                                  )
-                                else
-                                  Padding(
-                                    padding: const EdgeInsets.only(right: 12),
-                                    child: Icon(
-                                      Icons.search,
-                                      color: colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
+                FrostedGlassSliverAppBar(
+                  showBackButton: true,
+                  title: TextField(
+                    controller: _searchController,
+                    onChanged: (val) {
+                      setState(() {
+                        _searchQuery = val;
+                      });
+                    },
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: '${AppLocalizations.of(context)!.settingsTitle} / Search...',
+                      hintStyle: theme.textTheme.titleMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                       ),
+                      filled: false,
+                      fillColor: Colors.transparent,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                     ),
                   ),
+                  actions: [
+                    if (_searchQuery.isNotEmpty)
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            _searchQuery = '';
+                          });
+                        },
+                      )
+                    else
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: Icon(
+                          Icons.search,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.all(16),

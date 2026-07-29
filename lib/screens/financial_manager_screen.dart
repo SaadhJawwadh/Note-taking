@@ -16,7 +16,6 @@ import '../data/sms_contact.dart';
 import '../services/sms_service.dart';
 import '../services/sms_constants.dart';
 import 'transaction_editor_screen.dart';
-import 'category_management_screen.dart';
 import 'settings_screen.dart';
 import 'app_lock_screen.dart';
 import '../services/backup_service.dart';
@@ -1017,73 +1016,10 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     final currency = settings.currency;
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: AnimationLimiter(
         child: CustomScrollView(
           slivers: _buildSlivers(colorScheme, textTheme, currency, settings),
-        ),
-      ),
-      floatingActionButton: Material(
-        elevation: 6.0,
-        borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-        color: colorScheme.primaryContainer,
-        shadowColor: colorScheme.shadow.withValues(alpha: 0.2),
-        child: Container(
-          height: 56,
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-            border: Border.all(
-              color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-              width: 1,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              OpenContainer<bool>(
-                transitionType: ContainerTransitionType.fadeThrough,
-                transitionDuration: AppLayout.animDefault,
-                openBuilder: (context, _) => const TransactionEditorScreen(),
-                closedElevation: 0,
-                openElevation: 0,
-                closedShape: const StadiumBorder(),
-                closedColor: Colors.transparent,
-                openColor: colorScheme.surface,
-                onClosed: (updated) {
-                  if (updated == true) _refreshTransactions();
-                },
-                closedBuilder: (context, openContainer) => TextButton.icon(
-                  style: TextButton.styleFrom(
-                    foregroundColor: colorScheme.onPrimaryContainer,
-                    shape: const StadiumBorder(),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
-                  icon: const Icon(Icons.add, size: 22),
-                  label: const Text(
-                    'New Transaction',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                  ),
-                  onPressed: () {
-                    HapticFeedback.lightImpact();
-                    openContainer();
-                  },
-                ),
-              ),
-              Container(
-                height: 24,
-                width: 1,
-                color: colorScheme.onPrimaryContainer.withValues(alpha: 0.2),
-              ),
-              IconButton(
-                tooltip: 'Categories',
-                icon: Icon(Icons.category_outlined, color: colorScheme.onPrimaryContainer, size: 20),
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  AppRoute.push(context, const CategoryManagementScreen());
-                },
-              ),
-            ],
-          ),
         ),
       ),
     );
@@ -1119,29 +1055,16 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                     decoration: BoxDecoration(
                       color: Theme.of(context)
                           .colorScheme
-                          .surface
+                          .surfaceContainerLow
                           .withValues(alpha: isDark ? 0.82 : 0.88),
                     ),
                     child: Align(
                       alignment: Alignment.center,
-                      child: Container(
+                      child: SizedBox(
                         height: 56,
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        decoration: BoxDecoration(
-                          color: Color.alphaBlend(
-                            colorScheme.secondary.withValues(alpha: 0.08),
-                            colorScheme.surfaceContainerHigh,
-                          ).withValues(alpha: 0.88),
-                          borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-                          border: Border.all(
-                            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-                            width: 1,
-                          ),
-                          boxShadow: AppLayout.softShadow(context),
-                        ),
                         child: Row(
                           children: [
-                            const SizedBox(width: 16),
+                            const SizedBox(width: 4),
                             InkWell(
                               onTap: () {
                                 HapticFeedback.lightImpact();
@@ -1500,7 +1423,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
               )
             else
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
@@ -1808,7 +1731,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
         if (MediaQuery.sizeOf(context).width >= 600)
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1862,7 +1785,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
           if (_analyticsSegment == 'Breakdown')
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                 child: FinancialCategoryDonutCard(
                   categoryExpenses: _categoryExpenses,
                   totalExpense: _totalDateExpense,
@@ -1890,7 +1813,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
             ),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                 child: _buildMonthComparisonCard(colorScheme, textTheme, currency),
               ),
             ),
@@ -1910,7 +1833,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
             ),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                 child: _buildTopMerchantsCard(colorScheme, textTheme, currency),
               ),
             ),

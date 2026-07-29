@@ -15,9 +15,10 @@ import '../theme/app_layout.dart';
 import '../theme/app_theme.dart';
 import '../widgets/skeleton_card.dart';
 import '../widgets/moon_phase_painter.dart';
-import '../widgets/bouncing_widget.dart';
 
 class PeriodTrackerScreen extends StatefulWidget {
+  static final ValueNotifier<DateTime?> openLogEditorNotifier = ValueNotifier<DateTime?>(null);
+
   const PeriodTrackerScreen({super.key});
 
   @override
@@ -73,10 +74,20 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
     super.initState();
     _selectedDay = _focusedDay;
     _loadData();
+    PeriodTrackerScreen.openLogEditorNotifier.addListener(_handleLogEditorNotifier);
+  }
+
+  void _handleLogEditorNotifier() {
+    final date = PeriodTrackerScreen.openLogEditorNotifier.value;
+    if (date != null && mounted) {
+      PeriodTrackerScreen.openLogEditorNotifier.value = null; // consume
+      _showLogEditor(null, date);
+    }
   }
 
   @override
   void dispose() {
+    PeriodTrackerScreen.openLogEditorNotifier.removeListener(_handleLogEditorNotifier);
     _scrollController.dispose();
     super.dispose();
   }
@@ -558,6 +569,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: AnimationLimiter(
         child: CustomScrollView(
           controller: _scrollController,
@@ -586,26 +598,14 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                     decoration: BoxDecoration(
                       color: Theme.of(context)
                           .colorScheme
-                          .surface
+                          .surfaceContainerLow
                           .withValues(alpha: isDark ? 0.82 : 0.88),
                     ),
-                    child: Container(
+                    child: SizedBox(
                       height: 56,
-                      padding: const EdgeInsets.only(left: 16, right: 4),
-                      decoration: BoxDecoration(
-                        color: Color.alphaBlend(
-                          colorScheme.tertiary.withValues(alpha: 0.08),
-                          colorScheme.surfaceContainerHigh,
-                        ).withValues(alpha: 0.88),
-                        borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-                        border: Border.all(
-                          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-                          width: 1,
-                        ),
-                        boxShadow: AppLayout.softShadow(context),
-                      ),
                       child: Row(
                         children: [
+                          const SizedBox(width: 4),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -635,8 +635,10 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                               ],
                             ),
                           ),
-                          BouncingWidget(
-                            onTap: () async {
+                          IconButton(
+                            icon: const Icon(Icons.today_outlined),
+                            tooltip: 'Today',
+                            onPressed: () async {
                               await HapticFeedback.selectionClick();
                               setState(() {
                                 _focusedDay = DateTime.now();
@@ -650,44 +652,15 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                                 );
                               }
                             },
-                            child: IconButton(
-                              icon: const Icon(Icons.today_outlined),
-                              tooltip: 'Today',
-                              padding: EdgeInsets.zero,
-                              visualDensity: VisualDensity.compact,
-                              onPressed: () async {
-                                await HapticFeedback.selectionClick();
-                                setState(() {
-                                  _focusedDay = DateTime.now();
-                                  _selectedDay = DateTime.now();
-                                });
-                                if (_scrollController.hasClients) {
-                                  await _scrollController.animateTo(
-                                    0,
-                                    duration: AppLayout.animDefault,
-                                    curve: AppLayout.curveExpressive,
-                                  );
-                                }
-                              },
-                            ),
                           ),
-                          BouncingWidget(
-                            onTap: () {
+                          IconButton(
+                            icon: const Icon(Icons.settings_outlined),
+                            tooltip: 'Settings',
+                            onPressed: () {
                               HapticFeedback.selectionClick();
                               AppRoute.push(context, const SettingsScreen());
                             },
-                            child: IconButton(
-                              icon: const Icon(Icons.settings_outlined),
-                              tooltip: 'Settings',
-                              padding: EdgeInsets.zero,
-                              visualDensity: VisualDensity.compact,
-                              onPressed: () {
-                                HapticFeedback.selectionClick();
-                                AppRoute.push(context, const SettingsScreen());
-                              },
-                            ),
                           ),
-                          const SizedBox(width: 4),
                         ],
                       ),
                     ),
@@ -1129,67 +1102,6 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
               ),
             ),
           ],
-        ),
-      ),
-      floatingActionButton: Material(
-        elevation: 6.0,
-        borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-        color: colorScheme.tertiaryContainer,
-        shadowColor: colorScheme.shadow.withValues(alpha: 0.2),
-        child: Container(
-          height: 56,
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-            border: Border.all(
-              color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-              width: 1,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextButton.icon(
-                style: TextButton.styleFrom(
-                  foregroundColor: colorScheme.onTertiaryContainer,
-                  shape: const StadiumBorder(),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-                icon: const Icon(Icons.add, size: 22),
-                label: const Text(
-                  'Log Period',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                ),
-                onPressed: () async {
-                  await HapticFeedback.lightImpact();
-                  await _showLogEditor(null, _selectedDay ?? DateTime.now());
-                },
-              ),
-              Container(
-                height: 24,
-                width: 1,
-                color: colorScheme.onTertiaryContainer.withValues(alpha: 0.2),
-              ),
-              IconButton(
-                tooltip: 'Today',
-                icon: Icon(Icons.today_outlined, color: colorScheme.onTertiaryContainer, size: 20),
-                onPressed: () async {
-                  await HapticFeedback.lightImpact();
-                  setState(() {
-                    _focusedDay = DateTime.now();
-                    _selectedDay = DateTime.now();
-                  });
-                  if (_scrollController.hasClients) {
-                    await _scrollController.animateTo(
-                      0,
-                      duration: AppLayout.animDefault,
-                      curve: AppLayout.curveExpressive,
-                    );
-                  }
-                },
-              ),
-            ],
-          ),
         ),
       ),
     );

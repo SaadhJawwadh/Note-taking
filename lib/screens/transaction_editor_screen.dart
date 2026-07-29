@@ -15,6 +15,7 @@ import '../services/sms_service.dart';
 import '../utils/app_route.dart';
 import 'package:uuid/uuid.dart';
 import '../theme/app_layout.dart';
+import '../widgets/frosted_glass_sliver_app_bar.dart';
 
 class TransactionEditorScreen extends StatefulWidget {
   final TransactionModel? transaction;
@@ -471,57 +472,28 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
     final currency = settings.currency;
 
     return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(84),
-        child: SafeArea(
-          child: Container(
-            margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            height: 64,
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-              boxShadow: AppLayout.softShadow(context),
-            ),
-            child: Row(
-              children: [
+      body: CustomScrollView(
+        slivers: [
+          FrostedGlassSliverAppBar(
+            titleText: widget.transaction == null
+                ? 'New Transaction'
+                : 'Edit Transaction',
+            showBackButton: true,
+            actions: [
+              if (widget.transaction != null)
                 IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () async {
-                    await HapticFeedback.lightImpact();
-                    if (!context.mounted) return;
-                    Navigator.pop(context);
-                  },
+                  icon: const Icon(Icons.delete_outline),
+                  color: colorScheme.error,
+                  onPressed: _deleteTransaction,
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  widget.transaction == null
-                      ? 'New Transaction'
-                      : 'Edit Transaction',
-                  style: textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Spacer(),
-                if (widget.transaction != null)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 4),
-                    child: IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      color: colorScheme.error,
-                      onPressed: _deleteTransaction,
-                    ),
-                  ),
-              ],
-            ),
+            ],
           ),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+          SliverPadding(
+            padding: const EdgeInsets.all(24),
+            sliver: SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
             // Transaction Type Segmented Button
             SegmentedButton<bool>(
               segments: const [
@@ -733,63 +705,66 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
           ],
         ),
       ),
-      floatingActionButton: Material(
-        elevation: 6.0,
+    ),
+  ],
+),
+  floatingActionButton: Material(
+    elevation: 6.0,
+    borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+    color: colorScheme.primaryContainer,
+    shadowColor: colorScheme.shadow.withValues(alpha: 0.2),
+    child: Container(
+      height: 56,
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-        color: colorScheme.primaryContainer,
-        shadowColor: colorScheme.shadow.withValues(alpha: 0.2),
-        child: Container(
-          height: 56,
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-            border: Border.all(
-              color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-              width: 1,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextButton.icon(
-                style: TextButton.styleFrom(
-                  foregroundColor: colorScheme.onPrimaryContainer,
-                  shape: const StadiumBorder(),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-                icon: _isLoading
-                    ? SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: colorScheme.onPrimaryContainer,
-                        ),
-                      )
-                    : const Icon(Icons.save_outlined, size: 22),
-                label: Text(
-                  widget.transaction == null ? 'Save Transaction' : 'Update Transaction',
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                ),
-                onPressed: _isLoading ? null : _saveTransaction,
-              ),
-              Container(
-                height: 24,
-                width: 1,
-                color: colorScheme.onPrimaryContainer.withValues(alpha: 0.2),
-              ),
-              IconButton(
-                tooltip: 'Categories',
-                icon: Icon(Icons.category_outlined, color: colorScheme.onPrimaryContainer, size: 20),
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  AppRoute.push(context, const CategoryManagementScreen());
-                },
-              ),
-            ],
-          ),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+          width: 1,
         ),
       ),
-    );
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextButton.icon(
+            style: TextButton.styleFrom(
+              foregroundColor: colorScheme.onPrimaryContainer,
+              shape: const StadiumBorder(),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            icon: _isLoading
+                ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: colorScheme.onPrimaryContainer,
+                    ),
+                  )
+                : const Icon(Icons.save_outlined, size: 22),
+            label: Text(
+              widget.transaction == null ? 'Save Transaction' : 'Update Transaction',
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+            onPressed: _isLoading ? null : _saveTransaction,
+          ),
+          Container(
+            height: 24,
+            width: 1,
+            color: colorScheme.onPrimaryContainer.withValues(alpha: 0.2),
+          ),
+          IconButton(
+            tooltip: 'Categories',
+            icon: Icon(Icons.category_outlined, color: colorScheme.onPrimaryContainer, size: 20),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              AppRoute.push(context, const CategoryManagementScreen());
+            },
+          ),
+        ],
+      ),
+    ),
+  ),
+);
   }
 }

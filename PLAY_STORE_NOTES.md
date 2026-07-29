@@ -1,12 +1,12 @@
 <en-US>
-• Feature: Material 3 Expressive UI with spring haptics & M3 Floating Action Bars.
-• Feature: Symmetric frosted glassmorphic top & bottom navigation bars.
-• Fix: Fixed button gesture responsiveness & high-contrast period log cards.
-• Visual: Elevated M3 floating popover menus and illuminated moon phase painter.
+• Feature: Reusable frosted glass top headers across all sub-screens for 100% visual symmetry.
+• Feature: Centralized floating action bar delegating quick actions 16dp above the bottom navigation bar.
+• Feature: Remembers chosen default launch folder preference on startup.
+• Fix: Borderless glassmorphism resolving light-mode shadow artifacts and normalizing 20px title margins.
 </en-US>
 <ta-IN>
-• அம்சம்: ஸ்பிரிங் ஹேப்டிக்ஸ் மற்றும் எம்3 மிதக்கும் அதிரடிப் பட்டிகளுடன் கூடிய மெட்டீரியல் 3 வடிவமைப்பு.
-• அம்சம்: மேல்பகுதி மற்றும் கீழ்பகுதி உறைந்த கண்ணாடி வழிசெலுத்தல் பட்டைகள்.
-• திருத்தம்: பொத்தான் தொடுதல் பதில் மற்றும் உயர் மாறுபட்ட மாதவிடாய் பதிவு அட்டைகள் சரி செய்யப்பட்டன.
-• காட்சி: உயர்த்தப்பட்ட எம்3 மிதக்கும் மெனுக்கள் மற்றும் ஒளிரும் சந்திர கட்ட ஓவியர்.
+• அம்சம்: 100% காட்சி சமச்சீர்நிலைக்கு அனைத்து துணைத் திரைகளிலும் மீண்டும் பயன்படுத்தக்கூடிய உறைந்த கண்ணாடி தலைப்புகள்.
+• அம்சம்: வழிசெலுத்தல் பட்டிக்கு மேலே 16dp தூரத்தில் வேகமான செயல்களுக்கான மையப்படுத்தப்பட்ட மிதக்கும் பொத்தான்.
+• அம்சம்: பயன்பாட்டுத் தொடக்கத்தில் இயல்புநிலை கோப்புறை விருப்பத்தை நினைவில் கொள்கிறது.
+• திருத்தம்: ஒளி முறை நிழல் கலைப்பொருட்களைச் சரிசெய்து 20px தலைப்பு விளிம்புகளை இயல்பாக்கும் விளிம்பற்ற கண்ணாடி வடிவமைப்பு.
 </ta-IN>

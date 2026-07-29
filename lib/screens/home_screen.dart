@@ -24,7 +24,9 @@ import 'search_delegate.dart';
 import 'financial_manager_screen.dart';
 import 'period_tracker_screen.dart';
 import 'app_lock_screen.dart';
+import 'category_management_screen.dart';
 import 'transaction_editor_screen.dart';
+import '../utils/app_route.dart';
 import '../data/repositories/note_repository.dart';
 import '../widgets/bouncing_widget.dart';
 import '../widgets/onboarding_sheet.dart';
@@ -563,6 +565,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           index: _currentIndex,
           children: _buildFeatureScreens(settings),
         ),
+        floatingActionButton: _buildCurrentFAB(context, settings),
         bottomNavigationBar: ClipRect(
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
@@ -570,17 +573,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               decoration: BoxDecoration(
                 color: Theme.of(context)
                     .colorScheme
-                    .surface
+                    .surfaceContainerLow
                     .withValues(alpha: isDark ? 0.82 : 0.88),
-                border: Border(
-                  top: BorderSide(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .outlineVariant
-                        .withValues(alpha: 0.2),
-                    width: 1,
-                  ),
-                ),
               ),
               child: NavigationBar(
                 backgroundColor: Colors.transparent,
@@ -656,31 +650,171 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           noteProvider.setSearchQuery('');
         }
       },
-      child: Scaffold(
-        body: CustomScrollView(
-          controller: _scrollController,
-          slivers: [
-            HomeAppBar(
-              onClearSelection: () => noteProvider.clearSelection(),
-              onBulkArchive: () => noteProvider.bulkArchive(),
-              onBulkDelete: () => _bulkDeleteWithUndo(noteProvider),
-              onBulkTag: bulkTag,
-              onCycleViewMode: () => _cycleViewMode(settings),
-              onRefresh: refreshNotes,
+      child: CustomScrollView(
+        controller: _scrollController,
+        slivers: [
+          HomeAppBar(
+            onClearSelection: () => noteProvider.clearSelection(),
+            onBulkArchive: () => noteProvider.bulkArchive(),
+            onBulkDelete: () => _bulkDeleteWithUndo(noteProvider),
+            onBulkTag: bulkTag,
+            onCycleViewMode: () => _cycleViewMode(settings),
+            onRefresh: refreshNotes,
+          ),
+          if (noteProvider.searchQuery.isNotEmpty)
+            SliverToBoxAdapter(
+              child: UniversalSearchOverlay(query: noteProvider.searchQuery),
             ),
-            if (noteProvider.searchQuery.isNotEmpty)
-              SliverToBoxAdapter(
-                child: UniversalSearchOverlay(query: noteProvider.searchQuery),
+          SliverToBoxAdapter(child: TagFilterBar(onTagLongPress: _showTagOptions)),
+          NoteViewBuilder(
+            onRefresh: refreshNotes,
+            onNoteTap: onNoteTap,
+            onNoteLongPress: onNoteLongPress,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget? _buildCurrentFAB(BuildContext context, SettingsProvider settings) {
+    if (_currentIndex == 0) {
+      return _buildFAB(context);
+    }
+
+    int financesIndex = -1;
+    if (settings.showFinancialManager) financesIndex = 1;
+
+    int trackerIndex = -1;
+    if (settings.isPeriodTrackerEnabled) {
+      trackerIndex = settings.showFinancialManager ? 2 : 1;
+    }
+
+    if (_currentIndex == financesIndex) {
+      return _buildFinancesFAB(context);
+    }
+
+    if (_currentIndex == trackerIndex) {
+      return _buildTrackerFAB(context);
+    }
+
+    return null;
+  }
+
+  Widget _buildFinancesFAB(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Material(
+      elevation: 6.0,
+      borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+      color: colorScheme.primaryContainer,
+      shadowColor: colorScheme.shadow.withValues(alpha: 0.2),
+      child: Container(
+        height: 56,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+          border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            OpenContainer<bool>(
+              transitionType: ContainerTransitionType.fadeThrough,
+              transitionDuration: AppLayout.animDefault,
+              openBuilder: (context, _) => const TransactionEditorScreen(),
+              closedElevation: 0,
+              openElevation: 0,
+              closedShape: const StadiumBorder(),
+              closedColor: Colors.transparent,
+              openColor: colorScheme.surface,
+              closedBuilder: (context, openContainer) => TextButton.icon(
+                style: TextButton.styleFrom(
+                  foregroundColor: colorScheme.onPrimaryContainer,
+                  shape: const StadiumBorder(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+                icon: const Icon(Icons.add, size: 22),
+                label: const Text(
+                  'New Transaction',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  openContainer();
+                },
               ),
-            SliverToBoxAdapter(child: TagFilterBar(onTagLongPress: _showTagOptions)),
-            NoteViewBuilder(
-              onRefresh: refreshNotes,
-              onNoteTap: onNoteTap,
-              onNoteLongPress: onNoteLongPress,
+            ),
+            Container(
+              height: 24,
+              width: 1,
+              color: colorScheme.onPrimaryContainer.withValues(alpha: 0.2),
+            ),
+            IconButton(
+              tooltip: 'Categories',
+              icon: Icon(Icons.category_outlined, color: colorScheme.onPrimaryContainer, size: 20),
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                AppRoute.push(context, const CategoryManagementScreen());
+              },
             ),
           ],
         ),
-        floatingActionButton: _buildFAB(context),
+      ),
+    );
+  }
+
+  Widget _buildTrackerFAB(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Material(
+      elevation: 6.0,
+      borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+      color: colorScheme.tertiaryContainer,
+      shadowColor: colorScheme.shadow.withValues(alpha: 0.2),
+      child: Container(
+        height: 56,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+          border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextButton.icon(
+              style: TextButton.styleFrom(
+                foregroundColor: colorScheme.onTertiaryContainer,
+                shape: const StadiumBorder(),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+              icon: const Icon(Icons.add, size: 22),
+              label: const Text(
+                'Log Period',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+              ),
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                PeriodTrackerScreen.openLogEditorNotifier.value = DateTime.now();
+              },
+            ),
+            Container(
+              height: 24,
+              width: 1,
+              color: colorScheme.onTertiaryContainer.withValues(alpha: 0.2),
+            ),
+            IconButton(
+              tooltip: 'Jump to Today',
+              icon: Icon(Icons.today, color: colorScheme.onTertiaryContainer, size: 20),
+              onPressed: () async {
+                await HapticFeedback.lightImpact();
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

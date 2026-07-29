@@ -1,7 +1,6 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme/app_layout.dart';
-import '../widgets/bouncing_widget.dart';
+import '../widgets/frosted_glass_sliver_app_bar.dart';
 
 class ChangelogScreen extends StatelessWidget {
   const ChangelogScreen({super.key});
@@ -9,77 +8,15 @@ class ChangelogScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final textTheme = theme.textTheme;
 
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          SliverAppBar(
-            pinned: true,
-            floating: false,
-            snap: false,
-            primary: false,
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            toolbarHeight: MediaQuery.of(context).padding.top + 68.0,
-            titleSpacing: 0,
-            automaticallyImplyLeading: false,
-            flexibleSpace: ClipRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                child: Container(
-                  padding: EdgeInsets.only(
-                    top: MediaQuery.of(context).padding.top + 6,
-                    left: 16,
-                    right: 16,
-                    bottom: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surface
-                        .withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.82 : 0.88),
-                  ),
-                  child: Align(
-                    alignment: Alignment.center,
-                    child: Container(
-                      height: 56,
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.85),
-                        borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-                        border: Border.all(
-                          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-                          width: 1,
-                        ),
-                        boxShadow: AppLayout.softShadow(context),
-                      ),
-                      child: Row(
-                        children: [
-                          BouncingWidget(
-                            onTap: () => Navigator.pop(context),
-                            child: IconButton(
-                              icon: const Icon(Icons.arrow_back),
-                              onPressed: () => Navigator.pop(context),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Changelog',
-                            style: textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          const FrostedGlassSliverAppBar(
+            titleText: 'Changelog',
+            showBackButton: true,
           ),
           SliverPadding(
             padding: const EdgeInsets.symmetric(
@@ -90,9 +27,32 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
-                  version: 'v2.9.0',
+                  version: 'v2.9.1',
                   date: 'July 29, 2026',
                   isLatest: true,
+                  changes: [
+                    _ChangelogGroup(
+                      title: '🏛️ Unified Frosted Glass Headers & Single-Scaffold Architecture',
+                      items: [
+                        'Reusable FrostedGlassSliverAppBar Component: Modularized top header architecture across all 7+ sub-screens for 100% visual symmetry, 20px title alignment, and zero-border light/dark mode glassmorphism.',
+                        'Single Outer Scaffold FAB Architecture: Centralized floating action bar delegate floating 16dp above the bottom navigation bar across all tabs without clipping or double-padding.',
+                        'Default Launch Folder Persistence: Persists user default folder selection (settings.defaultFolder) on app launch.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🎨 Pixel-Aligned Header Layout & Light Mode Fixes',
+                      items: [
+                        'Borderless Glassmorphism: Removed hard horizontal border strokes and double-container inner pills to resolve light-mode shadow artifacts.',
+                        'Standardized Side Padding: Aligned left title margins to 20px and normalized right action buttons to standard 48x48dp Material touch targets.',
+                      ],
+                    ),
+                  ],
+                ),
+                _buildVersionSection(
+                  context,
+                  version: 'v2.9.0',
+                  date: 'July 29, 2026',
+                  isLatest: false,
                   changes: [
                     _ChangelogGroup(
                       title: '🎨 Material 3 Expressive UI & Tactile Motion System',
