@@ -1,8 +1,10 @@
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:in_app_update/in_app_update.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'dart:io';
+import '../utils/app_globals.dart';
 
 class UpdateRatingService {
   static final InAppReview _inAppReview = InAppReview.instance;
@@ -18,8 +20,20 @@ class UpdateRatingService {
         } else if (info.flexibleUpdateAllowed) {
           // Perform a flexible update so it downloads in the background
           await InAppUpdate.startFlexibleUpdate();
-          // Once downloaded, prompt the user to complete it
-          await InAppUpdate.completeFlexibleUpdate();
+          // Show a non-intrusive floating SnackBar prompt to complete the update
+          appScaffoldMessengerKey.currentState?.showSnackBar(
+            SnackBar(
+              duration: const Duration(minutes: 30),
+              behavior: SnackBarBehavior.floating,
+              content: const Text('✨ New update downloaded and ready.'),
+              action: SnackBarAction(
+                label: 'RESTART NOW',
+                onPressed: () {
+                  InAppUpdate.completeFlexibleUpdate();
+                },
+              ),
+            ),
+          );
         }
       }
     } catch (e) {

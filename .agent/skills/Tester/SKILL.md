@@ -7,9 +7,11 @@ description: A comprehensive testing skill that covers UI/UX consistency, codeba
 
 Use this skill to execute QA verifications, unit/widget tests, security audits, and layout validations.
 
-## 1. UI/UX & Layout Verification
-* **Material Design 3**: Verify components follow dynamic Material You themes, container colors (`surfaceContainerLow` for cards, `surfaceContainerHigh` for dialogs), and shape specifications.
-* **Haptics and Snappiness**: Check that micro-animations (e.g. `OpenContainer` transitions) run smoothly and buttons provide tactile feedback.
+## 1. UI/UX & Material 3 Expressive Verification
+* **Design System Reference**: Verify layouts adhere to [design.md](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/.agent/skills/UI-UX-Specialist/design.md) (5-tier surface tokens `surfaceContainerLow` $\rightarrow$ `surfaceContainerHighest`, $48 \times 48\text{ dp}$ tap targets, spring physics).
+* **Button Hierarchy Integrity**: Verify primary actions use `FilledButton` / `IconButton.filled`, secondary actions use `FilledButton.tonal` / `OutlinedButton`, dual actions use **Split Buttons**, and FAB groups expand via the **FAB Menu** pattern.
+* **M3 Motion & Spring Physics**: Check that micro-animations and container morphs use spring-based physics (`Curves.elasticOut`, `Curves.fastOutSlowIn`) and maintain smooth 120 FPS render performance.
+* **Typography & Emphasized Text**: Confirm that headings and editorial titles leverage M3 Emphasized text style slots (`Google Sans Text` weight 600) and numeric ledgers utilize tabular `Inter` font formatting.
 * **Overflow Protection**: Verify all dynamically generated text is wrapped appropriately (`Flexible`/`Expanded`) to prevent `RenderFlex overflow` issues.
 * **Visual Validation**: Capture screenshots of the mobile emulator (`emulator-5554`) to verify layouts:
   ```bash
@@ -53,3 +55,12 @@ Use this skill to execute QA verifications, unit/widget tests, security audits, 
 * **Drive the UI, don't assume**: a FAB `tooltip` swallowed the long-press that opened the template sheet — only caught by actually long-pressing on the emulator. Screenshot each new surface and LOOK at it.
 * **Test-data parity**: `createTestDatabase` pins the CURRENT schema version — bump it together with `_initDB`'s `version:` and add the `onUpgrade` branch, or tests diverge from production schema.
 * **Flutter↔Kotlin prefs types**: Dart `prefs.setInt` stores a Long — Kotlin must read `getLong(...)`, not `getInt(...)`, or widget code silently falls back to defaults.
+
+## 6. R8 Optimization & ProGuard Verification
+* **Release Build Compilation**: Run `flutter build apk --release` to verify that R8 shrinking completes cleanly without `ClassNotFoundException` or missing symbol warnings.
+* **Plugin Stripping Check**: When adding a new Flutter plugin with Android native components, verify that `android/app/proguard-rules.pro` has a corresponding `-keep class` declaration.
+* **On-Device ProGuard Audit**: Test key native features (SQLCipher DB decryption, Biometric auth, Share sheet, Camera/Gallery picking, Background WorkManager) on a release build (`app-release.apk`) to verify R8 has not stripped runtime reflection entry points.
+
+## 7. Image Fallbacks & Database Version Alignment
+* **Rich Text Image Fallbacks**: Verify `Image.file` and `Image.network` in custom embed builders implement `errorBuilder` to render a clean fallback icon (`broken_image_outlined`) when local image files are deleted from disk or URLs fail to resolve.
+* **Database Test Version Alignment**: Verify `DatabaseHelper.createTestDatabase()` pins the exact schema version specified in `_initDB()` (version 17) so test database instances match production database schemas 100%.

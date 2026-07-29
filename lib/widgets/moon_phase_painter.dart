@@ -72,8 +72,14 @@ class MoonPhasePainter extends CustomPainter {
       ..color = moonColor
       ..style = PaintingStyle.fill;
 
-    // Draw unlit background (full circle)
+    final paintOutline = Paint()
+      ..color = moonColor.withValues(alpha: 0.4)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+
+    // Draw unlit background (full circle) & subtle outline ring
     canvas.drawCircle(center, radius, paintShadow);
+    canvas.drawCircle(center, radius, paintOutline);
 
     if (phase == 0.0 || phase == 1.0) {
       // New Moon: completely unlit

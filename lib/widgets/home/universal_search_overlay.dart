@@ -8,14 +8,11 @@ import '../../data/period_log_model.dart';
 import '../../data/transaction_category.dart';
 import '../../data/settings_provider.dart';
 import '../../providers/note_provider.dart';
-import '../../screens/settings_screen.dart';
-import '../../screens/category_management_screen.dart';
-import '../../screens/sms_contacts_screen.dart';
-import '../../screens/sms_rules_screen.dart';
+import '../../features/finances/finances.dart';
+import '../../features/health/health.dart';
+import '../../features/settings/settings.dart';
 import '../../screens/manage_tags_screen.dart';
 import '../../screens/filtered_notes_screen.dart';
-import '../../screens/period_tracker_screen.dart';
-import '../../screens/transaction_editor_screen.dart';
 import '../recurring_rules_sheet.dart';
 import '../../services/backup_service.dart';
 import '../../services/sms_service.dart';
@@ -206,7 +203,7 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
           'lock',
           'setings'
         ],
-        onTap: () => AppRoute.push(context, const SettingsScreen()),
+        onTap: () => AppRoute.push(context, const SettingsScreen(initialQuery: 'App Lock')),
         trailingWidget: Switch.adaptive(
           value: settings.appLockEnabled,
           onChanged: (val) async {
@@ -217,7 +214,7 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
       ),
       SettingsSearchResult(
         title: 'SMS Auto-Sync',
-        subtitle: 'Twice daily background SMS transaction import',
+        subtitle: 'Daily background SMS transaction import',
         icon: Icons.sync_outlined,
         keywords: [
           'auto sync',
@@ -226,7 +223,7 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
           'background sync',
           'test sync'
         ],
-        onTap: () => AppRoute.push(context, const SettingsScreen()),
+        onTap: () => AppRoute.push(context, const SettingsScreen(initialQuery: 'SMS')),
         trailingWidget: _isTestingSync
             ? const SizedBox(
                 width: 20,
@@ -326,7 +323,7 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
           'restore',
           'json'
         ],
-        onTap: () => AppRoute.push(context, const SettingsScreen()),
+        onTap: () => AppRoute.push(context, const SettingsScreen(initialQuery: 'Backup')),
       ),
       SettingsSearchResult(
         title: 'Period Tracker',
@@ -357,7 +354,7 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
           'tag suggestions',
           'smart sms'
         ],
-        onTap: () => AppRoute.push(context, const SettingsScreen()),
+        onTap: () => AppRoute.push(context, const SettingsScreen(initialQuery: 'Gemini')),
       ),
       SettingsSearchResult(
         title: 'Manage Tags',
@@ -387,7 +384,7 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
         subtitle: 'Select currency symbol (LKR, USD, EUR, GBP...)',
         icon: Icons.currency_exchange_outlined,
         keywords: ['currency', 'symbol', 'usd', 'lkr', 'eur', 'gbp', 'money'],
-        onTap: () => AppRoute.push(context, const SettingsScreen()),
+        onTap: () => AppRoute.push(context, const SettingsScreen(initialQuery: 'Currency')),
       ),
     ];
 

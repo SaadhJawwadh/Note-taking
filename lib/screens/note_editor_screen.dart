@@ -31,6 +31,7 @@ import 'package:path_provider/path_provider.dart';
 import '../utils/app_globals.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_layout.dart';
+import '../widgets/bouncing_widget.dart';
 
 import '../widgets/editor/editor_table_dialog.dart';
 import '../widgets/editor/editor_note_details_sheet.dart';
@@ -85,6 +86,12 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   bool _isNoteLocked = false;
   DateTime? _lastScheduledReminder;
   String _folder = 'All Notes';
+
+  bool get _isCustomFolder =>
+      _folder.isNotEmpty &&
+      _folder != 'All Notes' &&
+      _folder != 'Notes' &&
+      _folder != 'notes';
 
   // Voice dictation
   final SpeechToText _speech = SpeechToText();
@@ -2353,10 +2360,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                 )
                               : Row(
                                   children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.arrow_back),
-                                      color: textColor,
-                                      onPressed: () => Navigator.maybePop(context),
+                                    BouncingWidget(
+                                      onTap: () => Navigator.maybePop(context),
+                                      child: IconButton(
+                                        icon: const Icon(Icons.arrow_back),
+                                        color: textColor,
+                                        onPressed: () => Navigator.maybePop(context),
+                                      ),
                                     ),
                                     Container(
                                       height: 32,
@@ -2389,23 +2399,39 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                     ),
                                     const Spacer(),
                                     if (settings.useOnDeviceAi)
-                                      IconButton(
-                                        icon: const Icon(Icons.auto_awesome_outlined),
-                                        tooltip: 'Gemini AI',
-                                        color: textColor,
-                                        onPressed: _showAiOptionsSheet,
+                                      BouncingWidget(
+                                        onTap: _showAiOptionsSheet,
+                                        child: IconButton(
+                                          icon: const Icon(Icons.auto_awesome_outlined),
+                                          tooltip: 'Gemini AI',
+                                          color: textColor,
+                                          onPressed: _showAiOptionsSheet,
+                                        ),
                                       ),
-                                    IconButton(
-                                      icon: const Icon(Icons.label_outline),
-                                      tooltip: 'Tags',
-                                      color: textColor,
-                                      onPressed: _showTagPicker,
+                                    BouncingWidget(
+                                      onTap: _showTagPicker,
+                                      child: IconButton(
+                                        icon: const Icon(Icons.label_outline),
+                                        tooltip: 'Tags',
+                                        color: textColor,
+                                        onPressed: _showTagPicker,
+                                      ),
                                     ),
 
                                     PopupMenuButton<String>(
                                       icon: Icon(Icons.more_vert, color: textColor),
                                       tooltip: 'More',
+                                      elevation: 6,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(AppLayout.radiusXL),
+                                        side: BorderSide(
+                                          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      color: theme.colorScheme.surfaceContainerHigh,
                                       onSelected: (value) {
+                                        HapticFeedback.selectionClick();
                                         switch (value) {
                                           case 'reminder':
                                             _pickReminder();
@@ -2436,87 +2462,109 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                             break;
                                         }
                                       },
-                                      itemBuilder: (context) => [
-                                        const PopupMenuItem(
-                                          value: 'search',
-                                          child: ListTile(
-                                            contentPadding: EdgeInsets.zero,
-                                            leading: Icon(Icons.search),
-                                            title: Text('Find in Note'),
-                                          ),
-                                        ),
-                                        PopupMenuItem(
-                                          value: 'reminder',
-                                          child: ListTile(
-                                            contentPadding: EdgeInsets.zero,
-                                            leading: Icon(_reminderAt != null
-                                                ? Icons.alarm_on
-                                                : Icons.alarm_add_outlined),
-                                            title: Text(_reminderAt != null
-                                                ? 'Change reminder'
-                                                : 'Set reminder'),
-                                          ),
-                                        ),
-                                        if (_reminderAt != null)
-                                          const PopupMenuItem(
-                                            value: 'clear_reminder',
-                                            child: ListTile(
-                                              contentPadding: EdgeInsets.zero,
-                                              leading: Icon(Icons.alarm_off_outlined),
-                                              title: Text('Remove reminder'),
+                                      itemBuilder: (context) {
+                                        final colorScheme = theme.colorScheme;
+                                        return [
+                                          PopupMenuItem(
+                                            value: 'search',
+                                            height: 44,
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.search, size: 20, color: colorScheme.onSurfaceVariant),
+                                                const SizedBox(width: 12),
+                                                Text('Find in Note', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                              ],
                                             ),
                                           ),
-                                        const PopupMenuItem(
-                                          value: 'folder',
-                                          child: ListTile(
-                                            contentPadding: EdgeInsets.zero,
-                                            leading: Icon(Icons.folder_outlined),
-                                            title: Text('Move to folder'),
+                                          PopupMenuItem(
+                                            value: 'reminder',
+                                            height: 44,
+                                            child: Row(
+                                              children: [
+                                                Icon(_reminderAt != null ? Icons.alarm_on : Icons.alarm_add_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                                                const SizedBox(width: 12),
+                                                Text(_reminderAt != null ? 'Change reminder' : 'Set reminder', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                              ],
+                                            ),
                                           ),
-                                        ),
-                                        const PopupMenuItem(
-                                          value: 'details',
-                                          child: ListTile(
-                                            contentPadding: EdgeInsets.zero,
-                                            leading: Icon(Icons.info_outline),
-                                            title: Text('Note Details & Stats'),
+                                          if (_reminderAt != null)
+                                            PopupMenuItem(
+                                              value: 'clear_reminder',
+                                              height: 44,
+                                              child: Row(
+                                                children: [
+                                                  Icon(Icons.alarm_off_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                                                  const SizedBox(width: 12),
+                                                  Text('Remove reminder', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                                ],
+                                              ),
+                                            ),
+                                          PopupMenuItem(
+                                            value: 'folder',
+                                            height: 44,
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.folder_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                                                const SizedBox(width: 12),
+                                                Text('Move to folder', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                              ],
+                                            ),
                                           ),
-                                        ),
-                                        const PopupMenuItem(
-                                          value: 'share',
-                                          child: ListTile(
-                                            contentPadding: EdgeInsets.zero,
-                                            leading: Icon(Icons.share_outlined),
-                                            title: Text('Share & Export'),
+                                          PopupMenuItem(
+                                            value: 'details',
+                                            height: 44,
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.info_outline, size: 20, color: colorScheme.onSurfaceVariant),
+                                                const SizedBox(width: 12),
+                                                Text('Note Details & Stats', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                              ],
+                                            ),
                                           ),
-                                        ),
-                                        PopupMenuItem(
-                                          value: 'lock',
-                                          child: ListTile(
-                                            contentPadding: EdgeInsets.zero,
-                                            leading: Icon(_isNoteLocked
-                                                ? Icons.lock_open_outlined
-                                                : Icons.lock_outline),
-                                            title: Text(_isNoteLocked
-                                                ? 'Unlock note'
-                                                : 'Lock note'),
+                                          PopupMenuItem(
+                                            value: 'share',
+                                            height: 44,
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.share_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                                                const SizedBox(width: 12),
+                                                Text('Share & Export', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                              ],
+                                            ),
                                           ),
-                                        ),
-                                        const PopupMenuItem(
-                                          value: 'delete',
-                                          child: ListTile(
-                                            contentPadding: EdgeInsets.zero,
-                                            leading: Icon(Icons.delete_outline),
-                                            title: Text('Move to Trash'),
+                                          PopupMenuItem(
+                                            value: 'lock',
+                                            height: 44,
+                                            child: Row(
+                                              children: [
+                                                Icon(_isNoteLocked ? Icons.lock_open_outlined : Icons.lock_outline, size: 20, color: colorScheme.onSurfaceVariant),
+                                                const SizedBox(width: 12),
+                                                Text(_isNoteLocked ? 'Unlock note' : 'Lock note', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                              ],
+                                            ),
                                           ),
-                                        ),
-                                      ],
+                                          PopupMenuItem(
+                                            value: 'delete',
+                                            height: 44,
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.delete_outline, size: 20, color: colorScheme.error),
+                                                const SizedBox(width: 12),
+                                                Text('Move to Trash', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.error, fontWeight: FontWeight.w500)),
+                                              ],
+                                            ),
+                                          ),
+                                        ];
+                                      },
                                     ),
-                                    IconButton(
-                                      icon: const Icon(Icons.check),
-                                      tooltip: 'Done',
-                                      color: textColor,
-                                      onPressed: () => Navigator.maybePop(context),
+                                    BouncingWidget(
+                                      onTap: () => Navigator.maybePop(context),
+                                      child: IconButton(
+                                        icon: const Icon(Icons.check),
+                                        tooltip: 'Done',
+                                        color: textColor,
+                                        onPressed: () => Navigator.maybePop(context),
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -2562,7 +2610,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                 autocorrect: true,
                                 maxLines: null,
                               ),
-                              if (_reminderAt != null || _isNoteLocked || _folder != 'All Notes')
+                              if (_reminderAt != null || _isNoteLocked || _isCustomFolder)
                                 Padding(
                                   padding: const EdgeInsets.only(bottom: 8),
                                   child: Wrap(
@@ -2592,7 +2640,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                                 color: textColor, fontSize: 12),
                                           ),
                                         ),
-                                      if (_folder != 'All Notes')
+                                      if (_isCustomFolder)
                                         InputChip(
                                           avatar: Icon(Icons.folder_outlined,
                                               size: 16, color: textColor),

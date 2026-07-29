@@ -30,7 +30,7 @@ class DatabaseHelper {
 
   @visibleForTesting
   Future<void> createTestDatabase(Database db) async {
-    await _createDB(db, 15);
+    await _createDB(db, 17);
   }
 
   Future<Database> get database {

@@ -19,4 +19,5 @@ Use this skill when tasked to extract learnings, save session fixes, or update/c
 2. **Target Skill Selection**: Find the most appropriate target skill in `.agent/skills/`.
 3. **Apply the Update**: Inject the new learning into the existing `SKILL.md` file under the corresponding section.
 4. **Create New Skill**: If no existing skill covers the domain, initialize a minimal directory in `.agent/skills/<name>/` with a single frontmatter-annotated `SKILL.md`.
-5. **Validate**: Ensure the file syntax is correct and formatting is consistent.
+5. **Knowledge Graph Update**: Update [.agent/map.md](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/.agent/map.md) if any new files, database tables/columns, providers, or service interfaces were added or altered during the session.
+6. **Validate**: Ensure the file syntax is correct and formatting is consistent.

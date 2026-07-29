@@ -733,17 +733,62 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'transaction_editor_fab',
-        onPressed: _isLoading ? null : _saveTransaction,
-        icon: _isLoading
-            ? const SizedBox(
-                width: 24,
+      floatingActionButton: Material(
+        elevation: 6.0,
+        borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+        color: colorScheme.primaryContainer,
+        shadowColor: colorScheme.shadow.withValues(alpha: 0.2),
+        child: Container(
+          height: 56,
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+            border: Border.all(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextButton.icon(
+                style: TextButton.styleFrom(
+                  foregroundColor: colorScheme.onPrimaryContainer,
+                  shape: const StadiumBorder(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+                icon: _isLoading
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: colorScheme.onPrimaryContainer,
+                        ),
+                      )
+                    : const Icon(Icons.save_outlined, size: 22),
+                label: Text(
+                  widget.transaction == null ? 'Save Transaction' : 'Update Transaction',
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+                onPressed: _isLoading ? null : _saveTransaction,
+              ),
+              Container(
                 height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Icon(Icons.save_outlined),
-        label: const Text('Save Transaction'),
+                width: 1,
+                color: colorScheme.onPrimaryContainer.withValues(alpha: 0.2),
+              ),
+              IconButton(
+                tooltip: 'Categories',
+                icon: Icon(Icons.category_outlined, color: colorScheme.onPrimaryContainer, size: 20),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  AppRoute.push(context, const CategoryManagementScreen());
+                },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

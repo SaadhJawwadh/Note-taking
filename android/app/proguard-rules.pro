@@ -60,3 +60,23 @@
 
 # General JNI keep
 -keepclassmembers class * { native <methods>; }
+
+# Java Desugaring Guardrails
+-dontwarn java.lang.invoke.**
+-dontwarn j$.**
+
+# Preserve Enum Values for JSON/Reflection Deserialization
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}
+
+# Preserve Serializable Data Objects
+-keepclassmembers class * implements java.io.Serializable {
+    static final long serialVersionUID;
+    private static final java.io.ObjectStreamField[] serialPersistentFields;
+    private void writeObject(java.io.ObjectOutputStream);
+    private void readObject(java.io.ObjectInputStream);
+    java.lang.Object writeReplace();
+    java.lang.Object readResolve();
+}

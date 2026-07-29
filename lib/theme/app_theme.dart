@@ -181,62 +181,94 @@ class AppTheme {
           borderRadius: BorderRadius.circular(16),
         ),
       ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: scheme.surfaceContainerHigh,
+        elevation: 6,
+        shadowColor: scheme.shadow.withValues(alpha: 0.2),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppLayout.radiusXL),
+          side: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        menuPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: scheme.primaryContainer,
         foregroundColor: scheme.onPrimaryContainer,
         elevation: 4,
         shape: const StadiumBorder(), // M3 Pill Style
       ),
-      // Deliberate shape steps: cards (16) < buttons (20) < FAB (full pill),
-      // rather than pill-ifying every control.
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppLayout.radiusXL),
-          ),
+          minimumSize: const Size(0, 48),
+          shape: const StadiumBorder(),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppLayout.radiusXL),
-          ),
+          minimumSize: const Size(0, 48),
+          shape: const StadiumBorder(),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppLayout.radiusXL),
-          ),
+          minimumSize: const Size(0, 48),
+          shape: const StadiumBorder(),
+        ),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          minimumSize: WidgetStateProperty.all(const Size(0, 48)),
+          shape: WidgetStateProperty.all(const StadiumBorder()),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: scheme.surfaceContainerHighest,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
           borderSide: BorderSide.none,
         ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         hintStyle:
             textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        labelTextStyle: WidgetStateProperty.all(
-          textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w500),
-        ),
+        height: 80,
+        backgroundColor: scheme.surface,
+        indicatorColor: scheme.secondaryContainer,
+        indicatorShape: const StadiumBorder(),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return IconThemeData(color: scheme.onSecondaryContainer, size: 24);
+          }
+          return IconThemeData(color: scheme.onSurfaceVariant, size: 24);
+        }),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: scheme.onSurface,
+            );
+          }
+          return textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.w500,
+            color: scheme.onSurfaceVariant,
+          );
+        }),
       ),
       // Keep modal sheets readable on tablets/foldables instead of
       // stretching edge to edge.
+      chipTheme: ChipThemeData(
+        shape: const StadiumBorder(),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        labelStyle: textTheme.labelLarge,
+        side: BorderSide.none,
+      ),
       bottomSheetTheme: const BottomSheetThemeData(
         constraints: BoxConstraints(maxWidth: AppLayout.maxContentWidth),
-      ),
-      // One shape language for every floating surface (menus, dialogs,
-      // snackbars) so ad hoc surfaces like context menus match the cards.
-      popupMenuTheme: PopupMenuThemeData(
-        color: scheme.surfaceContainerHigh,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppLayout.radiusL),
-        ),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: scheme.surfaceContainerHigh,

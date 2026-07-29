@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:animations/animations.dart';
@@ -195,7 +196,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           );
         }
-      } else if (action == 'view_budgets' && mounted) {
+      } else if ((action == 'view_trends' || action == 'view_budgets') && mounted) {
         final settings = Provider.of<SettingsProvider>(context, listen: false);
         if (settings.showFinancialManager) {
           final List<Widget> destinations = _buildDestinations(settings);
@@ -210,7 +211,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             setState(() {
               _currentIndex = financesIndex;
             });
-            FinancialManagerScreen.tabRedirectNotifier.value = 'Budgets';
+            FinancialManagerScreen.tabRedirectNotifier.value =
+                action == 'view_trends' ? 'Trends' : 'Budgets';
           }
         }
       } else if (action == 'new_note' && mounted) {
@@ -553,18 +555,45 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         );
       }
 
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+
       return Scaffold(
+        extendBody: true,
         body: IndexedStack(
           index: _currentIndex,
           children: _buildFeatureScreens(settings),
         ),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _currentIndex,
-          onDestinationSelected: (index) {
-            HapticFeedback.selectionClick();
-            setState(() => _currentIndex = index);
-          },
-          destinations: _buildNavDestinations(settings),
+        bottomNavigationBar: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .surface
+                    .withValues(alpha: isDark ? 0.82 : 0.88),
+                border: Border(
+                  top: BorderSide(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .outlineVariant
+                        .withValues(alpha: 0.2),
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: NavigationBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                selectedIndex: _currentIndex,
+                onDestinationSelected: (index) {
+                  HapticFeedback.selectionClick();
+                  setState(() => _currentIndex = index);
+                },
+                destinations: _buildNavDestinations(settings),
+              ),
+            ),
+          ),
         ),
       );
     });
@@ -656,82 +685,70 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  void _showNewNoteOptions(BuildContext context, VoidCallback openBlankNote) {
-    showModalBottomSheet(
-      context: context,
-      showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                'New Note',
-                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-            ),
-            ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Theme.of(sheetContext).colorScheme.primaryContainer,
-                child: Icon(Icons.note_alt_outlined,
-                    color: Theme.of(sheetContext).colorScheme.onPrimaryContainer),
-              ),
-              title: const Text('Blank Note'),
-              subtitle: const Text('Start writing in a new blank note'),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                openBlankNote();
-              },
-            ),
-            ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Theme.of(sheetContext).colorScheme.secondaryContainer,
-                child: Icon(Icons.style_outlined,
-                    color: Theme.of(sheetContext).colorScheme.onSecondaryContainer),
-              ),
-              title: const Text('Use a Template'),
-              subtitle: const Text('Create a note from a pre-defined layout'),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                _showTemplateSheet();
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildFAB(BuildContext context) {
     final noteProvider = Provider.of<NoteProvider>(context, listen: false);
-    return OpenContainer<bool>(
-      transitionType: ContainerTransitionType.fadeThrough,
-      transitionDuration: const Duration(milliseconds: 300),
-      openBuilder: (context, _) => NoteEditorScreen(initialFolder: noteProvider.selectedFolder),
-      closedElevation: 6.0,
-      openElevation: 0,
-      closedShape: const StadiumBorder(),
-      closedColor: Theme.of(context).colorScheme.primary,
-      openColor: Theme.of(context).colorScheme.surface,
-      onClosed: (returned) async { if (returned == true) await refreshNotes(); },
-      closedBuilder: (context, openContainer) => SizedBox(
+    final theme = Theme.of(context);
+    return Material(
+      elevation: 6.0,
+      borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+      color: theme.colorScheme.primaryContainer,
+      shadowColor: theme.colorScheme.shadow.withValues(alpha: 0.2),
+      child: Container(
         height: 56,
-        child: FloatingActionButton.extended(
-          heroTag: 'home_fab',
-          label: const Text('New Note'),
-          icon: const Icon(Icons.add),
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          foregroundColor: Theme.of(context).colorScheme.onPrimary,
-          elevation: 0,
-          shape: const StadiumBorder(),
-          onPressed: () {
-            HapticFeedback.lightImpact();
-            _showNewNoteOptions(context, openContainer);
-          },
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+          border: Border.all(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            OpenContainer<bool>(
+              transitionType: ContainerTransitionType.fadeThrough,
+              transitionDuration: AppLayout.animDefault,
+              openBuilder: (context, _) => NoteEditorScreen(initialFolder: noteProvider.selectedFolder),
+              closedElevation: 0,
+              openElevation: 0,
+              closedShape: const StadiumBorder(),
+              closedColor: Colors.transparent,
+              openColor: theme.colorScheme.surface,
+              onClosed: (returned) async { if (returned == true) await refreshNotes(); },
+              closedBuilder: (context, openContainer) => TextButton.icon(
+                style: TextButton.styleFrom(
+                  foregroundColor: theme.colorScheme.onPrimaryContainer,
+                  shape: const StadiumBorder(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+                icon: const Icon(Icons.add, size: 22),
+                label: const Text(
+                  'New Note',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  openContainer();
+                },
+              ),
+            ),
+            Container(
+              height: 24,
+              width: 1,
+              color: theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.2),
+            ),
+            IconButton(
+              tooltip: 'Templates',
+              icon: Icon(Icons.style_outlined, color: theme.colorScheme.onPrimaryContainer, size: 20),
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                _showTemplateSheet();
+              },
+            ),
+          ],
         ),
       ),
     );
@@ -858,7 +875,20 @@ class NoteCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (note.isPinned) Padding(padding: const EdgeInsets.only(left: AppLayout.spaceS), child: Icon(Icons.push_pin, size: AppLayout.iconS, color: theme.colorScheme.primary)),
+                      if (note.isPinned)
+                        Padding(
+                          padding: EdgeInsets.only(
+                            left: AppLayout.spaceS,
+                            right: isSelected ? 22.0 : 0.0,
+                          ),
+                          child: Icon(
+                            Icons.push_pin,
+                            size: AppLayout.iconS,
+                            color: theme.colorScheme.primary,
+                          ),
+                        )
+                      else if (isSelected)
+                        const SizedBox(width: 22.0),
                     ],
                   ),
                 if (note.isLocked) ...[
@@ -920,7 +950,23 @@ class NoteCard extends StatelessWidget {
                 ],
               ],
             ),
-            if (isSelected) Positioned(top: 0, right: 0, child: Icon(Icons.check_circle, color: theme.colorScheme.primary, size: AppLayout.icon20)),
+            if (isSelected)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    shape: BoxShape.circle,
+                    boxShadow: AppLayout.softShadow(context),
+                  ),
+                  child: Icon(
+                    Icons.check_circle,
+                    color: theme.colorScheme.primary,
+                    size: 22,
+                  ),
+                ),
+              ),
           ],
         ),
       ),

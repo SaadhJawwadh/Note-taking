@@ -24,10 +24,13 @@ class AppLayout {
   static const double iconXL = 48.0; // Added for larger icons
   static const double icon20 = 20.0; // Specific size for selection check
 
-  // Animations
+  // Animations & M3 Expressive Curves
   static const Duration animShort = Duration(milliseconds: 200);
   static const Duration animDefault = Duration(milliseconds: 300);
   static const Duration animLong = Duration(milliseconds: 500);
+  static const Curve curveExpressive = Curves.easeOutBack;
+  static const Curve curveSpring = Curves.elasticOut;
+  static const Curve curveFast = Curves.easeOutCubic;
 
   // Layout Constraints
   static const double maxContentWidth = 600.0;

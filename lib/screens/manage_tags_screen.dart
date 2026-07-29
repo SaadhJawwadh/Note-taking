@@ -1,9 +1,11 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../data/repositories/note_repository.dart';
 import '../theme/app_theme.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../theme/app_layout.dart';
+import '../widgets/bouncing_widget.dart';
 
 class ManageTagsScreen extends StatefulWidget {
   const ManageTagsScreen({super.key});
@@ -170,39 +172,74 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
         child: CustomScrollView(
           slivers: [
             SliverAppBar(
+              pinned: true,
+              floating: false,
+              snap: false,
+              primary: false,
               backgroundColor: Colors.transparent,
-              floating: true,
-              snap: true,
-              toolbarHeight: 84,
-              titleSpacing: 16,
+              elevation: 0,
+              toolbarHeight: MediaQuery.of(context).padding.top + 68.0,
+              titleSpacing: 0,
               automaticallyImplyLeading: false,
-              title: Container(
-                margin: const EdgeInsets.only(top: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                height: 64,
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-                  boxShadow: AppLayout.softShadow(context),
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      onPressed: () async {
-                        await HapticFeedback.lightImpact();
-                        if (!context.mounted) return;
-                        Navigator.pop(context);
-                      },
+              flexibleSpace: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                  child: Container(
+                    padding: EdgeInsets.only(
+                      top: MediaQuery.of(context).padding.top + 6,
+                      left: 16,
+                      right: 16,
+                      bottom: 6,
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Manage Tags',
-                      style: textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surface
+                          .withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.82 : 0.88),
+                    ),
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: Container(
+                        height: 56,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.85),
+                          borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+                          border: Border.all(
+                            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                            width: 1,
+                          ),
+                          boxShadow: AppLayout.softShadow(context),
+                        ),
+                        child: Row(
+                          children: [
+                            BouncingWidget(
+                              onTap: () async {
+                                await HapticFeedback.lightImpact();
+                                if (!context.mounted) return;
+                                Navigator.pop(context);
+                              },
+                              child: IconButton(
+                                icon: const Icon(Icons.arrow_back),
+                                onPressed: () async {
+                                  await HapticFeedback.lightImpact();
+                                  if (!context.mounted) return;
+                                  Navigator.pop(context);
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Manage Tags',
+                              style: textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),

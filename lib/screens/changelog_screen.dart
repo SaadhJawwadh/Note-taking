@@ -1,5 +1,7 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme/app_layout.dart';
+import '../widgets/bouncing_widget.dart';
 
 class ChangelogScreen extends StatelessWidget {
   const ChangelogScreen({super.key});
@@ -16,37 +18,66 @@ class ChangelogScreen extends StatelessWidget {
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar(
+            pinned: true,
+            floating: false,
+            snap: false,
+            primary: false,
             backgroundColor: Colors.transparent,
-            floating: true,
-            snap: true,
-            toolbarHeight: 84,
-            titleSpacing: 16,
+            elevation: 0,
+            toolbarHeight: MediaQuery.of(context).padding.top + 68.0,
+            titleSpacing: 0,
             automaticallyImplyLeading: false,
-            title: Container(
-              margin: const EdgeInsets.only(top: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              height: 64,
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-                boxShadow: AppLayout.softShadow(context),
-              ),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
+            flexibleSpace: ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                child: Container(
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.of(context).padding.top + 6,
+                    left: 16,
+                    right: 16,
+                    bottom: 6,
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Changelog',
-                    style: textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surface
+                        .withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.82 : 0.88),
+                  ),
+                  child: Align(
+                    alignment: Alignment.center,
+                    child: Container(
+                      height: 56,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.85),
+                        borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+                        border: Border.all(
+                          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                          width: 1,
+                        ),
+                        boxShadow: AppLayout.softShadow(context),
+                      ),
+                      child: Row(
+                        children: [
+                          BouncingWidget(
+                            onTap: () => Navigator.pop(context),
+                            child: IconButton(
+                              icon: const Icon(Icons.arrow_back),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Changelog',
+                            style: textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -59,9 +90,33 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
+                  version: 'v2.9.0',
+                  date: 'July 29, 2026',
+                  isLatest: true,
+                  changes: [
+                    _ChangelogGroup(
+                      title: '🎨 Material 3 Expressive UI & Tactile Motion System',
+                      items: [
+                        'App-Wide M3 Expressive Overhaul: Modern Material 3 Expressive tokens, surface elevation hierarchy, and fluid spring motion physics.',
+                        'Frosted Glass Navigation Bars: Symmetric top and bottom frosted glassmorphic navigation bars (16px blur) with edge-to-edge content depth.',
+                        'M3 Expressive Floating Action Bars: Stadium-pill FABs with quick shortcuts across Home, Period Tracker, Financial Manager, and Category Management.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🐞 Button Haptics & Contrast Enhancements',
+                      items: [
+                        'Header Action Button Fix: Resolved gesture arena conflict on top app bar buttons, restoring instant button clicks and spring bounce haptics.',
+                        'Period Log Readability & Illumination: High-contrast card fills, clear M3 flow tiles, and illuminated outer stroke ring for dark-mode moon painter.',
+                        'Floating Surface Popups: Upgraded sorting and tools context menus to M3 elevated floating surface popovers with leading icons and active checkmarks.',
+                      ],
+                    ),
+                  ],
+                ),
+                _buildVersionSection(
+                  context,
                   version: 'v2.8.1',
                   date: 'July 25, 2026',
-                  isLatest: true,
+                  isLatest: false,
                   changes: [
                     _ChangelogGroup(
                       title: '🔍 Universal Spotlight Search & Scope Filters',
@@ -118,7 +173,7 @@ class ChangelogScreen extends StatelessWidget {
                     _ChangelogGroup(
                       title: '🔄 Flexible Duration & Scheduled SMS Auto-Sync',
                       items: [
-                        'Periodic Interval Sync: Configure background SMS auto-sync every 12 hours (twice daily) or every 24 hours (daily).',
+                        'Periodic Interval Sync: Configure background SMS auto-sync at your chosen daily time.',
                         'Conditional Auto-Sync Time: Specify exact target sync time when 24-hour daily frequency is selected.',
                       ],
                     ),

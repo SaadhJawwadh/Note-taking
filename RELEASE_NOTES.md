@@ -1,11 +1,11 @@
 
-### 🔍 In-Place Universal Search Engine & Scope Filter Chips
-- **Universal Spotlight Search**: Search Notes, Settings & Tools, Financial Transactions, and Health Logs in-place directly on the home screen.
-- **Category Scope Filter Chips**: Scope search results down to Settings, Notes, Finances, or Health with a single tap.
-- **Inline Interactive Quick Actions**: Toggle App Lock, test SMS auto-sync, or import CSV files directly inside search cards.
+### 🎨 Material 3 Expressive UI & Tactile Motion System
+- **App-Wide M3 Expressive Overhaul**: Modern Material 3 Expressive tokens, surface elevation hierarchy, and fluid spring motion physics (`Curves.easeOutBack`).
+- **Frosted Glass Navigation Bars**: Symmetric top and bottom frosted glassmorphic navigation bars (`16px` blur) with edge-to-edge content scrolling depth.
+- **M3 Expressive Floating Action Bars**: Stadium-pill FABs with quick shortcuts across Home (+ New Note), Period Tracker (+ Log Period), Financial Manager (+ Add Transaction), and Category Management (+ Add Category).
 
-### 🛠️ Export Engine & UI Card Truncation Fixes
-- **Backup & Ledger Export Fix**: Fixed database primary key query error during JSON backup export and added graceful native file share fallbacks for CSV/JSON exports.
-- **Note Card Layout Clamp**: Restored multi-line maxLines and ellipsis truncation on home screen note card previews to prevent vertical card stretching.
-- **Handwriting Keyboard Support**: Full IME compatibility for Samsung S-Pen Direct Writing, GBoard Handwriting, and Apple Scribble.
+### 🐞 Button Haptics & Contrast Enhancements
+- **Header Action Button Fix**: Resolved gesture arena conflict on top app bar buttons, restoring instant button clicks and tactile spring bounce haptics.
+- **Period Log Readability & Illumination**: High-contrast card fills (`surfaceContainerHigh`), clear M3 flow tiles, and illuminated outer stroke ring for dark-mode moon phase painter.
+- **Floating Surface Popups**: Upgraded sorting and tools context menus to M3 elevated floating surface popovers with leading icons and active checkmarks.
 

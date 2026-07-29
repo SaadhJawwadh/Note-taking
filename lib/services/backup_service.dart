@@ -94,7 +94,7 @@ Future<String> generateBackupJson({Map<String, dynamic>? settingsOverride}) asyn
     };
   }
 
-  return const JsonEncoder.withIndent('  ').convert({
+  final payload = {
     'notes': notes,
     'tags': tags,
     'noteTags': noteTags,
@@ -106,7 +106,17 @@ Future<String> generateBackupJson({Map<String, dynamic>? settingsOverride}) asyn
     'settings': settingsMap,
     'version': 10,
     'exportedAt': DateTime.now().toIso8601String(),
-  });
+  };
+
+  return await compute(_encodeJsonIsolate, payload);
+}
+
+String _encodeJsonIsolate(Map<String, dynamic> data) {
+  return const JsonEncoder.withIndent('  ').convert(data);
+}
+
+Map<String, dynamic> _decodeJsonIsolate(String jsonStr) {
+  return jsonDecode(jsonStr) as Map<String, dynamic>;
 }
 
 Future<bool> performAutoBackup() async {
@@ -234,7 +244,7 @@ class BackupService {
       final file = File(result.files.single.path!);
       if (!await file.exists()) return;
       final content = await file.readAsString();
-      final data = Map<String, dynamic>.from(jsonDecode(content) as Map);
+      final data = Map<String, dynamic>.from(await compute(_decodeJsonIsolate, content));
 
       if (context.mounted) {
         final confirmed = await showDialog<bool>(

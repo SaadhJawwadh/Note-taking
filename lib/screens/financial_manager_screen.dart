@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use
+import 'dart:ui';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -16,6 +16,7 @@ import '../data/sms_contact.dart';
 import '../services/sms_service.dart';
 import '../services/sms_constants.dart';
 import 'transaction_editor_screen.dart';
+import 'category_management_screen.dart';
 import 'settings_screen.dart';
 import 'app_lock_screen.dart';
 import '../services/backup_service.dart';
@@ -57,7 +58,16 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedTab = FinancialManagerScreen.tabRedirectNotifier.value ?? 'Ledger';
+    final initialTab = FinancialManagerScreen.tabRedirectNotifier.value;
+    if (initialTab != null) {
+      _selectedTab = initialTab;
+      if (initialTab != 'Ledger') {
+        _analyticsSegment = initialTab;
+      }
+      FinancialManagerScreen.tabRedirectNotifier.value = null; // consume
+    } else {
+      _selectedTab = 'Ledger';
+    }
     FinancialManagerScreen.tabRedirectNotifier.addListener(_handleTabRedirect);
     _refreshTransactions();
     _smsSubscription = SmsService.incomingTransactions.listen((t) async {
@@ -71,6 +81,9 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     if (newTab != null && mounted) {
       setState(() {
         _selectedTab = newTab;
+        if (newTab != 'Ledger') {
+          _analyticsSegment = newTab;
+        }
       });
       FinancialManagerScreen.tabRedirectNotifier.value = null; // consume
     }
@@ -1009,37 +1022,69 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
           slivers: _buildSlivers(colorScheme, textTheme, currency, settings),
         ),
       ),
-      floatingActionButton: OpenContainer<bool>(
-        transitionType: ContainerTransitionType.fadeThrough,
-        transitionDuration: const Duration(milliseconds: 300),
-        openBuilder: (context, _) => const TransactionEditorScreen(),
-        closedElevation: 6.0,
-        openElevation: 0,
-        closedShape: const StadiumBorder(),
-        closedColor: colorScheme.primary,
-        openColor: colorScheme.surface,
-        onClosed: (updated) {
-          if (updated == true) _refreshTransactions();
-        },
-        closedBuilder: (context, openContainer) {
-          return SizedBox(
-            height: 56,
-            child: FloatingActionButton.extended(
-              heroTag: 'finance_fab',
-              label: const Text('New Transaction'),
-              icon: const Icon(Icons.add),
-              tooltip: 'Add Transaction',
-              backgroundColor: colorScheme.primary,
-              foregroundColor: colorScheme.onPrimary,
-              elevation: 0,
-              shape: const StadiumBorder(),
-              onPressed: () {
-                HapticFeedback.lightImpact();
-                openContainer();
-              },
+      floatingActionButton: Material(
+        elevation: 6.0,
+        borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+        color: colorScheme.primaryContainer,
+        shadowColor: colorScheme.shadow.withValues(alpha: 0.2),
+        child: Container(
+          height: 56,
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+            border: Border.all(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+              width: 1,
             ),
-          );
-        },
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              OpenContainer<bool>(
+                transitionType: ContainerTransitionType.fadeThrough,
+                transitionDuration: AppLayout.animDefault,
+                openBuilder: (context, _) => const TransactionEditorScreen(),
+                closedElevation: 0,
+                openElevation: 0,
+                closedShape: const StadiumBorder(),
+                closedColor: Colors.transparent,
+                openColor: colorScheme.surface,
+                onClosed: (updated) {
+                  if (updated == true) _refreshTransactions();
+                },
+                closedBuilder: (context, openContainer) => TextButton.icon(
+                  style: TextButton.styleFrom(
+                    foregroundColor: colorScheme.onPrimaryContainer,
+                    shape: const StadiumBorder(),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                  icon: const Icon(Icons.add, size: 22),
+                  label: const Text(
+                    'New Transaction',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  ),
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    openContainer();
+                  },
+                ),
+              ),
+              Container(
+                height: 24,
+                width: 1,
+                color: colorScheme.onPrimaryContainer.withValues(alpha: 0.2),
+              ),
+              IconButton(
+                tooltip: 'Categories',
+                icon: Icon(Icons.category_outlined, color: colorScheme.onPrimaryContainer, size: 20),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  AppRoute.push(context, const CategoryManagementScreen());
+                },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1049,61 +1094,183 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     String currency,
     SettingsProvider settings,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return [
             SliverAppBar(
+              pinned: true,
+              floating: false,
+              snap: false,
+              primary: false,
               backgroundColor: Colors.transparent,
-              floating: true,
-              snap: true,
-              toolbarHeight: 84,
-              titleSpacing: 16,
+              elevation: 0,
+              toolbarHeight: MediaQuery.of(context).padding.top + 68.0,
+              titleSpacing: 0,
               automaticallyImplyLeading: false,
-              title: Container(
-                margin: const EdgeInsets.only(top: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                height: 64,
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-                  boxShadow: AppLayout.softShadow(context),
-                ),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 16),
-                    InkWell(
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        _selectDateRange(context);
-                      },
-                      borderRadius: BorderRadius.circular(12),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
+              flexibleSpace: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                  child: Container(
+                    padding: EdgeInsets.only(
+                      top: MediaQuery.of(context).padding.top + 6,
+                      left: 16,
+                      right: 16,
+                      bottom: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surface
+                          .withValues(alpha: isDark ? 0.82 : 0.88),
+                    ),
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: Container(
+                        height: 56,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: Color.alphaBlend(
+                            colorScheme.secondary.withValues(alpha: 0.08),
+                            colorScheme.surfaceContainerHigh,
+                          ).withValues(alpha: 0.88),
+                          borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+                          border: Border.all(
+                            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                            width: 1,
+                          ),
+                          boxShadow: AppLayout.softShadow(context),
+                        ),
+                        child: Row(
                           children: [
-                            Text(
-                              'Finances',
-                              style: textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
+                            const SizedBox(width: 16),
+                            InkWell(
+                              onTap: () {
+                                HapticFeedback.lightImpact();
+                                _selectDateRange(context);
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'Finances',
+                                      style: textTheme.titleLarge?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
+                                      ),
+                                    ),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          _selectedRange.duration.inDays == 0
+                                              ? DateFormat.MMMd().format(_selectedRange.start)
+                                              : '${DateFormat.MMMd().format(_selectedRange.start)} – ${DateFormat.MMMd().format(_selectedRange.end)}',
+                                          style: textTheme.bodySmall?.copyWith(
+                                            color: colorScheme.primary,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 2),
+                                        Icon(
+                                          Icons.arrow_drop_down,
+                                          size: 18,
+                                          color: colorScheme.primary,
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  _selectedRange.duration.inDays == 0
-                                      ? DateFormat.MMMd().format(_selectedRange.start)
-                                      : '${DateFormat.MMMd().format(_selectedRange.start)} – ${DateFormat.MMMd().format(_selectedRange.end)}',
-                                  style: textTheme.labelSmall?.copyWith(
-                                    color: colorScheme.primary,
-                                    fontWeight: FontWeight.bold,
+                            const Spacer(),
+                            IconButton(
+                              icon: const Icon(Icons.sync_outlined),
+                              tooltip: 'Quick Import (24h)',
+                              onPressed: () {
+                                HapticFeedback.lightImpact();
+                                _quickImportRecentSms();
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.calendar_today_outlined),
+                              tooltip: 'Select Date Range',
+                              onPressed: () {
+                                HapticFeedback.lightImpact();
+                                _selectDateRange(context);
+                              },
+                            ),
+                            PopupMenuButton<String>(
+                              icon: const Icon(Icons.more_vert),
+                              tooltip: 'More Tools',
+                              elevation: 6,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(AppLayout.radiusXL),
+                                side: BorderSide(
+                                  color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              color: colorScheme.surfaceContainerHigh,
+                              onSelected: (value) {
+                                HapticFeedback.selectionClick();
+                                if (value == 'cleanup') {
+                                  _cleanupLedgerDuplicates();
+                                } else if (value == 'discover') {
+                                  _discoverBankSenders();
+                                } else if (value == 'export') {
+                                  BackupService.exportTransactionsToCsv(context);
+                                } else if (value == 'settings') {
+                                  AppRoute.push(context, const SettingsScreen());
+                                }
+                              },
+                              itemBuilder: (context) => [
+                                PopupMenuItem(
+                                  value: 'cleanup',
+                                  height: 44,
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.cleaning_services_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                                      const SizedBox(width: 12),
+                                      Text('Purge Duplicates', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(width: 2),
-                                Icon(
-                                  Icons.arrow_drop_down,
-                                  size: 16,
-                                  color: colorScheme.primary,
+                                PopupMenuItem(
+                                  value: 'discover',
+                                  height: 44,
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.radar_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                                      const SizedBox(width: 12),
+                                      Text('Discover Bank Senders', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                    ],
+                                  ),
+                                ),
+                                PopupMenuItem(
+                                  value: 'export',
+                                  height: 44,
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.table_view_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                                      const SizedBox(width: 12),
+                                      Text('Export to CSV', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                    ],
+                                  ),
+                                ),
+                                PopupMenuItem(
+                                  value: 'settings',
+                                  height: 44,
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.settings_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                                      const SizedBox(width: 12),
+                                      Text('Settings', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
@@ -1111,81 +1278,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                         ),
                       ),
                     ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.sync_outlined),
-                      tooltip: 'Quick Import (24h)',
-                      onPressed: () {
-                        HapticFeedback.lightImpact();
-                        _quickImportRecentSms();
-                      },
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.calendar_today_outlined),
-                      tooltip: 'Select Date Range',
-                      onPressed: () {
-                        HapticFeedback.lightImpact();
-                        _selectDateRange(context);
-                      },
-                    ),
-                    PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_vert),
-                      tooltip: 'More Tools',
-                      onSelected: (value) {
-                        if (value == 'cleanup') {
-                          _cleanupLedgerDuplicates();
-                        } else if (value == 'discover') {
-                          _discoverBankSenders();
-                        } else if (value == 'export') {
-                          BackupService.exportTransactionsToCsv(context);
-                        } else if (value == 'settings') {
-                          AppRoute.push(context, const SettingsScreen());
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'cleanup',
-                          child: Row(
-                            children: [
-                              Icon(Icons.cleaning_services_outlined, size: 20),
-                              SizedBox(width: 12),
-                              Text('Purge Duplicates'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'discover',
-                          child: Row(
-                            children: [
-                              Icon(Icons.radar_outlined, size: 20),
-                              SizedBox(width: 12),
-                              Text('Discover Bank Senders'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'export',
-                          child: Row(
-                            children: [
-                              Icon(Icons.table_view_outlined, size: 20),
-                              SizedBox(width: 12),
-                              Text('Export to CSV'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'settings',
-                          child: Row(
-                            children: [
-                              Icon(Icons.settings_outlined, size: 20),
-                              SizedBox(width: 12),
-                              Text('Settings'),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -1873,6 +1966,10 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
           visualDensity: VisualDensity.compact,
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           padding: EdgeInsets.symmetric(horizontal: isCompact ? 6 : 4),
+          selectedBackgroundColor: colorScheme.secondaryContainer,
+          selectedForegroundColor: colorScheme.onSecondaryContainer,
+          backgroundColor: colorScheme.surfaceContainerLow,
+          foregroundColor: colorScheme.onSurfaceVariant,
         ),
       ),
     );

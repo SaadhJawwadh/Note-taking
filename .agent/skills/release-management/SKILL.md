@@ -25,6 +25,7 @@ Before bumping the version, ensure all of the following are done:
 * `CHANGELOG.md` entry is documented under `## X.Y.Z - YYYY-MM-DD` (without brackets around the version number). Keep release notes ultra-concise, punchy, and benefit-first (3-4 bullets max, single short line per feature).
 * **Changelog Screen (MANDATORY for every release)**: Update `lib/screens/changelog_screen.dart` by adding a new `_buildVersionSection(context, version: 'vX.Y.Z', date: '...', isLatest: true, changes: [...])` entry at the top of the list, and setting `isLatest: false` on the preceding section. This guarantees the in-app Settings Changelog page matches `CHANGELOG.md` 100%.
 * **What's New sheet (MANDATORY for every release)**: Update the feature cards in `lib/widgets/whats_new_sheet.dart` to describe THIS release's user-facing features in short, friendly, benefit-first language (3-5 cards max, single line per card). The sheet auto-fires once per version — it's gated on `SettingsProvider.lastSeenVersion` vs `PackageInfo` version in `home_screen._maybeShowWhatsNew` — so stale content from a previous release WILL be shown to every updating user. Never ship a release without refreshing it.
+* **Codebase Knowledge Graph (`map.md`)**: Ensure [.agent/map.md](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/.agent/map.md) is updated with any new files, database tables, or feature architecture introduced in this release.
 * Version number in `pubspec.yaml` is bumped using the project convention:
   * **Minor bump** (new features): `1.X.0+Y` where `Y = X * 10000` (e.g. `1.34.0+13400`)
   * **Patch bump** (bug fixes): `1.X.Y+Z` (e.g. `1.33.1+13301`)
@@ -67,11 +68,14 @@ With every release, **ALWAYS** write the latest release notes to `PLAY_STORE_NOT
 ## Gradle & Build Configuration Guidelines
 
 * **JVM Targets**: Always ensure a consistent `jvmTarget = "17"` across all Android subprojects in `build.gradle.kts` to prevent compiler mismatch failures.
-* **Resource Shrinking**: Set `isShrinkResources = false` if the project uses dynamically loaded local assets (like icon packages or custom fonts) to prevent asset stripping.
-* **ProGuard SQLCipher Rule**: Ensure SQLCipher is protected from shrinking in `android/app/proguard-rules.pro`:
+* **R8 Code & Resource Shrinking**: Release builds use `isMinifyEnabled = true` and `isShrinkResources = true`. When adding any new third-party Flutter plugin that uses native Android code, reflection, or native channels:
+  1. Add a corresponding `-keep class <package_name>.** { *; }` rule to `android/app/proguard-rules.pro`.
+  2. Always build a local release APK (`flutter build apk --release`) to verify R8 compiles without class-stripping errors.
+* **ProGuard Core Rules**: Ensure core drivers (SQLCipher, sqflite, Pigeon, WorkManager, LocalAuth) are protected in `android/app/proguard-rules.pro`:
   ```proguard
   -keep class net.sqlcipher.** { *; }
   -keep class net.sqlcipher.database.SQLiteDatabase { *; }
+  -keep class com.tekartik.sqflite.** { *; }
   ```
 * **Flutter Icon Tree-Shaking Rule**:
   * **Zero Non-Constant `IconData` Calls**: Never instantiate `IconData(codePoint, ...)` using dynamic or runtime variables anywhere in Dart code. Flutter's release AOT compiler statically inspects `IconData` invocations to tree-shake font files and will abort the build with `Error: Avoid non-constant invocations of IconData`.

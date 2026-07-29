@@ -43,6 +43,7 @@ class MainActivity: FlutterFragmentActivity() {
         when (intent?.action) {
             "com.saadhjawwadh.notebook.ADD_TRANSACTION" -> pendingWidgetAction = "add_transaction"
             "com.saadhjawwadh.notebook.VIEW_BUDGETS" -> pendingWidgetAction = "view_budgets"
+            "com.saadhjawwadh.notebook.VIEW_TRENDS" -> pendingWidgetAction = "view_trends"
             "com.saadhjawwadh.notebook.NEW_NOTE" -> pendingWidgetAction = "new_note"
             "com.saadhjawwadh.notebook.SEARCH" -> pendingWidgetAction = "search"
             Intent.ACTION_PROCESS_TEXT -> {

@@ -45,6 +45,13 @@ class NoteProvider extends ChangeNotifier {
 
   void setFolder(String? folder) {
     _selectedFolder = folder;
+    SharedPreferences.getInstance().then((prefs) {
+      if (folder == null) {
+        prefs.remove('lastActiveFolder');
+      } else {
+        prefs.setString('lastActiveFolder', folder);
+      }
+    });
     refreshNotes();
   }
 
@@ -58,13 +65,25 @@ class NoteProvider extends ChangeNotifier {
   }
 
   NoteProvider() {
-    _loadSortMode().then((_) => refreshNotes());
+    _init();
+  }
+
+  Future<void> _init() async {
+    await _loadSortMode();
+    await refreshNotes();
   }
 
   Future<void> _loadSortMode() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       _sortMode = prefs.getString('noteSortMode') ?? 'modified';
+      if (prefs.containsKey('lastActiveFolder')) {
+        final savedFolder = prefs.getString('lastActiveFolder');
+        _selectedFolder = (savedFolder == null || savedFolder.isEmpty) ? null : savedFolder;
+      }
+      if (prefs.containsKey('lastActiveTag')) {
+        _selectedTag = prefs.getString('lastActiveTag') ?? 'All';
+      }
     } catch (_) {}
   }
 
@@ -100,9 +119,12 @@ class NoteProvider extends ChangeNotifier {
       _folderCounts = await _noteRepository.getFolderCounts();
       _folders = await _noteRepository.getAllFolders();
       _emptyFolders.removeWhere((f) => _folders.contains(f));
-      final allAvailableFolders = ['Notes', 'All Notes', ..._folders, ..._emptyFolders];
-      if (_selectedFolder != null && !allAvailableFolders.contains(_selectedFolder)) {
-        _selectedFolder = 'Notes';
+      if (_selectedFolder != null &&
+          _selectedFolder != 'Notes' &&
+          _selectedFolder != 'All Notes' &&
+          !_folders.contains(_selectedFolder) &&
+          !_emptyFolders.contains(_selectedFolder)) {
+        _emptyFolders.add(_selectedFolder!);
       }
 
       _allTags = ['All', ...tags];
@@ -150,6 +172,9 @@ class NoteProvider extends ChangeNotifier {
 
   void setTag(String tag) {
     _selectedTag = tag;
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setString('lastActiveTag', tag);
+    });
     refreshNotes();
   }
 

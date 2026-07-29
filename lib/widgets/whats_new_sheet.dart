@@ -1,5 +1,7 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:provider/provider.dart';
 import '../data/settings_provider.dart';
 import '../theme/app_layout.dart';
@@ -27,143 +29,168 @@ class WhatsNewSheet extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.70,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHigh,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppLayout.radiusMAX)),
-        border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: isDark ? 0.15 : 0.3),
-          width: 1.0,
-        ),
+    final featureItems = [
+      _buildFeatureItem(
+        theme,
+        icon: Icons.palette_outlined,
+        title: "Material 3 Expressive UI",
+        desc: "Modern M3 Expressive tokens, elevated floating surfaces, and tactile spring motion physics.",
       ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppLayout.spaceXL),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: AppLayout.spaceM),
-              // Top Drag Handle
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppLayout.spaceXL),
-              
-              // Title Block
-              Row(
+      _buildFeatureItem(
+        theme,
+        icon: Icons.blur_on_rounded,
+        title: "Frosted Glass Navigation Bars",
+        desc: "Symmetric top and bottom glassmorphic navigation bars (16px blur) with edge-to-edge content depth.",
+      ),
+      _buildFeatureItem(
+        theme,
+        icon: Icons.touch_app_rounded,
+        title: "Tactile Button Haptics & Fixes",
+        desc: "Instant button press response, spring bounce haptics, and borderless search bar text field styling.",
+      ),
+      _buildFeatureItem(
+        theme,
+        icon: Icons.water_drop_outlined,
+        title: "Period Log Readability & Moon Painter",
+        desc: "High-contrast card fills, M3 flow tiles, and illuminated outer stroke ring for dark-mode moon phase painter.",
+      ),
+    ];
+
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(AppLayout.radiusMAX)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.70,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.92),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppLayout.radiusMAX)),
+            border: Border.all(
+              color: theme.colorScheme.outlineVariant.withValues(alpha: isDark ? 0.15 : 0.3),
+              width: 1.0,
+            ),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppLayout.spaceXL),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(AppLayout.spaceS),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.auto_awesome,
-                      color: theme.colorScheme.primary,
-                      size: 28,
+                  const SizedBox(height: AppLayout.spaceM),
+                  // Top Drag Handle
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: AppLayout.spaceM),
+                  const SizedBox(height: AppLayout.spaceXL),
+                  
+                  // Title Block
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(AppLayout.spaceS),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.auto_awesome,
+                          color: theme.colorScheme.primary,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: AppLayout.spaceM),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "What's New",
+                              style: theme.textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primaryContainer,
+                                borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                              ),
+                              child: Text(
+                                "v$currentVersion",
+                                style: theme.textTheme.labelMedium?.copyWith(
+                                  color: theme.colorScheme.onPrimaryContainer,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppLayout.spaceXL),
+                  
+                  // Updates list with staggered animations
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "What's New",
-                          style: theme.textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: -0.5,
+                    child: AnimationLimiter(
+                      child: ListView(
+                        physics: const BouncingScrollPhysics(),
+                        children: AnimationConfiguration.toStaggeredList(
+                          duration: const Duration(milliseconds: 240),
+                          childAnimationBuilder: (widget) => SlideAnimation(
+                            verticalOffset: 20.0,
+                            child: FadeInAnimation(child: widget),
                           ),
-                        ),
-                        Text(
-                          "Version $currentVersion",
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppLayout.spaceXL),
-              
-              // Updates list
-              Expanded(
-                child: ListView(
-                  physics: const BouncingScrollPhysics(),
-                  children: [
-                    _buildFeatureItem(
-                      theme,
-                      icon: Icons.search_rounded,
-                      title: "Universal Spotlight Search",
-                      desc: "Search Notes, Settings & Tools, Transactions, and Health Logs in-place directly on the home screen.",
-                    ),
-                    _buildFeatureItem(
-                      theme,
-                      icon: Icons.backup_rounded,
-                      title: "Backup & Ledger Export Fix",
-                      desc: "Resolved database primary key query error and added native file share fallbacks for CSV/JSON exports.",
-                    ),
-                    _buildFeatureItem(
-                      theme,
-                      icon: Icons.view_headline_rounded,
-                      title: "Note Card Layout Clamp",
-                      desc: "Fixed height stretching on lengthy notes with maxLines and TextOverflow.ellipsis truncation.",
-                    ),
-                    _buildFeatureItem(
-                      theme,
-                      icon: Icons.edit_note_rounded,
-                      title: "Handwriting Keyboard Support",
-                      desc: "Full IME compatibility for Samsung S-Pen Direct Writing, GBoard Handwriting, and Apple Scribble.",
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Button
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppLayout.spaceL),
-                child: BouncingWidget(
-                  onTap: () => _finishWhatsNew(context),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: AppLayout.spaceM),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary,
-                      borderRadius: BorderRadius.circular(AppLayout.radiusL),
-                      boxShadow: [
-                        BoxShadow(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Text(
-                        "Awesome, Got It",
-                        style: TextStyle(
-                          color: theme.colorScheme.onPrimary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                          children: featureItems,
                         ),
                       ),
                     ),
                   ),
-                ),
+                  
+                  // Button
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: AppLayout.spaceL),
+                    child: BouncingWidget(
+                      onTap: () => _finishWhatsNew(context),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: AppLayout.spaceM),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary,
+                          borderRadius: BorderRadius.circular(AppLayout.radiusL),
+                          boxShadow: [
+                            BoxShadow(
+                              color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: Text(
+                            "Awesome, Got It",
+                            style: TextStyle(
+                              color: theme.colorScheme.onPrimary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -190,7 +217,14 @@ class WhatsNewSheet extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: theme.colorScheme.primary, size: 24),
+          Container(
+            padding: const EdgeInsets.all(AppLayout.spaceS),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(AppLayout.radiusM),
+            ),
+            child: Icon(icon, color: theme.colorScheme.primary, size: 22),
+          ),
           const SizedBox(width: AppLayout.spaceM),
           Expanded(
             child: Column(

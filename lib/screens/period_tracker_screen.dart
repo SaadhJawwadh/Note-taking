@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../data/period_log_model.dart';
@@ -14,6 +15,7 @@ import '../theme/app_layout.dart';
 import '../theme/app_theme.dart';
 import '../widgets/skeleton_card.dart';
 import '../widgets/moon_phase_painter.dart';
+import '../widgets/bouncing_widget.dart';
 
 class PeriodTrackerScreen extends StatefulWidget {
   const PeriodTrackerScreen({super.key});
@@ -64,6 +66,8 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
     'Spotting', 'Light', 'Medium', 'Heavy',
   ];
 
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
@@ -73,6 +77,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
 
   @override
   void dispose() {
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -414,6 +419,11 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                           tempIntensity = selection.first;
                         });
                       },
+                      style: SegmentedButton.styleFrom(
+                        selectedBackgroundColor: theme.colorScheme.tertiaryContainer,
+                        selectedForegroundColor: theme.colorScheme.onTertiaryContainer,
+                        backgroundColor: theme.colorScheme.surfaceContainerLow,
+                      ),
                     ),
 
                     const SizedBox(height: 20),
@@ -545,48 +555,143 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
       onPeriodColor = Colors.black87;
     }
 
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
       body: AnimationLimiter(
         child: CustomScrollView(
+          controller: _scrollController,
           slivers: [
             // ── Custom Sliver AppBar ──────────────────────────────────────
             SliverAppBar(
+              pinned: true,
+              floating: false,
+              snap: false,
+              primary: false,
               backgroundColor: Colors.transparent,
-              floating: true,
-              snap: true,
-              toolbarHeight: 84,
-              titleSpacing: 16,
+              elevation: 0,
+              toolbarHeight: MediaQuery.of(context).padding.top + 68.0,
+              titleSpacing: 0,
               automaticallyImplyLeading: false,
-              title: Container(
-                margin: const EdgeInsets.only(top: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                height: 64,
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-                  boxShadow: AppLayout.softShadow(context),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Period Tracker',
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
+              flexibleSpace: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                  child: Container(
+                    padding: EdgeInsets.only(
+                      top: MediaQuery.of(context).padding.top + 6,
+                      left: 16,
+                      right: 16,
+                      bottom: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surface
+                          .withValues(alpha: isDark ? 0.82 : 0.88),
+                    ),
+                    child: Container(
+                      height: 56,
+                      padding: const EdgeInsets.only(left: 16, right: 4),
+                      decoration: BoxDecoration(
+                        color: Color.alphaBlend(
+                          colorScheme.tertiary.withValues(alpha: 0.08),
+                          colorScheme.surfaceContainerHigh,
+                        ).withValues(alpha: 0.88),
+                        borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+                        border: Border.all(
+                          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                          width: 1,
                         ),
+                        boxShadow: AppLayout.softShadow(context),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Period Tracker',
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
+                                ),
+                                Text(
+                                  _currentCycleDay != null
+                                      ? 'Day $_currentCycleDay • $_currentPhase'
+                                      : _currentPhase,
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.tertiary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          BouncingWidget(
+                            onTap: () async {
+                              await HapticFeedback.selectionClick();
+                              setState(() {
+                                _focusedDay = DateTime.now();
+                                _selectedDay = DateTime.now();
+                              });
+                              if (_scrollController.hasClients) {
+                                await _scrollController.animateTo(
+                                  0,
+                                  duration: AppLayout.animDefault,
+                                  curve: AppLayout.curveExpressive,
+                                );
+                              }
+                            },
+                            child: IconButton(
+                              icon: const Icon(Icons.today_outlined),
+                              tooltip: 'Today',
+                              padding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                              onPressed: () async {
+                                await HapticFeedback.selectionClick();
+                                setState(() {
+                                  _focusedDay = DateTime.now();
+                                  _selectedDay = DateTime.now();
+                                });
+                                if (_scrollController.hasClients) {
+                                  await _scrollController.animateTo(
+                                    0,
+                                    duration: AppLayout.animDefault,
+                                    curve: AppLayout.curveExpressive,
+                                  );
+                                }
+                              },
+                            ),
+                          ),
+                          BouncingWidget(
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              AppRoute.push(context, const SettingsScreen());
+                            },
+                            child: IconButton(
+                              icon: const Icon(Icons.settings_outlined),
+                              tooltip: 'Settings',
+                              padding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                              onPressed: () {
+                                HapticFeedback.selectionClick();
+                                AppRoute.push(context, const SettingsScreen());
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                        ],
                       ),
                     ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.settings_outlined,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                      onPressed: () {
-                        AppRoute.push(context, const SettingsScreen());
-                      },
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -642,13 +747,16 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                         return Card(
                           elevation: 0,
                           clipBehavior: Clip.antiAlias,
-                          color: isPeriodActive && isSelectedToday
-                              ? periodColor
-                              : (selectedLog != null
-                                  ? periodColor.withValues(alpha: 0.35)
-                                  : colorScheme.surfaceContainerHighest),
+                          color: colorScheme.surfaceContainerHigh,
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppLayout.radiusXL)),
+                              borderRadius: BorderRadius.circular(AppLayout.radiusXL),
+                              side: BorderSide(
+                                color: isPeriodActive && isSelectedToday
+                                    ? colorScheme.primary
+                                    : colorScheme.outlineVariant.withValues(alpha: 0.3),
+                                width: isPeriodActive && isSelectedToday ? 1.5 : 1.0,
+                              ),
+                          ),
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: Column(
@@ -669,9 +777,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                                                     : 'No log for this day'),
                                             style: theme.textTheme.titleMedium?.copyWith(
                                               fontWeight: FontWeight.bold,
-                                              color: selectedLog != null
-                                                  ? onPeriodColor
-                                                  : colorScheme.onSurface,
+                                              color: colorScheme.onSurface,
                                             ),
                                           ),
                                           if (selectedLog != null) ...[
@@ -681,7 +787,8 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                                                   ? '${DateFormat.MMMd().format(selectedLog.startDate)} – ${DateFormat.MMMd().format(selectedLog.endDate!)}'
                                                   : '${DateFormat.MMMd().format(selectedLog.startDate)} · Ongoing',
                                               style: theme.textTheme.bodySmall?.copyWith(
-                                                color: onPeriodColor.withValues(alpha: 0.7),
+                                                color: colorScheme.onSurfaceVariant,
+                                                fontWeight: FontWeight.w500,
                                               ),
                                             ),
                                           ],
@@ -691,14 +798,13 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                                     if (selectedLog != null) ...[
                                       IconButton(
                                         onPressed: () => _showLogEditor(selectedLog),
-                                        icon: Icon(Icons.edit_outlined, size: 18, color: onPeriodColor.withValues(alpha: 0.7)),
+                                        icon: Icon(Icons.edit_outlined, size: 18, color: colorScheme.onSurfaceVariant),
                                         tooltip: 'Edit Dates',
                                         visualDensity: VisualDensity.compact,
                                       ),
                                       IconButton(
                                         onPressed: () => _deleteLog(selectedLog),
-                                        icon: Icon(Icons.delete_outline, size: 18,
-                                            color: Colors.red.shade700),
+                                        icon: Icon(Icons.delete_outline, size: 18, color: colorScheme.error),
                                         tooltip: 'Delete Log',
                                         visualDensity: VisualDensity.compact,
                                       ),
@@ -740,8 +846,8 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                                     FilledButton.icon(
                                       onPressed: _togglePeriodStatus,
                                       style: FilledButton.styleFrom(
-                                        backgroundColor: onPeriodColor,
-                                        foregroundColor: periodColor,
+                                        backgroundColor: colorScheme.errorContainer,
+                                        foregroundColor: colorScheme.onErrorContainer,
                                         minimumSize: const Size(double.infinity, 52),
                                       ),
                                       icon: const Icon(Icons.stop_rounded),
@@ -750,14 +856,15 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                                   ],
 
                                   const SizedBox(height: 14),
-                                  Divider(height: 1, color: onPeriodColor.withValues(alpha: 0.15)),
+                                  Divider(height: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
                                   const SizedBox(height: 12),
 
                                   // ── Flow Intensity (icon-only row, no wrapping) ──
                                   Text(
                                     'Flow Intensity',
                                     style: theme.textTheme.labelLarge?.copyWith(
-                                      color: onPeriodColor.withValues(alpha: 0.8),
+                                      color: colorScheme.onSurfaceVariant,
+                                      fontWeight: FontWeight.w600,
                                       letterSpacing: 0.5,
                                     ),
                                   ),
@@ -776,8 +883,8 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                                             padding: const EdgeInsets.symmetric(vertical: 10),
                                             decoration: BoxDecoration(
                                               color: isChosen
-                                                  ? onPeriodColor
-                                                  : onPeriodColor.withValues(alpha: 0.12),
+                                                  ? colorScheme.primaryContainer
+                                                  : colorScheme.surfaceContainerHighest,
                                               borderRadius: BorderRadius.circular(AppLayout.radiusM),
                                             ),
                                             child: Column(
@@ -786,13 +893,13 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                                                 Icon(
                                                   icon,
                                                   size: 20,
-                                                  color: isChosen ? periodColor : onPeriodColor.withValues(alpha: 0.7),
+                                                  color: isChosen ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant,
                                                 ),
                                                 const SizedBox(height: 4),
                                                 Text(
                                                   label,
                                                   style: theme.textTheme.labelSmall?.copyWith(
-                                                    color: isChosen ? periodColor : onPeriodColor.withValues(alpha: 0.7),
+                                                    color: isChosen ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant,
                                                     fontWeight: isChosen ? FontWeight.bold : FontWeight.normal,
                                                   ),
                                                 ),
@@ -821,13 +928,14 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                                           Icon(
                                             Icons.mood_outlined,
                                             size: 18,
-                                            color: onPeriodColor.withValues(alpha: 0.8),
+                                            color: colorScheme.onSurfaceVariant,
                                           ),
                                           const SizedBox(width: 8),
                                           Text(
                                             'Symptoms',
                                             style: theme.textTheme.labelLarge?.copyWith(
-                                              color: onPeriodColor.withValues(alpha: 0.8),
+                                              color: colorScheme.onSurfaceVariant,
+                                              fontWeight: FontWeight.w600,
                                               letterSpacing: 0.5,
                                             ),
                                           ),
@@ -836,13 +944,13 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                                             Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                               decoration: BoxDecoration(
-                                                color: onPeriodColor,
+                                                color: colorScheme.primaryContainer,
                                                 borderRadius: BorderRadius.circular(20),
                                               ),
                                               child: Text(
                                                 '${selectedLog.symptoms.length}',
                                                 style: theme.textTheme.labelSmall?.copyWith(
-                                                  color: periodColor,
+                                                  color: colorScheme.onPrimaryContainer,
                                                   fontWeight: FontWeight.bold,
                                                 ),
                                               ),
@@ -853,7 +961,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                                             _symptomsExpanded
                                                 ? Icons.keyboard_arrow_up_rounded
                                                 : Icons.keyboard_arrow_down_rounded,
-                                            color: onPeriodColor.withValues(alpha: 0.6),
+                                            color: colorScheme.onSurfaceVariant,
                                             size: 20,
                                           ),
                                         ],
@@ -874,7 +982,6 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                                                 runSpacing: 6,
                                                 children: _predefinedSymptoms.map((symptom) {
                                                   final isSelected = selectedLog.symptoms.contains(symptom);
-                                                  // Same palette as intensity tiles: onPeriodColor-based.
                                                   return GestureDetector(
                                                     onTap: () async {
                                                       await HapticFeedback.selectionClick();
@@ -893,16 +1000,16 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                                                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                                       decoration: BoxDecoration(
                                                         color: isSelected
-                                                            ? onPeriodColor
-                                                            : onPeriodColor.withValues(alpha: 0.12),
+                                                            ? colorScheme.primaryContainer
+                                                            : colorScheme.surfaceContainerHighest,
                                                         borderRadius: BorderRadius.circular(AppLayout.radiusM),
                                                       ),
                                                       child: Text(
                                                         symptom,
                                                         style: theme.textTheme.labelMedium?.copyWith(
                                                           color: isSelected
-                                                              ? periodColor
-                                                              : onPeriodColor.withValues(alpha: 0.85),
+                                                              ? colorScheme.onPrimaryContainer
+                                                              : colorScheme.onSurfaceVariant,
                                                           fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                                                         ),
                                                       ),
@@ -954,6 +1061,11 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
                           onDaySelected: (selectedDay, focusedDay) {
                             setState(() {
                               _selectedDay = selectedDay;
+                              _focusedDay = focusedDay;
+                            });
+                          },
+                          onPageChanged: (focusedDay) {
+                            setState(() {
                               _focusedDay = focusedDay;
                             });
                           },
@@ -1019,20 +1131,65 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
           ],
         ),
       ),
-      floatingActionButton: SizedBox(
-        height: 56,
-        child: FloatingActionButton.extended(
-          heroTag: 'period_fab',
-          onPressed: () async {
-            await HapticFeedback.lightImpact();
-            await _showLogEditor(null, _selectedDay ?? DateTime.now());
-          },
-          icon: const Icon(Icons.add),
-          label: const Text('Log Period'),
-          backgroundColor: colorScheme.primary,
-          foregroundColor: colorScheme.onPrimary,
-          elevation: 0,
-          shape: const StadiumBorder(),
+      floatingActionButton: Material(
+        elevation: 6.0,
+        borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+        color: colorScheme.tertiaryContainer,
+        shadowColor: colorScheme.shadow.withValues(alpha: 0.2),
+        child: Container(
+          height: 56,
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+            border: Border.all(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextButton.icon(
+                style: TextButton.styleFrom(
+                  foregroundColor: colorScheme.onTertiaryContainer,
+                  shape: const StadiumBorder(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+                icon: const Icon(Icons.add, size: 22),
+                label: const Text(
+                  'Log Period',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+                onPressed: () async {
+                  await HapticFeedback.lightImpact();
+                  await _showLogEditor(null, _selectedDay ?? DateTime.now());
+                },
+              ),
+              Container(
+                height: 24,
+                width: 1,
+                color: colorScheme.onTertiaryContainer.withValues(alpha: 0.2),
+              ),
+              IconButton(
+                tooltip: 'Today',
+                icon: Icon(Icons.today_outlined, color: colorScheme.onTertiaryContainer, size: 20),
+                onPressed: () async {
+                  await HapticFeedback.lightImpact();
+                  setState(() {
+                    _focusedDay = DateTime.now();
+                    _selectedDay = DateTime.now();
+                  });
+                  if (_scrollController.hasClients) {
+                    await _scrollController.animateTo(
+                      0,
+                      duration: AppLayout.animDefault,
+                      curve: AppLayout.curveExpressive,
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

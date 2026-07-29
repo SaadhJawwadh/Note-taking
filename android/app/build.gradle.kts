@@ -57,9 +57,9 @@ android {
                 signingConfigs.getByName("debug")
             }
 
-            // Temporarily disable shrinking to fix plugin stripping issues
-            isMinifyEnabled = false
-            isShrinkResources = false
+            // Enable R8 code shrinking and resource shrinking for release builds
+            isMinifyEnabled = true
+            isShrinkResources = true
             isDebuggable = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }

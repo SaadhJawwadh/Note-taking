@@ -189,7 +189,7 @@ class GlobalSearchDelegate extends SearchDelegate {
       ),
       _SettingsSearchResult(
         title: 'SMS Auto-Sync',
-        subtitle: 'Twice daily SMS background transaction import',
+        subtitle: 'Daily SMS background transaction import',
         icon: Icons.sync_outlined,
         keywords: ['auto sync', 'sms sync', 'daily sync', 'background sync'],
         onTap: () => AppRoute.push(context, const SettingsScreen()),

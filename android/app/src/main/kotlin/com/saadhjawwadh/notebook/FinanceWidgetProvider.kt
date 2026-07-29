@@ -122,7 +122,7 @@ class FinanceWidgetProvider : AppWidgetProvider() {
 
         // Intent for clicking the widget body (opens MainActivity deep link to Budgets/Analytics)
         val mainIntent = Intent(context, MainActivity::class.java).apply {
-            action = "com.saadhjawwadh.notebook.VIEW_BUDGETS"
+            action = "com.saadhjawwadh.notebook.VIEW_TRENDS"
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val mainPendingIntent = PendingIntent.getActivity(

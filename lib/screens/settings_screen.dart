@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -17,6 +18,7 @@ import '../utils/app_constants.dart';
 import '../utils/widget_helper.dart';
 import '../utils/app_route.dart';
 import '../theme/app_layout.dart';
+import '../widgets/bouncing_widget.dart';
 import 'package:file_picker/file_picker.dart';
 import 'app_lock_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -28,15 +30,27 @@ import '../widgets/recurring_rules_sheet.dart';
 import '../l10n/app_localizations.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  final String? initialQuery;
+
+  const SettingsScreen({
+    super.key,
+    this.initialQuery,
+  });
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
+  late final TextEditingController _searchController;
+  late String _searchQuery;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchQuery = widget.initialQuery ?? '';
+    _searchController = TextEditingController(text: _searchQuery);
+  }
 
   @override
   void dispose() {
@@ -49,6 +63,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
       backgroundColor: colorScheme.surface,
       body: Consumer<SettingsProvider>(
@@ -60,71 +76,109 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: CustomScrollView(
               slivers: [
                 SliverAppBar(
+                  pinned: true,
+                  floating: false,
+                  snap: false,
+                  primary: false,
                   backgroundColor: Colors.transparent,
-                  floating: true,
-                  snap: true,
-                  toolbarHeight: 84,
-                  titleSpacing: 16,
+                  elevation: 0,
+                  toolbarHeight: MediaQuery.of(context).padding.top + 68.0,
+                  titleSpacing: 0,
                   automaticallyImplyLeading: false,
-                  title: Container(
-                    margin: const EdgeInsets.only(top: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-                      boxShadow: AppLayout.softShadow(context),
-                    ),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back),
-                          onPressed: () {
-                            HapticFeedback.selectionClick();
-                            Navigator.pop(context);
-                          },
+                  flexibleSpace: ClipRect(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                      child: Container(
+                        padding: EdgeInsets.only(
+                          top: MediaQuery.of(context).padding.top + 6,
+                          left: 16,
+                          right: 16,
+                          bottom: 6,
                         ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: TextField(
-                            controller: _searchController,
-                            onChanged: (val) {
-                              setState(() {
-                                _searchQuery = val;
-                              });
-                            },
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                            decoration: InputDecoration(
-                              hintText: '${AppLocalizations.of(context)!.settingsTitle} / Search...',
-                              hintStyle: theme.textTheme.titleMedium?.copyWith(
-                                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surface
+                              .withValues(alpha: isDark ? 0.82 : 0.88),
+                        ),
+                        child: Align(
+                          alignment: Alignment.center,
+                          child: Container(
+                            height: 56,
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            decoration: BoxDecoration(
+                              color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.85),
+                              borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+                              border: Border.all(
+                                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                                width: 1,
                               ),
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                              boxShadow: AppLayout.softShadow(context),
+                            ),
+                            child: Row(
+                              children: [
+                                BouncingWidget(
+                                  onTap: () {
+                                    HapticFeedback.selectionClick();
+                                    Navigator.pop(context);
+                                  },
+                                  child: IconButton(
+                                    icon: const Icon(Icons.arrow_back),
+                                    onPressed: () {
+                                      HapticFeedback.selectionClick();
+                                      Navigator.pop(context);
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: TextField(
+                                    controller: _searchController,
+                                    onChanged: (val) {
+                                      setState(() {
+                                        _searchQuery = val;
+                                      });
+                                    },
+                                    style: theme.textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    decoration: InputDecoration(
+                                      hintText: '${AppLocalizations.of(context)!.settingsTitle} / Search...',
+                                      hintStyle: theme.textTheme.titleMedium?.copyWith(
+                                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                                      ),
+                                      filled: false,
+                                      fillColor: Colors.transparent,
+                                      border: InputBorder.none,
+                                      enabledBorder: InputBorder.none,
+                                      focusedBorder: InputBorder.none,
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                                    ),
+                                  ),
+                                ),
+                                if (_searchQuery.isNotEmpty)
+                                  IconButton(
+                                    icon: const Icon(Icons.close),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() {
+                                        _searchQuery = '';
+                                      });
+                                    },
+                                  )
+                                else
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 12),
+                                    child: Icon(
+                                      Icons.search,
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                         ),
-                        if (_searchQuery.isNotEmpty)
-                          IconButton(
-                            icon: const Icon(Icons.close),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() {
-                                _searchQuery = '';
-                              });
-                            },
-                          )
-                        else
-                          Padding(
-                            padding: const EdgeInsets.only(right: 12),
-                            child: Icon(
-                              Icons.search,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -213,22 +267,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       if (settings.dailySyncEnabled) ...[
                                         const _Divider(),
                                         SettingsTile(
-                                          icon: Icons.schedule_outlined,
-                                          title: 'Sync Frequency',
-                                          subtitle: settings.smsSyncFrequency == '12'
-                                              ? 'Every 12 Hours (Twice Daily)'
-                                              : 'Every 24 Hours (Daily)',
-                                          onTap: () => _showSmsSyncFrequencyPicker(context, settings),
+                                          icon: Icons.access_time_outlined,
+                                          title: 'Auto-Sync Time',
+                                          subtitle: _formatTimeOfDay(context, settings.dailySyncTime),
+                                          onTap: () => _showTimePicker(context, settings),
                                         ),
-                                        if (settings.smsSyncFrequency == '24') ...[
-                                          const _Divider(),
-                                          SettingsTile(
-                                            icon: Icons.access_time_outlined,
-                                            title: 'Auto-Sync Time',
-                                            subtitle: _formatTimeOfDay(context, settings.dailySyncTime),
-                                            onTap: () => _showTimePicker(context, settings),
-                                          ),
-                                        ],
                                       ],
                                     ],
                                   ),
@@ -510,20 +553,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         'Import bank transactions automatically in background',
       );
       if (settings.dailySyncEnabled) {
-        final syncSub = settings.smsSyncFrequency == '12' ? 'Every 12 Hours (9 AM & 9 PM)' : 'Every 24 Hours (Daily)';
+        final timeSub = _formatTimeOfDay(context, settings.dailySyncTime);
         addTile(
-          SettingsTile(icon: Icons.schedule_outlined, title: 'Sync Frequency', subtitle: syncSub, onTap: () => _showSmsSyncFrequencyPicker(context, settings)),
-          'Sync Frequency',
-          syncSub,
+          SettingsTile(icon: Icons.access_time_outlined, title: 'Auto-Sync Time', subtitle: timeSub, onTap: () => _showTimePicker(context, settings)),
+          'Auto-Sync Time',
+          timeSub,
         );
-        if (settings.smsSyncFrequency == '24') {
-          final timeSub = _formatTimeOfDay(context, settings.dailySyncTime);
-          addTile(
-            SettingsTile(icon: Icons.access_time_outlined, title: 'Auto-Sync Time', subtitle: timeSub, onTap: () => _showTimePicker(context, settings)),
-            'Auto-Sync Time',
-            timeSub,
-          );
-        }
         addTile(
           SettingsTile(
             icon: Icons.sync,
@@ -902,63 +937,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showSmsSyncFrequencyPicker(BuildContext context, SettingsProvider settings) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppLayout.radiusXXL)),
-      ),
-      builder: (context) {
-        final colorScheme = Theme.of(context).colorScheme;
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Text(
-                    'Auto-Sync Frequency',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                RadioListTile<String>(
-                  title: const Text('Every 12 Hours (Twice Daily)'),
-                  subtitle: Text('Recommended: Morning & Evening updates', style: TextStyle(color: colorScheme.onSurfaceVariant)),
-                  value: '12',
-                  // ignore: deprecated_member_use
-                  groupValue: settings.smsSyncFrequency,
-                  // ignore: deprecated_member_use
-                  onChanged: (val) {
-                    if (val != null) {
-                      settings.setSmsSyncFrequency(val);
-                      Navigator.pop(context);
-                    }
-                  },
-                ),
-                RadioListTile<String>(
-                  title: const Text('Every 24 Hours (Daily)'),
-                  subtitle: Text('Once a day background sync', style: TextStyle(color: colorScheme.onSurfaceVariant)),
-                  value: '24',
-                  // ignore: deprecated_member_use
-                  groupValue: settings.smsSyncFrequency,
-                  // ignore: deprecated_member_use
-                  onChanged: (val) {
-                    if (val != null) {
-                      settings.setSmsSyncFrequency(val);
-                      Navigator.pop(context);
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
+
 
   String _formatTimeOfDay(BuildContext context, String timeStr) {
     try {

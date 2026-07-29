@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -8,6 +9,7 @@ import '../../screens/settings_screen.dart';
 import '../../theme/app_layout.dart';
 import '../../utils/app_route.dart';
 import '../../l10n/app_localizations.dart';
+import '../bouncing_widget.dart';
 
 class HomeAppBar extends StatefulWidget implements PreferredSizeWidget {
   final VoidCallback onClearSelection;
@@ -50,34 +52,81 @@ class _HomeAppBarState extends State<HomeAppBar> {
   Widget build(BuildContext context) {
     final noteProvider = context.watch<NoteProvider>();
     final settings = context.watch<SettingsProvider>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final statusBarHeight = MediaQuery.of(context).padding.top;
+
+    final backgroundColor = (noteProvider.isSelectionMode
+            ? Theme.of(context).colorScheme.primaryContainer
+            : Color.alphaBlend(
+                Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+                Theme.of(context).colorScheme.surfaceContainerHigh,
+              ))
+        .withValues(alpha: 0.88);
+
+    final totalHeight = statusBarHeight + 68.0;
 
     return SliverAppBar(
+      pinned: true,
+      floating: false,
+      snap: false,
+      primary: false,
       backgroundColor: Colors.transparent,
-      floating: true,
-      snap: true,
-      toolbarHeight: 84,
-      titleSpacing: 16,
+      elevation: 0,
+      toolbarHeight: totalHeight,
+      titleSpacing: 0,
       automaticallyImplyLeading: false,
-      title: Container(
-        margin: const EdgeInsets.only(top: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        height: 64,
-        decoration: BoxDecoration(
-          color: noteProvider.isSelectionMode
-              ? Theme.of(context).colorScheme.primaryContainer
-              : Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-          boxShadow: AppLayout.softShadow(context),
-        ),
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 180),
-          switchInCurve: Curves.fastOutSlowIn,
-          switchOutCurve: Curves.fastOutSlowIn,
-          child: noteProvider.isSelectionMode
-              ? KeyedSubtree(key: const ValueKey('selection_mode'), child: _buildSelectionMode(context, noteProvider))
-              : _isSearching
-                  ? KeyedSubtree(key: const ValueKey('search_mode'), child: _buildSearchMode(context))
-                  : KeyedSubtree(key: const ValueKey('normal_mode'), child: _buildNormalMode(context, settings)),
+      flexibleSpace: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Container(
+            padding: EdgeInsets.only(
+              top: statusBarHeight + 6,
+              left: 16,
+              right: 16,
+              bottom: 6,
+            ),
+            decoration: BoxDecoration(
+              color: Theme.of(context)
+                  .colorScheme
+                  .surface
+                  .withValues(alpha: isDark ? 0.82 : 0.88),
+            ),
+            child: Align(
+              alignment: Alignment.center,
+              child: Container(
+                height: 56,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  color: backgroundColor,
+                  borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+                  border: Border.all(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .outlineVariant
+                        .withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                  boxShadow: AppLayout.softShadow(context),
+                ),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  switchInCurve: Curves.fastOutSlowIn,
+                  switchOutCurve: Curves.fastOutSlowIn,
+                  child: noteProvider.isSelectionMode
+                      ? KeyedSubtree(
+                          key: const ValueKey('selection_mode'),
+                          child: _buildSelectionMode(context, noteProvider))
+                      : _isSearching
+                          ? KeyedSubtree(
+                              key: const ValueKey('search_mode'),
+                              child: _buildSearchMode(context))
+                          : KeyedSubtree(
+                              key: const ValueKey('normal_mode'),
+                              child: _buildNormalMode(context, settings)),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -170,7 +219,11 @@ class _HomeAppBarState extends State<HomeAppBar> {
               hintStyle: theme.textTheme.titleMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
               ),
+              filled: false,
+              fillColor: Colors.transparent,
               border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(horizontal: 4),
             ),
             onChanged: (val) {
@@ -371,9 +424,9 @@ class _HomeAppBarState extends State<HomeAppBar> {
                                 displayFolder,
                                 overflow: TextOverflow.ellipsis,
                                 maxLines: 1,
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 15,
+                                      fontSize: 18,
                                     ),
                               ),
                             ),
@@ -381,7 +434,7 @@ class _HomeAppBarState extends State<HomeAppBar> {
                             Icon(
                               Icons.arrow_drop_down,
                               color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              size: 16,
+                              size: 18,
                             ),
                           ],
                         ),
@@ -391,7 +444,8 @@ class _HomeAppBarState extends State<HomeAppBar> {
                           maxLines: 1,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                fontSize: 11.5,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
                               ),
                         ),
                       ],
@@ -403,53 +457,124 @@ class _HomeAppBarState extends State<HomeAppBar> {
           ),
         ),
         PopupMenuButton<String>(
-          icon: const Icon(Icons.sort),
+          icon: const Icon(Icons.sort_rounded),
           tooltip: 'Sort notes',
           padding: EdgeInsets.zero,
-          initialValue: noteProvider.sortMode,
+          elevation: 6,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppLayout.radiusXL),
+            side: BorderSide(
+              color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+              width: 1,
+            ),
+          ),
+          color: Theme.of(context).colorScheme.surfaceContainerHigh,
           onSelected: (mode) {
             HapticFeedback.selectionClick();
             noteProvider.setSortMode(mode);
           },
-          itemBuilder: (context) => const [
-            CheckedPopupMenuItem(value: 'modified', child: Text('Last modified')),
-            CheckedPopupMenuItem(value: 'created', child: Text('Date created')),
-            CheckedPopupMenuItem(value: 'title', child: Text('Title')),
-            CheckedPopupMenuItem(value: 'color', child: Text('Color')),
-          ],
+          itemBuilder: (context) {
+            final colorScheme = Theme.of(context).colorScheme;
+            final currentSort = noteProvider.sortMode;
+            final items = [
+              ('modified', 'Last modified', Icons.access_time_rounded),
+              ('created', 'Date created', Icons.calendar_today_rounded),
+              ('title', 'Title', Icons.sort_by_alpha_rounded),
+              ('color', 'Color', Icons.palette_outlined),
+            ];
+
+            return items.map((item) {
+              final isSelected = currentSort == item.$1;
+              return PopupMenuItem<String>(
+                value: item.$1,
+                height: 44,
+                child: Row(
+                  children: [
+                    Icon(
+                      item.$3,
+                      size: 20,
+                      color: isSelected
+                          ? colorScheme.primary
+                          : colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        item.$2,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight:
+                                  isSelected ? FontWeight.bold : FontWeight.w500,
+                              color: isSelected
+                                  ? colorScheme.primary
+                                  : colorScheme.onSurface,
+                            ),
+                      ),
+                    ),
+                    if (isSelected)
+                      Icon(
+                        Icons.check_rounded,
+                        size: 18,
+                        color: colorScheme.primary,
+                      ),
+                  ],
+                ),
+              );
+            }).toList();
+          },
         ),
-        IconButton(
-          icon: Icon(_getIconForMode(settings.noteViewMode)),
-          tooltip: _getTooltipForMode(settings.noteViewMode),
-          padding: EdgeInsets.zero,
-          visualDensity: VisualDensity.compact,
-          onPressed: () {
+        BouncingWidget(
+          onTap: () {
             HapticFeedback.selectionClick();
             widget.onCycleViewMode();
           },
+          child: IconButton(
+            icon: Icon(_getIconForMode(settings.noteViewMode)),
+            tooltip: _getTooltipForMode(settings.noteViewMode),
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              widget.onCycleViewMode();
+            },
+          ),
         ),
-        IconButton(
-          icon: const Icon(Icons.search),
-          tooltip: 'Global search',
-          padding: EdgeInsets.zero,
-          visualDensity: VisualDensity.compact,
-          onPressed: () {
+        BouncingWidget(
+          onTap: () {
             HapticFeedback.selectionClick();
             setState(() {
               _isSearching = true;
             });
           },
+          child: IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: 'Global search',
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              setState(() {
+                _isSearching = true;
+              });
+            },
+          ),
         ),
-        IconButton(
-          icon: const Icon(Icons.settings_outlined),
-          tooltip: 'Settings',
-          padding: EdgeInsets.zero,
-          visualDensity: VisualDensity.compact,
-          onPressed: () {
+        BouncingWidget(
+          onTap: () {
             HapticFeedback.selectionClick();
             AppRoute.push(context, const SettingsScreen())
                 .then((_) => widget.onRefresh());
           },
+          child: IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Settings',
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              AppRoute.push(context, const SettingsScreen())
+                  .then((_) => widget.onRefresh());
+            },
+          ),
         ),
         const SizedBox(width: 4),
       ],
