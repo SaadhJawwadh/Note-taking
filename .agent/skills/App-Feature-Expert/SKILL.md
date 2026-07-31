@@ -94,3 +94,22 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
   - 🐛 **Fixes** (Bug fixes and stability resolutions)
 - **Play Store Parity**: Maintain identical user-friendly structure across `PLAY_STORE_NOTES.md`, `lib/screens/changelog_screen.dart`, and `lib/widgets/whats_new_sheet.dart`.
 
+---
+
+## 8. Widget Testing & Viewport Configurations
+
+- **Full-Screen Widget Test Viewport Configuration**: When writing widget tests for full-screen wizard screens or multi-page `PageView` components, configure mobile view dimensions to prevent offscreen layout clipping and false hit-test warnings:
+  ```dart
+  tester.view.physicalSize = const Size(1080, 1920);
+  tester.view.devicePixelRatio = 2.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  ```
+- **Gesture Hit-Test Tolerances**: Pass `warnIfMissed: false` when invoking `tester.tap()` on list tiles or offscreen buttons inside scrollable page views.
+
+---
+
+## 9. Global Typography & Dynamic Text Scaling
+
+- **Global TextScaler Invariant**: `MaterialApp.builder` in `main.dart` wraps top-level app containers in `MediaQuery` with `textScaler: TextScaler.linear(settings.textSize / 16.0)` to enforce user-configured typography scaling globally across all features.
+- **No Static Height Clippings**: Component layouts MUST honor dynamic text scaling without hardcoding static container heights that cause text clipping or overflow when scaled up to Large (20dp).
+

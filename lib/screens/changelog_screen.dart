@@ -28,9 +28,38 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
-                  version: 'v2.11.0',
+                  version: 'v2.11.1',
                   date: 'August 1, 2026',
                   isLatest: true,
+                  changes: [
+                    _ChangelogGroup(
+                      title: '🌟 What\'s New',
+                      items: [
+                        'Keyboard-Aware Note Editor: Formatting tools now stay accessible directly above the soft keyboard, and the note editor auto-scrolls to keep your active typing line visible as you type long notes.',
+                        'Full-Screen Setup Wizard: Customise your app theme, preferences, and local AI options right from the start.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🚀 Improvements',
+                      items: [
+                        'Refreshed Material 3 Design: Enjoy modern rounded cards, fluid animations, dynamic typography scaling, and a cleaner control center.',
+                        'Quick Keyboard Dismiss: Tap the new Hide Keyboard button on the note editor toolbar anytime to instantly dismiss the keyboard.',
+                        'Smarter Search & Folders: Easily search across settings and notes, and organize your ideas into folders.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🐛 Fixes',
+                      items: [
+                        'Note Editor Keyboard & Text Visibility: Resolved an issue where the software keyboard obscured long note text and hid formatting action bars during typing.',
+                      ],
+                    ),
+                  ],
+                ),
+                _buildVersionSection(
+                  context,
+                  version: 'v2.11.0',
+                  date: 'August 1, 2026',
+                  isLatest: false,
                   changes: [
                     _ChangelogGroup(
                       title: '🌟 What\'s New',

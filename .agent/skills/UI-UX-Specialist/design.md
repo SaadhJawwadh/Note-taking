@@ -178,6 +178,15 @@ Components that allow users to initiate actions, commit choices, or trigger stat
 * **Variants:** Standard (`IconButton`), Filled (`IconButton.filled`), Filled Tonal (`IconButton.filledTonal`), Outlined (`IconButton.outlined`).
 * **Usage Guidance:** Enforce `minimumSize: const Size(48, 48)` in global `iconButtonTheme`. Prefer outlined/rounded icons (`Icons.<name>_outlined`) for unselected states and filled icons for active toggles.
 
+#### 5. Floating Toolbars ([m3.material.io/components/toolbars](https://m3.material.io/components/toolbars/overview))
+* **Variants:** Standard Floating Pill ($56\text{dp}$ height), Compact Floating Pill ($48\text{dp}$ height).
+* **Shape & Elevation Tokens:** Full Stadium pill (`AppLayout.radiusMAX` / `28dp` radius), Container `surfaceContainerHigh` / `surfaceContainerHighest`, 1px `outlineVariant` border with `0.35` opacity, Elevation `6` (`AppLayout.softShadow`).
+* **Usage Guidance:**
+  - Ground page navigation at the top with a structural M3 Top App Bar (flush with status area).
+  - Use a single bottom M3 Floating Expressive Toolbar pill for creation and editing actions.
+  - Group icons into functional clusters separated by $1\text{px}$ `VerticalDivider` lines.
+  - Place block insertions (`Table`, `Image`, `Checklist`, `Drawing Canvas`, `Voice Mic`) on the primary bottom toolbar; reserve secondary docked toolbars strictly for text typography formatting (`Headers`, `Bold`, `Italic`, `Underline`, `Strikethrough`, `Lists`).
+
 #### 5. Segmented Buttons ([m3.material.io/components/segmented-buttons](https://m3.material.io/components/segmented-buttons/overview))
 * **Variants:** Single-select (`SegmentedButton<T>`), Multi-select.
 * **Shape Tokens:** Height `40dp`, Corner Radius `AppLayout.radiusMAX`, Active Container `secondaryContainer`, Active Foreground `onSecondaryContainer`.

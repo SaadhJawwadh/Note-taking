@@ -69,3 +69,6 @@ Use this skill to execute QA verifications, unit/widget tests, security audits, 
 * **Isolate Binding Initialization**: Verify all `@pragma('vm:entry-point')` functions and Workmanager task callbacks (`callbackDispatcher`, `backgroundMessageHandler`, `performDailyTransactionSync`) call `WidgetsFlutterBinding.ensureInitialized()` at entry before invoking `SharedPreferences`, `DatabaseHelper`, or platform channels.
 * **Workmanager Task Chain Resilience**: Confirm that scheduled background task routines wrap task re-registration logic inside `finally` blocks so temporary failures during task execution do not permanently stop future runs.
 * **Automated Notification Schedule Sync**: Verify that model mutations (creating/updating/deleting period logs or auto-purging deleted notes from trash) automatically trigger notification schedule recalculation or cancellation.
+
+## 9. Global Text Scaling & Viewport Audits
+* **Dynamic Text Scaling Validation**: Test widget trees across `settings.textSize` boundaries (14.0dp Small, 16.0dp Medium, 20.0dp Large) using `tester.binding.platformDispatcher.textScaleFactorTestValue` to verify text wrapping and prevent layout overflow.

@@ -81,6 +81,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   Map<String, int> _tagColors = {}; // Cache for tag colors
 
   final FocusNode _focusNode = FocusNode();
+  final ScrollController _scrollController = ScrollController();
   bool isNoteSaved = false;
   bool _isImageSelected = false;
   List<String> _noteUrls = [];
@@ -301,9 +302,41 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     if (mounted) {
       setState(() {
         _isImageSelected = _checkIfImageSelected();
-        _showFormattingBar = !selection.isCollapsed;
+        if (!selection.isCollapsed) {
+          _showFormattingBar = true;
+        }
       });
+      _scrollToCursorIfNeeded();
     }
+  }
+
+  void _scrollToCursorIfNeeded() {
+    if (!_focusNode.hasFocus || !_scrollController.hasClients) return;
+    final selection = _quillController.selection;
+    if (selection.baseOffset < 0) return;
+
+    final docLength = _quillController.document.length;
+    if (docLength <= 1) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+
+      final maxScroll = _scrollController.position.maxScrollExtent;
+      if (maxScroll <= 0) return;
+
+      final fraction = (selection.baseOffset / docLength).clamp(0.0, 1.0);
+      final targetScroll = (maxScroll * fraction).clamp(0.0, maxScroll);
+      final currentScroll = _scrollController.offset;
+
+      // Smoothly scroll down if cursor is beyond current visible offset
+      if (targetScroll > currentScroll || selection.baseOffset >= docLength - 5) {
+        _scrollController.animateTo(
+          targetScroll,
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+        );
+      }
+    });
   }
 
   bool _checkIfImageSelected() {
@@ -478,6 +511,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     _titleController.dispose();
     _quillController.dispose();
     _focusNode.dispose();
+    _scrollController.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
@@ -2721,6 +2755,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                             return false;
                           },
                           child: SingleChildScrollView(
+                            controller: _scrollController,
                             child: GestureDetector(
                               behavior: HitTestBehavior.translucent,
                               onTap: () {
@@ -3252,7 +3287,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(height: 100),
+                                    SizedBox(height: isKeyboardOpen ? 220 : 100),
                                   ],
                                 ),
                               ),
@@ -3575,7 +3610,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                         ),
                       // Bottom Toolbar (Pill)
                       Visibility(
-                        visible: !isKeyboardOpen && !_isImageSelected,
+                        visible: !_isImageSelected,
                         child: SafeArea(
                           top: false,
                           child: Container(
@@ -3675,6 +3710,17 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                           : textColor,
                                     ),
                                   ),
+                                  if (isKeyboardOpen)
+                                    IconButton(
+                                      icon: const Icon(Icons.keyboard_hide_rounded),
+                                      tooltip: 'Hide Keyboard',
+                                      onPressed: () {
+                                        FocusScope.of(context).unfocus();
+                                      },
+                                      style: IconButton.styleFrom(
+                                        foregroundColor: textColor,
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),

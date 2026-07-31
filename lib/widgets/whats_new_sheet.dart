@@ -37,6 +37,11 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.primaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
+            icon: Icons.keyboard_rounded,
+            title: "Keyboard-Aware Note Editor",
+            desc: "Formatting tools stay accessible above the soft keyboard with smart typing auto-scroll.",
+          ),
+          _WhatsNewItem(
             icon: Icons.auto_awesome_rounded,
             title: "Full-Screen Setup Wizard",
             desc: "Customise your app theme, preferences, and local AI options right from the start.",
@@ -51,12 +56,12 @@ class WhatsNewSheet extends StatelessWidget {
           _WhatsNewItem(
             icon: Icons.palette_outlined,
             title: "Refreshed Material 3 Design",
-            desc: "Enjoy modern rounded cards, fluid animations, and a cleaner control center.",
+            desc: "Enjoy modern rounded cards, dynamic typography scaling, and a cleaner control center.",
           ),
           _WhatsNewItem(
-            icon: Icons.search_rounded,
-            title: "Smarter Search & Folders",
-            desc: "Easily search across settings and notes, and organize your ideas into folders.",
+            icon: Icons.keyboard_hide_rounded,
+            title: "Quick Keyboard Dismiss",
+            desc: "Tap the new Hide Keyboard button on the editor toolbar anytime to hide the keyboard.",
           ),
         ],
       ),
@@ -67,8 +72,8 @@ class WhatsNewSheet extends StatelessWidget {
         items: [
           _WhatsNewItem(
             icon: Icons.check_circle_outline_rounded,
-            title: "Interactive Checklist Polish",
-            desc: "Toggling checklist items in notes is now smoother and more reliable.",
+            title: "Note Editor Text Visibility",
+            desc: "Resolved issue where the software keyboard obscured text and toolbar during long note editing.",
           ),
         ],
       ),
