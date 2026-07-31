@@ -64,3 +64,8 @@ Use this skill to execute QA verifications, unit/widget tests, security audits, 
 ## 7. Image Fallbacks & Database Version Alignment
 * **Rich Text Image Fallbacks**: Verify `Image.file` and `Image.network` in custom embed builders implement `errorBuilder` to render a clean fallback icon (`broken_image_outlined`) when local image files are deleted from disk or URLs fail to resolve.
 * **Database Test Version Alignment**: Verify `DatabaseHelper.createTestDatabase()` pins the exact schema version specified in `_initDB()` (version 17) so test database instances match production database schemas 100%.
+
+## 8. Background Isolate & Schedule QA
+* **Isolate Binding Initialization**: Verify all `@pragma('vm:entry-point')` functions and Workmanager task callbacks (`callbackDispatcher`, `backgroundMessageHandler`, `performDailyTransactionSync`) call `WidgetsFlutterBinding.ensureInitialized()` at entry before invoking `SharedPreferences`, `DatabaseHelper`, or platform channels.
+* **Workmanager Task Chain Resilience**: Confirm that scheduled background task routines wrap task re-registration logic inside `finally` blocks so temporary failures during task execution do not permanently stop future runs.
+* **Automated Notification Schedule Sync**: Verify that model mutations (creating/updating/deleting period logs or auto-purging deleted notes from trash) automatically trigger notification schedule recalculation or cancellation.

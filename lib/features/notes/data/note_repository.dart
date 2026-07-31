@@ -304,9 +304,10 @@ class NoteRepository {
     });
   }
 
-  Future<void> clearOldTrash() async {
+  Future<void> clearOldTrash([int days = 7]) async {
+    if (days <= 0) return; // Disabled
     final db = await _db;
-    final cutoff = DateTime.now().subtract(const Duration(days: 7));
+    final cutoff = DateTime.now().subtract(Duration(days: days));
     await db.transaction((txn) async {
       final oldNotes = await txn.query(
         TableNames.notes,
@@ -316,6 +317,7 @@ class NoteRepository {
       );
       for (final row in oldNotes) {
         final id = row[NoteFields.id] as String;
+        await NotificationService.cancelNoteReminder(id);
         await txn.delete('note_tags', where: 'note_id = ?', whereArgs: [id]);
         await txn.delete(TableNames.notes, where: '${NoteFields.id} = ?', whereArgs: [id]);
       }

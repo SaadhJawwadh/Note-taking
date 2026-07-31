@@ -22,8 +22,11 @@ Ensures that any code being pushed to production is functional, stable, and veri
 Before bumping the version, ensure all of the following are done:
 * `flutter analyze` → **zero errors/warnings**. CI/CD will fail on any lint issues.
 * `flutter test` → **all tests passing**. Running the full test suite locally is mandatory to catch regressions.
-* `CHANGELOG.md` entry is documented under `## X.Y.Z - YYYY-MM-DD` (without brackets around the version number). Keep release notes ultra-concise, punchy, and benefit-first (3-4 bullets max, single short line per feature).
-* **Changelog Screen (MANDATORY for every release)**: Update `lib/screens/changelog_screen.dart` by adding a new `_buildVersionSection(context, version: 'vX.Y.Z', date: '...', isLatest: true, changes: [...])` entry at the top of the list, and setting `isLatest: false` on the preceding section. This guarantees the in-app Settings Changelog page matches `CHANGELOG.md` 100%.
+* `CHANGELOG.md` entry is documented under `## X.Y.Z - YYYY-MM-DD` (without brackets around the version number). Write for everyday general users—**avoid technical developer jargon** (no "SQLCipher", "WorkManager", "ChangeNotifier", "Delta JSON", "BackdropFilter"). Group all entries into 3 explicit categories using expressive emojis:
+  * 🌟 **What's New** (New user-facing features)
+  * 🚀 **Improvements** (UI polish, performance, usability enhancements)
+  * 🐛 **Fixes** (Bug fixes and stability improvements)
+* **Changelog Screen (MANDATORY for every release)**: Update `lib/screens/changelog_screen.dart` by adding a new `_buildVersionSection(context, version: 'vX.Y.Z', date: '...', isLatest: true, changes: [...])` entry at the top of the list, grouped by `🌟 What's New`, `🚀 Improvements`, and `🐛 Fixes`.
 * **What's New sheet (MANDATORY for every release)**: Update the feature cards in `lib/widgets/whats_new_sheet.dart` to describe THIS release's user-facing features in short, friendly, benefit-first language (3-5 cards max, single line per card). The sheet auto-fires once per version — it's gated on `SettingsProvider.lastSeenVersion` vs `PackageInfo` version in `home_screen._maybeShowWhatsNew` — so stale content from a previous release WILL be shown to every updating user. Never ship a release without refreshing it.
 * **Codebase Knowledge Graph (`map.md`)**: Ensure [.agent/map.md](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/.agent/map.md) is updated with any new files, database tables, or feature architecture introduced in this release.
 * Version number in `pubspec.yaml` is bumped using the project convention:
@@ -43,22 +46,31 @@ Provide the APK path (`build/app/outputs/flutter-apk/app-release.apk`) to the us
 ### Step 3: Run Release Automation
 Execute the automated deploy script to bump, tag, and publish:
 ```bash
-./deploy.sh <version>
+flutter analyze && ./deploy.sh <version>
 ```
 ### Step 4: Play Console Bilingual Release Notes (Mandatory File & Output)
-With every release, **ALWAYS** write the latest release notes to `PLAY_STORE_NOTES.md` at the project root before running `./deploy.sh`. Format them inside `<en-US>` (English) and `<ta-IN>` (Tamil) XML tags:
-
-* Keep notes ultra-concise, direct, and under 4 bullet points total.
-* Focus purely on user benefits in a single short sentence per point (no technical jargon or long text).
+With every release, **ALWAYS** write the latest release notes to `PLAY_STORE_NOTES.md` at the project root before running `./deploy.sh`. Target everyday general users with friendly emojis and zero technical jargon, structured into 🌟 **What's New**, 🚀 **Improvements**, and 🐛 **Fixes**:
 
 ```xml
 <en-US>
-• Feature: Short, direct user benefit.
-• Fix: Quick one-line fix summary.
+🌟 What's New
+• Smart search and new folder organizing options.
+
+🚀 Improvements
+• Faster page loading and refreshed Material 3 styling.
+
+🐛 Fixes
+• Fixed minor checklist and notification bugs.
 </en-US>
 <ta-IN>
-• அம்சம்: நேரடிப் பயனர் விளக்கம்.
-• திருத்தம்: சுருக்கமான பிழைத்திருத்தம்.
+🌟 புதிய அம்சங்கள்
+• ஸ்மார்ட் தேடல் மற்றும் புதிய கோப்பு அமைப்புகள்.
+
+🚀 மேம்பாடுகள்
+• வேகமான செயல்பாடு மற்றும் புதிய வடிவமைப்பு.
+
+🐛 பிழை திருத்தங்கள்
+• விழிப்பூட்டல் மற்றும் சரிபார்ப்பு பட்டியல் பிழைகள் சரி செய்யப்பட்டன.
 </ta-IN>
 ```
 `./deploy.sh` and GitHub Actions will read `PLAY_STORE_NOTES.md` to automatically publish multilingual WhatsNew notes directly to Google Play Console.

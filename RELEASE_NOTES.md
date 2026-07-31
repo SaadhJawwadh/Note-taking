@@ -1,9 +1,11 @@
 
-### 🏛️ Feature-Driven Modular Architecture & Single Source of Truth UI
-- **Feature-Driven Core Migration**: Restructured code into modular domain packages (`lib/features/notes/`, `finances/`, `health/`, `settings/`) and shared design tokens (`lib/core/`).
-- **Unified Core UI Components**: Streamlined reusable UI primitives (`AppCard`, `AppBottomSheet`, `AppChip`, `AppDialog`) for 100% design symmetry across the entire app.
+### 🌟 What's New
+- **Full-Screen Setup Wizard**: Customise your app theme, preferences, and local AI options right from the start.
 
-### ⚡ Variable Font Asset Optimization & Checklists Fix
-- **Single Variable Font Binary**: Replaced 6 static font files with `GoogleSansFlex` variable font, drastically reducing app bundle size.
-- **Quill Checklist Processing**: Fixed interactive checklist item toggling, state preservation, and delta export stability.
+### 🚀 Improvements
+- **Refreshed Material 3 Design**: Enjoy modern rounded cards, fluid animations, and a cleaner control center.
+- **Smarter Search & Folders**: Easily search across settings and notes, and organize your ideas into folders.
+
+### 🐛 Fixes
+- **Interactive Checklist Polish**: Toggling checklist items in notes is now smoother and more reliable.
 

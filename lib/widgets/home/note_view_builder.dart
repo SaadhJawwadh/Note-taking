@@ -94,7 +94,7 @@ class NoteViewBuilder extends StatelessWidget {
     }
 
     return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 88),
       sliver: _buildSliverLayout(context, settings, noteProvider),
     );
   }
@@ -150,26 +150,27 @@ class NoteViewBuilder extends StatelessWidget {
   }
 
   Widget _buildDismissibleNoteCard(BuildContext context, Note note, VoidCallback refresh, NoteProvider noteProvider) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Dismissible(
       key: ValueKey(note.id),
       direction: DismissDirection.horizontal,
       background: Container(
         decoration: BoxDecoration(
-          color: Colors.green.withValues(alpha: 0.8),
+          color: colorScheme.primaryContainer,
           borderRadius: BorderRadius.circular(AppLayout.radiusXL),
         ),
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: const Icon(Icons.archive, color: Colors.white),
+        child: Icon(Icons.archive, color: colorScheme.onPrimaryContainer),
       ),
       secondaryBackground: Container(
         decoration: BoxDecoration(
-          color: Colors.red.withValues(alpha: 0.8),
+          color: colorScheme.errorContainer,
           borderRadius: BorderRadius.circular(AppLayout.radiusXL),
         ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: const Icon(Icons.delete, color: Colors.white),
+        child: Icon(Icons.delete, color: colorScheme.onErrorContainer),
       ),
       onDismissed: (direction) async {
         if (direction == DismissDirection.endToStart) {

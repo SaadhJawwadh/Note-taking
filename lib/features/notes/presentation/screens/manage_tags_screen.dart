@@ -73,30 +73,46 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
                         setState(() => selectedColor = c.toARGB32());
                       }
                     },
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: isSystem
-                            ? Theme.of(context).colorScheme.surface
-                            : c,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isSelected
-                              ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.outlineVariant,
-                          width: isSelected ? 3 : 1,
+                    child: SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: Center(
+                        child: AnimatedContainer(
+                          duration: AppLayout.animShort,
+                          width: isSelected ? 36 : 32,
+                          height: isSelected ? 36 : 32,
+                          decoration: BoxDecoration(
+                            color: isSystem
+                                ? Theme.of(context).colorScheme.surfaceContainerHigh
+                                : c,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSelected
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context).colorScheme.outlineVariant,
+                              width: isSelected ? 3 : 1,
+                            ),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color: c.withValues(alpha: 0.4),
+                                      blurRadius: 6,
+                                      spreadRadius: 1,
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          child: isSystem
+                              ? const Icon(Icons.shuffle, size: 16)
+                              : (isSelected
+                                  ? Icon(Icons.check,
+                                      size: 18,
+                                      color: c.computeLuminance() > 0.5
+                                          ? Colors.black
+                                          : Colors.white)
+                                  : null),
                         ),
                       ),
-                      child: isSystem
-                          ? const Icon(Icons.shuffle, size: 16)
-                          : (isSelected
-                              ? Icon(Icons.check,
-                                  size: 16,
-                                  color: c.computeLuminance() > 0.5
-                                      ? Colors.black
-                                      : Colors.white)
-                              : null),
                     ),
                   );
                 }).toList(),

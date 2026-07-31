@@ -67,7 +67,8 @@ class _BouncingWidgetState extends State<BouncingWidget>
       child: AnimatedBuilder(
         animation: _controller,
         builder: (context, child) {
-          final scale = 1.0 - Curves.easeOutBack.transform(_controller.value) * 0.05;
+          final normalized = (_controller.value / 0.05).clamp(0.0, 1.0);
+          final scale = 1.0 - Curves.easeOutBack.transform(normalized) * 0.05;
           return Transform.scale(
             scale: scale,
             child: child,

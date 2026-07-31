@@ -7,11 +7,13 @@ class AppChip extends StatelessWidget {
   final Widget? avatar;
   final IconData? icon;
   final bool isSelected;
+  final bool isCompact;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
   final Color? backgroundColor;
   final Color? selectedBackgroundColor;
   final Color? textColor;
+  final BorderSide? border;
 
   const AppChip({
     super.key,
@@ -19,12 +21,71 @@ class AppChip extends StatelessWidget {
     this.avatar,
     this.icon,
     this.isSelected = false,
+    this.isCompact = false,
     this.onTap,
     this.onDelete,
     this.backgroundColor,
     this.selectedBackgroundColor,
     this.textColor,
+    this.border,
   });
+
+  /// Helper to calculate high-contrast WCAG-compliant colors for any tag color seed
+  static ({Color bg, Color fg, BorderSide border}) getTagColors(
+    BuildContext context,
+    int? tagColorVal, {
+    required bool isSelected,
+  }) {
+    final theme = Theme.of(context);
+
+    if (tagColorVal != null && tagColorVal != 0) {
+      final seedColor = Color(tagColorVal);
+      final scheme = ColorScheme.fromSeed(
+        seedColor: seedColor,
+        brightness: theme.brightness,
+      );
+
+      if (isSelected) {
+        return (
+          bg: scheme.primary,
+          fg: scheme.onPrimary,
+          border: BorderSide(
+            color: scheme.primary,
+            width: 1.5,
+          ),
+        );
+      } else {
+        return (
+          bg: scheme.secondaryContainer.withValues(alpha: 0.5),
+          fg: scheme.onSecondaryContainer,
+          border: BorderSide(
+            color: scheme.primary.withValues(alpha: 0.6),
+            width: 1.5,
+          ),
+        );
+      }
+    }
+
+    if (isSelected) {
+      return (
+        bg: theme.colorScheme.primaryContainer,
+        fg: theme.colorScheme.onPrimaryContainer,
+        border: BorderSide(
+          color: theme.colorScheme.primary,
+          width: 1.5,
+        ),
+      );
+    } else {
+      return (
+        bg: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        fg: theme.colorScheme.onSurfaceVariant,
+        border: BorderSide(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
+          width: 1.5,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,50 +94,64 @@ class AppChip extends StatelessWidget {
         ? (selectedBackgroundColor ?? theme.colorScheme.primaryContainer)
         : (backgroundColor ?? theme.colorScheme.surfaceContainerHighest);
 
-    final effectiveFg = isSelected
-        ? theme.colorScheme.onPrimaryContainer
-        : (textColor ?? theme.colorScheme.onSurfaceVariant);
+    final effectiveFg = textColor ??
+        (isSelected
+            ? theme.colorScheme.onPrimaryContainer
+            : theme.colorScheme.onSurfaceVariant);
 
-    return Material(
-      color: effectiveBg,
-      borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-      child: InkWell(
-        onTap: onTap,
+    final horizPadding = isCompact ? 10.0 : 14.0;
+    final vertPadding = isCompact ? 3.0 : 6.0;
+    final fontSize = isCompact ? 12.0 : 13.0;
+    final iconSize = isCompact ? 14.0 : 16.0;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: effectiveBg,
         borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppLayout.spaceM,
-            vertical: AppLayout.spaceS,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (avatar != null) ...[
-                avatar!,
-                const SizedBox(width: AppLayout.spaceS),
-              ] else if (icon != null) ...[
-                Icon(icon, size: AppLayout.iconS, color: effectiveFg),
-                const SizedBox(width: AppLayout.spaceS),
-              ],
-              Text(
-                label,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: effectiveFg,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                ),
-              ),
-              if (onDelete != null) ...[
-                const SizedBox(width: AppLayout.spaceXS),
-                GestureDetector(
-                  onTap: onDelete,
-                  child: Icon(
-                    Icons.close,
-                    size: AppLayout.iconS,
+        border: border != null ? Border.fromBorderSide(border!) : null,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: horizPadding,
+              vertical: vertPadding,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (avatar != null) ...[
+                  avatar!,
+                  const SizedBox(width: AppLayout.spaceXS),
+                ] else if (icon != null) ...[
+                  Icon(icon, size: iconSize, color: effectiveFg),
+                  const SizedBox(width: AppLayout.spaceXS),
+                ],
+                Text(
+                  label,
+                  style: (theme.textTheme.labelMedium ?? const TextStyle()).copyWith(
+                    fontSize: fontSize,
                     color: effectiveFg,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                   ),
                 ),
+                if (onDelete != null) ...[
+                  const SizedBox(width: AppLayout.spaceXS),
+                  GestureDetector(
+                    onTap: onDelete,
+                    child: Icon(
+                      Icons.close,
+                      size: iconSize,
+                      color: effectiveFg,
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

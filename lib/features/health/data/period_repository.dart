@@ -1,7 +1,9 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
+import 'package:flutter/foundation.dart';
 import '../../../data/database_helper.dart';
 import '../../../data/period_log_model.dart';
 import '../../../data/database_constants.dart';
+import '../../../services/notification_service.dart';
 
 class PeriodRepository {
   static final PeriodRepository instance = PeriodRepository._init();
@@ -15,6 +17,11 @@ class PeriodRepository {
   Future<PeriodLog> createPeriodLog(PeriodLog log) async {
     final db = await _db;
     await db.insert(TableNames.periodLogs, log.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+    if (!kIsWeb) {
+      try {
+        await NotificationService.schedulePeriodNotifications();
+      } catch (_) {}
+    }
     return log;
   }
 
@@ -32,12 +39,24 @@ class PeriodRepository {
 
   Future<int> updatePeriodLog(PeriodLog log) async {
     final db = await _db;
-    return await db.update(TableNames.periodLogs, log.toMap(), where: '${PeriodLogFields.id} = ?', whereArgs: [log.id]);
+    final res = await db.update(TableNames.periodLogs, log.toMap(), where: '${PeriodLogFields.id} = ?', whereArgs: [log.id]);
+    if (!kIsWeb) {
+      try {
+        await NotificationService.schedulePeriodNotifications();
+      } catch (_) {}
+    }
+    return res;
   }
 
   Future<int> deletePeriodLog(String id) async {
     final db = await _db;
-    return await db.delete(TableNames.periodLogs, where: '${PeriodLogFields.id} = ?', whereArgs: [id]);
+    final res = await db.delete(TableNames.periodLogs, where: '${PeriodLogFields.id} = ?', whereArgs: [id]);
+    if (!kIsWeb) {
+      try {
+        await NotificationService.schedulePeriodNotifications();
+      } catch (_) {}
+    }
+    return res;
   }
 
   Future<List<PeriodLog>> searchPeriodLogs(String keyword) async {

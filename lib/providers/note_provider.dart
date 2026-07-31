@@ -102,7 +102,9 @@ class NoteProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _noteRepository.clearOldTrash();
+      final prefs = await SharedPreferences.getInstance();
+      final purgeDays = prefs.getInt('trashAutoPurgeDays') ?? 30;
+      await _noteRepository.clearOldTrash(purgeDays);
       final tags = await _noteRepository.getAllTags();
       final colors = await _noteRepository.getAllTagColors();
 

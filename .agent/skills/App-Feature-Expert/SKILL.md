@@ -53,7 +53,9 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 ## 3. Financial Manager & SMS Ledger (`lib/features/finances/`)
 
 - **SMS Auto-Import Pipeline**: Decoupled regex parsing (`SmsParser` + `sms_constants.dart`) and `SmsService`. 5-minute transaction deduplication window. Reversals purge target transaction within 7 days.
-- **Decoupled State (`FinancialManagerProvider`)**: Income, expense, net balance, category filtering, search queries, and duplicate cleanup managed reactively.
+- **Background Isolate & Workmanager Safety**: `backgroundMessageHandler` and `performDailyTransactionSync` MUST invoke `WidgetsFlutterBinding.ensureInitialized()` at entry to prevent isolate crashes when accessing `SharedPreferences`, `DatabaseHelper`, or platform channels. Task re-scheduling in `performDailyTransactionSync` MUST be wrapped in a `finally` block so daily sync chains never break on execution errors.
+- **Service Initialization & Permission Grants**: `SmsService.init()` initializes telephony listening on launch if permission is granted and syncs Workmanager schedules. `requestPermissions()` automatically triggers listening and schedule sync upon grant.
+- **Recurring Transactions Materialization**: `RecurringRuleRepository.instance.materializeDueRules()` MUST be invoked at app launch in `main.dart` and inside `FinancialManagerProvider.loadTransactions()`.
 - **Tabular Figures & Typography**: All balance strings and financial figures use `Inter` with tabular figures (`fontFeatures: [FontFeature.tabularFigures()]`).
 - **Trend Forecasting**: Linear regression with Huber-style outlier dampening ($Z > 1.8\sigma$) and exponentially-weighted slopes. Android widgets updated via `WidgetHelper` and WorkManager.
 
@@ -62,6 +64,7 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 ## 4. Health & Period Tracker (`lib/features/health/`)
 
 - **Cycle Predictions & Ovulation**: Rolling average from last 3 to 7 cycles (excluding outliers $<15$ or $>60$ days). Ovulation window estimated 14 days prior to expected start.
+- **Notification Rescheduling**: `NotificationService.schedulePeriodNotifications()` MUST be invoked in `PeriodRepository` when period logs are created, updated, or deleted, and in `SettingsProvider.loadSettings()` on app launch if enabled.
 - **Semantic Phase Colors**: Resolved at build time via `AppSemanticColors` (`ThemeExtension`).
 - **Privacy & Alerts**: Local data only (excluded from unencrypted backup). Discreet notification strings (`"Check the app"`). Privacy mask active until biometric authentication passes.
 
@@ -70,6 +73,7 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 ## 5. Settings & App Configuration (`lib/features/settings/`)
 
 - **Settings State (`SettingsProvider`)**: Manages theme mode, dynamic color schemes, currency selection, custom transaction rules, app lock timeouts, and category budgets.
+- **Schedule Sync On Preference Changes**: Setter methods (`setAutoBackupEnabled`, `setAutoBackupFrequency`, `setAutoBackupPath`, `setDailySyncEnabled`) MUST invoke their respective schedule sync helpers (`syncAutoBackupSchedule`, `syncDailySyncSchedule`) to guarantee Workmanager tasks stay in sync with stored preferences.
 - **Backup & Restore**: Encryption-guarded backup JSON via `BackupService`. Excludes sensitive biometric settings to prevent override via untrusted files.
 
 ---
@@ -78,3 +82,15 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 
 - **No Re-Export Stubs**: Do NOT create or maintain 1-line re-export stub files in `lib/screens/`, `lib/theme/`, or `lib/data/repositories/`.
 - **Direct Canonical Imports**: All screens and repositories must be imported directly from their feature module locations (`lib/features/<module>/presentation/screens/` and `lib/features/<module>/data/`).
+
+---
+
+## 7. Changelogs & Release Notes Standards
+
+- **General User Target**: Release notes and changelogs MUST target everyday general users with friendly, non-technical language (avoid developer jargon such as "SQLCipher", "WorkManager", "State Provider", "Delta JSON", "BackdropFilter").
+- **3-Category Grouping & Emojis**: Always group entries into 3 explicit categories using expressive emojis:
+  - 🌟 **What's New** (New user-facing features)
+  - 🚀 **Improvements** (Usability, UI polish, speed enhancements)
+  - 🐛 **Fixes** (Bug fixes and stability resolutions)
+- **Play Store Parity**: Maintain identical user-friendly structure across `PLAY_STORE_NOTES.md`, `lib/screens/changelog_screen.dart`, and `lib/widgets/whats_new_sheet.dart`.
+

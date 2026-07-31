@@ -5,6 +5,7 @@ import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:provider/provider.dart';
 import '../data/settings_provider.dart';
 import '../core/theme/app_layout.dart';
+import '../core/ui/app_card.dart';
 import '../widgets/bouncing_widget.dart';
 
 class WhatsNewSheet extends StatelessWidget {
@@ -29,42 +30,59 @@ class WhatsNewSheet extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final featureItems = [
-      _buildFeatureItem(
-        theme,
-        icon: Icons.dashboard_customize_rounded,
-        title: "Feature-Driven Modular Architecture",
-        desc: "Decoupled domain modules (Notes, Finances, Health, Settings) for faster load times and smoother navigation.",
+    final categories = [
+      _WhatsNewCategory(
+        categoryTitle: "🌟 What's New",
+        categoryColor: theme.colorScheme.primary,
+        bgColor: theme.colorScheme.primaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
+        items: [
+          _WhatsNewItem(
+            icon: Icons.auto_awesome_rounded,
+            title: "Full-Screen Setup Wizard",
+            desc: "Customise your app theme, preferences, and local AI options right from the start.",
+          ),
+        ],
       ),
-      _buildFeatureItem(
-        theme,
-        icon: Icons.palette_outlined,
-        title: "Single Source of Truth UI System",
-        desc: "Unified design tokens and core UI cards delivering 100% visual harmony across all screens.",
+      _WhatsNewCategory(
+        categoryTitle: "🚀 Improvements",
+        categoryColor: theme.colorScheme.tertiary,
+        bgColor: theme.colorScheme.tertiaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
+        items: [
+          _WhatsNewItem(
+            icon: Icons.palette_outlined,
+            title: "Refreshed Material 3 Design",
+            desc: "Enjoy modern rounded cards, fluid animations, and a cleaner control center.",
+          ),
+          _WhatsNewItem(
+            icon: Icons.search_rounded,
+            title: "Smarter Search & Folders",
+            desc: "Easily search across settings and notes, and organize your ideas into folders.",
+          ),
+        ],
       ),
-      _buildFeatureItem(
-        theme,
-        icon: Icons.font_download_outlined,
-        title: "Variable Font & Lightweight App",
-        desc: "Streamlined single-binary variable font for sharper typography and a smaller app size.",
-      ),
-      _buildFeatureItem(
-        theme,
-        icon: Icons.check_box_outlined,
-        title: "Reliable Rich Checklists",
-        desc: "Fixed interactive checklist toggling, state preservation, and text alignment in the note editor.",
+      _WhatsNewCategory(
+        categoryTitle: "🐛 Fixes",
+        categoryColor: theme.colorScheme.secondary,
+        bgColor: theme.colorScheme.secondaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
+        items: [
+          _WhatsNewItem(
+            icon: Icons.check_circle_outline_rounded,
+            title: "Interactive Checklist Polish",
+            desc: "Toggling checklist items in notes is now smoother and more reliable.",
+          ),
+        ],
       ),
     ];
 
     return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(AppLayout.radiusMAX)),
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(AppLayout.radiusXXL)),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
-          height: MediaQuery.of(context).size.height * 0.70,
+          height: MediaQuery.of(context).size.height * 0.75,
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.92),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppLayout.radiusMAX)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppLayout.radiusXXL)),
             border: Border.all(
               color: theme.colorScheme.outlineVariant.withValues(alpha: isDark ? 0.15 : 0.3),
               width: 1.0,
@@ -80,7 +98,7 @@ class WhatsNewSheet extends StatelessWidget {
                   // Top Drag Handle
                   Center(
                     child: Container(
-                      width: 36,
+                      width: 40,
                       height: 4,
                       decoration: BoxDecoration(
                         color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
@@ -89,20 +107,20 @@ class WhatsNewSheet extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: AppLayout.spaceXL),
-                  
-                  // Title Block
+
+                  // Header Row
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(AppLayout.spaceS),
+                        padding: const EdgeInsets.all(AppLayout.spaceM),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                          color: theme.colorScheme.primaryContainer,
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
-                          Icons.auto_awesome,
-                          color: theme.colorScheme.primary,
-                          size: 28,
+                          Icons.stars_rounded,
+                          color: theme.colorScheme.onPrimaryContainer,
+                          size: 30,
                         ),
                       ),
                       const SizedBox(width: AppLayout.spaceM),
@@ -121,13 +139,13 @@ class WhatsNewSheet extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.primaryContainer,
+                                color: theme.colorScheme.primary.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(AppLayout.radiusS),
                               ),
                               child: Text(
-                                "v$currentVersion",
+                                "Version $currentVersion",
                                 style: theme.textTheme.labelMedium?.copyWith(
-                                  color: theme.colorScheme.onPrimaryContainer,
+                                  color: theme.colorScheme.primary,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -138,25 +156,107 @@ class WhatsNewSheet extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: AppLayout.spaceXL),
-                  
-                  // Updates list with staggered animations
+
+                  // Categorized Updates List
                   Expanded(
                     child: AnimationLimiter(
-                      child: ListView(
+                      child: ListView.builder(
                         physics: const BouncingScrollPhysics(),
-                        children: AnimationConfiguration.toStaggeredList(
-                          duration: const Duration(milliseconds: 240),
-                          childAnimationBuilder: (widget) => SlideAnimation(
-                            verticalOffset: 20.0,
-                            child: FadeInAnimation(child: widget),
-                          ),
-                          children: featureItems,
-                        ),
+                        itemCount: categories.length,
+                        itemBuilder: (context, catIndex) {
+                          final category = categories[catIndex];
+                          return AnimationConfiguration.staggeredList(
+                            position: catIndex,
+                            duration: const Duration(milliseconds: 280),
+                            child: SlideAnimation(
+                              verticalOffset: 24.0,
+                              child: FadeInAnimation(
+                                child: Padding(
+                                  padding: const EdgeInsets.only(bottom: AppLayout.spaceL),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      // Category Pill Tag
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: AppLayout.spaceM,
+                                          vertical: AppLayout.spaceXS,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: category.bgColor,
+                                          borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                                        ),
+                                        child: Text(
+                                          category.categoryTitle,
+                                          style: theme.textTheme.titleSmall?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: category.categoryColor,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: AppLayout.spaceM),
+
+                                      // Items inside AppCard containers
+                                      ...category.items.map((item) {
+                                        return Padding(
+                                          padding: const EdgeInsets.only(bottom: AppLayout.spaceS),
+                                          child: AppCard(
+                                            padding: const EdgeInsets.all(AppLayout.spaceM),
+                                            child: Row(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Container(
+                                                  padding: const EdgeInsets.all(AppLayout.spaceS),
+                                                  decoration: BoxDecoration(
+                                                    color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                                                    borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                                                  ),
+                                                  child: Icon(
+                                                    item.icon,
+                                                    color: theme.colorScheme.primary,
+                                                    size: 22,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: AppLayout.spaceM),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        item.title,
+                                                        style: theme.textTheme.titleMedium?.copyWith(
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 4),
+                                                      Text(
+                                                        item.desc,
+                                                        style: theme.textTheme.bodyMedium?.copyWith(
+                                                          color: theme.colorScheme.onSurfaceVariant,
+                                                          height: 1.35,
+                                                          fontSize: 13,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      }),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ),
-                  
-                  // Button
+
+                  // Got It Button
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: AppLayout.spaceL),
                     child: BouncingWidget(
@@ -170,14 +270,14 @@ class WhatsNewSheet extends StatelessWidget {
                           boxShadow: [
                             BoxShadow(
                               color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
                             ),
                           ],
                         ),
                         child: Center(
                           child: Text(
-                            "Awesome, Got It",
+                            "Awesome, Got It!",
                             style: TextStyle(
                               color: theme.colorScheme.onPrimary,
                               fontWeight: FontWeight.bold,
@@ -196,58 +296,30 @@ class WhatsNewSheet extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildFeatureItem(
-    ThemeData theme, {
-    required IconData icon,
-    required String title,
-    required String desc,
-  }) {
-    final isDark = theme.brightness == Brightness.dark;
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppLayout.spaceM),
-      padding: const EdgeInsets.all(AppLayout.spaceM),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(AppLayout.radiusL),
-        border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: isDark ? 0.15 : 0.3),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(AppLayout.spaceS),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(AppLayout.radiusM),
-            ),
-            child: Icon(icon, color: theme.colorScheme.primary, size: 22),
-          ),
-          const SizedBox(width: AppLayout.spaceM),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: AppLayout.spaceXS),
-                Text(
-                  desc,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    height: 1.3,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+class _WhatsNewCategory {
+  final String categoryTitle;
+  final Color categoryColor;
+  final Color bgColor;
+  final List<_WhatsNewItem> items;
+
+  _WhatsNewCategory({
+    required this.categoryTitle,
+    required this.categoryColor,
+    required this.bgColor,
+    required this.items,
+  });
+}
+
+class _WhatsNewItem {
+  final IconData icon;
+  final String title;
+  final String desc;
+
+  _WhatsNewItem({
+    required this.icon,
+    required this.title,
+    required this.desc,
+  });
 }

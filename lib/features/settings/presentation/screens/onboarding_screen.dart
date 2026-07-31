@@ -1,0 +1,910 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+
+import '../../../../core/theme/app_layout.dart';
+import '../../../../core/ui/app_card.dart';
+import '../../../../widgets/bouncing_widget.dart';
+import '../../providers/settings_provider.dart';
+
+/// Full-Screen Interactive Onboarding Wizard
+class OnboardingScreen extends StatefulWidget {
+  final bool isReplay;
+
+  const OnboardingScreen({
+    super.key,
+    this.isReplay = false,
+  });
+
+  @override
+  State<OnboardingScreen> createState() => _OnboardingScreenState();
+}
+
+class _OnboardingScreenState extends State<OnboardingScreen> {
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+  static const int _totalPages = 5;
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _nextPage() {
+    HapticFeedback.lightImpact();
+    if (_currentPage < _totalPages - 1) {
+      _pageController.nextPage(
+        duration: AppLayout.animDefault,
+        curve: AppLayout.curveFast,
+      );
+    } else {
+      _finishOnboarding();
+    }
+  }
+
+  void _previousPage() {
+    HapticFeedback.lightImpact();
+    if (_currentPage > 0) {
+      _pageController.previousPage(
+        duration: AppLayout.animDefault,
+        curve: AppLayout.curveFast,
+      );
+    }
+  }
+
+  void _finishOnboarding() async {
+    final settings = context.read<SettingsProvider>();
+    await HapticFeedback.mediumImpact();
+    await settings.setHasSeenOnboarding(true);
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      await settings.setLastSeenVersion(packageInfo.version);
+    } catch (_) {}
+
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Scaffold(
+      backgroundColor: theme.colorScheme.surface,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: AppLayout.maxContentWidth),
+            child: Column(
+              children: [
+                // Top Action & Progress Bar
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppLayout.spaceXL,
+                    vertical: AppLayout.spaceM,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Replay Tag / Step Progress Badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.spaceM,
+                          vertical: AppLayout.spaceXS,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primaryContainer.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                        ),
+                        child: Text(
+                          widget.isReplay
+                              ? 'Step ${_currentPage + 1} of $_totalPages'
+                              : 'Welcome ${_currentPage + 1}/$_totalPages',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: theme.colorScheme.onPrimaryContainer,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      // Skip / Close Button
+                      TextButton(
+                        onPressed: _finishOnboarding,
+                        style: TextButton.styleFrom(
+                          foregroundColor: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        child: Text(
+                          _currentPage == _totalPages - 1 ? 'Done' : 'Skip',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Main Page View Content
+                Expanded(
+                  child: PageView(
+                    controller: _pageController,
+                    onPageChanged: (index) {
+                      setState(() => _currentPage = index);
+                    },
+                    children: [
+                      _buildWelcomeSlide(theme),
+                      _buildPersonalizationSlide(theme),
+                      _buildModulesSlide(theme),
+                      _buildAiSlide(theme),
+                      _buildTipsSlide(theme),
+                    ],
+                  ),
+                ),
+
+                // Bottom Controls: Page Indicators & Navigation Buttons
+                Padding(
+                  padding: const EdgeInsets.all(AppLayout.spaceXL),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Back Button (when page > 0)
+                      AnimatedOpacity(
+                        duration: AppLayout.animShort,
+                        opacity: _currentPage > 0 ? 1.0 : 0.0,
+                        child: IgnorePointer(
+                          ignoring: _currentPage == 0,
+                          child: IconButton.outlined(
+                            onPressed: _previousPage,
+                            icon: const Icon(Icons.arrow_back_rounded),
+                            tooltip: 'Back',
+                          ),
+                        ),
+                      ),
+
+                      // Animated Page Indicator Dots
+                      Row(
+                        children: List.generate(_totalPages, (index) {
+                          final isActive = index == _currentPage;
+                          return AnimatedContainer(
+                            duration: AppLayout.animShort,
+                            margin: const EdgeInsets.only(right: AppLayout.spaceS),
+                            width: isActive ? 28 : 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: isActive
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.outlineVariant.withValues(alpha: isDark ? 0.3 : 0.6),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          );
+                        }),
+                      ),
+
+                      // Primary Action Button (Next / Get Started)
+                      BouncingWidget(
+                        onTap: _nextPage,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppLayout.spaceXL,
+                            vertical: AppLayout.spaceM,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary,
+                            borderRadius: BorderRadius.circular(AppLayout.radiusL),
+                            boxShadow: AppLayout.softShadow(context),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _currentPage == _totalPages - 1 ? 'Get Started' : 'Next',
+                                style: TextStyle(
+                                  color: theme.colorScheme.onPrimary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(width: AppLayout.spaceS),
+                              Icon(
+                                _currentPage == _totalPages - 1
+                                    ? Icons.check_circle_rounded
+                                    : Icons.arrow_forward_rounded,
+                                color: theme.colorScheme.onPrimary,
+                                size: 18,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- Page 1: Welcome & Vision ---
+  Widget _buildWelcomeSlide(ThemeData theme) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: AppLayout.spaceXL),
+      child: Column(
+        children: [
+          const SizedBox(height: AppLayout.spaceL),
+          // Gradient Circle App Logo
+          Container(
+            width: 108,
+            height: 108,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [theme.colorScheme.primary, theme.colorScheme.tertiary],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Icon(
+              Icons.note_alt_rounded,
+              color: theme.colorScheme.onPrimary,
+              size: 52,
+            ),
+          ),
+          const SizedBox(height: AppLayout.spaceXXL),
+          Text(
+            'Welcome to Everything App',
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              letterSpacing: -0.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppLayout.spaceM),
+          Text(
+            'Your minimalist, private, offline-first workspace. Write notes, track finances, and manage your health seamlessly.',
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              height: 1.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppLayout.spaceXXL),
+          _buildFeatureCard(
+            theme,
+            icon: Icons.shield_outlined,
+            title: '100% Private & Offline',
+            desc: 'Your data is encrypted locally using SQLCipher. Zero cloud lock-in.',
+          ),
+          const SizedBox(height: AppLayout.spaceM),
+          _buildFeatureCard(
+            theme,
+            icon: Icons.edit_note_rounded,
+            title: 'Rich WYSIWYG Notes',
+            desc: 'Format text with bold, italic, code blocks, checklists, and voice notes.',
+          ),
+          const SizedBox(height: AppLayout.spaceM),
+          _buildFeatureCard(
+            theme,
+            icon: Icons.grid_view_rounded,
+            title: 'Modular Ecosystem',
+            desc: 'Enable or disable finance tracking and health features according to your workflow.',
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- Page 2: Personalization & Theme (Interactive Live Preview) ---
+  Widget _buildPersonalizationSlide(ThemeData theme) {
+    return Consumer<SettingsProvider>(
+      builder: (context, settings, child) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: AppLayout.spaceXL),
+          child: Column(
+            children: [
+              const SizedBox(height: AppLayout.spaceL),
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primaryContainer,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.palette_outlined,
+                  color: theme.colorScheme.onPrimaryContainer,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: AppLayout.spaceXL),
+              Text(
+                'Personalize Your Look',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppLayout.spaceS),
+              Text(
+                'Select your preferred appearance mode. Changes apply immediately in real-time.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppLayout.spaceXL),
+
+              // Theme Mode Options
+              AppCard(
+                padding: AppLayout.paddingAllM,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'App Theme Mode',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: AppLayout.spaceM),
+                    Row(
+                      children: [
+                        _buildThemeOptionTile(
+                          theme,
+                          title: 'System',
+                          icon: Icons.brightness_auto_rounded,
+                          isSelected: settings.themeMode == ThemeMode.system,
+                          onTap: () => settings.setThemeMode(ThemeMode.system),
+                        ),
+                        const SizedBox(width: AppLayout.spaceS),
+                        _buildThemeOptionTile(
+                          theme,
+                          title: 'Light',
+                          icon: Icons.light_mode_rounded,
+                          isSelected: settings.themeMode == ThemeMode.light,
+                          onTap: () => settings.setThemeMode(ThemeMode.light),
+                        ),
+                        const SizedBox(width: AppLayout.spaceS),
+                        _buildThemeOptionTile(
+                          theme,
+                          title: 'Dark',
+                          icon: Icons.dark_mode_rounded,
+                          isSelected: settings.themeMode == ThemeMode.dark,
+                          onTap: () => settings.setThemeMode(ThemeMode.dark),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppLayout.spaceM),
+
+              // Dynamic Color Tile
+              AppCard(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppLayout.spaceL,
+                  vertical: AppLayout.spaceS,
+                ),
+                child: SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  secondary: Icon(
+                    Icons.color_lens_outlined,
+                    color: theme.colorScheme.primary,
+                  ),
+                  title: Text(
+                    'Material You Dynamic Colors',
+                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    'Extract colors dynamically from your device wallpaper (Android 12+).',
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                  value: settings.useDynamicColor,
+                  onChanged: (val) {
+                    HapticFeedback.lightImpact();
+                    settings.setUseDynamicColor(val);
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // --- Page 3: Modular Powerups (Interactive Module Toggles) ---
+  Widget _buildModulesSlide(ThemeData theme) {
+    return Consumer<SettingsProvider>(
+      builder: (context, settings, child) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: AppLayout.spaceXL),
+          child: Column(
+            children: [
+              const SizedBox(height: AppLayout.spaceL),
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.secondaryContainer,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.extension_outlined,
+                  color: theme.colorScheme.onSecondaryContainer,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: AppLayout.spaceXL),
+              Text(
+                'Modular Powerups',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppLayout.spaceS),
+              Text(
+                'Activate specialized modules now or toggle them anytime in Settings.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppLayout.spaceXL),
+
+              // Finance Module Toggle Card
+              AppCard(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppLayout.spaceL,
+                  vertical: AppLayout.spaceS,
+                ),
+                child: SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  secondary: Icon(
+                    Icons.account_balance_wallet_outlined,
+                    color: theme.colorScheme.primary,
+                  ),
+                  title: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          'Financial Manager',
+                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: AppLayout.spaceS),
+                      if (settings.showFinancialManager)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'Active',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onPrimaryContainer,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  subtitle: Text(
+                    'Track expense ledgers, income categories, and auto-parse bank SMS alerts.',
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                  value: settings.showFinancialManager,
+                  onChanged: (val) {
+                    HapticFeedback.lightImpact();
+                    settings.setShowFinancialManager(val);
+                  },
+                ),
+              ),
+              if (settings.showFinancialManager) ...[
+                const SizedBox(height: AppLayout.spaceS),
+                AppCard(
+                  margin: const EdgeInsets.only(left: AppLayout.spaceL),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppLayout.spaceL,
+                    vertical: AppLayout.spaceXS,
+                  ),
+                  child: SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    secondary: Icon(
+                      Icons.sync_rounded,
+                      color: theme.colorScheme.primary,
+                      size: 20,
+                    ),
+                    title: Text(
+                      'Auto SMS Background Sync',
+                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      'Auto-parse bank debit/credit notifications in background.',
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                    value: settings.dailySyncEnabled,
+                    onChanged: (val) {
+                      HapticFeedback.lightImpact();
+                      settings.setDailySyncEnabled(val);
+                    },
+                  ),
+                ),
+              ],
+              const SizedBox(height: AppLayout.spaceM),
+
+              // Period Tracker Toggle Card
+              AppCard(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppLayout.spaceL,
+                  vertical: AppLayout.spaceS,
+                ),
+                child: SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  secondary: Icon(
+                    Icons.water_drop_outlined,
+                    color: theme.colorScheme.tertiary,
+                  ),
+                  title: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          'Period & Health Tracker',
+                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: AppLayout.spaceS),
+                      if (settings.isPeriodTrackerEnabled)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.tertiaryContainer,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'Active',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onTertiaryContainer,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  subtitle: Text(
+                    'Offline cycle logging, predictions, and discreet local notifications.',
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                  value: settings.isPeriodTrackerEnabled,
+                  onChanged: (val) {
+                    HapticFeedback.lightImpact();
+                    settings.setIsPeriodTrackerEnabled(val);
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // --- Page 4: On-Device Gemini AI Setup ---
+  Widget _buildAiSlide(ThemeData theme) {
+    return Consumer<SettingsProvider>(
+      builder: (context, settings, child) {
+        final isSupported = settings.isDeviceAiSupported;
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: AppLayout.spaceXL),
+          child: Column(
+            children: [
+              const SizedBox(height: AppLayout.spaceL),
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.tertiaryContainer,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.auto_awesome_rounded,
+                  color: theme.colorScheme.onTertiaryContainer,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: AppLayout.spaceXL),
+              Text(
+                'On-Device AI Assistant',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppLayout.spaceS),
+              Text(
+                'Run Gemini Nano directly on your device NPU for intelligent note summaries and smart SMS tagging.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppLayout.spaceXL),
+
+              // Hardware Status Badge
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppLayout.spaceM,
+                  vertical: AppLayout.spaceS,
+                ),
+                decoration: BoxDecoration(
+                  color: isSupported
+                      ? theme.colorScheme.primaryContainer.withValues(alpha: 0.5)
+                      : theme.colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                  border: Border.all(
+                    color: isSupported
+                        ? theme.colorScheme.primary.withValues(alpha: 0.3)
+                        : theme.colorScheme.outlineVariant,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isSupported ? Icons.check_circle_rounded : Icons.info_outline_rounded,
+                      color: isSupported ? theme.colorScheme.primary : theme.colorScheme.outline,
+                      size: 20,
+                    ),
+                    const SizedBox(width: AppLayout.spaceS),
+                    Flexible(
+                      child: Text(
+                        isSupported
+                            ? 'Android AI Core & Hardware NPU Ready'
+                            : 'On-Device AI is not available on this device',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: isSupported
+                              ? theme.colorScheme.onPrimaryContainer
+                              : theme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppLayout.spaceL),
+
+              // AI Toggle Card
+              if (isSupported)
+                AppCard(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppLayout.spaceL,
+                    vertical: AppLayout.spaceS,
+                  ),
+                  child: SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    secondary: Icon(
+                      Icons.psychology_outlined,
+                      color: theme.colorScheme.tertiary,
+                    ),
+                    title: Text(
+                      'Enable Local Gemini Nano AI',
+                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      'Processes note summaries and SMS categorizations locally. Zero network traffic.',
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                    value: settings.useOnDeviceAi,
+                    onChanged: (val) {
+                      HapticFeedback.lightImpact();
+                      settings.setUseOnDeviceAi(val);
+                    },
+                  ),
+                )
+              else
+                AppCard(
+                  padding: AppLayout.paddingAllL,
+                  child: Text(
+                    'Your hardware does not currently report Android AI Core support. You can still use all core note, finance, and health tracking features with maximum performance.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      height: 1.4,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // --- Page 5: Quick Nav & Pro-Tips ---
+  Widget _buildTipsSlide(ThemeData theme) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: AppLayout.spaceXL),
+      child: Column(
+        children: [
+          const SizedBox(height: AppLayout.spaceL),
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.tips_and_updates_rounded,
+              color: theme.colorScheme.onPrimaryContainer,
+              size: 32,
+            ),
+          ),
+          const SizedBox(height: AppLayout.spaceXL),
+          Text(
+            'Ready to Explore!',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppLayout.spaceS),
+          Text(
+            'Here are a few quick tips to get the most out of Everything App.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppLayout.spaceXL),
+          _buildFeatureCard(
+            theme,
+            icon: Icons.sync_lock_rounded,
+            title: 'Auto Sync & Backups',
+            desc: 'Background bank SMS parsing for zero-click expense logging and automated AES-256 encrypted backups.',
+          ),
+          const SizedBox(height: AppLayout.spaceM),
+          _buildFeatureCard(
+            theme,
+            icon: Icons.lock_outline_rounded,
+            title: 'App Lock & Security',
+            desc: 'Protect private notes, financial ledgers, and health logs with PIN or fingerprint authentication.',
+          ),
+          const SizedBox(height: AppLayout.spaceM),
+          _buildFeatureCard(
+            theme,
+            icon: Icons.gesture_rounded,
+            title: 'Multi-Select Batch Actions',
+            desc: 'Long press any note card to select multiple notes for tagging, archiving, or deleting in bulk.',
+          ),
+          const SizedBox(height: AppLayout.spaceM),
+          _buildFeatureCard(
+            theme,
+            icon: Icons.navigation_outlined,
+            title: 'Responsive Navigation',
+            desc: 'Enabling modules reveals a bottom navigation bar on phones or a sleek side rail on larger screens.',
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper Widget for Feature Cards
+  Widget _buildFeatureCard(
+    ThemeData theme, {
+    required IconData icon,
+    required String title,
+    required String desc,
+  }) {
+    return AppCard(
+      padding: AppLayout.paddingAllL,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(AppLayout.spaceS),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(AppLayout.radiusM),
+            ),
+            child: Icon(icon, color: theme.colorScheme.primary, size: 24),
+          ),
+          const SizedBox(width: AppLayout.spaceM),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: AppLayout.spaceXS),
+                Text(
+                  desc,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper Widget for Theme Selection Segment Tiles
+  Widget _buildThemeOptionTile(
+    ThemeData theme, {
+    required String title,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: BouncingWidget(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onTap();
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            vertical: AppLayout.spaceM,
+          ),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? theme.colorScheme.primaryContainer
+                : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(AppLayout.radiusM),
+            border: Border.all(
+              color: isSelected
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+              width: isSelected ? 1.5 : 1.0,
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(
+                icon,
+                color: isSelected
+                    ? theme.colorScheme.onPrimaryContainer
+                    : theme.colorScheme.onSurfaceVariant,
+                size: 22,
+              ),
+              const SizedBox(height: AppLayout.spaceXS),
+              Text(
+                title,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: isSelected
+                      ? theme.colorScheme.onPrimaryContainer
+                      : theme.colorScheme.onSurfaceVariant,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

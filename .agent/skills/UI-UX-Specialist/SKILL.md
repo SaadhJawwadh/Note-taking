@@ -25,3 +25,24 @@ Refer to [design.md](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/.ag
 * **App Lock Frosted Overlay**: Use live `BackdropFilter` (sigma 24.0) over theme-aware surface container cards with M3 stadium action buttons (`StadiumBorder()`), excluding sensitive child widgets from the active tree when locked.
 * **Global InkSparkle & Ripple Shape Bounds**: Configure `splashFactory: InkSparkle.splashFactory` globally in `AppTheme`, and enforce matching `borderRadius` across `ListTileThemeData` (`AppLayout.radiusL`) and `IconButtonThemeData` (`CircleBorder`) so ripples conform to rounded surface bounds.
 * **Shortcut Search Integration**: Route external search shortcuts (`com.saadhjawwadh.notebook.SEARCH`) through `HomeAppBar.searchRequestedNotifier` to launch the inline stadium search pill and `UniversalSearchOverlay`.
+* **Google Material Icons & Symbols Standard**: Icon references must align with official [Google Material Icons / Symbols](https://fonts.google.com/icons). Prefer outlined/rounded variants (`Icons.<icon_name>_outlined` or `Icons.<icon_name>_rounded`) over filled variants for secondary controls and list tiles to maintain clean visual weights across light and dark themes.
+
+## 2. Material 3 Official Components Catalog ([m3.material.io](https://m3.material.io/components))
+When implementing UI components, strictly follow the M3 guidelines codified in [design.md Section 9](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/.agent/skills/UI-UX-Specialist/design.md#9-comprehensive-material-3-component-specifications--guidance-catalog-m3materialio):
+1. **Action Components:** Use `FilledButton` for single primary CTA, `FilledButton.tonal` for secondary actions, `SegmentedButton` for 2–5 view toggles, and `FloatingActionButton` ($56\text{ dp}$ / $28\text{ dp}$ radius) for constructive canvas actions.
+2. **Communication Components:** Use `Badge.count` for unread/filter indicators, `LinearProgressIndicator` with rounded caps for task progress, and floating `SnackBar` for non-blocking confirmations.
+3. **Containment Components:** Wrap cards in `AppCard` / `Material` to ensure ink splash visibility, use `AppBottomSheet` with $28\text{ dp}$ top corners for modal panels, and use `AppDialog` for alert confirmations.
+4. **Navigation Components:** Use glassmorphic `FrostedGlassSliverAppBar` for headers, `NavigationBar` ($80\text{ dp}$ height with active pill container) for mobile, and `NavigationRail` for tablets (>600dp).
+5. **Selection Components:** Use `PopupMenuButton` / `MenuAnchor` with Level 3 elevation (`3`), $28\text{ dp}$ shape radius, and $48\text{ dp}$ item height; `FilterChip` / `AppChip` for tag filters; `Switch` with active thumb icon for toggles.
+6. **Text Input Components:** Use `TextField` with $56\text{ dp}$ height and $12\text{ dp}$ radius. When embedding inside custom stadium pill containers, set `filled: false` and borderless `InputDecoration`.
+
+## 3. Material 3 Official Styles Catalog ([m3.material.io/styles](https://m3.material.io/styles))
+When styling UI screens and custom widgets, strictly enforce the M3 Style systems codified in [design.md Section 10](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/.agent/skills/UI-UX-Specialist/design.md#10-comprehensive-material-3-styles-specifications--guidance-catalog-m3materialiostyles):
+1. **Color System:** Implement dynamic seed generation (`ColorScheme.fromSeed`), 5-Tier Surface Containers (`lowest` $\rightarrow$ `highest`), OLED pitch black `#000000` dark mode, and minimum $4.5:1$ WCAG AA contrast ratios.
+2. **Typography Scale:** Pair `Google Sans Text` / `Plus Jakarta Sans` for controls and `Inter` with tabular figures (`[FontFeature.tabularFigures()]`) for monetary ledgers. Use exact 15-role typography tokens.
+3. **Shape System:** Follow the 7-tier M3 shape scale (XS `4dp` micro-badges, SM `8dp` chips, MD `12dp` text fields, LG `16dp` grid cards, XL `28dp` sheets/menus, XXL `32dp` dialogs, Stadium `1000dp` action pills). Use connected corner morphing for grouped items.
+4. **Motion Architecture:** Enforce physical spring physics (`Curves.elasticOut` / `Curves.easeOutBack`, scale Factor `0.96` on press state) and standard transition patterns (`SharedAxis`, `FadeThrough`, `OpenContainer`).
+5. **Elevation & Depth:** Use tonal surface container elevation instead of static shadows, and glassmorphic backdrop blur (`sigma 16.0–24.0`) for edge-to-edge app headers.
+6. **Material Symbols:** Use official Google Material Symbols (`Icons.<name>_outlined` / `Icons.<name>_rounded`) with minimum $48 \times 48\text{ dp}$ touch target sizes.
+
+

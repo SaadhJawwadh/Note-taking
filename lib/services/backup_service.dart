@@ -29,6 +29,7 @@ void callbackDispatcher() {
   if (kIsWeb || !(Platform.isAndroid || Platform.isIOS)) return;
   try {
     Workmanager().executeTask((task, inputData) async {
+      WidgetsFlutterBinding.ensureInitialized();
       if (task == kAutoBackupTaskName) return await performAutoBackup();
       if (task == SmsService.kDailySyncTaskName) return await SmsService.performDailyTransactionSync();
       if (task == kWidgetRefreshTaskName) {
@@ -144,16 +145,32 @@ Future<bool> performAutoBackup() async {
 
 Future<void> _rotateBackups(String directoryPath) async {
   final dir = Directory(directoryPath);
-  if (!await dir.exists()) return;
-  final files = <File>[];
-  await for (final entity in dir.list()) {
-    if (entity is File && entity.path.contains('notebook_auto_backup_') && entity.path.endsWith('.json')) files.add(entity);
+  if (await dir.exists()) {
+    final files = <File>[];
+    await for (final entity in dir.list()) {
+      if (entity is File && entity.path.contains('notebook_auto_backup_') && entity.path.endsWith('.json')) files.add(entity);
+    }
+    if (files.length > 5) {
+      files.sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
+      for (final old in files.skip(5)) {
+        try { await old.delete(); } catch (_) {}
+      }
+    }
   }
-  if (files.length <= 5) return;
-  files.sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
-  for (final old in files.skip(5)) {
-    try { await old.delete(); } catch (_) {}
-  }
+
+  try {
+    final tempDir = await getTemporaryDirectory();
+    if (await tempDir.exists()) {
+      final cutoff = DateTime.now().subtract(const Duration(hours: 24));
+      await for (final entity in tempDir.list()) {
+        if (entity is File &&
+            (entity.path.contains('notebook_backup_') || entity.path.contains('transactions_export_')) &&
+            entity.lastModifiedSync().isBefore(cutoff)) {
+          try { await entity.delete(); } catch (_) {}
+        }
+      }
+    }
+  } catch (_) {}
 }
 
 Future<void> syncAutoBackupSchedule() async {

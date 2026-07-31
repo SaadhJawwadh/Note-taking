@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/note_provider.dart';
 import 'package:flutter/services.dart';
-import '../core/theme/app_layout.dart';
+import '../core/ui/app_chip.dart';
 
 class TagFilterBar extends StatelessWidget {
   final Function(String) onTagLongPress;
@@ -18,8 +18,8 @@ class TagFilterBar extends StatelessWidget {
         final tagColors = noteProvider.tagColors;
 
         return Container(
-          height: 50,
-          margin: const EdgeInsets.symmetric(vertical: 8),
+          height: 40,
+          margin: const EdgeInsets.symmetric(vertical: 4),
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -28,69 +28,29 @@ class TagFilterBar extends StatelessWidget {
               final tag = allTags[index];
               final isSelected = tag == selectedTag;
               final tagColorValue = tagColors[tag];
-
-              Color? chipBg;
-              Color? chipFg;
-              BorderSide? chipSide;
-
-              if (isSelected) {
-                if (tagColorValue != null && tagColorValue != 0) {
-                  final scheme = ColorScheme.fromSeed(
-                      seedColor: Color(tagColorValue),
-                      brightness: Theme.of(context).brightness);
-                  chipBg = scheme.primary;
-                  chipFg = scheme.onPrimary;
-                } else {
-                  chipBg = Theme.of(context).colorScheme.primary;
-                  chipFg = Theme.of(context).colorScheme.onPrimary;
-                }
-                chipSide = BorderSide.none;
-              } else {
-                if (tagColorValue != null && tagColorValue != 0) {
-                  final scheme = ColorScheme.fromSeed(
-                      seedColor: Color(tagColorValue),
-                      brightness: Theme.of(context).brightness);
-                  chipBg = Colors.transparent;
-                  chipFg = scheme.primary;
-                  chipSide = BorderSide(color: scheme.primary);
-                } else {
-                  chipBg = Colors.transparent;
-                  chipFg = Theme.of(context).colorScheme.onSurfaceVariant;
-                  chipSide = BorderSide(
-                    color: Theme.of(context).colorScheme.outline,
-                  );
-                }
-              }
+              final chipColors = AppChip.getTagColors(context, tagColorValue, isSelected: isSelected);
 
               return Padding(
-                padding: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.only(right: 6),
                 child: GestureDetector(
                   onLongPress: () {
                     HapticFeedback.mediumImpact();
                     onTagLongPress(tag);
                   },
-                  child: FilterChip(
-                    label: Text(
-                      (noteProvider.tagCounts[tag] ?? 0) > 0
-                          ? '$tag · ${noteProvider.tagCounts[tag]}'
-                          : tag,
-                    ),
-                    selected: isSelected,
-                    onSelected: (selected) {
+                  child: AppChip(
+                    label: (noteProvider.tagCounts[tag] ?? 0) > 0
+                        ? '$tag · ${noteProvider.tagCounts[tag]}'
+                        : tag,
+                    isSelected: isSelected,
+                    isCompact: true,
+                    backgroundColor: chipColors.bg,
+                    selectedBackgroundColor: chipColors.bg,
+                    textColor: chipColors.fg,
+                    border: chipColors.border,
+                    onTap: () {
                       HapticFeedback.lightImpact();
-                      if (selected) noteProvider.setTag(tag);
+                      noteProvider.setTag(tag);
                     },
-                    backgroundColor: chipBg,
-                    selectedColor: chipBg,
-                    labelStyle: TextStyle(
-                      color: chipFg,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    ),
-                    side: chipSide,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppLayout.radiusXL),
-                    ),
-                    showCheckmark: false,
                   ),
                 ),
               );

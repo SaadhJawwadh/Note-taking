@@ -22,6 +22,7 @@ import 'services/backup_service.dart' as backup;
 
 import 'services/local_ai_service.dart';
 import 'services/gemini_nano_service.dart';
+import 'data/repositories/recurring_rule_repository.dart';
 import 'utils/widget_helper.dart';
 import 'utils/app_globals.dart';
 
@@ -50,7 +51,11 @@ Future<void> main() async {
       if (!kIsWeb && (Platform.isAndroid || Platform.isIOS))
         Workmanager().initialize(backup.callbackDispatcher).catchError((e) => debugPrint('Workmanager error: $e')),
       TransactionCategory.reload().catchError((e) => debugPrint('Category reload error: $e')),
-      SmsService.reloadSmsContacts().catchError((e) => debugPrint('SmsService reload error: $e')),
+      SmsService.init().catchError((e) => debugPrint('SmsService init error: $e')),
+      RecurringRuleRepository.instance.materializeDueRules().catchError((e) {
+        debugPrint('Materialize rules error: $e');
+        return 0;
+      }),
       if (!kIsWeb)
         NotificationService.initialize().catchError((e) => debugPrint('NotificationService error: $e')),
     ]).timeout(const Duration(seconds: 10), onTimeout: () {
@@ -124,7 +129,13 @@ class NoteApp extends StatelessWidget {
           themeMode: settings.themeMode,
           home: const HomeScreen(),
           builder: (context, child) {
-            return AppLockScreen(child: child!);
+            final mediaQueryData = MediaQuery.of(context);
+            return MediaQuery(
+              data: mediaQueryData.copyWith(
+                textScaler: TextScaler.linear(settings.textSize / 16.0),
+              ),
+              child: AppLockScreen(child: child!),
+            );
           },
           localizationsDelegates: const [
             AppLocalizations.delegate,

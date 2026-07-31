@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:another_telephony/telephony.dart' hide NetworkType;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/widgets.dart';
 import '../features/finances/data/transaction_repository.dart';
 import '../data/transaction_model.dart';
 import '../data/transaction_category.dart';
@@ -83,7 +84,27 @@ class SmsService {
     } catch (_) {}
   }
 
-  static Future<bool> requestPermissions() async => (await Permission.sms.request()).isGranted;
+  static Future<void> init() async {
+    try {
+      await reloadSmsContacts();
+      await TransactionCategory.reload();
+      if (await hasPermission()) {
+        await _startTelephonyListening();
+        await syncDailySyncSchedule();
+      }
+    } catch (e) {
+      debugPrint('SmsService init error: $e');
+    }
+  }
+
+  static Future<bool> requestPermissions() async {
+    final granted = (await Permission.sms.request()).isGranted;
+    if (granted) {
+      await _startTelephonyListening();
+      await syncDailySyncSchedule();
+    }
+    return granted;
+  }
 
   static Future<bool> hasPermission() async => (await Permission.sms.status).isGranted;
 
@@ -179,21 +200,27 @@ class SmsService {
     return _smsStreamController.stream;
   }
 
-  static void _startTelephonyListening() {
+  static Future<void> _startTelephonyListening() async {
     if (_isListeningToTelephony) return;
-    _isListeningToTelephony = true;
+    if (!await hasPermission()) return;
     
-    telephony.listenIncomingSms(
-      onNewMessage: (SmsMessage message) async {
-        await reloadSmsContacts();
-        await TransactionCategory.reload();
-        final inserted = await _handleNewSms(message);
-        if (inserted != null) {
-          _smsStreamController.add(inserted);
-        }
-      },
-      onBackgroundMessage: backgroundMessageHandler,
-    );
+    _isListeningToTelephony = true;
+    try {
+      telephony.listenIncomingSms(
+        onNewMessage: (SmsMessage message) async {
+          await reloadSmsContacts();
+          await TransactionCategory.reload();
+          final inserted = await _handleNewSms(message);
+          if (inserted != null) {
+            _smsStreamController.add(inserted);
+          }
+        },
+        onBackgroundMessage: backgroundMessageHandler,
+      );
+    } catch (e) {
+      _isListeningToTelephony = false;
+      debugPrint('Error starting telephony listener: $e');
+    }
   }
 
   @Deprecated('Use incomingTransactions instead to avoid memory leaks')
@@ -342,6 +369,8 @@ class SmsService {
   }
 
   static Future<bool> performDailyTransactionSync() async {
+    WidgetsFlutterBinding.ensureInitialized();
+    bool success = false;
     try {
       final prefs = await SharedPreferences.getInstance();
 
@@ -366,76 +395,88 @@ class SmsService {
         );
       }
 
-      // Schedule next run for tomorrow's target time
-      final timeStr = prefs.getString('dailySyncTime') ?? '20:00';
-      final delay = calculateDailySyncDelay(timeStr);
-      await Workmanager().registerOneOffTask(
-        kDailySyncTaskName,
-        kDailySyncTaskName,
-        initialDelay: delay,
-        constraints: Constraints(
-          networkType: NetworkType.notRequired,
-          requiresBatteryNotLow: true,
-        ),
-      );
-
-      return true;
+      success = true;
     } catch (e) {
       debugPrint('performDailyTransactionSync error: $e');
-      return false;
+      success = false;
+    } finally {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        if (prefs.getBool('dailySyncEnabled') ?? false) {
+          final timeStr = prefs.getString('dailySyncTime') ?? '20:00';
+          final delay = calculateDailySyncDelay(timeStr);
+          await Workmanager().registerOneOffTask(
+            kDailySyncTaskName,
+            kDailySyncTaskName,
+            initialDelay: delay,
+            constraints: Constraints(
+              networkType: NetworkType.notRequired,
+              requiresBatteryNotLow: true,
+            ),
+          );
+        }
+      } catch (e) {
+        debugPrint('Error re-registering daily sync task: $e');
+      }
     }
+    return success;
   }
 }
 
 @pragma('vm:entry-point')
 Future<void> backgroundMessageHandler(SmsMessage message) async {
-  // Setup SharedPreferences and database config for the isolate
-  final prefs = await SharedPreferences.getInstance();
-  final customExpenseRules = prefs.getStringList('customExpenseRules') ?? [];
-  final customIncomeRules = prefs.getStringList('customIncomeRules') ?? [];
-  
-  final contacts = await TransactionRepository.instance.getAllSmsContacts();
-  final allowed = <String>{};
-  final blocked = <String>{};
-  for (final c in contacts) {
-    if (c.isBlocked) {
-      blocked.addAll(c.senderIds.map((s) => s.toLowerCase()));
-    } else {
-      allowed.addAll(c.senderIds.map((s) => s.toLowerCase()));
-    }
-  }
-
-  await TransactionCategory.reload();
-
-  final transaction = await SmsService._parseWithAiFallback(
-    body: message.body ?? '',
-    address: message.address ?? '',
-    messageId: message.id,
-    messageDate: message.date,
-    allowedSenderIds: allowed,
-    blockedSenderIds: blocked,
-    customExpenseRules: customExpenseRules,
-    customIncomeRules: customIncomeRules,
-  );
-  if (transaction != null) {
-    if (await TransactionRepository.instance.hasCrossSenderDuplicate(transaction.amount, transaction.date)) {
-      return;
-    }
-    final inserted = await TransactionRepository.instance.createSmsTransaction(transaction);
-    if (inserted != null) {
-      if (transaction.category == SmsConstants.reversalSentinel) {
-        final target = await TransactionRepository.instance.findReversalTarget(transaction.amount, transaction.date);
-        if (target != null) {
-          await TransactionRepository.instance.deleteTransaction(target.id!);
-        }
-        await TransactionRepository.instance.deleteTransaction(inserted.id!);
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    // Setup SharedPreferences and database config for the isolate
+    final prefs = await SharedPreferences.getInstance();
+    final customExpenseRules = prefs.getStringList('customExpenseRules') ?? [];
+    final customIncomeRules = prefs.getStringList('customIncomeRules') ?? [];
+    
+    final contacts = await TransactionRepository.instance.getAllSmsContacts();
+    final allowed = <String>{};
+    final blocked = <String>{};
+    for (final c in contacts) {
+      if (c.isBlocked) {
+        blocked.addAll(c.senderIds.map((s) => s.toLowerCase()));
       } else {
-        await NotificationService.showNotification(
-          id: inserted.id ?? (DateTime.now().millisecondsSinceEpoch ~/ 1000),
-          title: inserted.isExpense ? '💳 Expense Auto-Imported' : '💰 Income Auto-Imported',
-          body: '${inserted.isExpense ? "Spent" : "Received"} ${inserted.amount.toStringAsFixed(0)} • ${inserted.description}',
-        );
+        allowed.addAll(c.senderIds.map((s) => s.toLowerCase()));
       }
     }
+
+    await TransactionCategory.reload();
+
+    final transaction = await SmsService._parseWithAiFallback(
+      body: message.body ?? '',
+      address: message.address ?? '',
+      messageId: message.id,
+      messageDate: message.date,
+      allowedSenderIds: allowed,
+      blockedSenderIds: blocked,
+      customExpenseRules: customExpenseRules,
+      customIncomeRules: customIncomeRules,
+    );
+    if (transaction != null) {
+      if (await TransactionRepository.instance.hasCrossSenderDuplicate(transaction.amount, transaction.date)) {
+        return;
+      }
+      final inserted = await TransactionRepository.instance.createSmsTransaction(transaction);
+      if (inserted != null) {
+        if (transaction.category == SmsConstants.reversalSentinel) {
+          final target = await TransactionRepository.instance.findReversalTarget(transaction.amount, transaction.date);
+          if (target != null) {
+            await TransactionRepository.instance.deleteTransaction(target.id!);
+          }
+          await TransactionRepository.instance.deleteTransaction(inserted.id!);
+        } else {
+          await NotificationService.showNotification(
+            id: inserted.id ?? (DateTime.now().millisecondsSinceEpoch ~/ 1000),
+            title: inserted.isExpense ? '💳 Expense Auto-Imported' : '💰 Income Auto-Imported',
+            body: '${inserted.isExpense ? "Spent" : "Received"} ${inserted.amount.toStringAsFixed(0)} • ${inserted.description}',
+          );
+        }
+      }
+    }
+  } catch (e) {
+    debugPrint('backgroundMessageHandler error: $e');
   }
 }

@@ -22,18 +22,18 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
   });
 
   static const light = AppSemanticColors(
-    success: Color(0xFF1E8E3E),
-    phaseMenstrual: Color(0xFFE57373),
-    phaseFollicular: Color(0xFF64B5F6),
-    phaseOvulatory: Color(0xFFFFB74D),
-    phaseLuteal: Color(0xFFBA68C8),
+    success: Color(0xFF1B873F),
+    phaseMenstrual: Color(0xFFD32F2F),
+    phaseFollicular: Color(0xFF1976D2),
+    phaseOvulatory: Color(0xFFF57C00),
+    phaseLuteal: Color(0xFF7B1FA2),
   );
   static const dark = AppSemanticColors(
-    success: Color(0xFF34C759),
-    phaseMenstrual: Color(0xFFE57373),
-    phaseFollicular: Color(0xFF64B5F6),
-    phaseOvulatory: Color(0xFFFFB74D),
-    phaseLuteal: Color(0xFFBA68C8),
+    success: Color(0xFF32D74B),
+    phaseMenstrual: Color(0xFFEF9A9A),
+    phaseFollicular: Color(0xFF90CAF9),
+    phaseOvulatory: Color(0xFFFFCC80),
+    phaseLuteal: Color(0xFFCE93D8),
   );
 
   @override
@@ -76,27 +76,21 @@ class AppTheme {
   static const Color textSecondary = Color(0xFF8E8E93);
   static const Color errorRed = Color(0xFFFF453A);
 
-  // Note Color Seeds (Material Standard Colors)
+  // Note Color Seeds (Material 3 Expressive Curated Palette)
   static const List<Color> noteColors = [
-    Color(0x00000000), // System Default
-    Colors.red,
-    Colors.pink,
-    Colors.purple,
-    Colors.deepPurple,
-    Colors.indigo,
-    Colors.blue,
-    Colors.lightBlue,
-    Colors.cyan,
-    Colors.teal,
-    Colors.green,
-    Colors.lightGreen,
-    Colors.lime,
-    Colors.yellow,
-    Colors.amber,
-    Colors.orange,
-    Colors.deepOrange,
-    Colors.brown,
-    Colors.blueGrey,
+    Color(0x00000000), // System Default (0)
+    Color(0xFFE06D53), // Coral Dusk
+    Color(0xFFD9779B), // Soft Rose
+    Color(0xFF9E7BB5), // Lavender Dusk
+    Color(0xFF6A7EC0), // Indigo Dusk
+    Color(0xFF5194B6), // Sky Blue
+    Color(0xFF4E9F90), // Sage Teal
+    Color(0xFF5A9E75), // Emerald
+    Color(0xFF86A148), // Olive Green
+    Color(0xFFD49339), // Amber Harvest
+    Color(0xFFC86F4B), // Terracotta
+    Color(0xFF917265), // Warm Brown
+    Color(0xFF758596), // Slate Blue
   ];
 
   static ThemeData createTheme(
@@ -193,6 +187,7 @@ class AppTheme {
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
           shape: const CircleBorder(),
+          minimumSize: const Size(48, 48),
         ),
       ),
       appBarTheme: AppBarTheme(
@@ -213,16 +208,59 @@ class AppTheme {
       ),
       popupMenuTheme: PopupMenuThemeData(
         color: scheme.surfaceContainerHigh,
-        elevation: 6,
-        shadowColor: scheme.shadow.withValues(alpha: 0.2),
+        elevation: 3,
+        shadowColor: scheme.shadow.withValues(alpha: 0.15),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppLayout.radiusXL),
           side: BorderSide(
-            color: scheme.outlineVariant.withValues(alpha: 0.3),
+            color: scheme.outlineVariant.withValues(alpha: 0.35),
             width: 1,
           ),
         ),
         menuPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        labelTextStyle: WidgetStateProperty.all(
+          textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w500,
+            color: scheme.onSurface,
+          ),
+        ),
+      ),
+      menuTheme: MenuThemeData(
+        style: MenuStyle(
+          backgroundColor: WidgetStateProperty.all(scheme.surfaceContainerHigh),
+          elevation: WidgetStateProperty.all(3),
+          shadowColor: WidgetStateProperty.all(scheme.shadow.withValues(alpha: 0.15)),
+          shape: WidgetStateProperty.all(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppLayout.radiusXL),
+              side: BorderSide(
+                color: scheme.outlineVariant.withValues(alpha: 0.35),
+                width: 1,
+              ),
+            ),
+          ),
+          padding: WidgetStateProperty.all(const EdgeInsets.symmetric(vertical: 8, horizontal: 4)),
+        ),
+      ),
+      dropdownMenuTheme: DropdownMenuThemeData(
+        menuStyle: MenuStyle(
+          backgroundColor: WidgetStateProperty.all(scheme.surfaceContainerHigh),
+          elevation: WidgetStateProperty.all(3),
+          shadowColor: WidgetStateProperty.all(scheme.shadow.withValues(alpha: 0.15)),
+          shape: WidgetStateProperty.all(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppLayout.radiusXL),
+              side: BorderSide(
+                color: scheme.outlineVariant.withValues(alpha: 0.35),
+                width: 1,
+              ),
+            ),
+          ),
+        ),
+        textStyle: textTheme.bodyMedium?.copyWith(
+          fontWeight: FontWeight.w500,
+          color: scheme.onSurface,
+        ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: scheme.primaryContainer,

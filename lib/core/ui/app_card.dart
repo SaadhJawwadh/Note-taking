@@ -32,27 +32,35 @@ class AppCard extends StatelessWidget {
     final effectiveColor = backgroundColor ?? theme.colorScheme.surfaceContainerHigh;
     final effectiveRadius = borderRadius ?? AppLayout.radiusL;
 
-    Widget content = Container(
+    Widget cardPadding = Padding(
       padding: padding ?? AppLayout.paddingAllL,
-      decoration: BoxDecoration(
-        color: effectiveColor,
-        borderRadius: BorderRadius.circular(effectiveRadius),
-        border: border != null ? Border.fromBorderSide(border!) : null,
-        boxShadow: boxShadow,
-      ),
       child: child,
     );
 
-    if (onTap != null || onLongPress != null) {
-      content = Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(effectiveRadius),
-        child: InkWell(
-          onTap: onTap,
-          onLongPress: onLongPress,
+    Widget content = Material(
+      color: effectiveColor,
+      borderRadius: BorderRadius.circular(effectiveRadius),
+      clipBehavior: Clip.antiAlias,
+      child: (onTap != null || onLongPress != null)
+          ? InkWell(
+              onTap: onTap,
+              onLongPress: onLongPress,
+              splashColor: theme.colorScheme.primary.withValues(alpha: 0.12),
+              highlightColor: theme.colorScheme.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(effectiveRadius),
+              child: cardPadding,
+            )
+          : cardPadding,
+    );
+
+    if (border != null || boxShadow != null) {
+      content = Container(
+        decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(effectiveRadius),
-          child: content,
+          border: border != null ? Border.fromBorderSide(border!) : null,
+          boxShadow: boxShadow,
         ),
+        child: content,
       );
     }
 

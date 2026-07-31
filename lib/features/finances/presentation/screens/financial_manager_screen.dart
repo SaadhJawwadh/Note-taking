@@ -1132,11 +1132,12 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                             PopupMenuButton<String>(
                               icon: const Icon(Icons.more_vert),
                               tooltip: 'More Tools',
-                              elevation: 6,
+                              elevation: 3,
+                              shadowColor: colorScheme.shadow.withValues(alpha: 0.15),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(AppLayout.radiusXL),
                                 side: BorderSide(
-                                  color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                                  color: colorScheme.outlineVariant.withValues(alpha: 0.35),
                                   width: 1,
                                 ),
                               ),
@@ -1156,7 +1157,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                               itemBuilder: (context) => [
                                 PopupMenuItem(
                                   value: 'cleanup',
-                                  height: 44,
+                                  height: 48,
                                   child: Row(
                                     children: [
                                       Icon(Icons.cleaning_services_outlined, size: 20, color: colorScheme.onSurfaceVariant),
@@ -1167,7 +1168,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                 ),
                                 PopupMenuItem(
                                   value: 'discover',
-                                  height: 44,
+                                  height: 48,
                                   child: Row(
                                     children: [
                                       Icon(Icons.radar_outlined, size: 20, color: colorScheme.onSurfaceVariant),
@@ -1178,7 +1179,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                 ),
                                 PopupMenuItem(
                                   value: 'export',
-                                  height: 44,
+                                  height: 48,
                                   child: Row(
                                     children: [
                                       Icon(Icons.table_view_outlined, size: 20, color: colorScheme.onSurfaceVariant),
@@ -1189,7 +1190,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                 ),
                                 PopupMenuItem(
                                   value: 'settings',
-                                  height: 44,
+                                  height: 48,
                                   child: Row(
                                     children: [
                                       Icon(Icons.settings_outlined, size: 20, color: colorScheme.onSurfaceVariant),

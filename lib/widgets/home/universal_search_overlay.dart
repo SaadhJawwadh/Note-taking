@@ -18,6 +18,7 @@ import '../../services/backup_service.dart';
 import '../../services/sms_service.dart';
 import '../../utils/app_route.dart';
 import '../../core/theme/app_layout.dart';
+import '../../core/theme/app_theme.dart';
 
 class SettingsSearchResult {
   final String title;
@@ -628,7 +629,9 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
         trailing: Text(
           "${t.isExpense ? '-' : '+'}${t.amount.toStringAsFixed(2)}",
           style: TextStyle(
-            color: t.isExpense ? theme.colorScheme.error : Colors.green,
+            color: t.isExpense
+                ? theme.colorScheme.error
+                : (theme.extension<AppSemanticColors>()?.success ?? theme.colorScheme.primary),
             fontWeight: FontWeight.bold,
           ),
         ),

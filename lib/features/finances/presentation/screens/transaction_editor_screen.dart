@@ -322,18 +322,18 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
   }
 
   static const _colorSwatches = [
-    Color(0xFFE53935), // Red
-    Color(0xFFE91E63), // Pink
-    Color(0xFF9C27B0), // Purple
-    Color(0xFF673AB7), // Deep Purple
-    Color(0xFF3F51B5), // Indigo
-    Color(0xFF2196F3), // Blue
-    Color(0xFF00BCD4), // Cyan
-    Color(0xFF009688), // Teal
-    Color(0xFF4CAF50), // Green
-    Color(0xFFFF9800), // Orange
-    Color(0xFFFF5722), // Deep Orange
-    Color(0xFF607D8B), // Blue Grey
+    Color(0xFFE06D53), // Coral Dusk
+    Color(0xFFD9779B), // Soft Rose
+    Color(0xFF9E7BB5), // Lavender Dusk
+    Color(0xFF6A7EC0), // Indigo Dusk
+    Color(0xFF5194B6), // Sky Blue
+    Color(0xFF4E9F90), // Sage Teal
+    Color(0xFF5A9E75), // Emerald
+    Color(0xFF86A148), // Olive Green
+    Color(0xFFD49339), // Amber Harvest
+    Color(0xFFC86F4B), // Terracotta
+    Color(0xFF917265), // Warm Brown
+    Color(0xFF758596), // Slate Blue
   ];
 
   Future<void> _showNewCategoryDialog() async {

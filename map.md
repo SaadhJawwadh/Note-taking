@@ -69,6 +69,7 @@ lib/
 │   └── settings/                     # App Settings & Preferences Feature Module
 │       ├── presentation/
 │       │   └── screens/
+│       │       ├── onboarding_screen.dart# Full-screen multi-step setup & theme wizard
 │       │       └── settings_screen.dart# App options, backup/restore, security controls
 │       └── providers/
 │           └── settings_provider.dart# SharedPreferences state & global app options
@@ -163,12 +164,14 @@ A fully offline, privacy-first menstrual cycle tracker.
     *   Log Entity: `lib/data/period_log_model.dart`
 
 ### 4. Settings & App Preferences Module (`lib/features/settings/`)
-Consolidates global app configuration, security timeouts, and data backups.
+Consolidates global app configuration, onboarding setup wizard, security timeouts, and data backups.
 *   **Key Features**:
+    *   **Onboarding Wizard**: Multi-step full-screen setup (`OnboardingScreen`) with live theme customization, modular feature switches, background sync toggles, and hardware NPU AI Core detection.
     *   **Global Provider**: `SettingsProvider` handles dark/light theme modes, dynamic colors, currency preferences, custom rules, and category budgets.
     *   **Backup & Recovery**: Encrypted JSON backups via `BackupService`. Excludes sensitive biometric settings to prevent override via untrusted files.
 *   **Key Files**:
-    *   UI Screen: `lib/features/settings/presentation/screens/settings_screen.dart`
+    *   Onboarding UI: `lib/features/settings/presentation/screens/onboarding_screen.dart`
+    *   Settings UI: `lib/features/settings/presentation/screens/settings_screen.dart`
     *   State Manager: `lib/features/settings/providers/settings_provider.dart`
 
 ### 5. Core Design System & UI Components (`lib/core/`)

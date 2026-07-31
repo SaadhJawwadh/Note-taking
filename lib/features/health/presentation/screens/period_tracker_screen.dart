@@ -146,13 +146,13 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
     final semantic = Theme.of(context).extension<AppSemanticColors>();
     switch (_currentPhase) {
       case 'Menstrual Phase':
-        return semantic?.phaseMenstrual ?? Colors.red.shade300;
+        return semantic?.phaseMenstrual ?? const Color(0xFFD32F2F);
       case 'Follicular Phase':
-        return semantic?.phaseFollicular ?? Colors.blue.shade300;
+        return semantic?.phaseFollicular ?? const Color(0xFF1976D2);
       case 'Ovulatory Phase':
-        return semantic?.phaseOvulatory ?? Colors.orange.shade300;
+        return semantic?.phaseOvulatory ?? const Color(0xFFF57C00);
       case 'Luteal Phase':
-        return semantic?.phaseLuteal ?? Colors.purple.shade300;
+        return semantic?.phaseLuteal ?? const Color(0xFF7B1FA2);
       default:
         return Theme.of(context).colorScheme.outline;
     }
@@ -558,14 +558,11 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen>
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    Color periodColor = colorScheme.errorContainer;
-    Color onPeriodColor = colorScheme.onErrorContainer;
-    if (theme.brightness == Brightness.dark) {
-      // Make the red explicitly lighter per user request
-      periodColor = Colors.red.shade200;
-      // Fix accessibility: dark text contrasts much better on a lightened background
-      onPeriodColor = Colors.black87;
-    }
+    final semantic = theme.extension<AppSemanticColors>();
+    final periodColor = semantic?.phaseMenstrual ?? colorScheme.errorContainer;
+    final onPeriodColor = theme.brightness == Brightness.dark
+        ? const Color(0xFF1C1A22)
+        : colorScheme.onErrorContainer;
 
     final isDark = theme.brightness == Brightness.dark;
 

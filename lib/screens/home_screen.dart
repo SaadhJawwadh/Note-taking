@@ -15,6 +15,7 @@ import '../data/settings_provider.dart';
 import '../providers/note_provider.dart';
 import '../core/theme/app_theme.dart';
 import '../core/theme/app_layout.dart';
+import '../core/ui/app_chip.dart';
 import '../widgets/tag_filter_bar.dart';
 import '../widgets/home/home_app_bar.dart';
 import '../widgets/home/note_view_builder.dart';
@@ -28,7 +29,7 @@ import 'package:note_taking_app/features/finances/presentation/screens/transacti
 import '../utils/app_route.dart';
 import '../features/notes/data/note_repository.dart';
 import '../widgets/bouncing_widget.dart';
-import '../widgets/onboarding_sheet.dart';
+import '../features/settings/presentation/screens/onboarding_screen.dart';
 import '../utils/widget_helper.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/whats_new_sheet.dart';
@@ -464,13 +465,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _showOnboardingSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      isDismissible: false,
-      enableDrag: false,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const OnboardingSheet(),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const OnboardingScreen(),
+      ),
     );
   }
 
@@ -1024,12 +1022,11 @@ class NoteCard extends StatelessWidget {
                   ),
                 if (note.isLocked) ...[
                   const SizedBox(height: AppLayout.spaceS),
-                  Row(
-                    children: [
-                      Icon(Icons.lock_outline, size: AppLayout.iconS, color: theme.colorScheme.onSurfaceVariant),
-                      const SizedBox(width: AppLayout.spaceS),
-                      Text('Locked note', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant, fontStyle: FontStyle.italic)),
-                    ],
+                  AppChip(
+                    label: 'Locked Note',
+                    icon: Icons.lock_outline,
+                    backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                    textColor: theme.colorScheme.onSurfaceVariant,
                   ),
                 ],
                 if (!note.isLocked && note.imagePath != null) ...[

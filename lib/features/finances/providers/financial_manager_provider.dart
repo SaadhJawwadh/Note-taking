@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../data/transaction_model.dart';
 import '../data/transaction_repository.dart';
+import '../../../data/repositories/recurring_rule_repository.dart';
 
 /// ChangeNotifier managing state and financial metrics for Financial Manager.
 class FinancialManagerProvider extends ChangeNotifier {
@@ -31,6 +32,10 @@ class FinancialManagerProvider extends ChangeNotifier {
   Future<void> loadTransactions() async {
     _isLoading = true;
     notifyListeners();
+
+    try {
+      await RecurringRuleRepository.instance.materializeDueRules();
+    } catch (_) {}
 
     _allTransactions = await _repository.readAllTransactions();
     _applyFilters();

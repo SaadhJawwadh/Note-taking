@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/local_ai_service.dart';
 import '../../../services/sms_service.dart';
+import '../../../services/backup_service.dart';
 import '../../../screens/app_lock_screen.dart';
 import 'dart:convert';
 
@@ -97,6 +98,9 @@ class SettingsProvider extends ChangeNotifier {
   Map<String, double> _categoryBudgets = {};
   Map<String, double> get categoryBudgets => _categoryBudgets;
 
+  int _trashAutoPurgeDays = 30;
+  int get trashAutoPurgeDays => _trashAutoPurgeDays;
+
   SettingsProvider() {
     loadSettings();
   }
@@ -141,6 +145,7 @@ class SettingsProvider extends ChangeNotifier {
     _dailySyncTime = prefs.getString('dailySyncTime') ?? '20:00';
     _smsSyncFrequency = prefs.getString('smsSyncFrequency') ?? '12';
     _lastSeenVersion = prefs.getString('lastSeenVersion') ?? '';
+    _trashAutoPurgeDays = prefs.getInt('trashAutoPurgeDays') ?? 30;
 
     final budgetsStr = prefs.getString('categoryBudgets');
     if (budgetsStr != null) {
@@ -157,6 +162,16 @@ class SettingsProvider extends ChangeNotifier {
 
     _isInitialized = true;
     notifyListeners();
+
+    if (_autoBackupEnabled) {
+      await syncAutoBackupSchedule();
+    }
+    if (_dailySyncEnabled) {
+      await SmsService.syncDailySyncSchedule();
+    }
+    if (_isPeriodTrackerEnabled && !kIsWeb) {
+      await NotificationService.schedulePeriodNotifications();
+    }
   }
 
   Future<void> setHasSeenOnboarding(bool seen) async {
@@ -177,6 +192,13 @@ class SettingsProvider extends ChangeNotifier {
     _currency = curr;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('currency', curr);
+    notifyListeners();
+  }
+
+  Future<void> setTrashAutoPurgeDays(int days) async {
+    _trashAutoPurgeDays = days;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('trashAutoPurgeDays', days);
     notifyListeners();
   }
 
@@ -222,6 +244,7 @@ class SettingsProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('autoBackupEnabled', enabled);
     notifyListeners();
+    await syncAutoBackupSchedule();
   }
 
   Future<void> setAutoBackupFrequency(String freq) async {
@@ -229,6 +252,7 @@ class SettingsProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('autoBackupFrequency', freq);
     notifyListeners();
+    await syncAutoBackupSchedule();
   }
 
   Future<void> setAutoBackupPath(String? path) async {
@@ -240,6 +264,7 @@ class SettingsProvider extends ChangeNotifier {
       await prefs.remove('autoBackupPath');
     }
     notifyListeners();
+    await syncAutoBackupSchedule();
   }
 
   Future<void> setLastAutoBackupTime(String? time) async {

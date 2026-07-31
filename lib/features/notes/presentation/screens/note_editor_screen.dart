@@ -16,6 +16,7 @@ import 'package:provider/provider.dart';
 import '../../../../data/settings_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_layout.dart';
+import '../../../../core/ui/app_chip.dart';
 import '../../../../utils/rich_text_utils.dart';
 import '../../../../utils/quill_checklist_helper.dart';
 import 'dart:io';
@@ -550,10 +551,19 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                     ),
                     onChanged: (v) => enteredTag = v.trim(),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
+                  Text(
+                    'TAG COLOR',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
                   Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
+                    spacing: 8,
+                    runSpacing: 8,
                     alignment: WrapAlignment.center,
                     children: [
                       ...AppTheme.noteColors.map((c) {
@@ -578,32 +588,47 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                 setModalState(() => newTagColor = c.toARGB32());
                               }
                             },
-                            child: Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: isSystem
-                                    ? Theme.of(context).colorScheme.surface
-                                    : c,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: isSelected
-                                      ? Theme.of(context).colorScheme.primary
-                                      : Theme.of(context)
-                                          .colorScheme
-                                          .outlineVariant,
-                                  width: isSelected ? 3 : 1,
+                            child: SizedBox(
+                              width: 44,
+                              height: 44,
+                              child: Center(
+                                child: Container(
+                                  width: isSelected ? 34 : 30,
+                                  height: isSelected ? 34 : 30,
+                                  decoration: BoxDecoration(
+                                    color: isSystem
+                                        ? Theme.of(context).colorScheme.surfaceContainerHigh
+                                        : c,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? Theme.of(context).colorScheme.primary
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .outlineVariant,
+                                      width: isSelected ? 3 : 1,
+                                    ),
+                                    boxShadow: isSelected
+                                        ? [
+                                            BoxShadow(
+                                              color: c.withValues(alpha: 0.4),
+                                              blurRadius: 6,
+                                              spreadRadius: 1,
+                                            ),
+                                          ]
+                                        : null,
+                                  ),
+                                  child: isSystem
+                                      ? const Icon(Icons.shuffle, size: 16)
+                                      : (isSelected
+                                          ? Icon(Icons.check,
+                                              size: 16,
+                                              color: c.computeLuminance() > 0.5
+                                                  ? Colors.black
+                                                  : Colors.white)
+                                          : null),
                                 ),
                               ),
-                              child: isSystem
-                                  ? const Icon(Icons.shuffle, size: 16)
-                                  : (isSelected
-                                      ? Icon(Icons.check,
-                                          size: 16,
-                                          color: c.computeLuminance() > 0.5
-                                              ? Colors.black
-                                              : Colors.white)
-                                      : null),
                             ),
                           ),
                         );
@@ -612,21 +637,38 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                   ),
                   const SizedBox(height: 16),
                   if (_allTags.isNotEmpty) ...[
-                    const Text('Select Tags'),
+                    Text(
+                      'SELECT TAGS',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                          ),
+                    ),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
+                      runSpacing: 8,
                       children: _allTags.map((t) {
                         final isSelected = tags.contains(t);
-                        return FilterChip(
-                          label: Text(t),
-                          selected: isSelected,
-                          onSelected: (sel) {
+                        final tagColorVal = _tagColors[t];
+                        final colors = AppChip.getTagColors(context, tagColorVal,
+                            isSelected: isSelected);
+
+                        return AppChip(
+                          label: t,
+                          icon: isSelected ? Icons.check : null,
+                          isSelected: isSelected,
+                          backgroundColor: colors.bg,
+                          selectedBackgroundColor: colors.bg,
+                          textColor: colors.fg,
+                          border: colors.border,
+                          onTap: () {
                             setState(() {
-                              if (sel) {
-                                tags.add(t);
-                              } else {
+                              if (isSelected) {
                                 tags.remove(t);
+                              } else {
+                                tags.add(t);
                               }
                               _updateColorFromTags();
                             });
@@ -1498,6 +1540,41 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+                              border: Border.all(
+                                color: Colors.green.withValues(alpha: 0.35),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 7,
+                                  height: 7,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.green,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'NPU Hardware Ready • 100% Offline',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: Colors.green.shade700,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
                         // Header Avatar Ring
                         Center(
                           child: Container(
@@ -2265,6 +2342,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
       final textColor = onBackground;
       final hintColor = onBackground.withValues(alpha: 0.6);
+      final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 100;
 
       return PopScope(
         canPop: false,
@@ -2295,20 +2373,11 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                     children: [
                       // Top Bar
                       Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 4),
-                          decoration: BoxDecoration(
-                            color: isSystemDefault
-                                ? theme.colorScheme.surfaceContainerHighest
-                                : ColorScheme.fromSeed(
-                                        seedColor: Color(color),
-                                        brightness: theme.brightness)
-                                    .surfaceContainerHighest,
-                            borderRadius:
-                                BorderRadius.circular(AppLayout.radiusMAX),
-                            boxShadow: AppLayout.softShadow(context),
+                          decoration: const BoxDecoration(
+                            color: Colors.transparent,
                           ),
                           child: _isSearching
                               ? CallbackShortcuts(
@@ -2479,16 +2548,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                                               textColor)))),
                                     ),
                                     const Spacer(),
-                                    if (settings.useOnDeviceAi)
-                                      BouncingWidget(
-                                        onTap: _showAiOptionsSheet,
-                                        child: IconButton(
-                                          icon: const Icon(Icons.auto_awesome_outlined),
-                                          tooltip: 'Gemini AI',
-                                          color: textColor,
-                                          onPressed: _showAiOptionsSheet,
-                                        ),
-                                      ),
                                     BouncingWidget(
                                       onTap: _showTagPicker,
                                       child: IconButton(
@@ -2498,15 +2557,23 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                         onPressed: _showTagPicker,
                                       ),
                                     ),
-
+                                    SizedBox(
+                                      height: 20,
+                                      child: VerticalDivider(
+                                        width: 12,
+                                        thickness: 1,
+                                        color: textColor.withValues(alpha: 0.2),
+                                      ),
+                                    ),
                                     PopupMenuButton<String>(
                                       icon: Icon(Icons.more_vert, color: textColor),
                                       tooltip: 'More',
-                                      elevation: 6,
+                                      elevation: 3,
+                                      shadowColor: theme.colorScheme.shadow.withValues(alpha: 0.15),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(AppLayout.radiusXL),
                                         side: BorderSide(
-                                          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                                          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
                                           width: 1,
                                         ),
                                       ),
@@ -2637,15 +2704,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                           ),
                                         ];
                                       },
-                                    ),
-                                    BouncingWidget(
-                                      onTap: () => Navigator.maybePop(context),
-                                      child: IconButton(
-                                        icon: const Icon(Icons.check),
-                                        tooltip: 'Done',
-                                        color: textColor,
-                                        onPressed: () => Navigator.maybePop(context),
-                                      ),
                                     ),
                                   ],
                                 ),
@@ -3240,29 +3298,111 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                   child: Row(
                                     children: [
-                                      Container(
-                                        margin: const EdgeInsets.only(right: 2),
-                                        child: IconButton.filledTonal(
-                                          icon: const Icon(Icons.auto_awesome_rounded, size: 18),
-                                          tooltip: 'Gemini AI Assist',
-                                          onPressed: _showAiOptionsSheet,
-                                          style: IconButton.styleFrom(
-                                            backgroundColor: noteScheme.primaryContainer,
-                                            foregroundColor: noteScheme.onPrimaryContainer,
-                                            padding: const EdgeInsets.all(6),
-                                            minimumSize: const Size(34, 34),
-                                            maximumSize: const Size(34, 34),
+                                      // Cluster 1: Header Hierarchy Switcher
+                                      PopupMenuButton<int>(
+                                        tooltip: 'Text Style',
+                                        elevation: 3,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(AppLayout.radiusL),
+                                          side: BorderSide(
+                                            color: noteScheme.outlineVariant.withValues(alpha: 0.35),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        color: theme.colorScheme.surfaceContainerHigh,
+                                        onSelected: (level) {
+                                          HapticFeedback.selectionClick();
+                                          if (level == 0) {
+                                            _quillController.formatSelection(
+                                              const Attribute('header', AttributeScope.block, null),
+                                            );
+                                          } else if (level == 1) {
+                                            _quillController.formatSelection(Attribute.h1);
+                                          } else if (level == 2) {
+                                            _quillController.formatSelection(Attribute.h2);
+                                          } else if (level == 3) {
+                                            _quillController.formatSelection(Attribute.h3);
+                                          }
+                                        },
+                                        itemBuilder: (context) => [
+                                          PopupMenuItem<int>(
+                                            value: 0,
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.segment, size: 18, color: textColor),
+                                                const SizedBox(width: 10),
+                                                Text('Body Text', style: theme.textTheme.bodyMedium),
+                                              ],
+                                            ),
+                                          ),
+                                          PopupMenuItem<int>(
+                                            value: 1,
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.title, size: 20, color: textColor),
+                                                const SizedBox(width: 10),
+                                                Text('Heading 1', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                                              ],
+                                            ),
+                                          ),
+                                          PopupMenuItem<int>(
+                                            value: 2,
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.title, size: 18, color: textColor),
+                                                const SizedBox(width: 10),
+                                                Text('Heading 2', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                                              ],
+                                            ),
+                                          ),
+                                          PopupMenuItem<int>(
+                                            value: 3,
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.title, size: 16, color: textColor),
+                                                const SizedBox(width: 10),
+                                                Text('Heading 3', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: noteScheme.primaryContainer.withValues(alpha: 0.6),
+                                            borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                'H1 / Body',
+                                                style: theme.textTheme.labelMedium?.copyWith(
+                                                  color: noteScheme.onPrimaryContainer,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 2),
+                                              Icon(
+                                                Icons.arrow_drop_down,
+                                                size: 16,
+                                                color: noteScheme.onPrimaryContainer,
+                                              ),
+                                            ],
                                           ),
                                         ),
                                       ),
+
                                       SizedBox(
                                         height: 20,
                                         child: VerticalDivider(
-                                          width: 12,
+                                          width: 14,
                                           thickness: 1,
                                           color: noteScheme.outlineVariant.withValues(alpha: 0.5),
                                         ),
                                       ),
+
+                                      // Cluster 2: Inline Formatting & Highlighting
                                       QuillToolbarToggleStyleButton(
                                         attribute: Attribute.bold,
                                         controller: _quillController,
@@ -3272,8 +3412,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                                 iconButtonUnselectedData:
                                                     IconButtonData(
                                                         style: IconButton.styleFrom(
-                                                            foregroundColor:
-                                                                textColor)),
+                                                            foregroundColor: textColor)),
                                                 iconButtonSelectedData:
                                                     IconButtonData(
                                                         style: IconButton.styleFrom(
@@ -3290,8 +3429,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                                 iconButtonUnselectedData:
                                                     IconButtonData(
                                                         style: IconButton.styleFrom(
-                                                            foregroundColor:
-                                                                textColor)),
+                                                            foregroundColor: textColor)),
                                                 iconButtonSelectedData:
                                                     IconButtonData(
                                                         style: IconButton.styleFrom(
@@ -3299,6 +3437,51 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                                                 .colorScheme
                                                                 .onPrimary)))),
                                       ),
+                                      QuillToolbarToggleStyleButton(
+                                        attribute: Attribute.underline,
+                                        controller: _quillController,
+                                        options: QuillToolbarToggleStyleButtonOptions(
+                                            iconData: Icons.format_underlined,
+                                            iconTheme: QuillIconTheme(
+                                                iconButtonUnselectedData:
+                                                    IconButtonData(
+                                                        style: IconButton.styleFrom(
+                                                            foregroundColor: textColor)),
+                                                iconButtonSelectedData:
+                                                    IconButtonData(
+                                                        style: IconButton.styleFrom(
+                                                            foregroundColor: theme
+                                                                .colorScheme
+                                                                .onPrimary)))),
+                                      ),
+                                      QuillToolbarToggleStyleButton(
+                                        attribute: Attribute.strikeThrough,
+                                        controller: _quillController,
+                                        options: QuillToolbarToggleStyleButtonOptions(
+                                            iconData: Icons.strikethrough_s,
+                                            iconTheme: QuillIconTheme(
+                                                iconButtonUnselectedData:
+                                                    IconButtonData(
+                                                        style: IconButton.styleFrom(
+                                                            foregroundColor: textColor)),
+                                                iconButtonSelectedData:
+                                                    IconButtonData(
+                                                        style: IconButton.styleFrom(
+                                                            foregroundColor: theme
+                                                                .colorScheme
+                                                                .onPrimary)))),
+                                      ),
+
+                                      SizedBox(
+                                        height: 20,
+                                        child: VerticalDivider(
+                                          width: 14,
+                                          thickness: 1,
+                                          color: noteScheme.outlineVariant.withValues(alpha: 0.5),
+                                        ),
+                                      ),
+
+                                      // Cluster 3: Lists & Structural Blocks
                                       QuillToolbarToggleStyleButton(
                                         attribute: Attribute.ol,
                                         controller: _quillController,
@@ -3308,8 +3491,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                                 iconButtonUnselectedData:
                                                     IconButtonData(
                                                         style: IconButton.styleFrom(
-                                                            foregroundColor:
-                                                                textColor)),
+                                                            foregroundColor: textColor)),
                                                 iconButtonSelectedData:
                                                     IconButtonData(
                                                         style: IconButton.styleFrom(
@@ -3326,8 +3508,23 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                                 iconButtonUnselectedData:
                                                     IconButtonData(
                                                         style: IconButton.styleFrom(
-                                                            foregroundColor:
-                                                                textColor)),
+                                                            foregroundColor: textColor)),
+                                                iconButtonSelectedData:
+                                                    IconButtonData(
+                                                        style: IconButton.styleFrom(
+                                                            foregroundColor: theme
+                                                                .colorScheme
+                                                                .onPrimary)))),
+                                      ),
+                                      QuillToolbarToggleCheckListButton(
+                                        controller: _quillController,
+                                        options: QuillToolbarToggleCheckListButtonOptions(
+                                            iconData: Icons.check_box_outlined,
+                                            iconTheme: QuillIconTheme(
+                                                iconButtonUnselectedData:
+                                                    IconButtonData(
+                                                        style: IconButton.styleFrom(
+                                                            foregroundColor: textColor)),
                                                 iconButtonSelectedData:
                                                     IconButtonData(
                                                         style: IconButton.styleFrom(
@@ -3344,8 +3541,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                                 iconButtonUnselectedData:
                                                     IconButtonData(
                                                         style: IconButton.styleFrom(
-                                                            foregroundColor:
-                                                                textColor)),
+                                                            foregroundColor: textColor)),
                                                 iconButtonSelectedData:
                                                     IconButtonData(
                                                         style: IconButton.styleFrom(
@@ -3362,22 +3558,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                                 iconButtonUnselectedData:
                                                     IconButtonData(
                                                         style: IconButton.styleFrom(
-                                                            foregroundColor:
-                                                                textColor)),
+                                                            foregroundColor: textColor)),
                                                 iconButtonSelectedData:
                                                     IconButtonData(
                                                         style: IconButton.styleFrom(
                                                             foregroundColor: theme
                                                                 .colorScheme
                                                                 .onPrimary)))),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.table_chart_outlined),
-                                        tooltip: 'Insert Table',
-                                        onPressed: _showTableInsertionDialog,
-                                        style: IconButton.styleFrom(
-                                          foregroundColor: textColor,
-                                        ),
                                       ),
                                     ],
                                   ),
@@ -3388,7 +3575,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                         ),
                       // Bottom Toolbar (Pill)
                       Visibility(
-                        visible: !_isImageSelected,
+                        visible: !isKeyboardOpen && !_isImageSelected,
                         child: SafeArea(
                           top: false,
                           child: Container(
@@ -3403,10 +3590,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                       .surfaceContainerHighest,
                               borderRadius:
                                   BorderRadius.circular(AppLayout.radiusMAX),
+                              border: Border.all(
+                                color: noteScheme.outlineVariant.withValues(alpha: 0.35),
+                                width: 1.0,
+                              ),
                               boxShadow: AppLayout.softShadow(context),
                             ),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                 children: [
@@ -3424,6 +3616,24 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                       foregroundColor: _showFormattingBar
                                           ? theme.colorScheme.primary
                                           : textColor,
+                                    ),
+                                  ),
+                                  if (settings.useOnDeviceAi)
+                                    IconButton.filledTonal(
+                                      icon: const Icon(Icons.auto_awesome_rounded, size: 20),
+                                      tooltip: 'Gemini AI Assist',
+                                      onPressed: _showAiOptionsSheet,
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: noteScheme.primaryContainer,
+                                        foregroundColor: noteScheme.onPrimaryContainer,
+                                      ),
+                                    ),
+                                  IconButton(
+                                    icon: const Icon(Icons.table_chart_outlined),
+                                    tooltip: 'Insert Table',
+                                    onPressed: _showTableInsertionDialog,
+                                    style: IconButton.styleFrom(
+                                      foregroundColor: textColor,
                                     ),
                                   ),
                                   QuillToolbarToggleCheckListButton(

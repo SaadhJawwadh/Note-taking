@@ -83,15 +83,6 @@ class FrostedGlassSliverAppBar extends StatelessWidget {
                   .colorScheme
                   .surfaceContainerLow
                   .withValues(alpha: isDark ? 0.82 : 0.80),
-              border: Border(
-                bottom: BorderSide(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .outlineVariant
-                      .withValues(alpha: isDark ? 0.2 : 0.35),
-                  width: 1,
-                ),
-              ),
             ),
             child: Align(
               alignment: Alignment.center,

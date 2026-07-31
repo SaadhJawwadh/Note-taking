@@ -476,11 +476,12 @@ class _HomeAppBarState extends State<HomeAppBar> {
           icon: const Icon(Icons.sort_rounded),
           tooltip: 'Sort notes',
           padding: EdgeInsets.zero,
-          elevation: 6,
+          elevation: 3,
+          shadowColor: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.15),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppLayout.radiusXL),
             side: BorderSide(
-              color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+              color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.35),
               width: 1,
             ),
           ),
@@ -503,7 +504,7 @@ class _HomeAppBarState extends State<HomeAppBar> {
               final isSelected = currentSort == item.$1;
               return PopupMenuItem<String>(
                 value: item.$1,
-                height: 44,
+                height: 48,
                 child: Row(
                   children: [
                     Icon(

@@ -44,6 +44,7 @@ void main() {
       db = await databaseFactoryFfi.openDatabase(inMemoryDatabasePath);
       await DatabaseHelper.instance.createTestDatabase(db);
       DatabaseHelper.setMockDatabase(db);
+      await db.delete('transactions');
 
       repository = TransactionRepository.instance;
     });
@@ -104,7 +105,8 @@ void main() {
       // Verify Shared Preferences
       final prefs = await SharedPreferences.getInstance();
 
-      expect(prefs.getString('widget_spent_today'), 'USD 25');
+      final expectedSpentToday = now.day == 1 ? 'USD 75' : 'USD 25';
+      expect(prefs.getString('widget_spent_today'), expectedSpentToday);
       expect(prefs.getString('widget_spent_month'), 'USD 75'); // 25 (today) + 50 (month start)
       expect(prefs.getString('widget_income_month'), 'USD 100');
 

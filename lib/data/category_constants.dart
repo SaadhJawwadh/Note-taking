@@ -68,15 +68,15 @@ class CategoryConstants {
   };
 
   static const Map<String, Color> badgeColors = {
-    transport: Color(0xFF2196F3),
-    food: Color(0xFFFF9800),
-    subscriptions: Color(0xFF9C27B0),
-    shopping: Color(0xFFE91E63),
-    utilities: Color(0xFF607D8B),
-    health: Color(0xFF4CAF50),
-    entertainment: Color(0xFFFF5722),
-    payments: Color(0xFF795548),
-    deposit: Color(0xFF00897B),
-    other: Color(0xFF9E9E9E),
+    transport: Color(0xFF5194B6),
+    food: Color(0xFFD49339),
+    subscriptions: Color(0xFF9E7BB5),
+    shopping: Color(0xFFD9779B),
+    utilities: Color(0xFF758596),
+    health: Color(0xFF5A9E75),
+    entertainment: Color(0xFFE06D53),
+    payments: Color(0xFF917265),
+    deposit: Color(0xFF4E9F90),
+    other: Color(0xFF8E8E93),
   };
 }

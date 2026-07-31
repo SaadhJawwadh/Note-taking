@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:note_taking_app/data/settings_provider.dart';
-import 'package:note_taking_app/widgets/onboarding_sheet.dart';
+import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
+import 'package:note_taking_app/features/settings/presentation/screens/onboarding_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -31,7 +31,7 @@ void main() {
     });
   });
 
-  group('OnboardingSheet Widget Tests', () {
+  group('OnboardingScreen Widget Tests', () {
     late SettingsProvider settings;
 
     setUp(() async {
@@ -44,14 +44,16 @@ void main() {
       return ChangeNotifierProvider<SettingsProvider>.value(
         value: settings,
         child: const MaterialApp(
-          home: Scaffold(
-            body: OnboardingSheet(),
-          ),
+          home: OnboardingScreen(),
         ),
       );
     }
 
     testWidgets('Renders onboarding page 1 (Welcome) successfully', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1080, 1920);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
       await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle();
 
@@ -60,50 +62,85 @@ void main() {
       expect(find.text('Next'), findsOneWidget);
     });
 
-    testWidgets('Navigating next pages works', (WidgetTester tester) async {
+    testWidgets('Navigating next and back pages works', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1080, 1920);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
       await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle();
 
-      // Page 1 -> Page 2
-      await tester.tap(find.text('Next'));
+      // Page 1 -> Page 2 (Personalization)
+      await tester.tap(find.text('Next'), warnIfMissed: false);
       await tester.pumpAndSettle();
+      expect(find.text('Personalize Your Look'), findsOneWidget);
 
+      // Page 2 -> Page 3 (Modular Powerups)
+      await tester.tap(find.text('Next'), warnIfMissed: false);
+      await tester.pumpAndSettle();
       expect(find.text('Modular Powerups'), findsOneWidget);
 
-      // Page 2 -> Page 3
-      await tester.tap(find.text('Next'));
+      // Page 3 -> Page 4 (On-Device AI Assistant)
+      await tester.tap(find.text('Next'), warnIfMissed: false);
       await tester.pumpAndSettle();
+      expect(find.text('On-Device AI Assistant'), findsOneWidget);
 
-      expect(find.text('On-Device Gemini AI'), findsOneWidget);
-
-      // Page 3 -> Page 4
-      await tester.tap(find.text('Next'));
+      // Page 4 -> Page 5 (Ready to Explore!)
+      await tester.tap(find.text('Next'), warnIfMissed: false);
       await tester.pumpAndSettle();
-
-      expect(find.text('Where to Find Features'), findsOneWidget);
-
-      // Page 4 -> Page 5
-      await tester.tap(find.text('Next'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Quick Pro-Tips'), findsOneWidget);
+      expect(find.text('Ready to Explore!'), findsOneWidget);
       expect(find.text('Get Started'), findsOneWidget);
-      expect(find.text('Skip'), findsNothing); // Skip hidden on last page
+      expect(find.text('Done'), findsOneWidget);
+
+      // Back navigation (Page 5 -> Page 4)
+      final backFinder = find.byTooltip('Back');
+      expect(backFinder, findsOneWidget);
+      await tester.tap(backFinder, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(find.text('On-Device AI Assistant'), findsOneWidget);
+    });
+
+    testWidgets('Toggling theme mode inside onboarding updates settings', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1080, 1920);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      // Go to page 2 (Personalization)
+      await tester.tap(find.text('Next'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      expect(settings.themeMode, ThemeMode.system);
+
+      // Tap Dark theme tile
+      await tester.tap(find.text('Dark'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      expect(settings.themeMode, ThemeMode.dark);
     });
 
     testWidgets('Toggling modules inside onboarding updates settings', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1080, 1920);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
       await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle();
 
-      // Go to page 2 (Modular Powerups)
-      await tester.tap(find.text('Next'));
+      // Go to page 3 (Modular Powerups)
+      await tester.tap(find.text('Next'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Next'), warnIfMissed: false);
       await tester.pumpAndSettle();
 
       expect(settings.showFinancialManager, isFalse);
-      
-      // Tap switch for Financial Manager
-      final switchFinder = find.byType(Switch).first;
-      await tester.tap(switchFinder);
+
+      // Tap switch tile for Financial Manager
+      final tileFinder = find.widgetWithText(SwitchListTile, 'Financial Manager');
+      expect(tileFinder, findsOneWidget);
+      await tester.tap(tileFinder, warnIfMissed: false);
       await tester.pumpAndSettle();
 
       expect(settings.showFinancialManager, isTrue);
