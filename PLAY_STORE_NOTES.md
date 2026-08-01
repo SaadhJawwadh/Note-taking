@@ -1,24 +1,24 @@
 <en-US>
 🌟 What's New
-• Keyboard-Aware Note Editor: Formatting toolbar floats above soft keyboard with typing auto-scroll.
-• Full-Screen Setup Wizard: Customise theme, modules, and AI options.
+• Keyboard-Aware Note Editor: Active typing line stays visible above keyboard with smart auto-scroll.
+• Transition-Guarded Scrolling: Auto-scroll re-aligns typing view without snapping manual scrolls.
 
 🚀 Improvements
-• Refreshed Material 3 styling and dynamic text scaling.
-• Hide Keyboard button on editor toolbar.
+• Elevated viewport safety padding above keyboard and formatting toolbar.
+• Natural drag-down gesture to dismiss keyboard in long notes.
 
 🐛 Fixes
-• Fixed text visibility and keyboard occlusion in long notes.
+• Fixed RenderEditor caret calculation and cursor visibility in long notes.
 </en-US>
 <ta-IN>
 🌟 புதிய அம்சங்கள்
-• விசைப்பலகை வசதி எடிட்டர்: கருவிகள் விசைப்பலகைக்கு மேலே தானியங்கி உருளலுடன் இயங்கும்.
-• அமைவு வழிகாட்டி: கருப்பொருள் மற்றும் AI விருப்பங்களை அமைக்கலாம்.
+• விசைப்பலகை வசதி எடிட்டர்: தட்டச்சு வரி விசைப்பலகைக்கு மேலே தெளிவாக தெரியும்.
+• மென்மையான உருளல்: தட்டச்சு காட்சி தடையின்றி இயங்கும்.
 
 🚀 மேம்பாடுகள்
-• புதிய Material 3 வடிவமைப்பு மற்றும் உரை அளவீடு.
-• விசைப்பலகை மறைக்கும் பொத்தான் சேர்க்கப்பட்டது.
+• விசைப்பலகை மற்றும் கருவிகளுக்கு மேலே உயர்த்தப்பட்ட இடைவெளி.
+• நீண்ட குறிப்புகளில் விசைப்பலகையை மறைக்க கீழே இழுக்கும் வசதி.
 
 🐛 பிழை திருத்தங்கள்
-• நீண்ட குறிப்புகளில் உரை மறைப்பு பிழை சரி செய்யப்பட்டது.
+• எடிட்டரில் உரை காட்டி கணக்கீடு பிழை சரி செய்யப்பட்டது.
 </ta-IN>

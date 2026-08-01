@@ -45,7 +45,8 @@ class AppBottomSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Center(
+    return Align(
+      alignment: Alignment.bottomCenter,
       child: Container(
         constraints: const BoxConstraints(maxWidth: AppLayout.maxContentWidth),
         decoration: BoxDecoration(

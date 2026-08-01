@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -118,6 +117,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   List<int> _searchOffsets = [];
   int _currentSearchIndex = -1;
   bool _isEditingTableCell = false;
+  bool _wasKeyboardOpen = false;
 
   // Slash commands & checklist collapse state
   bool _showSlashMenu = false;
@@ -310,6 +310,19 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     }
   }
 
+  RenderBox? _findRenderEditor(RenderObject? object) {
+    if (object == null) return null;
+    if (object.runtimeType.toString().contains('RenderEditor')) {
+      return object as RenderBox;
+    }
+    RenderBox? result;
+    object.visitChildren((child) {
+      if (result != null) return;
+      result = _findRenderEditor(child);
+    });
+    return result;
+  }
+
   void _scrollToCursorIfNeeded() {
     if (!_focusNode.hasFocus || !_scrollController.hasClients) return;
     final selection = _quillController.selection;
@@ -319,22 +332,86 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     if (docLength <= 1) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_scrollController.hasClients) return;
+      if (!mounted || !_scrollController.hasClients || !_focusNode.hasFocus) return;
 
-      final maxScroll = _scrollController.position.maxScrollExtent;
-      if (maxScroll <= 0) return;
+      try {
+        final focusContext = _focusNode.context;
+        if (focusContext == null) return;
 
-      final fraction = (selection.baseOffset / docLength).clamp(0.0, 1.0);
-      final targetScroll = (maxScroll * fraction).clamp(0.0, maxScroll);
-      final currentScroll = _scrollController.offset;
+        final rootRenderObject = focusContext.findRenderObject();
+        final editorRenderObject = _findRenderEditor(rootRenderObject);
+        if (editorRenderObject == null || !editorRenderObject.attached) return;
 
-      // Smoothly scroll down if cursor is beyond current visible offset
-      if (targetScroll > currentScroll || selection.baseOffset >= docLength - 5) {
-        _scrollController.animateTo(
-          targetScroll,
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
+        final scrollableState = Scrollable.of(focusContext);
+        final scrollRenderObject = scrollableState.context.findRenderObject();
+        if (scrollRenderObject is! RenderBox || !scrollRenderObject.attached) return;
+
+        // Obtain caret rectangle relative to RenderEditor top-left
+        final dynamic dynamicRender = editorRenderObject;
+        final TextPosition pos = TextPosition(offset: selection.baseOffset);
+        Rect? caretRect;
+        try {
+          caretRect = dynamicRender.getLocalRectForCaret(pos);
+        } catch (_) {
+          try {
+            final endpoints = dynamicRender.getEndpointsForSelection(selection);
+            if (endpoints.isNotEmpty) {
+              final ep = endpoints.first;
+              caretRect = Rect.fromLTWH(ep.point.dx, ep.point.dy, 2.0, ep.handleHeight);
+            }
+          } catch (_) {}
+        }
+
+        final double caretTop = caretRect?.top ??
+            (editorRenderObject.size.height * (selection.baseOffset / docLength));
+        final double caretHeight = (caretRect != null && caretRect.height > 0)
+            ? caretRect.height
+            : 24.0;
+
+        // Convert editor top-left to scrollable coordinate space
+        final Offset editorOffsetInScrollable = editorRenderObject.localToGlobal(
+          Offset.zero,
+          ancestor: scrollRenderObject,
         );
+
+        // Calculate absolute Y position of cursor inside scrollable content
+        final double cursorYInContent =
+            _scrollController.offset + editorOffsetInScrollable.dy + caretTop;
+
+        final double currentScroll = _scrollController.offset;
+        final double viewportHeight = _scrollController.position.viewportDimension;
+
+        // Safety margins so typing line is not covered by top bar or bottom toolbar/keyboard
+        const double topPadding = 60.0;
+        const double bottomPadding = 160.0; // Keeps active typing line well above soft keyboard + formatting pill
+
+        final double visibleTop = currentScroll + topPadding;
+        final double visibleBottom = currentScroll + viewportHeight - bottomPadding;
+
+        double? targetScroll;
+
+        if (cursorYInContent + caretHeight > visibleBottom) {
+          // Cursor is below visible area or covered by keyboard -> scroll down
+          targetScroll = (cursorYInContent + caretHeight) - (viewportHeight - bottomPadding);
+        } else if (cursorYInContent < visibleTop) {
+          // Cursor is above visible area -> scroll up
+          targetScroll = cursorYInContent - topPadding;
+        }
+
+        if (targetScroll != null) {
+          final maxScroll = _scrollController.position.maxScrollExtent;
+          final clampedTarget = targetScroll.clamp(0.0, maxScroll);
+
+          if ((clampedTarget - currentScroll).abs() > 2.0) {
+            _scrollController.animateTo(
+              clampedTarget,
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+            );
+          }
+        }
+      } catch (e) {
+        debugPrint('Error scrolling to cursor: $e');
       }
     });
   }
@@ -2377,6 +2454,14 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       final textColor = onBackground;
       final hintColor = onBackground.withValues(alpha: 0.6);
       final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 100;
+      if (isKeyboardOpen && !_wasKeyboardOpen) {
+        _wasKeyboardOpen = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _scrollToCursorIfNeeded();
+        });
+      } else if (!isKeyboardOpen && _wasKeyboardOpen) {
+        _wasKeyboardOpen = false;
+      }
 
       return PopScope(
         canPop: false,
@@ -2745,17 +2830,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                       ),
                       // Editor Area
                       Expanded(
-                        child: NotificationListener<UserScrollNotification>(
-                          onNotification: (scrollNotification) {
-                            if (scrollNotification.direction ==
-                                    ScrollDirection.reverse &&
-                                _focusNode.hasFocus) {
-                              FocusScope.of(context).unfocus();
-                            }
-                            return false;
-                          },
-                          child: SingleChildScrollView(
-                            controller: _scrollController,
+                        child: SingleChildScrollView(
+                          controller: _scrollController,
+                          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                             child: GestureDetector(
                               behavior: HitTestBehavior.translucent,
                               onTap: () {
@@ -3294,7 +3371,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                             ),
                           ),
                         ),
-                      ),
                       // Slash Commands Overlay Card
                       if (_showSlashMenu && !_isImageSelected)
                         _buildSlashMenuOverlay(theme, noteScheme),

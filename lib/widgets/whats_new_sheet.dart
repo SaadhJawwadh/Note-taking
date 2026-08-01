@@ -42,9 +42,9 @@ class WhatsNewSheet extends StatelessWidget {
             desc: "Formatting tools stay accessible above the soft keyboard with smart typing auto-scroll.",
           ),
           _WhatsNewItem(
-            icon: Icons.auto_awesome_rounded,
-            title: "Full-Screen Setup Wizard",
-            desc: "Customise your app theme, preferences, and local AI options right from the start.",
+            icon: Icons.unfold_more_rounded,
+            title: "Transition-Guarded Auto-Scroll",
+            desc: "Smooth typing auto-scroll with transition guards so manual scrolling is never interrupted.",
           ),
         ],
       ),
@@ -54,14 +54,14 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.tertiaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.palette_outlined,
-            title: "Refreshed Material 3 Design",
-            desc: "Enjoy modern rounded cards, dynamic typography scaling, and a cleaner control center.",
+            icon: Icons.space_bar_rounded,
+            title: "Elevated Viewport Safety Padding",
+            desc: "Active typing line stays elevated comfortably above the soft keyboard and formatting pill.",
           ),
           _WhatsNewItem(
-            icon: Icons.keyboard_hide_rounded,
-            title: "Quick Keyboard Dismiss",
-            desc: "Tap the new Hide Keyboard button on the editor toolbar anytime to hide the keyboard.",
+            icon: Icons.swipe_vertical_rounded,
+            title: "Natural Swipe Keyboard Dismiss",
+            desc: "Drag down anywhere in long notes to naturally dismiss the soft keyboard.",
           ),
         ],
       ),
@@ -72,8 +72,8 @@ class WhatsNewSheet extends StatelessWidget {
         items: [
           _WhatsNewItem(
             icon: Icons.check_circle_outline_rounded,
-            title: "Note Editor Text Visibility",
-            desc: "Resolved issue where the software keyboard obscured text and toolbar during long note editing.",
+            title: "RenderEditor Caret Calculation",
+            desc: "Resolved issue where Quill editor container wrappers obscured cursor position calculations.",
           ),
         ],
       ),
