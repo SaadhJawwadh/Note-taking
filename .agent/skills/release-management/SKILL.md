@@ -49,7 +49,10 @@ Execute the automated deploy script to bump, tag, and publish:
 flutter analyze && ./deploy.sh <version>
 ```
 ### Step 4: Play Console Bilingual Release Notes (Mandatory File & Output)
-With every release, **ALWAYS** write the latest release notes to `PLAY_STORE_NOTES.md` at the project root before running `./deploy.sh`. Target everyday general users with friendly emojis and zero technical jargon, structured into 🌟 **What's New**, 🚀 **Improvements**, and 🐛 **Fixes**:
+With every release, **ALWAYS** write the latest release notes to `PLAY_STORE_NOTES.md` at the project root before running `./deploy.sh`. Target everyday general users with friendly emojis and zero technical jargon, structured into 🌟 **What's New**, 🚀 **Improvements**, and 🐛 **Fixes**.
+
+> [!CRITICAL]
+> **500 Character Maximum Limit**: Google Play Console strictly enforces a **500 character limit** per language block (`<en-US>` and `<ta-IN>`). Keep each section concise and total character count under **450 characters** to prevent Play Store API publication failures.
 
 ```xml
 <en-US>
