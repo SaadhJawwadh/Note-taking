@@ -66,13 +66,23 @@ lib/
 │   │   │   └── widgets/              # Editor toolbar & header widgets
 │   │   └── providers/
 │   │       └── note_editor_provider.dart# Editor state, dirty tracking, auto-save timer
-│   └── settings/                     # App Settings & Preferences Feature Module
+│   ├── settings/                     # App Settings & Preferences Feature Module
+│   │   ├── presentation/
+│   │   │   └── screens/
+│   │   │       ├── onboarding_screen.dart# Full-screen multi-step setup & theme wizard
+│   │   │       └── settings_screen.dart# App options, backup/restore, security controls
+│   │   └── providers/
+│   │       └── settings_provider.dart# SharedPreferences state & global app options
+│   └── sync/                         # Master P2P Device Sync Feature Module
+│       ├── data/
+│       │   └── p2p_pairing_model.dart# Paired device model with Primary/Secondary roles
 │       ├── presentation/
-│       │   └── screens/
-│       │       ├── onboarding_screen.dart# Full-screen multi-step setup & theme wizard
-│       │       └── settings_screen.dart# App options, backup/restore, security controls
+│       │   ├── screens/
+│       │   │   └── p2p_sync_screen.dart# Primary QR code generator, scanner, & P2P controller
+│       │   └── widgets/
+│       │       └── qr_scanner_dialog.dart# Camera QR code scanner screen
 │       └── providers/
-│           └── settings_provider.dart# SharedPreferences state & global app options
+│           └── p2p_sync_provider.dart# Primary host server state, IP pull sync, test pings
 ├── data/                             # Models & Database Helpers
 │   ├── category_constants.dart       # Built-in transaction categories and colors
 │   ├── category_definition.dart      # Category model (custom names, keywords, colors)
@@ -174,7 +184,20 @@ Consolidates global app configuration, onboarding setup wizard, security timeout
     *   Settings UI: `lib/features/settings/presentation/screens/settings_screen.dart`
     *   State Manager: `lib/features/settings/providers/settings_provider.dart`
 
-### 5. Core Design System & UI Components (`lib/core/`)
+### 5. Master P2P Device Sync Module (`lib/features/sync/`)
+Offline, router-isolated, LocalSend-style P2P device synchronization.
+*   **Key Features**:
+    *   **Primary (Host) -> Secondary (Receiver) Role Architecture**: Primary device acts as Host Server on port 8765; Secondary device scans QR code and pulls master database state.
+    *   **Complete Master Overwrite**: Secondary device replaces its SQLite database 100% with Primary's master snapshot so both devices match perfectly.
+    *   **Deduplicated Device Cards**: Devices are strictly deduplicated by unique `deviceId`.
+    *   **Guaranteed Test Ping**: Direct IP ping returns `Test Ping Succeeded 🟢 (XXms)` latency confirmation.
+*   **Key Files**:
+    *   Sync UI: `lib/features/sync/presentation/screens/p2p_sync_screen.dart`
+    *   State Manager: `lib/features/sync/providers/p2p_sync_provider.dart`
+    *   Network Engine: `lib/services/p2p_sync_service.dart`
+    *   Paired Device Entity: `lib/features/sync/data/p2p_pairing_model.dart`
+
+### 6. Core Design System & UI Components (`lib/core/`)
 *   **Single Source of Truth**: All layout spacing, border radii, animation curves, and colors are defined in `AppLayout` and `AppTheme` (`lib/core/theme/`).
 *   **Atomic UI Library**: Reusable UI components in `lib/core/ui/`:
     *   `AppCard`: Standardized card container with single-source-of-truth surface fills and touch feedback.

@@ -522,7 +522,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
       final bool hasExtraFeatures = settings.showFinancialManager || settings.isPeriodTrackerEnabled;
       
-      if (!hasExtraFeatures) return _buildNotesScaffold(context, settings);
+      if (!hasExtraFeatures) {
+        return Scaffold(
+          body: _buildNotesScaffold(context, settings),
+          floatingActionButton: _buildFAB(context),
+        );
+      }
 
       final List<Widget> destinations = _buildDestinations(settings);
       _currentIndex = _currentIndex.clamp(0, destinations.length - 1);
@@ -552,6 +557,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ],
           ),
+          floatingActionButton: _buildCurrentFAB(context, settings),
         );
       }
 

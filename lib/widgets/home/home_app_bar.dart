@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../data/settings_provider.dart';
 import '../../providers/note_provider.dart';
+import '../../features/sync/providers/p2p_sync_provider.dart';
+import '../../features/sync/presentation/screens/p2p_sync_screen.dart';
 import 'package:note_taking_app/features/settings/presentation/screens/settings_screen.dart';
 import '../../core/theme/app_layout.dart';
 import '../../utils/app_route.dart';
@@ -574,6 +576,53 @@ class _HomeAppBarState extends State<HomeAppBar> {
               });
             },
           ),
+        ),
+        Consumer<P2pSyncProvider>(
+          builder: (context, syncProvider, _) {
+            final isSyncing = syncProvider.status == SyncStatus.syncing;
+            return BouncingWidget(
+              onTap: () async {
+                unawaited(HapticFeedback.lightImpact());
+                if (syncProvider.pairedDevices.isEmpty) {
+                  unawaited(AppRoute.push(context, const P2pSyncScreen()).then((_) => widget.onRefresh()));
+                } else {
+                  await syncProvider.syncNow(onCompleted: () {
+                    noteProvider.refreshNotes();
+                  });
+                }
+              },
+              child: IconButton(
+                icon: isSyncing
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
+                        ),
+                      )
+                    : Icon(
+                        Icons.sync_rounded,
+                        color: syncProvider.status == SyncStatus.completed
+                            ? Theme.of(context).colorScheme.primary
+                            : null,
+                      ),
+                tooltip: isSyncing ? 'Syncing notes...' : 'P2P Sync Now',
+                padding: EdgeInsets.zero,
+                visualDensity: VisualDensity.compact,
+                onPressed: () async {
+                  unawaited(HapticFeedback.lightImpact());
+                  if (syncProvider.pairedDevices.isEmpty) {
+                    unawaited(AppRoute.push(context, const P2pSyncScreen()).then((_) => widget.onRefresh()));
+                  } else {
+                    await syncProvider.syncNow(onCompleted: () {
+                      noteProvider.refreshNotes();
+                    });
+                  }
+                },
+              ),
+            );
+          },
         ),
         BouncingWidget(
           onTap: () {

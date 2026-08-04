@@ -37,14 +37,14 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.primaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.keyboard_rounded,
-            title: "Keyboard-Aware Note Editor",
-            desc: "Formatting tools stay accessible above the soft keyboard with smart typing auto-scroll.",
+            icon: Icons.sync_rounded,
+            title: "Fast Local Master Device Sync",
+            desc: "Transfer your complete notebook between devices instantly over your local network.",
           ),
           _WhatsNewItem(
-            icon: Icons.unfold_more_rounded,
-            title: "Transition-Guarded Auto-Scroll",
-            desc: "Smooth typing auto-scroll with transition guards so manual scrolling is never interrupted.",
+            icon: Icons.qr_code_scanner_rounded,
+            title: "Onboarding Setup Mode Choices",
+            desc: "Choose to set up a new primary notebook or pair and import from an existing phone during app setup.",
           ),
         ],
       ),
@@ -54,14 +54,14 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.tertiaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.space_bar_rounded,
-            title: "Elevated Viewport Safety Padding",
-            desc: "Active typing line stays elevated comfortably above the soft keyboard and formatting pill.",
+            icon: Icons.shield_rounded,
+            title: "Permission-Lean Privacy",
+            desc: "Removed unnecessary Bluetooth and location permission requests for a cleaner experience.",
           ),
           _WhatsNewItem(
-            icon: Icons.swipe_vertical_rounded,
-            title: "Natural Swipe Keyboard Dismiss",
-            desc: "Drag down anywhere in long notes to naturally dismiss the soft keyboard.",
+            icon: Icons.warning_amber_rounded,
+            title: "Clear Role & Overwrite Warnings",
+            desc: "Helpful warning dialogs explain Primary and Secondary device roles before replacing secondary data.",
           ),
         ],
       ),

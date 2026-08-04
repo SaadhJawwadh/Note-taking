@@ -36,8 +36,10 @@ Specialist skill governing the onboarding experience, setup screens, live theme 
 
 ## 2. Page Structure & Interactive Setup Rules
 
-1. **Page 1: Welcome & Vision**
+1. **Page 1: Welcome & Vision (Setup Choice Mode)**
    - Introduces offline privacy, zero cloud lock-in, and local SQLCipher database encryption.
+   - **Primary Device Choice Card**: Set up as new Primary notebook (proceeds with wizard).
+   - **Pair & Import Choice Card**: Launches camera QR scanner to pull master database state from Primary phone in 1 step during onboarding.
 2. **Page 2: Personalization & Live Theme Preview**
    - **Theme Mode Selector**: System, Light, Dark options (`settings.setThemeMode(...)`).
    - **Real-Time Visual Feedback**: Toggling theme modes immediately updates `Theme.of(context)` across the active widget tree.

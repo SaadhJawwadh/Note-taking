@@ -11,6 +11,7 @@ import 'package:note_taking_app/features/notes/presentation/screens/filtered_not
 import 'package:note_taking_app/features/finances/presentation/screens/category_management_screen.dart';
 import 'package:note_taking_app/features/finances/presentation/screens/sms_contacts_screen.dart';
 import 'package:note_taking_app/features/finances/presentation/screens/sms_rules_screen.dart';
+import 'package:note_taking_app/features/sync/presentation/screens/p2p_sync_screen.dart';
 import '../../../../screens/changelog_screen.dart';
 import 'onboarding_screen.dart';
 import '../../../../utils/app_constants.dart';
@@ -749,6 +750,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   title: 'Data & Backup',
                                   icon: Icons.cloud_sync_outlined,
                                   children: [
+                                    SettingsTile(
+                                      icon: Icons.devices_rounded,
+                                      iconColor: colorScheme.tertiary,
+                                      title: 'P2P Device Sync',
+                                      subtitle: 'Sync notes between devices (Local / Relay)',
+                                      showArrow: true,
+                                      onTap: () => AppRoute.push(context, const P2pSyncScreen()),
+                                    ),
+                                    const _Divider(),
                                     SettingsTile(
                                       icon: Icons.download_outlined,
                                       iconColor: colorScheme.primary,

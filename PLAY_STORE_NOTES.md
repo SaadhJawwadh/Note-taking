@@ -1,24 +1,25 @@
 <en-US>
 🌟 What's New
-• Keyboard-Aware Note Editor: Active typing line stays visible above keyboard with smart auto-scroll.
-• Transition-Guarded Scrolling: Auto-scroll re-aligns typing view without snapping manual scrolls.
+• Fast local master notebook device sync.
+• Choose setup mode or import during onboarding.
 
 🚀 Improvements
-• Elevated viewport safety padding above keyboard and formatting toolbar.
-• Natural drag-down gesture to dismiss keyboard in long notes.
+• Permission-lean privacy with zero Bluetooth prompts.
+• Clear role and data overwrite warning dialogs.
+• Floating action button accessible in landscape and tablet views.
 
 🐛 Fixes
-• Fixed RenderEditor caret calculation and cursor visibility in long notes.
+• Single-device pairing deduplication.
 </en-US>
 <ta-IN>
 🌟 புதிய அம்சங்கள்
-• விசைப்பலகை வசதி எடிட்டர்: தட்டச்சு வரி விசைப்பலகைக்கு மேலே தெளிவாக தெரியும்.
-• மென்மையான உருளல்: தட்டச்சு காட்சி தடையின்றி இயங்கும்.
+• சாதனங்களுக்கு இடையே வேகமான உள்ளூர் ஒத்திசைவு.
+• தொடக்கத்திலேயே முதன்மை சாதனம் அல்லது இறக்குமதி தேர்வு.
 
 🚀 மேம்பாடுகள்
-• விசைப்பலகை மற்றும் கருவிகளுக்கு மேலே உயர்த்தப்பட்ட இடைவெளி.
-• நீண்ட குறிப்புகளில் விசைப்பலகையை மறைக்க கீழே இழுக்கும் வசதி.
+• புளூடூத் அனுமதி தேவையில்லாத தனியுரிமை.
+• தெளிவான எச்சரிக்கை அறிவிப்புகள்.
 
 🐛 பிழை திருத்தங்கள்
-• எடிட்டரில் உரை காட்டி கணக்கீடு பிழை சரி செய்யப்பட்டது.
+• இரட்டை சாதன பதிவுகள் சரி செய்யப்பட்டன.
 </ta-IN>

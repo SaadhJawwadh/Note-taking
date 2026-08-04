@@ -18,6 +18,8 @@ Refer to [design.md](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/.ag
 * **Component Standards**: Use M3 **FAB Menu**, **Split Buttons**, **Floating Toolbars**, **SegmentedButton**, `SearchBar`, and `Badge.count`.
 * **Zero Hardcoded Colors**: Always use `Theme.of(context).colorScheme.<token>` — never hardcode static `Color(...)` values in UI components.
 * **A11y Touch Targets**: All clickable icons must meet the minimum $48 \times 48\text{ dp}$ tap target.
+* **Unambiguous Master Overwrite Warning Modal**: Before executing actions that replace local state 100% (such as Secondary P2P master sync), display an explicit M3 Warning Modal (`_showOverwriteWarningDialog`) outlining role mechanics and requiring tapping **"I Understand & Overwrite"**.
+* **Tactile Haptic Feedback**: Wrap action controls and segment tiles in `BouncingWidget` with `HapticFeedback.lightImpact()` / `mediumImpact()`.
 * **Tactile Spring Physics**: Micro-interactions and press states must use `bouncing_widget.dart` or `AppLayout.curveExpressive` / `AppLayout.curveSpring`.
 * **TextField Container Transparency**: When embedding `TextField` inside custom-styled containers, set `filled: false`, `fillColor: Colors.transparent`, and borderless `InputBorder` properties on `InputDecoration` to prevent global theme fill artifacts.
 * **Symmetric Frosted Glass Navigation**: Pair frosted glass top app bars with matching frosted glass bottom navigation bars (`ClipRect` + `BackdropFilter` `16px` blur) and `extendBody: true` on `Scaffold` for edge-to-edge content depth.

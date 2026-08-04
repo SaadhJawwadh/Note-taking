@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +8,9 @@ import '../../../../core/theme/app_layout.dart';
 import '../../../../core/ui/app_card.dart';
 import '../../../../widgets/bouncing_widget.dart';
 import '../../providers/settings_provider.dart';
+import '../../../../providers/note_provider.dart';
+import '../../../sync/presentation/widgets/qr_scanner_dialog.dart';
+import '../../../sync/providers/p2p_sync_provider.dart';
 
 /// Full-Screen Interactive Onboarding Wizard
 class OnboardingScreen extends StatefulWidget {
@@ -279,6 +283,107 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppLayout.spaceXXL),
+          // Device Setup Mode Selection
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'How would you like to set up this device?',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppLayout.spaceS),
+          BouncingWidget(
+            onTap: _nextPage,
+            child: AppCard(
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(AppLayout.spaceS),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.phone_android_rounded, color: theme.colorScheme.onPrimaryContainer),
+                  ),
+                  const SizedBox(width: AppLayout.spaceM),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Primary Device (New Notebook)', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 2),
+                        Text('Set up as main device. Create notes here to sync to other devices.', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.arrow_forward_ios_rounded, size: 16, color: theme.colorScheme.primary),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppLayout.spaceS),
+          BouncingWidget(
+            onTap: () async {
+              final scanned = await Navigator.push<String>(
+                context,
+                MaterialPageRoute(builder: (_) => const QrScannerScreen()),
+              );
+              if (scanned != null && scanned.isNotEmpty && mounted) {
+                try {
+                  final map = json.decode(scanned) as Map<String, dynamic>;
+                  final pairCode = map['code']?.toString() ?? scanned;
+                  final ip = map['ip']?.toString();
+                  if (ip != null) {
+                    final syncProvider = Provider.of<P2pSyncProvider>(context, listen: false);
+                    final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+                    await syncProvider.pairNewDevice(
+                      deviceName: map['name']?.toString() ?? 'Primary Phone',
+                      pairCode: pairCode,
+                      targetIp: ip,
+                      role: 'SECONDARY',
+                    );
+                    await syncProvider.pullFromPrimary(
+                      targetIp: ip,
+                      onCompleted: () {
+                        noteProvider.refreshNotes();
+                      },
+                    );
+                    _finishOnboarding();
+                  }
+                } catch (_) {}
+              }
+            },
+            child: AppCard(
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(AppLayout.spaceS),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.secondaryContainer,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.qr_code_scanner_rounded, color: theme.colorScheme.onSecondaryContainer),
+                  ),
+                  const SizedBox(width: AppLayout.spaceM),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Pair & Import from Primary Device', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 2),
+                        Text('Scan Primary device QR code to pull notes, ledgers, and settings instantly.', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.qr_code_scanner_rounded, size: 20, color: theme.colorScheme.primary),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppLayout.spaceXL),
           _buildFeatureCard(
             theme,
             icon: Icons.shield_outlined,

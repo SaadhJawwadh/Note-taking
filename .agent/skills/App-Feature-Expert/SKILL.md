@@ -78,7 +78,17 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 
 ---
 
-## 6. Canonical Feature Imports & Architecture Standards
+## 6. Master P2P Device Sync Engine (`lib/features/sync/`)
+
+- **Primary (Host) -> Secondary (Receiver) Role Architecture**: Primary device acts as Host Server on port 8765 (`P2pSyncService`); Secondary device scans QR code and pulls master state (`pullFromPrimary()`).
+- **Direct REST HTTP Server (Port 8765) + UDP Radio Beacon (Port 8766)**: LocalSend-style direct socket connections bypass fragile Google Nearby / BLE daemons entirely, executing transfers in < 10 milliseconds.
+- **Complete Master Overwrite**: Secondary device replaces its SQLite database 100% with Primary master snapshot via `BackupService.restoreFromBackupData()`.
+- **Deduplicated Device Cards**: Devices are strictly deduplicated by unique `deviceId`.
+- **Permission-Lean Guardrail**: No Bluetooth (`BLUETOOTH_*`) or Location permissions required. Retains minimal network permissions (`INTERNET`, `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE`, `CHANGE_WIFI_MULTICAST_STATE`).
+
+---
+
+## 7. Canonical Feature Imports & Architecture Standards
 
 - **No Re-Export Stubs**: Do NOT create or maintain 1-line re-export stub files in `lib/screens/`, `lib/theme/`, or `lib/data/repositories/`.
 - **Direct Canonical Imports**: All screens and repositories must be imported directly from their feature module locations (`lib/features/<module>/presentation/screens/` and `lib/features/<module>/data/`).

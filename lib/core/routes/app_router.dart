@@ -19,6 +19,7 @@ class AppRouter {
   static const String smsRules = '/sms-rules';
   static const String smsContacts = '/sms-contacts';
   static const String changelog = '/changelog';
+  static const String p2pSync = '/p2p-sync';
 
   /// Pushes [page] with a horizontal shared-axis transition (drill-in).
   static Future<T?> push<T>(BuildContext context, Widget page) {

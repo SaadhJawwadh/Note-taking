@@ -278,139 +278,10 @@ class BackupService {
         if (confirmed != true) return;
       }
 
-      final db = await DatabaseHelper.instance.database;
-      
-      await db.transaction((txn) async {
-        // Clear existing dynamic data to ensure integrity
-        await txn.delete('notes');
-        await txn.delete('tags');
-        await txn.delete('note_tags');
-        await txn.delete('transactions');
-        await txn.delete('period_logs');
-        await txn.delete('recurring_rules');
-        // Built-in categories and contacts are kept, but we replace custom ones
-        await txn.delete('category_definitions', where: 'isBuiltIn = 0');
-        await txn.delete('sms_contacts', where: 'isBuiltIn = 0');
-
-        final batch = txn.batch();
-
-        if (data.containsKey('notes')) {
-          for (final row in data['notes']) {
-            final map = Map<String, Object?>.from(row)..remove('tags'); // Omit legacy tags column
-            if (map['isArchived'] is bool) {
-              map['isArchived'] = (map['isArchived'] as bool) ? 1 : 0;
-            }
-            if (map['isPinned'] is bool) {
-              map['isPinned'] = (map['isPinned'] as bool) ? 1 : 0;
-            }
-            if (!map.containsKey('previewText') || map['previewText'] == null) {
-              final content = map['content'] as String? ?? '';
-              map['previewText'] = RichTextUtils.contentToPlainText(content, maxLines: 6);
-            }
-            if (!map.containsKey('category') || map['category'] == null || (map['category'] as String).isEmpty) {
-              map['category'] = 'Notes';
-            }
-            batch.insert('notes', map, conflictAlgorithm: ConflictAlgorithm.replace);
-          }
-        }
-        if (data.containsKey('tags')) {
-          for (final row in data['tags']) {
-            final map = Map<String, Object?>.from(row);
-            if (map['name'] != null) {
-              batch.insert('tags', map, conflictAlgorithm: ConflictAlgorithm.replace);
-            }
-          }
-        }
-        if (data.containsKey('noteTags')) {
-          for (final row in data['noteTags']) {
-            final map = Map<String, Object?>.from(row);
-            final tagName = map['tag_name'] as String?;
-            if (tagName != null && tagName.isNotEmpty) {
-              batch.insert('tags', {'name': tagName}, conflictAlgorithm: ConflictAlgorithm.ignore);
-            }
-            batch.insert('note_tags', map, conflictAlgorithm: ConflictAlgorithm.replace);
-          }
-        } else if (data.containsKey('notes')) {
-          // Fallback for older backups: reconstruct note_tags and tags from notes column
-          for (final row in data['notes']) {
-            final id = row['id'] as String?;
-            final tagsJson = row['tags'] as String?;
-            if (id != null && tagsJson != null) {
-              try {
-                final List<dynamic> tags = jsonDecode(tagsJson);
-                for (final tag in tags) {
-                  final tagName = tag.toString().trim();
-                  if (tagName.isNotEmpty) {
-                    batch.insert('tags', {'name': tagName}, conflictAlgorithm: ConflictAlgorithm.ignore);
-                    batch.insert('note_tags', {'note_id': id, 'tag_name': tagName}, conflictAlgorithm: ConflictAlgorithm.ignore);
-                  }
-                }
-              } catch (_) {}
-            }
-          }
-        }
-        if (data.containsKey('transactions')) {
-          for (final row in data['transactions']) {
-            final map = Map<String, Object?>.from(row)..remove('_id');
-            if (map['isExpense'] is bool) {
-              map['isExpense'] = (map['isExpense'] as bool) ? 1 : 0;
-            }
-            if (!map.containsKey('category') || map['category'] == null) {
-              map['category'] = 'Other';
-            }
-            batch.insert('transactions', map, conflictAlgorithm: ConflictAlgorithm.replace);
-          }
-        }
-        if (data.containsKey('recurringRules')) {
-          for (final row in data['recurringRules']) {
-            final map = Map<String, Object?>.from(row);
-            if (map['isExpense'] is bool) {
-              map['isExpense'] = (map['isExpense'] as bool) ? 1 : 0;
-            }
-            batch.insert('recurring_rules', map, conflictAlgorithm: ConflictAlgorithm.replace);
-          }
-        }
-        if (data.containsKey('categoryDefinitions')) {
-          for (final row in data['categoryDefinitions']) {
-            final map = Map<String, Object?>.from(row);
-            if (map['isBuiltIn'] is bool) {
-              map['isBuiltIn'] = (map['isBuiltIn'] as bool) ? 1 : 0;
-            }
-            batch.insert('category_definitions', map, conflictAlgorithm: ConflictAlgorithm.replace);
-          }
-        }
-        if (data.containsKey('smsContacts')) {
-          for (final row in data['smsContacts']) {
-            final map = Map<String, Object?>.from(row);
-            if (map['isBuiltIn'] is bool) {
-              map['isBuiltIn'] = (map['isBuiltIn'] as bool) ? 1 : 0;
-            }
-            batch.insert('sms_contacts', map, conflictAlgorithm: ConflictAlgorithm.replace);
-          }
-        }
-        if (data.containsKey('periodLogs')) {
-          for (final row in data['periodLogs']) {
-            batch.insert('period_logs', Map<String, Object?>.from(row), conflictAlgorithm: ConflictAlgorithm.replace);
-          }
-        }
-
-        await batch.commit(noResult: true);
-      });
-
-      await TransactionCategory.reload();
-      await SmsService.reloadSmsContacts();
-      await WidgetHelper.updateWidgetData();
-
       if (context.mounted) {
-        try {
-          await Provider.of<NoteProvider>(context, listen: false).refreshNotes();
-        } catch (e) {
-          debugPrint('NoteProvider refresh error: $e');
-        }
-      }
-
-      if (context.mounted && data.containsKey('settings')) {
-        await Provider.of<SettingsProvider>(context, listen: false).restoreFromBackupMap(Map<String, dynamic>.from(data['settings'] as Map));
+        await restoreFromBackupData(data, context: context);
+      } else {
+        await restoreFromBackupData(data);
       }
 
       if (context.mounted) {
@@ -433,6 +304,142 @@ class BackupService {
             behavior: SnackBarBehavior.floating,
           ),
         );
+      }
+    }
+  }
+
+  static Future<void> restoreFromBackupData(Map<String, dynamic> data, {BuildContext? context}) async {
+    final db = await DatabaseHelper.instance.database;
+    
+    await db.transaction((txn) async {
+      // Clear existing dynamic data to ensure integrity
+      await txn.delete('notes');
+      await txn.delete('tags');
+      await txn.delete('note_tags');
+      await txn.delete('transactions');
+      await txn.delete('period_logs');
+      await txn.delete('recurring_rules');
+      // Built-in categories and contacts are kept, but we replace custom ones
+      await txn.delete('category_definitions', where: 'isBuiltIn = 0');
+      await txn.delete('sms_contacts', where: 'isBuiltIn = 0');
+
+      final batch = txn.batch();
+
+      if (data.containsKey('notes')) {
+        for (final row in data['notes']) {
+          final map = Map<String, Object?>.from(row)..remove('tags');
+          if (map['isArchived'] is bool) {
+            map['isArchived'] = (map['isArchived'] as bool) ? 1 : 0;
+          }
+          if (map['isPinned'] is bool) {
+            map['isPinned'] = (map['isPinned'] as bool) ? 1 : 0;
+          }
+          if (!map.containsKey('previewText') || map['previewText'] == null) {
+            final content = map['content'] as String? ?? '';
+            map['previewText'] = RichTextUtils.contentToPlainText(content, maxLines: 6);
+          }
+          if (!map.containsKey('category') || map['category'] == null || (map['category'] as String).isEmpty) {
+            map['category'] = 'Notes';
+          }
+          batch.insert('notes', map, conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+      }
+      if (data.containsKey('tags')) {
+        for (final row in data['tags']) {
+          final map = Map<String, Object?>.from(row);
+          if (map['name'] != null) {
+            batch.insert('tags', map, conflictAlgorithm: ConflictAlgorithm.replace);
+          }
+        }
+      }
+      if (data.containsKey('noteTags')) {
+        for (final row in data['noteTags']) {
+          final map = Map<String, Object?>.from(row);
+          final tagName = map['tag_name'] as String?;
+          if (tagName != null && tagName.isNotEmpty) {
+            batch.insert('tags', {'name': tagName}, conflictAlgorithm: ConflictAlgorithm.ignore);
+          }
+          batch.insert('note_tags', map, conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+      } else if (data.containsKey('notes')) {
+        for (final row in data['notes']) {
+          final id = row['id'] as String?;
+          final tagsJson = row['tags'] as String?;
+          if (id != null && tagsJson != null) {
+            try {
+              final List<dynamic> tags = jsonDecode(tagsJson);
+              for (final tag in tags) {
+                final tagName = tag.toString().trim();
+                if (tagName.isNotEmpty) {
+                  batch.insert('tags', {'name': tagName}, conflictAlgorithm: ConflictAlgorithm.ignore);
+                  batch.insert('note_tags', {'note_id': id, 'tag_name': tagName}, conflictAlgorithm: ConflictAlgorithm.ignore);
+                }
+              }
+            } catch (_) {}
+          }
+        }
+      }
+      if (data.containsKey('transactions')) {
+        for (final row in data['transactions']) {
+          final map = Map<String, Object?>.from(row)..remove('_id');
+          if (map['isExpense'] is bool) {
+            map['isExpense'] = (map['isExpense'] as bool) ? 1 : 0;
+          }
+          if (!map.containsKey('category') || map['category'] == null) {
+            map['category'] = 'Other';
+          }
+          batch.insert('transactions', map, conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+      }
+      if (data.containsKey('recurringRules')) {
+        for (final row in data['recurringRules']) {
+          final map = Map<String, Object?>.from(row);
+          if (map['isExpense'] is bool) {
+            map['isExpense'] = (map['isExpense'] as bool) ? 1 : 0;
+          }
+          batch.insert('recurring_rules', map, conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+      }
+      if (data.containsKey('categoryDefinitions')) {
+        for (final row in data['categoryDefinitions']) {
+          final map = Map<String, Object?>.from(row);
+          if (map['isBuiltIn'] is bool) {
+            map['isBuiltIn'] = (map['isBuiltIn'] as bool) ? 1 : 0;
+          }
+          batch.insert('category_definitions', map, conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+      }
+      if (data.containsKey('smsContacts')) {
+        for (final row in data['smsContacts']) {
+          final map = Map<String, Object?>.from(row);
+          if (map['isBuiltIn'] is bool) {
+            map['isBuiltIn'] = (map['isBuiltIn'] as bool) ? 1 : 0;
+          }
+          batch.insert('sms_contacts', map, conflictAlgorithm: ConflictAlgorithm.ignore);
+        }
+      }
+      if (data.containsKey('periodLogs')) {
+        for (final row in data['periodLogs']) {
+          batch.insert('period_logs', Map<String, Object?>.from(row), conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+      }
+
+      await batch.commit(noResult: true);
+    });
+
+    await TransactionCategory.reload();
+    await SmsService.reloadSmsContacts();
+    await WidgetHelper.updateWidgetData();
+
+    if (context != null && context.mounted) {
+      try {
+        await Provider.of<NoteProvider>(context, listen: false).refreshNotes();
+      } catch (e) {
+        debugPrint('NoteProvider refresh error: $e');
+      }
+
+      if (context.mounted && data.containsKey('settings')) {
+        await Provider.of<SettingsProvider>(context, listen: false).restoreFromBackupMap(Map<String, dynamic>.from(data['settings'] as Map));
       }
     }
   }
