@@ -20,6 +20,9 @@ class _SmsImportSheetState extends State<SmsImportSheet> {
 
   int _selectedIndex = 2;
   bool _loading = false;
+  int _scannedCount = 0;
+  int _totalCount = 0;
+  int _foundCount = 0;
 
   Future<void> _runImport() async {
     final granted = await SmsService.hasPermission();
@@ -45,21 +48,61 @@ class _SmsImportSheetState extends State<SmsImportSheet> {
       final ok = await SmsService.requestPermissions();
       if (!mounted) return;
       if (!ok) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('SMS permission is required to import transactions.'), behavior: SnackBarBehavior.floating));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('SMS permission is required to import transactions.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
         return;
       }
     }
 
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _scannedCount = 0;
+      _totalCount = 0;
+      _foundCount = 0;
+    });
+
     final offsetDays = _periods[_selectedIndex].$2;
-    final from = offsetDays != null ? DateTime.now().subtract(Duration(days: offsetDays)) : DateTime(2000);
-    final count = await SmsService.syncInboxFrom(from);
+    final from = offsetDays != null
+        ? DateTime.now().subtract(Duration(days: offsetDays))
+        : DateTime(2000);
+
+    final count = await SmsService.syncInboxFrom(
+      from,
+      onProgress: (scanned, total, found) {
+        if (mounted) {
+          setState(() {
+            _scannedCount = scanned;
+            _totalCount = total;
+            _foundCount = found;
+          });
+        }
+      },
+    );
+
+    final newSenders = await SmsService.discoverNewBankSenders();
 
     if (!mounted) return;
     setState(() => _loading = false);
     Navigator.pop(context);
 
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(count == 0 ? 'No new transactions found.' : 'Imported $count new transaction${count == 1 ? '' : 's'} from SMS.'), behavior: SnackBarBehavior.floating));
+    String message = count == 0
+        ? 'No new transactions found.'
+        : 'Imported $count new transaction${count == 1 ? '' : 's'} from SMS.';
+    if (newSenders.isNotEmpty) {
+      message += ' Found ${newSenders.length} new bank sender${newSenders.length == 1 ? '' : 's'}.';
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
   @override
@@ -68,30 +111,72 @@ class _SmsImportSheetState extends State<SmsImportSheet> {
     final textTheme = Theme.of(context).textTheme;
 
     return Container(
-      decoration: BoxDecoration(color: colorScheme.surfaceContainerHigh, borderRadius: const BorderRadius.vertical(top: Radius.circular(28))),
-      padding: EdgeInsets.only(left: 24, right: 24, top: 8, bottom: MediaQuery.of(context).viewInsets.bottom + 24),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHigh,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 24,
+        top: 8,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Import SMS Transactions', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
-          Text('Choose how far back to scan your SMS inbox for bank transactions.', style: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant)),
+          Text(
+            'Choose how far back to scan your SMS inbox for bank transactions.',
+            style: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
+          ),
           const SizedBox(height: 20),
           ...List.generate(_periods.length, (i) {
             final (label, _) = _periods[i];
-            // ignore: deprecated_member_use
-            return RadioListTile<int>(title: Text(label), value: i, groupValue: _selectedIndex, onChanged: _loading ? null : (v) => setState(() => _selectedIndex = v!), contentPadding: EdgeInsets.zero, dense: true);
+            return RadioListTile<int>(
+              title: Text(label),
+              value: i,
+              // ignore: deprecated_member_use
+              groupValue: _selectedIndex,
+              // ignore: deprecated_member_use
+              onChanged: _loading ? null : (v) => setState(() => _selectedIndex = v!),
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+            );
           }),
+          if (_loading) ...[
+            const SizedBox(height: 12),
+            LinearProgressIndicator(
+              value: _totalCount > 0 ? _scannedCount / _totalCount : null,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _totalCount > 0
+                  ? 'Scanning message $_scannedCount of $_totalCount... Found $_foundCount transaction${_foundCount == 1 ? '' : 's'}.'
+                  : 'Preparing SMS inbox scan...',
+              style: textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+            ),
+          ],
           const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              TextButton(onPressed: _loading ? null : () => Navigator.pop(context), child: const Text('Cancel')),
+              TextButton(
+                onPressed: _loading ? null : () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
               const SizedBox(width: 8),
               FilledButton.icon(
                 onPressed: _loading ? null : _runImport,
-                icon: _loading ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.download_outlined, size: 18),
+                icon: _loading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.download_outlined, size: 18),
                 label: Text(_loading ? 'Importing…' : 'Import'),
               ),
             ],

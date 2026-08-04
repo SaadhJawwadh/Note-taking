@@ -108,7 +108,10 @@ class SmsService {
 
   static Future<bool> hasPermission() async => (await Permission.sms.status).isGranted;
 
-  static Future<int> syncInboxFrom(DateTime from) async {
+  static Future<int> syncInboxFrom(
+    DateTime from, {
+    void Function(int scanned, int total, int found)? onProgress,
+  }) async {
     if (!await hasPermission()) {
       return 0;
     }
@@ -123,7 +126,16 @@ class SmsService {
     );
 
     int count = 0;
+    int processed = 0;
+    final total = messages.length;
+    onProgress?.call(0, total, 0);
+
     for (var m in messages) {
+      processed++;
+      if (processed % 5 == 0) {
+        await Future.delayed(Duration.zero);
+      }
+
       final t = await _parseWithAiFallback(
         body: m.body ?? '',
         address: m.address ?? '',
@@ -134,18 +146,23 @@ class SmsService {
         customExpenseRules: _customExpenseRules,
         customIncomeRules: _customIncomeRules,
       );
+
       if (t == null || t.smsId == null) {
+        onProgress?.call(processed, total, count);
         continue;
       }
       if (await TransactionRepository.instance.hasCrossSenderDuplicate(t.amount, t.date)) {
+        onProgress?.call(processed, total, count);
         continue;
       }
 
       final inserted = await TransactionRepository.instance.createSmsTransaction(t);
       if (inserted == null) {
+        onProgress?.call(processed, total, count);
         continue;
       }
       count++;
+      onProgress?.call(processed, total, count);
 
       if (t.category == SmsConstants.reversalSentinel) {
         final target = await TransactionRepository.instance.findReversalTarget(t.amount, t.date);
@@ -238,82 +255,88 @@ class SmsService {
     required List<String> customExpenseRules,
     required List<String> customIncomeRules,
   }) async {
-    var transaction = SmsParser.parseMessage(
-      body: body,
-      address: address,
-      messageId: messageId,
-      messageDate: messageDate,
-      allowedSenderIds: allowedSenderIds,
-      blockedSenderIds: blockedSenderIds,
-      customExpenseRules: customExpenseRules,
-      customIncomeRules: customIncomeRules,
-    );
+    if (body.trim().isEmpty) return null;
 
+    TransactionModel? transaction;
     bool isAiParsed = false;
-    if (transaction == null && body.trim().isNotEmpty) {
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        final useAi = prefs.getBool('useOnDeviceAi') ?? false;
-        if (useAi && SmsParser.isPotentiallyRelevant(
-              body: body,
-              address: address,
-              allowedSenderIds: allowedSenderIds,
-              blockedSenderIds: blockedSenderIds,
-            )) {
-          final aiService = GeminiNanoService();
-          if (await aiService.isSupported()) {
-            await TransactionCategory.reload();
-            final activeCategories = TransactionCategory.allNames;
-            final aiParsed = await aiService.parseSmsTransaction(body, activeCategories);
-            if (aiParsed != null && aiParsed['amount'] != null && aiParsed['amount'] > 0) {
-              final date = messageDate != null
-                  ? DateTime.fromMillisecondsSinceEpoch(messageDate)
-                  : DateTime.now();
-              final smsId = messageId != null
-                  ? '${messageId}_$messageDate'
-                  : 'hash_${body.hashCode}_$messageDate';
 
-              final description = aiParsed['description'] ?? aiParsed['merchant'] ?? 'AI Parsed Transaction';
-              String category = aiParsed['category'] ?? 'Other';
-              if (!activeCategories.contains(category)) {
-                category = TransactionCategory.fromDescriptionCached('$description $body');
-              }
+    // 1. Try AI-First parsing if enabled & supported
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final useAi = prefs.getBool('useOnDeviceAi') ?? false;
+      if (useAi && SmsParser.isPotentiallyRelevant(
+            body: body,
+            address: address,
+            allowedSenderIds: allowedSenderIds,
+            blockedSenderIds: blockedSenderIds,
+          )) {
+        final aiService = GeminiNanoService();
+        if (await aiService.isSupported()) {
+          await TransactionCategory.reload();
+          final activeCategories = TransactionCategory.allNames;
+          final aiParsed = await aiService.parseSmsTransaction(body, activeCategories);
+          if (aiParsed != null && aiParsed['amount'] != null && (aiParsed['amount'] as num) > 0) {
+            final date = messageDate != null
+                ? DateTime.fromMillisecondsSinceEpoch(messageDate)
+                : DateTime.now();
+            final smsId = messageId != null
+                ? '${messageId}_$messageDate'
+                : 'hash_${body.hashCode}_$messageDate';
 
-              transaction = TransactionModel(
-                amount: aiParsed['amount'],
-                description: description,
-                date: date,
-                isExpense: aiParsed['isExpense'] ?? true,
-                category: category,
-                smsId: smsId,
-              );
-              isAiParsed = true;
+            final description = aiParsed['description'] ?? aiParsed['merchant'] ?? 'AI Parsed Transaction';
+            String category = aiParsed['category'] ?? 'Other';
+            if (!activeCategories.contains(category)) {
+              category = TransactionCategory.fromDescriptionCached('$description $body');
             }
+
+            transaction = TransactionModel(
+              amount: (aiParsed['amount'] as num).toDouble(),
+              description: description,
+              date: date,
+              isExpense: aiParsed['isExpense'] ?? true,
+              category: category,
+              smsId: smsId,
+            );
+            isAiParsed = true;
           }
         }
-      } catch (e) {
-        debugPrint('On-device AI SMS parsing failed: $e');
       }
+    } catch (e) {
+      debugPrint('On-device AI SMS parsing failed: $e');
     }
 
-    // AI Refinement Step: Only refine the description if it was NOT already parsed by the AI
-    if (transaction != null && !isAiParsed) {
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        if (prefs.getBool('useOnDeviceAi') ?? false) {
-          final aiService = GeminiNanoService();
-          if (await aiService.isSupported()) {
-            final refined = await aiService.refineTransactionDescription(
-              transaction.description,
-              body,
-            );
-            if (refined != null && refined.isNotEmpty) {
-              transaction = transaction.copy(description: refined);
+    // 2. Fallback to Regex parser if AI did not return a valid transaction
+    if (transaction == null) {
+      transaction = SmsParser.parseMessage(
+        body: body,
+        address: address,
+        messageId: messageId,
+        messageDate: messageDate,
+        allowedSenderIds: allowedSenderIds,
+        blockedSenderIds: blockedSenderIds,
+        customExpenseRules: customExpenseRules,
+        customIncomeRules: customIncomeRules,
+      );
+
+      // AI Refinement Step: Refine description of regex-parsed transaction if AI is available
+      if (transaction != null && !isAiParsed) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          if (prefs.getBool('useOnDeviceAi') ?? false) {
+            final aiService = GeminiNanoService();
+            if (await aiService.isSupported()) {
+              final refined = await aiService.refineTransactionDescription(
+                transaction.description,
+                body,
+              );
+              if (refined != null && refined.isNotEmpty) {
+                transaction = transaction.copy(description: refined);
+              }
             }
           }
+        } catch (e) {
+          debugPrint('AI Refinement failed: $e');
         }
-      } catch (e) {
-        debugPrint('AI Refinement failed: $e');
       }
     }
 
@@ -420,6 +443,35 @@ class SmsService {
       }
     }
     return success;
+  }
+
+  static Future<void> performAppLaunchCatchUpSync() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final enabled = prefs.getBool('dailySyncEnabled') ?? false;
+      if (!enabled) return;
+      if (!await hasPermission()) return;
+
+      final lastSyncStr = prefs.getString('lastSmsSyncTime');
+      DateTime from = DateTime.now().subtract(const Duration(hours: 24));
+      if (lastSyncStr != null) {
+        final parsed = DateTime.tryParse(lastSyncStr);
+        if (parsed != null) {
+          from = parsed;
+        }
+      }
+
+      // Only perform catch-up if last sync was more than 30 minutes ago
+      if (DateTime.now().difference(from).inMinutes >= 30) {
+        final count = await syncInboxFrom(from);
+        final now = DateTime.now();
+        await prefs.setString('lastSmsSyncTime', now.toIso8601String());
+        await prefs.setInt('lastSmsSyncCount', count);
+        debugPrint('App-launch catch-up sync completed: $count transactions imported');
+      }
+    } catch (e) {
+      debugPrint('App-launch catch-up sync error: $e');
+    }
   }
 }
 

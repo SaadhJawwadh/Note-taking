@@ -112,6 +112,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
   // Search and formatting panel state
   bool _showFormattingBar = false;
+  bool _isFormattingBarPinnedManually = false;
   bool _isSearching = false;
   bool _isCaseSensitive = false;
   List<int> _searchOffsets = [];
@@ -304,6 +305,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
         _isImageSelected = _checkIfImageSelected();
         if (!selection.isCollapsed) {
           _showFormattingBar = true;
+        } else {
+          _showFormattingBar = _isFormattingBarPinnedManually;
         }
       });
       _scrollToCursorIfNeeded();
@@ -3720,7 +3723,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                     tooltip: 'Formatting',
                                     onPressed: () {
                                       setState(() {
-                                        _showFormattingBar = !_showFormattingBar;
+                                        _isFormattingBarPinnedManually = !_isFormattingBarPinnedManually;
+                                        _showFormattingBar = _isFormattingBarPinnedManually;
                                       });
                                     },
                                     style: IconButton.styleFrom(

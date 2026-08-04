@@ -34,6 +34,7 @@ import '../utils/widget_helper.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/whats_new_sheet.dart';
 import '../services/update_rating_service.dart';
+import '../services/sms_service.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -80,6 +81,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _checkAndProcessPendingIntents();
+        unawaited(SmsService.performAppLaunchCatchUpSync());
       }
     });
   }
@@ -261,6 +263,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final bool isLocked = settings.appLockEnabled && !AppLockScreen.sessionAuthenticated.value;
       if (!isLocked) {
         _checkAndProcessPendingIntents();
+        unawaited(SmsService.performAppLaunchCatchUpSync());
       }
     }
   }
