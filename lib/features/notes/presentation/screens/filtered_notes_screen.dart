@@ -10,6 +10,7 @@ import 'package:note_taking_app/screens/home_screen.dart';
 import 'package:note_taking_app/features/notes/presentation/screens/note_editor_screen.dart';
 import 'package:note_taking_app/core/theme/app_layout.dart';
 import 'package:note_taking_app/widgets/frosted_glass_sliver_app_bar.dart';
+import 'package:note_taking_app/core/ui/app_card.dart';
 
 enum FilterType { archived, trash }
 
@@ -160,6 +161,63 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
               titleText: title,
               showBackButton: true,
             ),
+            if (widget.filterType == FilterType.trash && !isLoading)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: Builder(builder: (ctx) {
+                    final isDark = Theme.of(ctx).brightness == Brightness.dark;
+                    return AppCard.tonal(
+                      color: colorScheme.errorContainer
+                          .withValues(alpha: isDark ? 0.16 : 0.35),
+                      borderColor: colorScheme.error
+                          .withValues(alpha: isDark ? 0.35 : 0.45),
+                      borderRadius: AppLayout.radiusL,
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: colorScheme.errorContainer.withValues(alpha: 0.5),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.auto_delete_outlined,
+                              size: 20,
+                              color: colorScheme.error,
+                            ),
+                          ),
+                          const SizedBox(width: AppLayout.spaceM),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Trash Auto-Purge Active',
+                                  style: textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.error,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  settings.trashAutoPurgeDays > 0
+                                      ? 'Notes in trash are automatically purged after ${settings.trashAutoPurgeDays} days.'
+                                      : 'Notes in trash can be restored anytime before permanent deletion.',
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ),
+              ),
             if (isLoading)
               const SliverFillRemaining(
                 child: Center(child: CircularProgressIndicator()),

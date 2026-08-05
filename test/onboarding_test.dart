@@ -5,6 +5,9 @@ import 'package:note_taking_app/features/settings/presentation/screens/onboardin
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:note_taking_app/features/sync/providers/p2p_sync_provider.dart';
+import 'package:note_taking_app/features/sync/presentation/screens/p2p_sync_screen.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -33,16 +36,21 @@ void main() {
 
   group('OnboardingScreen Widget Tests', () {
     late SettingsProvider settings;
+    late P2pSyncProvider p2pProvider;
 
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
       settings = SettingsProvider();
+      p2pProvider = P2pSyncProvider();
       await Future.delayed(const Duration(milliseconds: 50));
     });
 
     Widget buildTestWidget() {
-      return ChangeNotifierProvider<SettingsProvider>.value(
-        value: settings,
+      return MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsProvider>.value(value: settings),
+          ChangeNotifierProvider<P2pSyncProvider>.value(value: p2pProvider),
+        ],
         child: const MaterialApp(
           home: OnboardingScreen(),
         ),
@@ -144,6 +152,33 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(settings.showFinancialManager, isTrue);
+    });
+
+    testWidgets('Tapping Configure P2P Sync on page 4 navigates to P2pSyncScreen', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1080, 1920);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      // Navigate to page 4 (_buildTipsSlide)
+      await tester.tap(find.text('Next'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Next'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Next'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Next'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      final p2pButton = find.text('Configure P2P Sync ➔');
+      expect(p2pButton, findsOneWidget);
+
+      await tester.tap(p2pButton, warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(P2pSyncScreen), findsOneWidget);
     });
   });
 }

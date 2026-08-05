@@ -5,6 +5,7 @@ import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'dart:io';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/settings_provider.dart';
 import 'package:note_taking_app/features/notes/presentation/screens/manage_tags_screen.dart';
 import 'package:note_taking_app/features/notes/presentation/screens/filtered_notes_screen.dart';
@@ -408,7 +409,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   onThemeModeChanged: settings.setThemeMode,
                                 ),
 
-                                // 1. Manage Features Section
+                                 // 1. Manage Features Section
                                 SettingsSection(
                                   title: 'Manage Features',
                                   icon: Icons.apps_outlined,
@@ -524,6 +525,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           valueBadge: _formatTimeOfDay(context, settings.dailySyncTime),
                                           showArrow: true,
                                           onTap: () => _showTimePicker(context, settings),
+                                        ),
+                                        const _Divider(),
+                                        SettingsTile(
+                                          icon: Icons.play_circle_outline_rounded,
+                                          iconColor: colorScheme.primary,
+                                          title: 'Sync SMS Now',
+                                          subtitle: 'Instantly scan inbox for recent transactions',
+                                          onTap: () => _performManualSmsSync(context),
                                         ),
                                       ],
                                     ],
@@ -1701,6 +1710,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
           '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
       await settings.setDailySyncTime(formattedTime);
     }
+  }
+
+  void _performManualSmsSync(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('Scanning SMS inbox for bank transactions...'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+    final count = await SmsService.syncInboxFrom(
+      DateTime.now().subtract(const Duration(hours: 48)),
+    );
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    await prefs.setString('lastSmsSyncTime', now.toIso8601String());
+    await prefs.setInt('lastSmsSyncCount', count);
+    if (!context.mounted) return;
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          count > 0
+              ? 'Synced $count new bank transaction${count == 1 ? "" : "s"} successfully.'
+              : 'SMS scan complete. No new bank transactions found.',
+        ),
+      ),
+    );
   }
 }
 

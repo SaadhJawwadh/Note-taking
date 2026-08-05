@@ -501,7 +501,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
         content: Text(
           count == 0
               ? 'Ledger is 100% clean! No duplicate transactions found.'
-              : 'Successfully cleaned up $count duplicate transaction${count == 1 ? '' : 's'}! 🎉',
+              : 'Successfully cleaned up $count duplicate transaction${count == 1 ? '' : 's'}!',
         ),
         behavior: SnackBarBehavior.floating,
       ),
@@ -611,9 +611,21 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
         ? DateFormat.MMMMEEEEd().format(_selectedRange.start)
         : '${DateFormat.MMMd().format(_selectedRange.start)} – ${DateFormat.MMMd().format(_selectedRange.end)}';
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Card(
       elevation: 0,
-      color: isPositive ? cs.tertiaryContainer : cs.errorContainer,
+      color: isPositive
+          ? cs.tertiaryContainer.withValues(alpha: isDark ? 0.22 : 0.55)
+          : cs.errorContainer.withValues(alpha: isDark ? 0.22 : 0.45),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppLayout.radiusXL),
+        side: BorderSide(
+          color: isPositive
+              ? cs.tertiary.withValues(alpha: isDark ? 0.35 : 0.45)
+              : cs.error.withValues(alpha: isDark ? 0.35 : 0.45),
+          width: 1.2,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(

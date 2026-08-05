@@ -56,3 +56,8 @@ The interface avoids sharp edges in favor of soft, approachable curves.
 - **Tactile Feedback**: Immediate ripple effects, scaling, and elevation changes on touch.
 - **Micro-Animations**: Snappy transitions (~300ms) using the `animations` package (e.g., `FadeThroughPageTransitionsBuilder` and `OpenContainer`).
 - **Dynamic Theming**: Dynamic color mappings derived from `ColorScheme.fromSeed(...)` based on note tag colors, ensuring perfect contrast across light and dark modes.
+
+## 6. Hero Containers & Optical QR Invariants
+- **Single Hero Container Tinting**: Top hero cards receive an 18% alpha opacity dynamic container fill (`primaryContainer` / `tertiaryContainer`) paired with a 1.2px accent border (30% alpha opacity). All secondary body cards remain in unified surface containers (`surfaceContainerHigh`).
+- **Zero Emojis in UI Buttons & Alerts**: Button labels, dialog actions, and SnackBar text must use clean typography and official Material Symbols instead of text emojis (`🔄`, `🟢`, `🔴`).
+- **Optical High-Contrast QR Code Standard**: QR codes must render solid pure black `#000000` modules inside a pure white `#FFFFFF` container with 16dp padding for 100% camera scanning reliability in all light/dark themes.

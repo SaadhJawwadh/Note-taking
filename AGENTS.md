@@ -8,3 +8,4 @@ Refer to [.agent/rules.md](file:///Users/saadhjawwadh/Documents/Code/Note%20taki
 3. **Feature-Driven Architecture**: Place domain code in `lib/features/` (`notes`, `finances`, `health`, `settings`) with decoupled providers.
 4. **Mandatory Analysis & Testing**: Run `flutter analyze` and `flutter test` after code changes.
 5. **No Unprompted Git Commits/Pushes**: Request explicit user confirmation before committing or pushing.
+6. **Seamless Borderless Bars & Hero Tints**: Keep top/bottom bars 100% borderless (`border: null`) and dynamically scale Hero Container alpha opacities (50%–55% Light Mode vs 20%–22% Dark Mode).

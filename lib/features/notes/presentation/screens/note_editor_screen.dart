@@ -109,6 +109,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   final Set<String> _dismissedUrls = {};
   bool _isUpdatingProgrammatically = false;
   StreamSubscription? _docSubscription;
+  Timer? _scrollToCursorDebounce;
 
   // Search and formatting panel state
   bool _showFormattingBar = false;
@@ -299,18 +300,30 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   }
 
   void _onSelectionChanged() {
+    if (!mounted) return;
+
     final selection = _quillController.selection;
-    if (mounted) {
+    final newIsImageSelected = _checkIfImageSelected();
+    final newShowFormattingBar = !selection.isCollapsed || _isFormattingBarPinnedManually;
+
+    // Only trigger setState if visual layout state actually changed
+    if (newIsImageSelected != _isImageSelected || newShowFormattingBar != _showFormattingBar) {
       setState(() {
-        _isImageSelected = _checkIfImageSelected();
-        if (!selection.isCollapsed) {
-          _showFormattingBar = true;
-        } else {
-          _showFormattingBar = _isFormattingBarPinnedManually;
-        }
+        _isImageSelected = newIsImageSelected;
+        _showFormattingBar = newShowFormattingBar;
       });
-      _scrollToCursorIfNeeded();
     }
+
+    _debounceScrollToCursor();
+  }
+
+  void _debounceScrollToCursor() {
+    _scrollToCursorDebounce?.cancel();
+    _scrollToCursorDebounce = Timer(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        _scrollToCursorIfNeeded();
+      }
+    });
   }
 
   RenderBox? _findRenderEditor(RenderObject? object) {
@@ -588,6 +601,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     _speech.cancel();
     _docSubscription?.cancel();
     _debounce?.cancel();
+    _scrollToCursorDebounce?.cancel();
     _titleController.dispose();
     _quillController.dispose();
     _focusNode.dispose();
@@ -1505,10 +1519,11 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                   constraints: const BoxConstraints(maxHeight: 240),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+                    color: colorScheme.secondaryContainer.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(AppLayout.radiusM),
                     border: Border.all(
-                      color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                      color: colorScheme.secondary.withValues(alpha: 0.30),
+                      width: 1.2,
                     ),
                   ),
                   child: SingleChildScrollView(

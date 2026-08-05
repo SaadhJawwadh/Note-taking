@@ -138,7 +138,7 @@ class DatabaseHelper {
 
     Database? db;
     try {
-      db = await openDatabase(path, readOnly: true, singleInstance: false);
+      db = await openDatabase(path, password: '', readOnly: true, singleInstance: false);
       await db.rawQuery('SELECT count(*) FROM sqlite_master');
       return true;
     } catch (_) {

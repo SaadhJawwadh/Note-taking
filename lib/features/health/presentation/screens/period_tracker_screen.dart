@@ -15,7 +15,7 @@ import '../../../../core/theme/app_layout.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../widgets/skeleton_card.dart';
 import '../../../../widgets/moon_phase_painter.dart';
-
+import '../../../../core/ui/app_card.dart';
 
 class PeriodTrackerScreen extends StatefulWidget {
   static final ValueNotifier<DateTime?> openLogEditorNotifier = ValueNotifier<DateTime?>(null);
@@ -1160,14 +1160,12 @@ class CyclePhaseMoonWidget extends StatelessWidget {
       // Map cycleDay (1 to avgCycleLength) to phaseValue (0.0 to 1.0)
       phaseValue = (cycleDay! - 1) / avgCycleLength;
     }
+    final isDark = theme.brightness == Brightness.dark;
 
-    return Card(
-      elevation: 0,
-      color: theme.colorScheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppLayout.radiusXL),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3)),
-      ),
+    return AppCard.tonal(
+      color: phaseColor.withValues(alpha: isDark ? 0.20 : 0.45),
+      borderColor: phaseColor.withValues(alpha: isDark ? 0.35 : 0.45),
+      borderRadius: AppLayout.radiusXL,
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Row(

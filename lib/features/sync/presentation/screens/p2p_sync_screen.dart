@@ -42,7 +42,7 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
       builder: (dialogCtx) {
         return AppDialog(
           title: 'Pair New Device',
-          confirmLabel: 'Pair & Sync Device 🔄',
+          confirmLabel: 'Pair & Sync Device',
           onConfirm: () async {
             final code = _pairCodeController.text.trim();
             final name = _deviceNameController.text.trim();
@@ -189,13 +189,13 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
               data: qrData,
               version: QrVersions.auto,
               size: 210.0,
-              eyeStyle: QrEyeStyle(
+              eyeStyle: const QrEyeStyle(
                 eyeShape: QrEyeShape.square,
-                color: Theme.of(context).colorScheme.primary,
+                color: Colors.black,
               ),
-              dataModuleStyle: QrDataModuleStyle(
+              dataModuleStyle: const QrDataModuleStyle(
                 dataModuleShape: QrDataModuleShape.circle,
-                color: Theme.of(context).colorScheme.onSurface,
+                color: Colors.black,
               ),
             ),
           ),
@@ -228,6 +228,7 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Consumer<P2pSyncProvider>(
       builder: (context, syncProvider, child) {
@@ -244,8 +245,15 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                 padding: const EdgeInsets.all(AppLayout.spaceM),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    // Hero Status & Sync Card
-                    AppCard(
+                    // Top Hero Status Card
+                    AppCard.frosted(
+                      backgroundColor: colorScheme.primaryContainer
+                          .withValues(alpha: isDark ? 0.22 : 0.55),
+                      border: BorderSide(
+                        color: colorScheme.primary
+                            .withValues(alpha: isDark ? 0.35 : 0.45),
+                        width: 1.2,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -283,9 +291,13 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                                     Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Text(
-                                          'Bi-Directional P2P Sync',
-                                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                                        Expanded(
+                                          child: Text(
+                                            'Bi-Directional P2P Sync',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                                          ),
                                         ),
                                         AppChip(
                                           label: isSyncing
@@ -339,7 +351,7 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                                                   SnackBar(
                                                     content: Text(
                                                       result.success
-                                                          ? 'Sync completed successfully 🟢'
+                                                          ? 'Sync completed successfully'
                                                           : (result.errorMessage ?? 'Sync failed'),
                                                     ),
                                                     backgroundColor: result.success
@@ -374,7 +386,7 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                                           SnackBar(
                                             content: Text(
                                               syncProvider.lastMessage ??
-                                                  (success ? 'Test Ping Succeeded 🟢' : 'Test Ping Failed 🔴'),
+                                                  (success ? 'Test Ping Succeeded' : 'Test Ping Failed'),
                                             ),
                                             backgroundColor: success ? colorScheme.primary : colorScheme.error,
                                             behavior: SnackBarBehavior.floating,
@@ -466,7 +478,7 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                                             Clipboard.setData(ClipboardData(text: syncProvider.currentPairCode));
                                             ScaffoldMessenger.of(context).showSnackBar(
                                               const SnackBar(
-                                                content: Text('Pair code copied to clipboard 📋'),
+                                                content: Text('Pair code copied to clipboard'),
                                                 behavior: SnackBarBehavior.floating,
                                               ),
                                             );
@@ -513,7 +525,7 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                                               Clipboard.setData(ClipboardData(text: syncProvider.localIpAddress!));
                                               ScaffoldMessenger.of(context).showSnackBar(
                                                 const SnackBar(
-                                                  content: Text('IP address copied to clipboard 📋'),
+                                                  content: Text('IP address copied to clipboard'),
                                                   behavior: SnackBarBehavior.floating,
                                                 ),
                                               );
@@ -644,7 +656,7 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                                               ScaffoldMessenger.of(context).showSnackBar(
                                                 SnackBar(
                                                   content: Text(
-                                                    res.success ? 'Synced with ${device.deviceName} 🟢' : (res.errorMessage ?? 'Sync failed'),
+                                                    res.success ? 'Synced with ${device.deviceName}' : (res.errorMessage ?? 'Sync failed'),
                                                   ),
                                                   behavior: SnackBarBehavior.floating,
                                                 ),

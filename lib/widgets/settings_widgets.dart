@@ -31,16 +31,19 @@ class SettingsHeroCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Material(
-        color: colorScheme.surfaceContainerHigh,
+        color: isDark
+            ? colorScheme.primaryContainer.withValues(alpha: 0.22)
+            : colorScheme.primaryContainer.withValues(alpha: 0.55),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppLayout.radiusXXL),
           side: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.4),
-            width: 1.0,
+            color: colorScheme.primary.withValues(alpha: isDark ? 0.35 : 0.45),
+            width: 1.2,
           ),
         ),
         clipBehavior: Clip.antiAlias,
@@ -237,18 +240,27 @@ class SettingsSection extends StatelessWidget {
   final String title;
   final IconData icon;
   final List<Widget> children;
+  final Color? accentColor;
 
   const SettingsSection({
     super.key,
     required this.title,
     required this.icon,
     required this.children,
+    this.accentColor,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final effectiveAccent = accentColor ?? colorScheme.primary;
+    final containerColor = accentColor != null
+        ? accentColor!.withValues(alpha: 0.12)
+        : colorScheme.surfaceContainerHigh.withValues(alpha: 0.7);
+    final borderColor = accentColor != null
+        ? accentColor!.withValues(alpha: 0.25)
+        : colorScheme.outlineVariant.withValues(alpha: 0.35);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
@@ -262,7 +274,7 @@ class SettingsSection extends StatelessWidget {
                 Icon(
                   icon,
                   size: 18,
-                  color: colorScheme.primary,
+                  color: effectiveAccent,
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -270,18 +282,18 @@ class SettingsSection extends StatelessWidget {
                   style: theme.textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.2,
-                    color: colorScheme.primary,
+                    color: effectiveAccent,
                   ),
                 ),
               ],
             ),
           ),
           Material(
-            color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.7),
+            color: containerColor,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppLayout.radiusXL),
               side: BorderSide(
-                color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+                color: borderColor,
                 width: 1.0,
               ),
             ),
@@ -352,6 +364,8 @@ class SettingsTile extends StatelessWidget {
                 : null),
         title: Text(
           title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
             color: colorScheme.onSurface,
@@ -370,12 +384,15 @@ class SettingsTile extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (valueBadge != null) ...[
-                  AppChip(
-                    isCompact: true,
-                    label: valueBadge!,
-                    backgroundColor:
-                        colorScheme.surfaceContainerHighest.withValues(alpha: 0.8),
-                    textColor: colorScheme.onSurfaceVariant,
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 120),
+                    child: AppChip(
+                      isCompact: true,
+                      label: valueBadge!,
+                      backgroundColor:
+                          colorScheme.surfaceContainerHighest.withValues(alpha: 0.8),
+                      textColor: colorScheme.onSurfaceVariant,
+                    ),
                   ),
                   if (showArrow) const SizedBox(width: AppLayout.spaceXS),
                 ],

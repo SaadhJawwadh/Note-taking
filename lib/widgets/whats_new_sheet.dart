@@ -39,8 +39,8 @@ class WhatsNewSheet extends StatelessWidget {
         items: [
           _WhatsNewItem(
             icon: Icons.sync_rounded,
-            title: "Fast Local Master Device Sync",
-            desc: "Transfer your complete notebook between devices instantly over your local network.",
+            title: "Bi-Directional P2P Wi-Fi Sync",
+            desc: "Merge notes, financial ledgers, and settings between devices over Wi-Fi without losing local edits.",
             actionLabel: "Try P2P Sync ➔",
             onAction: () {
               Navigator.push(
@@ -50,9 +50,9 @@ class WhatsNewSheet extends StatelessWidget {
             },
           ),
           _WhatsNewItem(
-            icon: Icons.qr_code_scanner_rounded,
-            title: "Onboarding Setup Mode Choices",
-            desc: "Choose to set up a new primary notebook or pair and import from an existing phone during app setup.",
+            icon: Icons.sync_lock_rounded,
+            title: "Reliable SMS Auto-Sync Engine",
+            desc: "Background bank transaction sync now runs reliably with 48-hour catch-up sync, live status badges, and 1-tap test scanning.",
           ),
         ],
       ),
@@ -62,14 +62,14 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.tertiaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.shield_rounded,
-            title: "Permission-Lean Privacy",
-            desc: "Removed unnecessary Bluetooth and location permission requests for a cleaner experience.",
+            icon: Icons.keyboard_rounded,
+            title: "Ultra-Smooth Text Selection",
+            desc: "Optimized keyboard D-Pad arrow key navigation and text selection in the editor for instant, stutter-free typing.",
           ),
           _WhatsNewItem(
-            icon: Icons.warning_amber_rounded,
-            title: "Clear Role & Overwrite Warnings",
-            desc: "Helpful warning dialogs explain Primary and Secondary device roles before replacing secondary data.",
+            icon: Icons.palette_rounded,
+            title: "Dynamic Light & Dark Hero Cards",
+            desc: "Hero cards dynamically adjust pastel opacities in Light Mode and deep translucent fills in Dark Mode for crisp contrast.",
           ),
         ],
       ),

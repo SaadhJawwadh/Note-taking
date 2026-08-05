@@ -76,6 +76,10 @@ class AppTheme {
   static const Color textSecondary = Color(0xFF8E8E93);
   static const Color errorRed = Color(0xFFFF453A);
 
+  // Font Family Single Source of Truth Constants
+  static const String fontGoogleSansFlex = 'Google Sans Flex';
+  static const String fontInter = 'Inter';
+
   // Note Color Seeds (Material 3 Expressive Curated Palette)
   static const List<Color> noteColors = [
     Color(0x00000000), // System Default (0)
@@ -140,31 +144,39 @@ class AppTheme {
 
     final textTheme = baseTextTheme.copyWith(
       displayLarge: baseTextTheme.displayLarge?.copyWith(
-        fontFamily: 'Google Sans Flex',
+        fontFamily: fontGoogleSansFlex,
         fontVariations: fontVariations,
       ),
       displayMedium: baseTextTheme.displayMedium?.copyWith(
-        fontFamily: 'Google Sans Flex',
+        fontFamily: fontGoogleSansFlex,
         fontVariations: fontVariations,
       ),
       displaySmall: baseTextTheme.displaySmall?.copyWith(
-        fontFamily: 'Google Sans Flex',
+        fontFamily: fontGoogleSansFlex,
         fontVariations: fontVariations,
       ),
       headlineLarge: baseTextTheme.headlineLarge?.copyWith(
-        fontFamily: 'Google Sans Flex',
+        fontFamily: fontGoogleSansFlex,
         fontVariations: fontVariations,
       ),
       headlineMedium: baseTextTheme.headlineMedium?.copyWith(
-        fontFamily: 'Google Sans Flex',
+        fontFamily: fontGoogleSansFlex,
         fontVariations: fontVariations,
       ),
       headlineSmall: baseTextTheme.headlineSmall?.copyWith(
-        fontFamily: 'Google Sans Flex',
+        fontFamily: fontGoogleSansFlex,
         fontVariations: fontVariations,
       ),
       titleLarge: baseTextTheme.titleLarge?.copyWith(
-        fontFamily: 'Google Sans Flex',
+        fontFamily: fontGoogleSansFlex,
+        fontVariations: fontVariations,
+      ),
+      titleMedium: baseTextTheme.titleMedium?.copyWith(
+        fontFamily: fontGoogleSansFlex,
+        fontVariations: fontVariations,
+      ),
+      labelLarge: baseTextTheme.labelLarge?.copyWith(
+        fontFamily: fontGoogleSansFlex,
         fontVariations: fontVariations,
       ),
     );

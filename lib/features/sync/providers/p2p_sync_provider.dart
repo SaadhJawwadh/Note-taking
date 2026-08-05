@@ -89,7 +89,7 @@ class P2pSyncProvider with ChangeNotifier {
         _status = SyncStatus.completed;
         _lastSyncedAt = DateTime.now();
         if (result.latencyMs != null) {
-          _lastMessage = 'Test Ping Succeeded 🟢 (${result.latencyMs}ms)';
+          _lastMessage = 'Test Ping Succeeded (${result.latencyMs}ms)';
         } else {
           _lastMessage = result.syncedCount > 0 ? 'Master State Synced' : result.transportUsed;
         }

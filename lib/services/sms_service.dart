@@ -106,7 +106,14 @@ class SmsService {
     return granted;
   }
 
-  static Future<bool> hasPermission() async => (await Permission.sms.status).isGranted;
+  static Future<bool> hasPermission() async {
+    try {
+      return (await Permission.sms.status).isGranted;
+    } catch (e) {
+      debugPrint('SmsService.hasPermission isolate warning: $e');
+      return true; // Fallback in background isolate so getInboxSms can attempt scanning
+    }
+  }
 
   static Future<int> syncInboxFrom(
     DateTime from, {
@@ -380,9 +387,9 @@ class SmsService {
         kDailySyncTaskName,
         kDailySyncTaskName,
         initialDelay: delay,
+        existingWorkPolicy: ExistingWorkPolicy.replace,
         constraints: Constraints(
           networkType: NetworkType.notRequired,
-          requiresBatteryNotLow: true,
         ),
       );
       debugPrint('Daily SMS Auto-Sync task scheduled for $timeStr with delay: $delay');
@@ -401,20 +408,20 @@ class SmsService {
       if (!(prefs.getBool('dailySyncEnabled') ?? false)) return true;
       if (!await hasPermission()) return true;
 
-      // Sync transactions over the last 26 hours (with a safety margin)
+      // Sync transactions over the last 48 hours (to cover power-off / offline periods)
       final now = DateTime.now();
-      final fromTime = now.subtract(const Duration(hours: 26));
+      final fromTime = now.subtract(const Duration(hours: 48));
       final count = await syncInboxFrom(fromTime);
 
       await prefs.setString('lastSmsSyncTime', now.toIso8601String());
       await prefs.setInt('lastSmsSyncCount', count);
 
-      // Notify the user if new transactions were synced
+      // Notify the user ONLY if 1 or more new transactions were synced
       if (count > 0) {
         await NotificationService.showNotification(
           id: 101,
-          title: 'SMS Auto-Sync Complete',
-          body: 'Synced $count new transaction${count == 1 ? "" : "s"} from your messages.',
+          title: '💳 SMS Auto-Sync Complete',
+          body: 'Synced $count new bank transaction${count == 1 ? "" : "s"} from your messages.',
         );
       }
 
@@ -432,9 +439,9 @@ class SmsService {
             kDailySyncTaskName,
             kDailySyncTaskName,
             initialDelay: delay,
+            existingWorkPolicy: ExistingWorkPolicy.replace,
             constraints: Constraints(
               networkType: NetworkType.notRequired,
-              requiresBatteryNotLow: true,
             ),
           );
         }
@@ -453,16 +460,18 @@ class SmsService {
       if (!await hasPermission()) return;
 
       final lastSyncStr = prefs.getString('lastSmsSyncTime');
-      DateTime from = DateTime.now().subtract(const Duration(hours: 24));
+      DateTime from = DateTime.now().subtract(const Duration(hours: 48));
       if (lastSyncStr != null) {
         final parsed = DateTime.tryParse(lastSyncStr);
         if (parsed != null) {
-          from = parsed;
+          // Use last sync time, capped to max 48 hours ago
+          final maxLookback = DateTime.now().subtract(const Duration(hours: 48));
+          from = parsed.isBefore(maxLookback) ? maxLookback : parsed;
         }
       }
 
-      // Only perform catch-up if last sync was more than 30 minutes ago
-      if (DateTime.now().difference(from).inMinutes >= 30) {
+      // Perform catch-up if last sync was more than 15 minutes ago
+      if (DateTime.now().difference(from).inMinutes >= 15) {
         final count = await syncInboxFrom(from);
         final now = DateTime.now();
         await prefs.setString('lastSmsSyncTime', now.toIso8601String());

@@ -1,26 +1,24 @@
 <en-US>
 🌟 What's New
 • Bi-directional P2P Wi-Fi device sync.
-• Interactive setup in onboarding & What's New.
+• Reliable SMS auto-sync with 48h catch-up & test button.
 
 🚀 Improvements
-• Material 3 Expressive sync control hub.
-• 1-tap IP & pair code copying with live auto-refresh.
+• Ultra-smooth text editing & D-Pad selection in editor.
+• Seamless borderless top & bottom glass navigation bars.
 
 🐛 Fixes
-• Symmetrical 2-device pairing display.
-• Soft-deleted notes stay cleanly in Trash.
+• Isolate-safe background permissions & database options.
 </en-US>
 <ta-IN>
 🌟 புதிய அம்சங்கள்
-• சாதனங்களுக்கு இடையே இருவழி Wi-Fi ஒத்திசைவு.
-• தொடக்கத்திலேயே எளிதான P2P சாதன இணைப்பு.
+• சாதனங்களுக்கு இடையே இருவழி P2P Wi-Fi ஒத்திசைவு.
+• 48h பிந்தைய ஒத்திசைவு கொண்ட வங்கியின் SMS தானியங்கி இறக்குமதி.
 
 🚀 மேம்பாடுகள்
-• புதிய Material 3 வடிவமைப்பு மற்றும் 1-டேப் நகல்.
-• நேரடி தானியங்கி புதுப்பிப்பு.
+• தட்டச்சு மற்றும் எழுத்துத் தேர்வில் அதிவேக செயல்பாடு.
+• விளிம்புகள் இல்லாத மென்மையான கண்ணாடி வழிசெலுத்தல் பட்டி.
 
 🐛 பிழை திருத்தங்கள்
-• இரு சாதனங்களின் சரியான இணைப்பு காட்சி.
-• குப்பைத்தொட்டி குறிப்புகள் சரியாக பராமரிக்கப்படுகின்றன.
+• பின்னணி ஒத்திசைவு மற்றும் தரவுத்தள நிலைத்தன்மை திருத்தங்கள்.
 </ta-IN>

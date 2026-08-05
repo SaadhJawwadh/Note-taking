@@ -8,7 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import '../data/settings_provider.dart';
-import '../l10n/app_localizations.dart';
+import '../core/ui/app_card.dart';
 
 class AppLockScreen extends StatefulWidget {
   final Widget child;
@@ -261,23 +261,11 @@ class AppLockScreenState extends State<AppLockScreen>
               child: Scaffold(
                 backgroundColor: Colors.transparent,
                 body: Center(
-                  child: Container(
-                    padding: const EdgeInsets.all(32),
+                  child: AppCard.frosted(
                     margin: const EdgeInsets.symmetric(horizontal: 24),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .surfaceContainerHigh
-                          .withValues(alpha: isDark ? 0.65 : 0.80),
-                      borderRadius: BorderRadius.circular(28),
-                      border: Border.all(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .outlineVariant
-                            .withValues(alpha: isDark ? 0.3 : 0.5),
-                        width: 1,
-                      ),
-                    ),
+                    padding: const EdgeInsets.all(32),
+                    borderRadius: 28,
+                    blurSigma: 24.0,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -302,6 +290,10 @@ class AppLockScreenState extends State<AppLockScreen>
                                   .colorScheme
                                   .primaryContainer
                                   .withValues(alpha: 0.7),
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.35),
+                                width: 1.5,
+                              ),
                             ),
                             child: Icon(
                               Icons.lock_outline,
@@ -312,7 +304,7 @@ class AppLockScreenState extends State<AppLockScreen>
                         ),
                         const SizedBox(height: 24),
                         Text(
-                          AppLocalizations.of(context)?.appLocked ?? 'App Locked',
+                          'App Locked',
                           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
@@ -330,7 +322,7 @@ class AppLockScreenState extends State<AppLockScreen>
                           FilledButton.icon(
                             onPressed: () => _checkAuth(context),
                             icon: const Icon(Icons.fingerprint),
-                            label: Text(AppLocalizations.of(context)?.unlock ?? 'Unlock'),
+                            label: const Text('Unlock'),
                             style: FilledButton.styleFrom(
                               minimumSize: const Size(160, 48),
                               shape: const StadiumBorder(),

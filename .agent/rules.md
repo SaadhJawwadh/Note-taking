@@ -69,3 +69,11 @@ When adding native Android plugins to `pubspec.yaml`, the agent **MUST** ensure 
 Before running deployment scripts (`./deploy.sh`) or tagging a release:
 1. **`PLAY_STORE_NOTES.md` (Mandatory)**: Always write updated, bilingual release notes (`<en-US>` and `<ta-IN>`) under 450 characters per section to `PLAY_STORE_NOTES.md` BEFORE triggering `./deploy.sh`.
 2. **App Changelog Parity**: Ensure `CHANGELOG.md`, `lib/screens/changelog_screen.dart`, `lib/widgets/whats_new_sheet.dart`, and `PLAY_STORE_NOTES.md` all feature identical, user-friendly benefit highlights for the new version.
+
+---
+
+## 🎨 Rule 8: Navigation & Hero Container Standards
+1. **Seamless Borderless Bars**: Top App Bars (`FrostedGlassSliverAppBar`, custom header slivers) and Bottom Navigation Bars MUST be 100% borderless (`border: null`), relying on pure backdrop blur (`sigma 16.0`) and translucent `surfaceContainerLow` fill so content scrolls underneath seamlessly.
+2. **Dynamic Light/Dark Hero Container Tint**: Hero cards (`SettingsHeroCard`, Net Balance, P2P Sync Status, Period Tracker Moon Phase, Trash Auto-Purge Banner) must dynamically adjust container opacity (50%–55% alpha in Light Mode; 20%–22% alpha in Dark Mode) to preserve vibrant fills without returning to gradient or dull grey decorations.
+3. **SQLCipher Safety**: Always pass `password: ''` (or explicit key) to `openDatabase()` calls when using `sqflite_sqlcipher` to prevent runtime options cast crashes.
+
