@@ -62,3 +62,10 @@ When adding native Android plugins to `pubspec.yaml`, the agent **MUST** ensure 
 ## 🔒 Rule 6: Security & User Consent
 * **Local Data First**: Data and encrypted backups remain local. Exclude sensitive biometric/auth settings from backup restoration.
 * **No Unprompted Commits/Pushes**: Always obtain explicit user permission before executing `git commit` or `git push`.
+
+---
+
+## 🏷️ Rule 7: Mandatory Play Store Listing & Release Notes Sync
+Before running deployment scripts (`./deploy.sh`) or tagging a release:
+1. **`PLAY_STORE_NOTES.md` (Mandatory)**: Always write updated, bilingual release notes (`<en-US>` and `<ta-IN>`) under 450 characters per section to `PLAY_STORE_NOTES.md` BEFORE triggering `./deploy.sh`.
+2. **App Changelog Parity**: Ensure `CHANGELOG.md`, `lib/screens/changelog_screen.dart`, `lib/widgets/whats_new_sheet.dart`, and `PLAY_STORE_NOTES.md` all feature identical, user-friendly benefit highlights for the new version.
