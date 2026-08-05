@@ -7,6 +7,7 @@ import '../data/settings_provider.dart';
 import '../core/theme/app_layout.dart';
 import '../core/ui/app_card.dart';
 import '../widgets/bouncing_widget.dart';
+import '../features/sync/presentation/screens/p2p_sync_screen.dart';
 
 class WhatsNewSheet extends StatelessWidget {
   final String currentVersion;
@@ -40,6 +41,13 @@ class WhatsNewSheet extends StatelessWidget {
             icon: Icons.sync_rounded,
             title: "Fast Local Master Device Sync",
             desc: "Transfer your complete notebook between devices instantly over your local network.",
+            actionLabel: "Try P2P Sync ➔",
+            onAction: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const P2pSyncScreen()),
+              );
+            },
           ),
           _WhatsNewItem(
             icon: Icons.qr_code_scanner_rounded,
@@ -242,6 +250,32 @@ class WhatsNewSheet extends StatelessWidget {
                                                           fontSize: 13,
                                                         ),
                                                       ),
+                                                      if (item.actionLabel != null && item.onAction != null) ...[
+                                                        const SizedBox(height: AppLayout.spaceS),
+                                                        Align(
+                                                          alignment: Alignment.centerLeft,
+                                                          child: TextButton(
+                                                            onPressed: () {
+                                                              _finishWhatsNew(context);
+                                                              item.onAction!();
+                                                            },
+                                                            style: TextButton.styleFrom(
+                                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                                              minimumSize: Size.zero,
+                                                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                              backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
+                                                              foregroundColor: theme.colorScheme.primary,
+                                                              shape: RoundedRectangleBorder(
+                                                                borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                                                              ),
+                                                            ),
+                                                            child: Text(
+                                                              item.actionLabel!,
+                                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
                                                     ],
                                                   ),
                                                 ),
@@ -321,10 +355,14 @@ class _WhatsNewItem {
   final IconData icon;
   final String title;
   final String desc;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   _WhatsNewItem({
     required this.icon,
     required this.title,
     required this.desc,
+    this.actionLabel,
+    this.onAction,
   });
 }

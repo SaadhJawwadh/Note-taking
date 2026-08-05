@@ -60,12 +60,22 @@ lib/
 │   │   │   └── widgets/              # Editor toolbar & header widgets
 │   │   └── providers/
 │   │       └── note_editor_provider.dart# Editor state, dirty tracking, auto-save timer
-│   └── settings/                     # App Settings & Preferences Feature Module
+│   ├── settings/                     # App Settings & Preferences Feature Module
+│   │   ├── presentation/
+│   │   │   └── screens/
+│   │   │       ├── onboarding_screen.dart# Full-screen interactive wizard & setup choices
+│   │   │       └── settings_screen.dart# App options, backup/restore, security controls
+│   │   └── providers/
+│   │       └── settings_provider.dart# SharedPreferences state & global app options
+│   └── sync/                         # Master P2P Device Sync Feature Module
 │       ├── presentation/
-│       │   └── screens/
-│       │       └── settings_screen.dart# App options, backup/restore, security controls
+│       │   ├── screens/
+│       │   │   └── p2p_sync_screen.dart# Master P2P control hub, status cards, peer devices
+│       │   └── widgets/
+│       │       ├── p2p_setup_wizard_sheet.dart# 1-tap onboarding pairing wizard
+│       │       └── qr_scanner_dialog.dart# Camera QR code scanner dialog
 │       └── providers/
-│           └── settings_provider.dart# SharedPreferences state & global app options
+│           └── p2p_sync_provider.dart# Direct REST HTTP/UDP server & pair code state
 ├── data/                             # Models, Database Helpers & Legacy Compatibility Exports
 │   ├── repositories/                 # Re-exports feature repositories for backward compatibility
 │   ├── category_constants.dart       # Built-in transaction categories and colors
@@ -85,9 +95,12 @@ lib/
 │   ├── gemini_nano_service.dart      # Android AI Core & Gemini Nano text refining, tagging
 │   ├── local_ai_service.dart         # AI Core interface definitions
 │   ├── notification_service.dart     # Local notifications scheduling (period predictions)
+│   ├── p2p_sync_service.dart         # Direct REST HTTP/UDP server & peer transport engine
 │   ├── sms_constants.dart            # Sri Lankan bank SMS regex & sender mappings
 │   ├── sms_parser.dart               # Rules-based SMS debit/credit parser
 │   ├── sms_service.dart              # Telephony SMS listener, duplicates, reversals dispatcher
+│   ├── sync_crypto_service.dart      # AES-256-GCM payloads encryption & pair key derivation
+│   ├── sync_merge_service.dart       # Non-destructive Last-Write-Wins (LWW) bi-directional delta merge engine
 │   └── update_service.dart           # Queries GitHub Release API and triggers OTA updates
 ├── theme/                            # Legacy Theme Compatibility Exports (Re-exports lib/core/theme/)
 │   ├── app_layout.dart               # Re-exports lib/core/theme/app_layout.dart

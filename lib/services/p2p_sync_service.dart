@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import 'backup_service.dart';
+import 'sync_merge_service.dart';
 import '../features/sync/data/p2p_pairing_model.dart';
 import 'sync_crypto_service.dart';
 
@@ -261,7 +262,7 @@ class P2pSyncService {
           response.statusCode = HttpStatus.unauthorized;
         }
       } 
-      // 3. Pull Master Snapshot
+      // 3. Pull Master Snapshot (1-Way Fallback)
       else if (path == '/api/sync/pull_master') {
         final body = await utf8.decoder.bind(request).join();
         final decrypted = _crypto.decryptPayload(body, pairCode);
@@ -278,6 +279,34 @@ class P2pSyncService {
             receivedCount: 0,
             sentCount: 1,
             transportUsed: 'Primary Master Export',
+          ));
+        } else {
+          response.statusCode = HttpStatus.unauthorized;
+        }
+      } 
+      // 4. Bi-Directional Delta Merge (Non-Destructive 2-Way Sync)
+      else if (path == '/api/sync/bidirectional_sync') {
+        final body = await utf8.decoder.bind(request).join();
+        final decrypted = _crypto.decryptPayload(body, pairCode);
+        if (decrypted != null) {
+          final Map<String, dynamic> clientData = json.decode(decrypted);
+
+          // 1. Merge client data into host database
+          final mergeResult = await SyncMergeService.instance.mergeRemoteData(clientData);
+
+          // 2. Generate updated host payload for client
+          final updatedBackupJson = await generateBackupJson();
+          final encryptedReply = _crypto.encryptPayload(updatedBackupJson, pairCode);
+
+          response.statusCode = HttpStatus.ok;
+          response.write(encryptedReply);
+
+          _syncEventsController.add(SyncResult(
+            success: true,
+            syncedCount: mergeResult.notesMerged + mergeResult.transactionsMerged,
+            receivedCount: mergeResult.notesMerged,
+            sentCount: 1,
+            transportUsed: 'Bi-Directional Delta Merge',
           ));
         } else {
           response.statusCode = HttpStatus.unauthorized;
@@ -301,7 +330,7 @@ class P2pSyncService {
         'deviceId': myDeviceId,
         'deviceName': myDeviceName,
         'pairCode': pairCode,
-        'role': 'SECONDARY',
+        'role': 'PEER',
       };
 
       final encrypted = _crypto.encryptPayload(json.encode(handshakeMap), pairCode);
@@ -311,11 +340,42 @@ class P2pSyncService {
       final req = await client.postUrl(Uri.parse('http://$targetIp:$httpSyncPort/api/sync/pair_handshake'));
       req.write(encrypted);
       final res = await req.close();
-      return res.statusCode == 200;
+
+      if (res.statusCode == 200) {
+        final body = await utf8.decoder.bind(res).join();
+        final decrypted = _crypto.decryptPayload(body, pairCode);
+        if (decrypted != null) {
+          final Map<String, dynamic> map = json.decode(decrypted);
+          final remoteDevice = PairedDevice(
+            deviceId: map['deviceId'] ?? const Uuid().v4(),
+            deviceName: map['deviceName'] ?? 'Paired Device',
+            pairCode: pairCode,
+            lastSyncedAt: DateTime.now(),
+            transportMode: 'Bi-Directional Sync',
+            ipAddress: targetIp,
+            role: map['role'] as String? ?? 'PEER',
+          );
+          _remoteDevicePairedController.add(remoteDevice);
+          return true;
+        }
+      }
+      return false;
     } catch (e) {
       debugPrint('[P2pSyncService] Pair handshake error: $e');
       return false;
     }
+  }
+
+  String _formatUserFriendlyError(dynamic e, String targetIp) {
+    final str = e.toString();
+    if (str.contains('SocketException') || str.contains('Connection refused')) {
+      return 'Peer at $targetIp unreachable. Make sure both devices are on the same Wi-Fi.';
+    } else if (str.contains('TimeoutException') || str.contains('timed out')) {
+      return 'Connection to $targetIp timed out. Open the app on the other device.';
+    } else if (str.contains('HandshakeException')) {
+      return 'Network handshake failed with $targetIp. Check pair code.';
+    }
+    return 'Connection error ($targetIp): ${e.toString().split('\n').first}';
   }
 
   /// Sends a direct test ping with round-trip latency measurement.
@@ -328,10 +388,10 @@ class P2pSyncService {
       };
       final encrypted = _crypto.encryptPayload(json.encode(pingMap), pairCode);
       if (encrypted == null) {
-        return SyncResult(success: false, errorMessage: 'Encryption error');
+        return SyncResult(success: false, errorMessage: 'Encryption failed. Check pair code.');
       }
 
-      final client = HttpClient()..connectionTimeout = const Duration(seconds: 3);
+      final client = HttpClient()..connectionTimeout = const Duration(seconds: 4);
       final req = await client.postUrl(Uri.parse('http://$targetIp:$httpSyncPort/api/sync/ping'));
       req.write(encrypted);
       final res = await req.close();
@@ -345,16 +405,20 @@ class P2pSyncService {
           final result = SyncResult(
             success: true,
             syncedCount: 0,
-            transportUsed: 'Primary Direct IP ($targetIp)',
+            transportUsed: 'Direct IP ($targetIp)',
             latencyMs: latency,
           );
           _syncEventsController.add(result);
           return result;
+        } else {
+          return SyncResult(success: false, errorMessage: 'Pair Code mismatch. Decryption failed for $targetIp.');
         }
+      } else if (res.statusCode == 401) {
+        return SyncResult(success: false, errorMessage: 'Pair Code mismatch. Check 6-digit code on target device.');
       }
-      return SyncResult(success: false, errorMessage: 'Ping response invalid from $targetIp');
+      return SyncResult(success: false, errorMessage: 'Ping failed (HTTP ${res.statusCode}) from $targetIp');
     } catch (e) {
-      final res = SyncResult(success: false, errorMessage: 'Target $targetIp unreachable: $e');
+      final res = SyncResult(success: false, errorMessage: _formatUserFriendlyError(e, targetIp));
       _syncEventsController.add(res);
       return res;
     }
@@ -412,9 +476,62 @@ class P2pSyncService {
     }
   }
 
-  /// Background auto-sync trigger compatibility alias.
+  /// Performs non-destructive Bi-Directional Delta Merge with Target Peer Device.
+  Future<SyncResult> syncBiDirectional(String targetIp, String pairCode) async {
+    if (_isSyncing) {
+      return SyncResult(success: false, errorMessage: 'Sync already in progress');
+    }
+    _isSyncing = true;
+
+    try {
+      final clientBackupJson = await generateBackupJson();
+      final encrypted = _crypto.encryptPayload(clientBackupJson, pairCode);
+      if (encrypted == null) {
+        return SyncResult(success: false, errorMessage: 'Encryption error');
+      }
+
+      final client = HttpClient()..connectionTimeout = const Duration(seconds: 8);
+      final req = await client.postUrl(Uri.parse('http://$targetIp:$httpSyncPort/api/sync/bidirectional_sync'));
+      req.write(encrypted);
+      final res = await req.close();
+
+      if (res.statusCode == 200) {
+        final responseBody = await utf8.decoder.bind(res).join();
+        final decryptedReply = _crypto.decryptPayload(responseBody, pairCode);
+        if (decryptedReply != null) {
+          final Map<String, dynamic> replyMap = json.decode(decryptedReply);
+
+          // Non-destructive Last-Write-Wins Merge on client device
+          final mergeResult = await SyncMergeService.instance.mergeRemoteData(replyMap);
+
+          final syncRes = SyncResult(
+            success: true,
+            syncedCount: mergeResult.notesMerged + mergeResult.transactionsMerged,
+            receivedCount: mergeResult.notesMerged,
+            sentCount: 1,
+            transportUsed: 'Bi-Directional Delta Merge ($targetIp)',
+          );
+          _syncEventsController.add(syncRes);
+          return syncRes;
+        } else {
+          return SyncResult(success: false, errorMessage: 'Pair Code mismatch. Decryption failed for $targetIp.');
+        }
+      } else if (res.statusCode == 401) {
+        return SyncResult(success: false, errorMessage: 'Pair Code mismatch. Check 6-digit code on target device.');
+      }
+      return SyncResult(success: false, errorMessage: 'Sync failed (HTTP ${res.statusCode}) with $targetIp');
+    } catch (e) {
+      final res = SyncResult(success: false, errorMessage: _formatUserFriendlyError(e, targetIp));
+      _syncEventsController.add(res);
+      return res;
+    } finally {
+      _isSyncing = false;
+    }
+  }
+
+  /// Background auto-sync trigger compatibility alias (uses Bi-Directional Merge).
   Future<SyncResult> performSync(PairedDevice device) async {
     final ip = device.ipAddress ?? '127.0.0.1';
-    return pullMasterFromPrimary(ip, device.pairCode);
+    return syncBiDirectional(ip, device.pairCode);
   }
 }

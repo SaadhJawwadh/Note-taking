@@ -40,6 +40,7 @@ class P2pSyncProvider with ChangeNotifier {
   final P2pSyncService _service = P2pSyncService.instance;
   StreamSubscription<SyncResult>? _syncResultSubscription;
   StreamSubscription<PairedDevice>? _remotePairSubscription;
+  Timer? _eventDebounceTimer;
 
   P2pSyncProvider() {
     loadSettings();
@@ -47,6 +48,7 @@ class P2pSyncProvider with ChangeNotifier {
 
   @override
   void dispose() {
+    _eventDebounceTimer?.cancel();
     _syncResultSubscription?.cancel();
     _remotePairSubscription?.cancel();
     _service.stopPrimaryHostServer();
@@ -100,7 +102,10 @@ class P2pSyncProvider with ChangeNotifier {
 
     // Subscribe to remote device auto-pairing events (1-Scan Bidirectional pairing)
     _remotePairSubscription = _service.remoteDevicePaired.listen((incomingDevice) async {
-      final index = _pairedDevices.indexWhere((d) => d.deviceId == incomingDevice.deviceId);
+      final index = _pairedDevices.indexWhere((d) =>
+          d.deviceId == incomingDevice.deviceId ||
+          (d.ipAddress != null && incomingDevice.ipAddress != null && d.ipAddress == incomingDevice.ipAddress) ||
+          d.pairCode == incomingDevice.pairCode);
       if (index != -1) {
         _pairedDevices[index] = incomingDevice;
       } else {
@@ -183,12 +188,16 @@ class P2pSyncProvider with ChangeNotifier {
       role: role,
     );
 
-    // Deduplicate by deviceId or pairCode
-    _pairedDevices.removeWhere((d) => d.deviceId == newDevice.deviceId || d.pairCode == pairCode.trim());
+    // Deduplicate by deviceId, pairCode, or targetIp
+    _pairedDevices.removeWhere((d) =>
+        d.deviceId == newDevice.deviceId ||
+        d.pairCode == pairCode.trim() ||
+        (targetIp != null && targetIp.isNotEmpty && d.ipAddress == targetIp));
     _pairedDevices.add(newDevice);
 
     _currentPairCode = pairCode.trim();
     await _saveDevicesToStorage();
+    await startPrimaryHostServer();
 
     if (targetIp != null && targetIp.isNotEmpty) {
       await _service.sendPairHandshake(_currentPairCode, deviceName, targetIp);
@@ -207,12 +216,64 @@ class P2pSyncProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Alias for pullFromPrimary for home app bar button compatibility.
-  Future<SyncResult> syncNow({Function()? onCompleted}) async {
-    return pullFromPrimary(onCompleted: onCompleted);
+  /// Triggers a 3-second debounced background sync when data changes (notes/expenses).
+  void triggerEventSync() {
+    if (!_isAutoSyncEnabled || _pairedDevices.isEmpty) return;
+    _eventDebounceTimer?.cancel();
+    _eventDebounceTimer = Timer(const Duration(seconds: 3), () async {
+      final targetIp = _pairedDevices.first.ipAddress;
+      if (targetIp != null && targetIp.isNotEmpty) {
+        await syncBiDirectional(targetIp: targetIp);
+      }
+    });
   }
 
-  /// Secondary pulls master state from Primary Device
+  /// Alias for syncBiDirectional for home app bar button compatibility.
+  Future<SyncResult> syncNow({Function()? onCompleted}) async {
+    return syncBiDirectional(onCompleted: onCompleted);
+  }
+
+  /// Performs non-destructive Bi-Directional Delta Merge with Target Device
+  Future<SyncResult> syncBiDirectional({String? targetIp, Function()? onCompleted}) async {
+    final ipToSync = targetIp ?? (_pairedDevices.isNotEmpty ? _pairedDevices.first.ipAddress : null);
+    if (ipToSync == null || ipToSync.isEmpty) {
+      _status = SyncStatus.error;
+      _lastMessage = 'Sync Failed: Peer IP unavailable. Scan QR code to pair.';
+      notifyListeners();
+      return SyncResult(success: false, errorMessage: _lastMessage);
+    }
+
+    _status = SyncStatus.syncing;
+    _lastMessage = 'Syncing & merging with peer ($ipToSync)...';
+    notifyListeners();
+
+    final result = await _service.syncBiDirectional(ipToSync, _currentPairCode);
+
+    if (result.success) {
+      _status = SyncStatus.completed;
+      _lastSyncedAt = DateTime.now();
+      _lastMessage = 'Synced & merged state with $ipToSync';
+
+      final updatedIndex = _pairedDevices.indexWhere((d) => d.ipAddress == ipToSync);
+      if (updatedIndex != -1) {
+        _pairedDevices[updatedIndex] = _pairedDevices[updatedIndex].copyWith(
+          lastSyncedAt: _lastSyncedAt,
+          transportMode: result.transportUsed,
+        );
+        await _saveDevicesToStorage();
+      }
+
+      if (onCompleted != null) onCompleted();
+    } else {
+      _status = SyncStatus.error;
+      _lastMessage = result.errorMessage ?? 'Bi-directional sync failed';
+    }
+
+    notifyListeners();
+    return result;
+  }
+
+  /// Secondary pulls master state from Primary Device (1-Way Fallback)
   Future<SyncResult> pullFromPrimary({String? targetIp, Function()? onCompleted}) async {
     final ipToSync = targetIp ?? (_pairedDevices.isNotEmpty ? _pairedDevices.first.ipAddress : null);
     if (ipToSync == null || ipToSync.isEmpty) {

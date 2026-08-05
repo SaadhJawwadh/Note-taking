@@ -2300,19 +2300,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     if (!_lockAuthPassed) {
       final cs = Theme.of(context).colorScheme;
       return Scaffold(
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                cs.surface,
-                cs.surfaceContainerHigh,
-                cs.surfaceContainerHighest,
-              ],
-            ),
-          ),
-          child: Stack(
+        backgroundColor: cs.surface,
+        body: Stack(
             children: [
               Positioned(
                 top: -100,
@@ -2428,9 +2417,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
               ),
             ],
           ),
-        ),
-      );
-    }
+        );
+      }
 
     return Consumer<SettingsProvider>(builder: (context, settings, child) {
       final theme = Theme.of(context);

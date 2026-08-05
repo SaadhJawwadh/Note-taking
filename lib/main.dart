@@ -132,9 +132,10 @@ class NoteApp extends StatelessWidget {
           home: const HomeScreen(),
           builder: (context, child) {
             final mediaQueryData = MediaQuery.of(context);
+            final deviceFontScale = mediaQueryData.textScaler.scale(1.0);
             return MediaQuery(
               data: mediaQueryData.copyWith(
-                textScaler: TextScaler.linear(settings.textSize / 16.0),
+                textScaler: TextScaler.linear(deviceFontScale * (settings.textSize / 16.0)),
               ),
               child: AppLockScreen(child: child!),
             );

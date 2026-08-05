@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../features/notes/data/note_repository.dart';
 import '../data/note_model.dart';
+import '../services/p2p_sync_service.dart';
 
 class NoteProvider extends ChangeNotifier {
   final NoteRepository _noteRepository = NoteRepository();
+  StreamSubscription? _syncEventsSubscription;
   List<Note> _notes = [];
   List<Note> _filteredNotes = [];
   bool _isLoading = true;
@@ -66,6 +69,17 @@ class NoteProvider extends ChangeNotifier {
 
   NoteProvider() {
     _init();
+    _syncEventsSubscription = P2pSyncService.instance.syncEvents.listen((result) {
+      if (result.success && (result.syncedCount > 0 || result.receivedCount > 0)) {
+        refreshNotes();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _syncEventsSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _init() async {

@@ -11,6 +11,7 @@ import '../../providers/settings_provider.dart';
 import '../../../../providers/note_provider.dart';
 import '../../../sync/presentation/widgets/qr_scanner_dialog.dart';
 import '../../../sync/providers/p2p_sync_provider.dart';
+import '../../../sync/presentation/screens/p2p_sync_screen.dart';
 
 /// Full-Screen Interactive Onboarding Wizard
 class OnboardingScreen extends StatefulWidget {
@@ -239,16 +240,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       child: Column(
         children: [
           const SizedBox(height: AppLayout.spaceL),
-          // Gradient Circle App Logo
+          // Circle App Logo
           Container(
             width: 108,
             height: 108,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [theme.colorScheme.primary, theme.colorScheme.tertiary],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: theme.colorScheme.primary,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
@@ -345,8 +342,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       targetIp: ip,
                       role: 'SECONDARY',
                     );
-                    await syncProvider.pullFromPrimary(
-                      targetIp: ip,
+                    await syncProvider.syncBiDirectional(
                       onCompleted: () {
                         noteProvider.refreshNotes();
                       },
@@ -881,8 +877,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           _buildFeatureCard(
             theme,
             icon: Icons.sync_lock_rounded,
-            title: 'Auto Sync & Backups',
-            desc: 'Background bank SMS parsing for zero-click expense logging and automated AES-256 encrypted backups.',
+            title: 'P2P Device Sync & Backups',
+            desc: 'Bi-directional P2P Wi-Fi notebook sync, automatic SMS parsing, and AES-256 encrypted backups.',
+            actionLabel: 'Configure P2P Sync ➔',
+            onAction: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const P2pSyncScreen()),
+              );
+            },
           ),
           const SizedBox(height: AppLayout.spaceM),
           _buildFeatureCard(
@@ -916,6 +919,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     required IconData icon,
     required String title,
     required String desc,
+    String? actionLabel,
+    VoidCallback? onAction,
   }) {
     return AppCard(
       padding: AppLayout.paddingAllL,
@@ -949,6 +954,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     height: 1.3,
                   ),
                 ),
+                if (actionLabel != null && onAction != null) ...[
+                  const SizedBox(height: AppLayout.spaceS),
+                  TextButton(
+                    onPressed: onAction,
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
+                      foregroundColor: theme.colorScheme.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                      ),
+                    ),
+                    child: Text(
+                      actionLabel,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

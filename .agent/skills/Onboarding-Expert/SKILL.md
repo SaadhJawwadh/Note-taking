@@ -39,7 +39,7 @@ Specialist skill governing the onboarding experience, setup screens, live theme 
 1. **Page 1: Welcome & Vision (Setup Choice Mode)**
    - Introduces offline privacy, zero cloud lock-in, and local SQLCipher database encryption.
    - **Primary Device Choice Card**: Set up as new Primary notebook (proceeds with wizard).
-   - **Pair & Import Choice Card**: Launches camera QR scanner to pull master database state from Primary phone in 1 step during onboarding.
+   - **Pair & Import Choice Card**: Launches camera QR scanner to pair and perform a non-destructive bi-directional sync from Primary phone in 1 step during onboarding.
 2. **Page 2: Personalization & Live Theme Preview**
    - **Theme Mode Selector**: System, Light, Dark options (`settings.setThemeMode(...)`).
    - **Real-Time Visual Feedback**: Toggling theme modes immediately updates `Theme.of(context)` across the active widget tree.
@@ -52,7 +52,9 @@ Specialist skill governing the onboarding experience, setup screens, live theme 
    - **NPU / Hardware Detection Badge**: Checks `settings.isDeviceAiSupported` (Android AI Core support).
    - **Local AI Toggle**: Offline text summarization and smart SMS categorization (`settings.setUseOnDeviceAi(...)`).
 5. **Page 5: Ready to Explore & Pro-Tips**
-   - Pro-tips cards for **Auto Sync & AES-256 Backups**, **App Lock & Security**, **Multi-Select Batch Actions**, and **Responsive Navigation**.
+   - Pro-tips cards for **P2P Device Sync & Backups** (with a direct **"Configure P2P Sync ➔"** action button launching `P2pSyncScreen`), **App Lock & Security**, **Multi-Select Batch Actions**, and **Responsive Navigation**.
+6. **What's New Sheet Action Buttons (`WhatsNewSheet`)**:
+   - `WhatsNewSheet` items support optional `actionLabel` (e.g. `"Try P2P Sync ➔"`) and `onAction` callbacks to launch feature screens directly from release update cards.
 
 ---
 

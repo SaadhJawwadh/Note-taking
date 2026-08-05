@@ -1,25 +1,26 @@
 <en-US>
 🌟 What's New
-• Fast local master notebook device sync.
-• Choose setup mode or import during onboarding.
+• Bi-directional P2P Wi-Fi device sync.
+• Interactive setup in onboarding & What's New.
 
 🚀 Improvements
-• Permission-lean privacy with zero Bluetooth prompts.
-• Clear role and data overwrite warning dialogs.
-• Floating action button accessible in landscape and tablet views.
+• Material 3 Expressive sync control hub.
+• 1-tap IP & pair code copying with live auto-refresh.
 
 🐛 Fixes
-• Single-device pairing deduplication.
+• Symmetrical 2-device pairing display.
+• Soft-deleted notes stay cleanly in Trash.
 </en-US>
 <ta-IN>
 🌟 புதிய அம்சங்கள்
-• சாதனங்களுக்கு இடையே வேகமான உள்ளூர் ஒத்திசைவு.
-• தொடக்கத்திலேயே முதன்மை சாதனம் அல்லது இறக்குமதி தேர்வு.
+• சாதனங்களுக்கு இடையே இருவழி Wi-Fi ஒத்திசைவு.
+• தொடக்கத்திலேயே எளிதான P2P சாதன இணைப்பு.
 
 🚀 மேம்பாடுகள்
-• புளூடூத் அனுமதி தேவையில்லாத தனியுரிமை.
-• தெளிவான எச்சரிக்கை அறிவிப்புகள்.
+• புதிய Material 3 வடிவமைப்பு மற்றும் 1-டேப் நகல்.
+• நேரடி தானியங்கி புதுப்பிப்பு.
 
 🐛 பிழை திருத்தங்கள்
-• இரட்டை சாதன பதிவுகள் சரி செய்யப்பட்டன.
+• இரு சாதனங்களின் சரியான இணைப்பு காட்சி.
+• குப்பைத்தொட்டி குறிப்புகள் சரியாக பராமரிக்கப்படுகின்றன.
 </ta-IN>

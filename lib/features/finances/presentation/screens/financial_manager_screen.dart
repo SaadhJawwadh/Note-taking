@@ -718,21 +718,13 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
             toY: data['totalIncome'] as double,
             width: 10,
             borderRadius: BorderRadius.circular(6),
-            gradient: LinearGradient(
-              colors: [cs.tertiary.withValues(alpha: 0.5), cs.tertiary],
-              begin: Alignment.bottomCenter,
-              end: Alignment.topCenter,
-            ),
+            color: cs.tertiary,
           ),
           BarChartRodData(
             toY: data['totalExpense'] as double,
             width: 10,
             borderRadius: BorderRadius.circular(6),
-            gradient: LinearGradient(
-              colors: [cs.error.withValues(alpha: 0.5), cs.error],
-              begin: Alignment.bottomCenter,
-              end: Alignment.topCenter,
-            ),
+            color: cs.error,
           ),
         ],
         barsSpace: 4,

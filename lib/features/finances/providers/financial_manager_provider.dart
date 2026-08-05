@@ -1,15 +1,32 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../data/transaction_model.dart';
 import '../data/transaction_repository.dart';
 import '../../../data/repositories/recurring_rule_repository.dart';
+import '../../../services/p2p_sync_service.dart';
 
 /// ChangeNotifier managing state and financial metrics for Financial Manager.
 class FinancialManagerProvider extends ChangeNotifier {
   final TransactionRepository _repository = TransactionRepository.instance;
+  StreamSubscription? _syncSubscription;
 
   List<TransactionModel> _allTransactions = [];
   List<TransactionModel> _filteredTransactions = [];
   bool _isLoading = false;
+
+  FinancialManagerProvider() {
+    _syncSubscription = P2pSyncService.instance.syncEvents.listen((result) {
+      if (result.success && (result.syncedCount > 0 || result.receivedCount > 0)) {
+        loadTransactions();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _syncSubscription?.cancel();
+    super.dispose();
+  }
 
   String _searchQuery = '';
   String _selectedCategory = 'All';

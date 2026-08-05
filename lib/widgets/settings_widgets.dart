@@ -45,18 +45,8 @@ class SettingsHeroCard extends StatelessWidget {
         ),
         clipBehavior: Clip.antiAlias,
         elevation: 1,
-        child: Container(
+        child: Padding(
           padding: const EdgeInsets.all(AppLayout.spaceL),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                colorScheme.surfaceContainerHigh,
-                colorScheme.primaryContainer.withValues(alpha: 0.15),
-              ],
-            ),
-          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

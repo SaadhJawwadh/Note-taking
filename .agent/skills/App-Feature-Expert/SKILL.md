@@ -80,9 +80,12 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 
 ## 6. Master P2P Device Sync Engine (`lib/features/sync/`)
 
-- **Primary (Host) -> Secondary (Receiver) Role Architecture**: Primary device acts as Host Server on port 8765 (`P2pSyncService`); Secondary device scans QR code and pulls master state (`pullFromPrimary()`).
-- **Direct REST HTTP Server (Port 8765) + UDP Radio Beacon (Port 8766)**: LocalSend-style direct socket connections bypass fragile Google Nearby / BLE daemons entirely, executing transfers in < 10 milliseconds.
-- **Complete Master Overwrite**: Secondary device replaces its SQLite database 100% with Primary master snapshot via `BackupService.restoreFromBackupData()`.
+- **Bi-Directional Delta Merge Architecture**: Devices execute non-destructive 2-way LWW delta merges (`SyncMergeService.mergeRemoteData()`), merging notes, financial ledgers, period logs, and settings over Wi-Fi without losing local edits.
+- **Tombstones vs. Soft-Deletes**:
+  - **Permanent Purges**: Handled via `deleted_notes` tombstone table; purged IDs delete matching local notes.
+  - **Soft-Deletes (`notes.deletedAt != null`)**: Merged by checking `deletedAt` date with a 5-second clock skew tolerance. Local soft-deleted notes are preserved in Trash and cannot be resurrected unless the remote edit timestamp is strictly *after* the local deletion timestamp.
+- **Reactive UI Auto-Refresh Pattern**: Passive HTTP host servers merge payloads in background threads. Domain providers (`NoteProvider`, `FinancialManagerProvider`) MUST subscribe to `P2pSyncService.instance.syncEvents` to automatically re-query SQLite (`refreshNotes()`, `loadTransactions()`) whenever incoming or outgoing sync payloads are merged.
+- **Direct REST HTTP Server (Port 8765) + UDP Radio Beacon (Port 8766)**: Direct socket connections bypass cloud servers and BLE daemons entirely, discovering peers and executing transfers in < 10 ms across dynamic DHCP IPs and VPN split-tunneling.
 - **Deduplicated Device Cards**: Devices are strictly deduplicated by unique `deviceId`.
 - **Permission-Lean Guardrail**: No Bluetooth (`BLUETOOTH_*`) or Location permissions required. Retains minimal network permissions (`INTERNET`, `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE`, `CHANGE_WIFI_MULTICAST_STATE`).
 

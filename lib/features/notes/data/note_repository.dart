@@ -112,26 +112,55 @@ class NoteRepository {
 
   Future<int> deleteNote(String id) async {
     final db = await _db;
+    final now = DateTime.now().toIso8601String();
     return await db.transaction((txn) async {
       await txn.delete('note_tags', where: 'note_id = ?', whereArgs: [id]);
+      await txn.insert('deleted_notes', {'id': id, 'deletedAt': now}, conflictAlgorithm: ConflictAlgorithm.replace);
       return await txn.delete(TableNames.notes, where: '${NoteFields.id} = ?', whereArgs: [id]);
     });
   }
 
   Future<int> archiveNote(String id, bool archive) async {
     final db = await _db;
-    return await db.update(TableNames.notes, {NoteFields.isArchived: archive ? 1 : 0}, where: '${NoteFields.id} = ?', whereArgs: [id]);
+    final now = DateTime.now().toIso8601String();
+    return await db.update(
+      TableNames.notes,
+      {
+        NoteFields.isArchived: archive ? 1 : 0,
+        NoteFields.dateModified: now,
+      },
+      where: '${NoteFields.id} = ?',
+      whereArgs: [id],
+    );
   }
 
   Future<int> softDeleteNote(String id) async {
     await NotificationService.cancelNoteReminder(id);
     final db = await _db;
-    return await db.update(TableNames.notes, {NoteFields.deletedAt: DateTime.now().toIso8601String()}, where: '${NoteFields.id} = ?', whereArgs: [id]);
+    final now = DateTime.now().toIso8601String();
+    return await db.update(
+      TableNames.notes,
+      {
+        NoteFields.deletedAt: now,
+        NoteFields.dateModified: now,
+      },
+      where: '${NoteFields.id} = ?',
+      whereArgs: [id],
+    );
   }
 
   Future<int> restoreNote(String id) async {
     final db = await _db;
-    return await db.update(TableNames.notes, {NoteFields.deletedAt: null}, where: '${NoteFields.id} = ?', whereArgs: [id]);
+    final now = DateTime.now().toIso8601String();
+    return await db.update(
+      TableNames.notes,
+      {
+        NoteFields.deletedAt: null,
+        NoteFields.dateModified: now,
+      },
+      where: '${NoteFields.id} = ?',
+      whereArgs: [id],
+    );
   }
 
   Future<List<String>> getAllFolders() async {

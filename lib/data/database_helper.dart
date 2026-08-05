@@ -95,7 +95,7 @@ class DatabaseHelper {
       return await openDatabase(
         path,
         password: password,
-        version: 17,
+        version: 18,
         onCreate: _createDB,
         onUpgrade: _upgradeDB,
       );
@@ -115,7 +115,7 @@ class DatabaseHelper {
         return await openDatabase(
           path,
           password: password,
-          version: 17,
+          version: 18,
           onCreate: _createDB,
           onUpgrade: _upgradeDB,
         );
@@ -357,6 +357,9 @@ class DatabaseHelper {
       if (!hasIconCol) {
         await db.execute('ALTER TABLE ${TableNames.categoryDefinitions} ADD COLUMN ${CategoryFields.iconCodePoint} INTEGER');
       }
+    }
+    if (oldVersion < 18) {
+      await db.execute('CREATE TABLE IF NOT EXISTS deleted_notes (id TEXT PRIMARY KEY, deletedAt TEXT NOT NULL)');
     }
   }
 }

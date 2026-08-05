@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:intl/intl.dart';
@@ -35,89 +36,35 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
     super.dispose();
   }
 
-  void _showOverwriteWarningDialog(BuildContext context, VoidCallback onConfirmed) {
-    showDialog(
-      context: context,
-      builder: (dialogCtx) => AppDialog(
-        title: 'Master Sync Warning',
-        confirmLabel: 'I Understand & Overwrite',
-        onConfirm: () {
-          Navigator.pop(dialogCtx);
-          onConfirmed();
-        },
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(AppLayout.spaceM),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(AppLayout.radiusM),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.error, size: 28),
-                  const SizedBox(width: AppLayout.spaceM),
-                  Expanded(
-                    child: Text(
-                      'This will replace 100% of notes, ledgers, and settings on this device with the Primary device\'s master snapshot.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onErrorContainer,
-                          ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppLayout.spaceM),
-            Text(
-              '• Primary device remains the master source.\n'
-              '• This device will act as a synced Secondary copy.\n'
-              '• Any local notes on this device will be replaced.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    height: 1.5,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   void _showPairDeviceDialog(BuildContext context, P2pSyncProvider syncProvider) {
     showDialog(
       context: context,
       builder: (dialogCtx) {
         return AppDialog(
-          title: 'Pair Primary Device',
-          confirmLabel: 'Pull & Sync from Primary',
+          title: 'Pair New Device',
+          confirmLabel: 'Pair & Sync Device 🔄',
           onConfirm: () async {
             final code = _pairCodeController.text.trim();
             final name = _deviceNameController.text.trim();
             final ip = _targetIpController.text.trim();
             if (code.length == 6 && ip.isNotEmpty) {
-              _showOverwriteWarningDialog(context, () async {
-                final noteProvider = Provider.of<NoteProvider>(context, listen: false);
-                await syncProvider.pairNewDevice(
-                  deviceName: name.isEmpty ? 'Primary Device' : name,
-                  pairCode: code,
-                  targetIp: ip,
-                  role: 'SECONDARY',
-                );
-                await syncProvider.pullFromPrimary(
-                  targetIp: ip,
-                  onCompleted: () {
-                    noteProvider.refreshNotes();
-                  },
-                );
-                _pairCodeController.clear();
-                _deviceNameController.clear();
-                _targetIpController.clear();
-                if (dialogCtx.mounted) Navigator.pop(dialogCtx);
-              });
+              final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+              await syncProvider.pairNewDevice(
+                deviceName: name.isEmpty ? 'Paired Device' : name,
+                pairCode: code,
+                targetIp: ip,
+                role: 'PEER',
+              );
+              await syncProvider.syncBiDirectional(
+                targetIp: ip,
+                onCompleted: () {
+                  noteProvider.refreshNotes();
+                },
+              );
+              _pairCodeController.clear();
+              _deviceNameController.clear();
+              _targetIpController.clear();
+              if (dialogCtx.mounted) Navigator.pop(dialogCtx);
             }
           },
           content: StatefulBuilder(
@@ -127,7 +74,7 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Recommended: Scan the Primary device QR code to auto-detect Primary IP and pair code in 1 tap.',
+                    'Scan the Primary device QR code to auto-detect IP and pair code in 1 tap.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
@@ -158,7 +105,7 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                         }
                       },
                       icon: const Icon(Icons.qr_code_scanner_rounded),
-                      label: const Text('Scan Primary QR Code', style: TextStyle(fontWeight: FontWeight.bold)),
+                      label: const Text('Scan QR Code', style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
                   ),
                   const SizedBox(height: AppLayout.spaceL),
@@ -168,7 +115,7 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: AppLayout.spaceS),
                         child: Text(
-                          'OR MANUAL IP & CODE',
+                          'OR ENTER MANUAL IP & CODE',
                           style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: Theme.of(context).colorScheme.outline,
@@ -201,7 +148,7 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                   TextField(
                     controller: _deviceNameController,
                     decoration: const InputDecoration(
-                      labelText: 'Primary Device Name (Optional)',
+                      labelText: 'Device Name (Optional)',
                       prefixIcon: Icon(Icons.devices_outlined),
                     ),
                   ),
@@ -229,23 +176,33 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(height: AppLayout.spaceS),
-          QrImageView(
-            data: qrData,
-            version: QrVersions.auto,
-            size: 200.0,
-            eyeStyle: QrEyeStyle(
-              eyeShape: QrEyeShape.square,
-              color: Theme.of(context).colorScheme.primary,
+          Container(
+            padding: const EdgeInsets.all(AppLayout.spaceM),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(AppLayout.radiusL),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+              ),
             ),
-            dataModuleStyle: QrDataModuleStyle(
-              dataModuleShape: QrDataModuleShape.circle,
-              color: Theme.of(context).colorScheme.onSurface,
+            child: QrImageView(
+              data: qrData,
+              version: QrVersions.auto,
+              size: 210.0,
+              eyeStyle: QrEyeStyle(
+                eyeShape: QrEyeShape.square,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              dataModuleStyle: QrDataModuleStyle(
+                dataModuleShape: QrDataModuleShape.circle,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
           ),
-          const SizedBox(height: AppLayout.spaceM),
+          const SizedBox(height: AppLayout.spaceL),
           Text(
             'Pair Code: ${provider.currentPairCode}',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                   letterSpacing: 4.0,
                   color: Theme.of(context).colorScheme.primary,
@@ -254,14 +211,14 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
           if (provider.localIpAddress != null) ...[
             const SizedBox(height: 4),
             Text(
-              'Primary IP: ${provider.localIpAddress}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.bold,
+              'Local IP: ${provider.localIpAddress}',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
             ),
           ],
-          const SizedBox(height: AppLayout.spaceM),
+          const SizedBox(height: AppLayout.spaceL),
         ],
       ),
     );
@@ -287,35 +244,75 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                 padding: const EdgeInsets.all(AppLayout.spaceM),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    // Hero CTA Card for Primary Master Sync
+                    // Hero Status & Sync Card
                     AppCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(AppLayout.spaceS),
+                                padding: const EdgeInsets.all(AppLayout.spaceS + 2),
                                 decoration: BoxDecoration(
-                                  color: colorScheme.primaryContainer,
+                                  color: isSyncing
+                                      ? colorScheme.primaryContainer
+                                      : colorScheme.surfaceContainerHighest,
                                   shape: BoxShape.circle,
                                 ),
-                                child: Icon(Icons.sync_rounded, color: colorScheme.onPrimaryContainer, size: 28),
+                                child: isSyncing
+                                    ? SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.5,
+                                          valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                                        ),
+                                      )
+                                    : Icon(
+                                        Icons.sync_rounded,
+                                        color: colorScheme.primary,
+                                        size: 26,
+                                      ),
                               ),
                               const SizedBox(width: AppLayout.spaceM),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      'Primary Master Sync',
-                                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Bi-Directional P2P Sync',
+                                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                                        ),
+                                        AppChip(
+                                          label: isSyncing
+                                              ? 'Syncing...'
+                                              : (syncProvider.status == SyncStatus.error ? 'Error' : 'Ready'),
+                                          isSelected: true,
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(height: 2),
+                                    const SizedBox(height: 4),
                                     Text(
-                                      syncProvider.lastMessage ?? 'Pull & overwrite data from Primary device',
-                                      style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                                      syncProvider.lastMessage ?? 'Merge notes, ledgers & settings non-destructively',
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: colorScheme.onSurfaceVariant,
+                                        height: 1.3,
+                                      ),
                                     ),
+                                    if (syncProvider.lastSyncedAt != null) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Last synced: ${DateFormat.jm().format(syncProvider.lastSyncedAt!)}',
+                                        style: theme.textTheme.labelSmall?.copyWith(
+                                          color: colorScheme.primary,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),
@@ -325,39 +322,39 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                           Row(
                             children: [
                               Expanded(
-                                flex: 2,
+                                flex: 3,
                                 child: SizedBox(
                                   height: 48,
                                   child: BouncingWidget(
-                                    onTap: isSyncing
-                                        ? null
-                                        : () async {
-                                            final noteProvider = Provider.of<NoteProvider>(context, listen: false);
-                                            await syncProvider.pullFromPrimary(onCompleted: () {
-                                              noteProvider.refreshNotes();
-                                            });
-                                          },
                                     child: FilledButton.icon(
                                       onPressed: isSyncing
                                           ? null
                                           : () async {
                                               final noteProvider = Provider.of<NoteProvider>(context, listen: false);
-                                              await syncProvider.pullFromPrimary(onCompleted: () {
+                                              final result = await syncProvider.syncBiDirectional(onCompleted: () {
                                                 noteProvider.refreshNotes();
                                               });
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      result.success
+                                                          ? 'Sync completed successfully 🟢'
+                                                          : (result.errorMessage ?? 'Sync failed'),
+                                                    ),
+                                                    backgroundColor: result.success
+                                                        ? colorScheme.primary
+                                                        : colorScheme.error,
+                                                    behavior: SnackBarBehavior.floating,
+                                                  ),
+                                                );
+                                              }
                                             },
                                       icon: isSyncing
-                                          ? SizedBox(
-                                              width: 18,
-                                              height: 18,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                                valueColor: AlwaysStoppedAnimation<Color>(colorScheme.onPrimary),
-                                              ),
-                                            )
-                                          : const Icon(Icons.download_rounded),
+                                          ? const SizedBox.shrink()
+                                          : const Icon(Icons.sync_rounded),
                                       label: Text(
-                                        isSyncing ? 'Pulling Data...' : 'Pull Sync Now',
+                                        isSyncing ? 'Syncing...' : 'Sync & Merge Now',
                                         style: const TextStyle(fontWeight: FontWeight.bold),
                                       ),
                                     ),
@@ -366,11 +363,25 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                               ),
                               const SizedBox(width: AppLayout.spaceS),
                               Expanded(
-                                flex: 1,
+                                flex: 2,
                                 child: SizedBox(
                                   height: 48,
                                   child: OutlinedButton.icon(
-                                    onPressed: () => syncProvider.sendTestPing(),
+                                    onPressed: () async {
+                                      final success = await syncProvider.sendTestPing();
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              syncProvider.lastMessage ??
+                                                  (success ? 'Test Ping Succeeded 🟢' : 'Test Ping Failed 🔴'),
+                                            ),
+                                            backgroundColor: success ? colorScheme.primary : colorScheme.error,
+                                            behavior: SnackBarBehavior.floating,
+                                          ),
+                                        );
+                                      }
+                                    },
                                     icon: const Icon(Icons.network_ping_rounded, size: 18),
                                     label: const Text('Test Ping'),
                                   ),
@@ -384,7 +395,7 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
 
                     const SizedBox(height: AppLayout.spaceL),
 
-                    // Primary Device Info & Local IP Card
+                    // This Device Network & Hosting Identity Hub
                     AppCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -392,72 +403,122 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                'This Device Network Host Info',
-                                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.qr_code_2_rounded),
-                                tooltip: 'Show Primary Host QR Code',
-                                onPressed: () => _showQrCodeModal(context, syncProvider),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: AppLayout.spaceS),
-                          Row(
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              Row(
                                 children: [
+                                  Icon(Icons.router_rounded, color: colorScheme.primary, size: 20),
+                                  const SizedBox(width: AppLayout.spaceS),
                                   Text(
-                                    'Pair Code',
-                                    style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: colorScheme.surfaceContainerHighest,
-                                      borderRadius: BorderRadius.circular(AppLayout.radiusM),
-                                    ),
-                                    child: Text(
-                                      syncProvider.currentPairCode,
-                                      style: theme.textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 3.0,
-                                        color: colorScheme.primary,
-                                      ),
-                                    ),
+                                    'This Device Hosting Info',
+                                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                                   ),
                                 ],
                               ),
-                              const SizedBox(width: AppLayout.spaceL),
+                              IconButton(
+                                icon: const Icon(Icons.refresh_rounded),
+                                tooltip: 'Refresh Wi-Fi IP Address',
+                                onPressed: () => syncProvider.refreshDiagnostics(),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppLayout.spaceM),
+                          Row(
+                            children: [
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Device Local IP Address',
+                                      '6-Digit Pair Code',
                                       style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
                                     ),
                                     const SizedBox(height: 4),
                                     Row(
                                       children: [
+                                        Flexible(
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              color: colorScheme.primaryContainer.withValues(alpha: 0.5),
+                                              borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                                              border: Border.all(
+                                                color: colorScheme.primary.withValues(alpha: 0.3),
+                                              ),
+                                            ),
+                                            child: FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              child: Text(
+                                                syncProvider.currentPairCode,
+                                                style: theme.textTheme.titleMedium?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                  letterSpacing: 2.0,
+                                                  color: colorScheme.primary,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.copy_rounded, size: 18),
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                          tooltip: 'Copy Pair Code',
+                                          onPressed: () {
+                                            Clipboard.setData(ClipboardData(text: syncProvider.currentPairCode));
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(
+                                                content: Text('Pair code copied to clipboard 📋'),
+                                                behavior: SnackBarBehavior.floating,
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Device Local IP',
+                                      style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      children: [
                                         Icon(
                                           Icons.wifi_rounded,
-                                          size: 16,
+                                          size: 18,
                                           color: syncProvider.localIpAddress != null ? colorScheme.primary : colorScheme.outline,
                                         ),
-                                        const SizedBox(width: 4),
+                                        const SizedBox(width: 6),
                                         Expanded(
                                           child: Text(
-                                            syncProvider.localIpAddress ?? 'Checking Wi-Fi IP...',
+                                            syncProvider.localIpAddress ?? 'Checking Wi-Fi...',
                                             style: theme.textTheme.bodyMedium?.copyWith(
                                               fontWeight: FontWeight.bold,
                                             ),
                                             overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
+                                        if (syncProvider.localIpAddress != null && syncProvider.localIpAddress!.isNotEmpty)
+                                          IconButton(
+                                            icon: const Icon(Icons.copy_rounded, size: 18),
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                            tooltip: 'Copy IP Address',
+                                            onPressed: () {
+                                              Clipboard.setData(ClipboardData(text: syncProvider.localIpAddress!));
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text('IP address copied to clipboard 📋'),
+                                                  behavior: SnackBarBehavior.floating,
+                                                ),
+                                              );
+                                            },
+                                          ),
                                       ],
                                     ),
                                   ],
@@ -465,13 +526,23 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                               ),
                             ],
                           ),
+                          const SizedBox(height: AppLayout.spaceM),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 44,
+                            child: FilledButton.tonalIcon(
+                              onPressed: () => _showQrCodeModal(context, syncProvider),
+                              icon: const Icon(Icons.qr_code_2_rounded),
+                              label: const Text('Show Host QR Code', style: TextStyle(fontWeight: FontWeight.bold)),
+                            ),
+                          ),
                         ],
                       ),
                     ),
 
                     const SizedBox(height: AppLayout.spaceL),
 
-                    // Paired Devices List Section Header (Single Deduplicated List)
+                    // Paired Devices List Section
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -479,9 +550,9 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                           'Paired Devices (${syncProvider.pairedDevices.length})',
                           style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                         ),
-                        TextButton.icon(
+                        FilledButton.icon(
                           onPressed: () => _showPairDeviceDialog(context, syncProvider),
-                          icon: const Icon(Icons.add_rounded),
+                          icon: const Icon(Icons.add_rounded, size: 18),
                           label: const Text('Pair Device'),
                         ),
                       ],
@@ -503,7 +574,7 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Tap "Pair Device" to scan Primary device QR code.',
+                                  'Tap "Pair Device" to scan QR code or enter IP address.',
                                   style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
                                 ),
                               ],
@@ -513,6 +584,8 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                       )
                     else
                       ...syncProvider.pairedDevices.map((device) {
+                        final targetIp = device.ipAddress;
+
                         return Padding(
                           padding: const EdgeInsets.only(bottom: AppLayout.spaceS),
                           child: AppCard(
@@ -544,18 +617,41 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
-                                        device.lastSyncedAt != null
-                                            ? 'Last synced ${DateFormat.jm().format(device.lastSyncedAt!)}'
-                                            : 'Not synced yet',
+                                        targetIp != null && targetIp.isNotEmpty
+                                            ? 'IP: $targetIp • ${device.lastSyncedAt != null ? DateFormat.jm().format(device.lastSyncedAt!) : 'Not synced'}'
+                                            : (device.lastSyncedAt != null
+                                                ? 'Last synced ${DateFormat.jm().format(device.lastSyncedAt!)}'
+                                                : 'Not synced yet'),
                                         style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
                                       ),
                                     ],
                                   ),
                                 ),
-                                AppChip(
-                                  label: device.role == 'PRIMARY' ? 'Primary' : 'Secondary',
-                                  isSelected: true,
-                                ),
+                                if (targetIp != null && targetIp.isNotEmpty)
+                                  IconButton(
+                                    icon: const Icon(Icons.sync_rounded),
+                                    color: colorScheme.primary,
+                                    tooltip: 'Sync with ${device.deviceName}',
+                                    onPressed: isSyncing
+                                        ? null
+                                        : () async {
+                                            final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+                                            final res = await syncProvider.syncBiDirectional(
+                                              targetIp: targetIp,
+                                              onCompleted: () => noteProvider.refreshNotes(),
+                                            );
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    res.success ? 'Synced with ${device.deviceName} 🟢' : (res.errorMessage ?? 'Sync failed'),
+                                                  ),
+                                                  behavior: SnackBarBehavior.floating,
+                                                ),
+                                              );
+                                            }
+                                          },
+                                  ),
                                 IconButton(
                                   icon: const Icon(Icons.delete_outline_rounded),
                                   color: colorScheme.error,
@@ -570,18 +666,24 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
 
                     const SizedBox(height: AppLayout.spaceL),
 
-                    // Offline Backup Export & Import Card
+                    // Offline Backup File Fallback Card
                     AppCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Offline Backup File Sync',
-                            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                          Row(
+                            children: [
+                              Icon(Icons.folder_zip_rounded, color: colorScheme.secondary, size: 20),
+                              const SizedBox(width: AppLayout.spaceS),
+                              Text(
+                                'Offline Backup File Fallback',
+                                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Share backup file via Bluetooth, Nearby Share, or Drive as an offline fallback.',
+                            'Share offline backup files via Bluetooth, Nearby Share, or Google Drive as a manual fallback.',
                             style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                           const SizedBox(height: AppLayout.spaceM),
@@ -610,14 +712,17 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
 
                     const SizedBox(height: AppLayout.spaceL),
 
-                    // Options & Settings
+                    // Options & Preferences Card
                     AppCard(
-                      child: SwitchListTile(
-                        value: syncProvider.isAutoSyncEnabled,
-                        onChanged: (val) => syncProvider.setAutoSyncEnabled(val),
-                        title: const Text('Background Auto-Sync'),
-                        subtitle: const Text('Automatically pull data when secondary device connects'),
-                        secondary: const Icon(Icons.sync_lock_rounded),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: SwitchListTile(
+                          value: syncProvider.isAutoSyncEnabled,
+                          onChanged: (val) => syncProvider.setAutoSyncEnabled(val),
+                          title: const Text('Event Auto-Sync'),
+                          subtitle: const Text('Sync 3s after saving notes or ledgers'),
+                          secondary: const Icon(Icons.sync_lock_rounded),
+                        ),
                       ),
                     ),
                   ]),

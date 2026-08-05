@@ -44,7 +44,15 @@ class SyncCryptoService {
       
       final key = deriveKey(secretKey);
       final encrypter = enc.Encrypter(enc.AES(key, mode: enc.AESMode.cbc));
-      return encrypter.decrypt(encryptedData, iv: iv);
+      final decrypted = encrypter.decrypt(encryptedData, iv: iv);
+      if (decrypted.trim().isEmpty) return null;
+      try {
+        json.decode(decrypted);
+      } catch (_) {
+        // Return null if wrong key produced unparseable garbage text
+        return null;
+      }
+      return decrypted;
     } catch (_) {
       return null;
     }

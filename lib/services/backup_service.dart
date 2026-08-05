@@ -70,6 +70,10 @@ Future<String> generateBackupJson({Map<String, dynamic>? settingsOverride}) asyn
   final smsContacts = await db.query('sms_contacts');
   final periodLogs = await db.query('period_logs');
   final recurringRules = await db.query('recurring_rules');
+  List<Map<String, dynamic>> deletedNotes = [];
+  try {
+    deletedNotes = await db.query('deleted_notes');
+  } catch (_) {}
 
   final Map<String, dynamic> settingsMap;
   if (settingsOverride != null) {
@@ -104,6 +108,7 @@ Future<String> generateBackupJson({Map<String, dynamic>? settingsOverride}) asyn
     'smsContacts': smsContacts,
     'periodLogs': periodLogs,
     'recurringRules': recurringRules,
+    'deletedNotes': deletedNotes,
     'settings': settingsMap,
     'version': 10,
     'exportedAt': DateTime.now().toIso8601String(),
