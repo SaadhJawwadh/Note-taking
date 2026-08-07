@@ -39,6 +39,11 @@ class MainActivity: FlutterFragmentActivity() {
         handleIntent(intent)
     }
 
+    override fun onResume() {
+        super.onResume()
+        screenOffLock = false
+    }
+
     private fun handleIntent(intent: Intent?) {
         when (intent?.action) {
             "com.saadhjawwadh.notebook.ADD_TRANSACTION" -> pendingWidgetAction = "add_transaction"

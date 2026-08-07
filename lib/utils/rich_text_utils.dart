@@ -149,6 +149,8 @@ class RichTextUtils {
 
         final allLines = <String>[];
         final lineBuffer = StringBuffer();
+        bool hasChecklistItems = false;
+        bool hasCheckedItems = false;
 
         for (final op in delta.toList()) {
           if (!op.isInsert) continue;
@@ -196,18 +198,24 @@ class RichTextUtils {
             if (text[i] == '\n') {
               lineBuffer.write(text.substring(start, i));
               var line = lineBuffer.toString();
+              bool isChecked = false;
 
               // List prefix only for single-newline ops carrying list attributes
               if (text == '\n') {
                 final listAttr = op.attributes?['list'] as String?;
                 if (listAttr == 'checked') {
-                  line = '☑ $line';
+                  hasChecklistItems = true;
+                  hasCheckedItems = true;
+                  isChecked = true;
                 } else if (listAttr == 'unchecked') {
+                  hasChecklistItems = true;
                   line = '☐ $line';
                 }
               }
 
-              allLines.add(line);
+              if (!isChecked) {
+                allLines.add(line);
+              }
               lineBuffer.clear();
               start = i + 1;
             }
@@ -227,22 +235,44 @@ class RichTextUtils {
           allLines.removeLast();
         }
 
-        if (allLines.isEmpty) return '';
+        if (allLines.isEmpty) {
+          return (hasChecklistItems && hasCheckedItems) ? '(All items completed)' : '';
+        }
         final taken = allLines.take(maxLines).join('\n');
         return allLines.length > maxLines ? '$taken...' : taken;
       } catch (_) {}
     }
-    // Legacy Markdown: strip common syntax characters for a rough plain-text preview
-    final stripped = content
-        .replaceAll(RegExp(r'[#*_`>\[\]!]'), '')
-        .trim()
-        .split('\n')
-        .where((l) => l.trim().isNotEmpty)
-        .toList();
 
-    if (stripped.isEmpty) return '';
-    final taken = stripped.take(maxLines).join('\n');
-    return stripped.length > maxLines ? '$taken...' : taken;
+    // Legacy Markdown: filter out completed checklist items
+    final rawLines = content.split('\n');
+    final processed = <String>[];
+    bool mdHasChecklist = false;
+    bool mdHasChecked = false;
+
+    for (final raw in rawLines) {
+      final trimmed = raw.trim();
+      if (trimmed.startsWith('- [x]') || trimmed.startsWith('* [x]') || trimmed.startsWith('[x]')) {
+        mdHasChecklist = true;
+        mdHasChecked = true;
+        continue; // Skip completed items
+      }
+      if (trimmed.startsWith('- [ ]') || trimmed.startsWith('* [ ]') || trimmed.startsWith('[ ]')) {
+        mdHasChecklist = true;
+        final itemText = trimmed.substring(5).trim();
+        processed.add('☐ $itemText');
+        continue;
+      }
+      final strippedLine = raw.replaceAll(RegExp(r'[#*_`>\[\]!]'), '').trim();
+      if (strippedLine.isNotEmpty) {
+        processed.add(strippedLine);
+      }
+    }
+
+    if (processed.isEmpty) {
+      return (mdHasChecklist && mdHasChecked) ? '(All items completed)' : '';
+    }
+    final taken = processed.take(maxLines).join('\n');
+    return processed.length > maxLines ? '$taken...' : taken;
   }
 
   /// Preprocesses markdown strings to find GFM tables and replace them with base64 placeholder tokens.

@@ -43,9 +43,20 @@ class TransactionRepository {
     return maps.isNotEmpty ? TransactionModel.fromJson(maps.first) : null;
   }
 
-  Future<List<TransactionModel>> readAllTransactions() async {
+  Future<List<TransactionModel>> readAllTransactions({bool includeDeleted = false}) async {
     final db = await _db;
-    final result = await db.query(TableNames.transactions, orderBy: '${TransactionFields.date} DESC');
+    final where = includeDeleted ? null : '${TransactionFields.deletedAt} IS NULL';
+    final result = await db.query(TableNames.transactions, where: where, orderBy: '${TransactionFields.date} DESC');
+    return result.map((json) => TransactionModel.fromJson(json)).toList();
+  }
+
+  Future<List<TransactionModel>> readTrashedTransactions() async {
+    final db = await _db;
+    final result = await db.query(
+      TableNames.transactions,
+      where: '${TransactionFields.deletedAt} IS NOT NULL',
+      orderBy: '${TransactionFields.deletedAt} DESC',
+    );
     return result.map((json) => TransactionModel.fromJson(json)).toList();
   }
 
@@ -58,9 +69,108 @@ class TransactionRepository {
     return count;
   }
 
-  Future<int> deleteTransaction(int id) async {
+  Future<int> softDeleteTransaction(int id) async {
     final db = await _db;
+    final now = DateTime.now().toIso8601String();
+    final count = await db.update(
+      TableNames.transactions,
+      {TransactionFields.deletedAt: now},
+      where: '${TransactionFields.id} = ?',
+      whereArgs: [id],
+    );
+    if (count > 0) {
+      await WidgetHelper.updateWidgetData();
+    }
+    return count;
+  }
+
+  Future<int> restoreTransaction(int id) async {
+    final db = await _db;
+    final count = await db.rawUpdate(
+      'UPDATE ${TableNames.transactions} SET ${TransactionFields.deletedAt} = NULL WHERE ${TransactionFields.id} = ?',
+      [id],
+    );
+    if (count > 0) {
+      await WidgetHelper.updateWidgetData();
+    }
+    return count;
+  }
+
+  Future<int> permanentlyDeleteTransaction(int id) async {
+    final db = await _db;
+    final txn = await readTransaction(id);
+    if (txn != null && txn.smsId != null && txn.smsId!.isNotEmpty) {
+      await db.insert(
+        TableNames.deletedTransactionSmsIds,
+        {
+          'smsId': txn.smsId,
+          'deletedAt': DateTime.now().toIso8601String(),
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
     final count = await db.delete(TableNames.transactions, where: '${TransactionFields.id} = ?', whereArgs: [id]);
+    if (count > 0) {
+      await WidgetHelper.updateWidgetData();
+    }
+    return count;
+  }
+
+  Future<int> deleteTransaction(int id) async {
+    return await softDeleteTransaction(id);
+  }
+
+  Future<int> emptyTrash() async {
+    final db = await _db;
+    final trashed = await readTrashedTransactions();
+    for (final t in trashed) {
+      if (t.smsId != null && t.smsId!.isNotEmpty) {
+        await db.insert(
+          TableNames.deletedTransactionSmsIds,
+          {
+            'smsId': t.smsId,
+            'deletedAt': DateTime.now().toIso8601String(),
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    }
+    final count = await db.delete(
+      TableNames.transactions,
+      where: '${TransactionFields.deletedAt} IS NOT NULL',
+    );
+    if (count > 0) {
+      await WidgetHelper.updateWidgetData();
+    }
+    return count;
+  }
+
+  Future<int> clearOldTransactionTrash({int days = 30}) async {
+    final db = await _db;
+    final cutoff = DateTime.now().subtract(Duration(days: days)).toIso8601String();
+    final oldRows = await db.query(
+      TableNames.transactions,
+      where: '${TransactionFields.deletedAt} IS NOT NULL AND ${TransactionFields.deletedAt} < ?',
+      whereArgs: [cutoff],
+    );
+    for (final row in oldRows) {
+      final smsId = row[TransactionFields.smsId] as String?;
+      if (smsId != null && smsId.isNotEmpty) {
+        await db.insert(
+          TableNames.deletedTransactionSmsIds,
+          {
+            'smsId': smsId,
+            'deletedAt': DateTime.now().toIso8601String(),
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    }
+    final count = await db.delete(
+      TableNames.transactions,
+      where: '${TransactionFields.deletedAt} IS NOT NULL AND ${TransactionFields.deletedAt} < ?',
+      whereArgs: [cutoff],
+    );
     if (count > 0) {
       await WidgetHelper.updateWidgetData();
     }
@@ -69,7 +179,12 @@ class TransactionRepository {
 
   Future<List<TransactionModel>> searchTransactions(String keyword) async {
     final db = await _db;
-    final result = await db.query(TableNames.transactions, where: 'description LIKE ? OR category LIKE ?', whereArgs: ['%$keyword%', '%$keyword%'], orderBy: 'date DESC');
+    final result = await db.query(
+      TableNames.transactions,
+      where: '(description LIKE ? OR category LIKE ?) AND ${TransactionFields.deletedAt} IS NULL',
+      whereArgs: ['%$keyword%', '%$keyword%'],
+      orderBy: 'date DESC',
+    );
     return result.map((json) => TransactionModel.fromJson(json)).toList();
   }
 
@@ -77,14 +192,39 @@ class TransactionRepository {
     final db = await _db;
     final windowStart = date.subtract(Duration(days: windowDays)).toIso8601String();
     final windowEnd = date.toIso8601String();
-    final rows = await db.query(TableNames.transactions, where: 'amount = ? AND isExpense = 1 AND smsId IS NOT NULL AND date >= ? AND date <= ?', whereArgs: [amount, windowStart, windowEnd], orderBy: '${TransactionFields.date} DESC', limit: 1);
+    final rows = await db.query(
+      TableNames.transactions,
+      where: 'amount = ? AND isExpense = 1 AND smsId IS NOT NULL AND date >= ? AND date <= ? AND ${TransactionFields.deletedAt} IS NULL',
+      whereArgs: [amount, windowStart, windowEnd],
+      orderBy: '${TransactionFields.date} DESC',
+      limit: 1,
+    );
     return rows.isNotEmpty ? TransactionModel.fromJson(rows.first) : null;
   }
 
   Future<bool> smsExists(String smsId) async {
+    if (smsId.isEmpty) return false;
     final db = await _db;
-    final result = await db.query(TableNames.transactions, columns: [TransactionFields.id], where: '${TransactionFields.smsId} = ?', whereArgs: [smsId], limit: 1);
-    return result.isNotEmpty;
+
+    // Check active or soft-deleted transactions table
+    final activeCheck = await db.query(
+      TableNames.transactions,
+      columns: [TransactionFields.id],
+      where: '${TransactionFields.smsId} = ?',
+      whereArgs: [smsId],
+      limit: 1,
+    );
+    if (activeCheck.isNotEmpty) return true;
+
+    // Check tombstone table for permanently deleted transactions
+    final tombstoneCheck = await db.query(
+      TableNames.deletedTransactionSmsIds,
+      columns: ['smsId'],
+      where: 'smsId = ?',
+      whereArgs: [smsId],
+      limit: 1,
+    );
+    return tombstoneCheck.isNotEmpty;
   }
 
   Future<List<Map<String, dynamic>>> getMonthlyTransactionSummary(int months) async {
@@ -98,7 +238,7 @@ class TransactionRepository {
           'SELECT SUM(CASE WHEN isExpense = 0 THEN amount ELSE 0.0 END) AS totalIncome, '
           'SUM(CASE WHEN isExpense = 1 THEN amount ELSE 0.0 END) AS totalExpense '
           'FROM ${TableNames.transactions} '
-          'WHERE date >= ? AND date < ? AND category != ?',
+          'WHERE date >= ? AND date < ? AND category != ? AND ${TransactionFields.deletedAt} IS NULL',
           [
             periodStart.toIso8601String(),
             periodEnd.toIso8601String(),
@@ -119,7 +259,7 @@ class TransactionRepository {
         'SELECT SUM(CASE WHEN isExpense = 0 THEN amount ELSE 0.0 END) AS totalIncome, '
         'SUM(CASE WHEN isExpense = 1 THEN amount ELSE 0.0 END) AS totalExpense '
         'FROM ${TableNames.transactions} '
-        'WHERE category != ?',
+        'WHERE category != ? AND ${TransactionFields.deletedAt} IS NULL',
         ['__reversal__']);
     return {
       'totalIncome': (rows.first['totalIncome'] as num?)?.toDouble() ?? 0.0,

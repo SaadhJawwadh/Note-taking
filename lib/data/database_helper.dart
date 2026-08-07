@@ -95,7 +95,7 @@ class DatabaseHelper {
       return await openDatabase(
         path,
         password: password,
-        version: 18,
+        version: 19,
         onCreate: _createDB,
         onUpgrade: _upgradeDB,
       );
@@ -217,12 +217,20 @@ class DatabaseHelper {
         date TEXT NOT NULL,
         isExpense INTEGER NOT NULL,
         category TEXT NOT NULL DEFAULT 'Other',
-        smsId TEXT
+        smsId TEXT,
+        deletedAt TEXT
       )
     ''');
     await db.execute(
       'CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_smsId ON ${TableNames.transactions}(smsId) WHERE smsId IS NOT NULL',
     );
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ${TableNames.deletedTransactionSmsIds} (
+        smsId TEXT PRIMARY KEY,
+        deletedAt TEXT NOT NULL
+      )
+    ''');
 
     await db.execute('''
       CREATE TABLE IF NOT EXISTS ${TableNames.categoryDefinitions} (
@@ -360,6 +368,10 @@ class DatabaseHelper {
     }
     if (oldVersion < 18) {
       await db.execute('CREATE TABLE IF NOT EXISTS deleted_notes (id TEXT PRIMARY KEY, deletedAt TEXT NOT NULL)');
+    }
+    if (oldVersion < 19) {
+      await db.execute('ALTER TABLE ${TableNames.transactions} ADD COLUMN deletedAt TEXT');
+      await db.execute('CREATE TABLE IF NOT EXISTS ${TableNames.deletedTransactionSmsIds} (smsId TEXT PRIMARY KEY, deletedAt TEXT NOT NULL)');
     }
   }
 }

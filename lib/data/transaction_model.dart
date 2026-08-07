@@ -8,6 +8,7 @@ class TransactionModel {
   final bool isExpense;
   final String category;
   final String? smsId;
+  final DateTime? deletedAt;
 
   TransactionModel({
     this.id,
@@ -17,6 +18,7 @@ class TransactionModel {
     this.isExpense = true,
     this.category = TransactionCategory.other,
     this.smsId,
+    this.deletedAt,
   });
 
   TransactionModel copy({
@@ -27,6 +29,7 @@ class TransactionModel {
     bool? isExpense,
     String? category,
     String? smsId,
+    DateTime? deletedAt,
   }) =>
       TransactionModel(
         id: id ?? this.id,
@@ -36,6 +39,7 @@ class TransactionModel {
         isExpense: isExpense ?? this.isExpense,
         category: category ?? this.category,
         smsId: smsId ?? this.smsId,
+        deletedAt: deletedAt ?? this.deletedAt,
       );
 
   static TransactionModel fromJson(Map<String, Object?> json) =>
@@ -50,6 +54,9 @@ class TransactionModel {
         category: (json[TransactionFields.category] as String?) ??
             TransactionCategory.other,
         smsId: json[TransactionFields.smsId] as String?,
+        deletedAt: json[TransactionFields.deletedAt] != null
+            ? DateTime.tryParse(json[TransactionFields.deletedAt] as String)
+            : null,
       );
 
   Map<String, Object?> toJson() => {
@@ -60,6 +67,7 @@ class TransactionModel {
         TransactionFields.isExpense: isExpense ? 1 : 0,
         TransactionFields.category: category,
         TransactionFields.smsId: smsId,
+        TransactionFields.deletedAt: deletedAt?.toIso8601String(),
       };
 }
 
@@ -72,6 +80,7 @@ class TransactionFields {
     isExpense,
     category,
     smsId,
+    deletedAt,
   ];
 
   static const String id = '_id';
@@ -81,4 +90,5 @@ class TransactionFields {
   static const String isExpense = 'isExpense';
   static const String category = 'category';
   static const String smsId = 'smsId';
+  static const String deletedAt = 'deletedAt';
 }

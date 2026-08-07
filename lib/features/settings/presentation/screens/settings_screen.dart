@@ -5,7 +5,6 @@ import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'dart:io';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/settings_provider.dart';
 import 'package:note_taking_app/features/notes/presentation/screens/manage_tags_screen.dart';
 import 'package:note_taking_app/features/notes/presentation/screens/filtered_notes_screen.dart';
@@ -1720,13 +1719,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         duration: Duration(seconds: 2),
       ),
     );
-    final count = await SmsService.syncInboxFrom(
-      DateTime.now().subtract(const Duration(hours: 48)),
-    );
-    final prefs = await SharedPreferences.getInstance();
-    final now = DateTime.now();
-    await prefs.setString('lastSmsSyncTime', now.toIso8601String());
-    await prefs.setInt('lastSmsSyncCount', count);
+    final count = await SmsService.performDailySyncManualTrigger();
     if (!context.mounted) return;
     messenger.clearSnackBars();
     messenger.showSnackBar(

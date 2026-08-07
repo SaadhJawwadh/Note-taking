@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import '../../data/settings_provider.dart';
 import '../../providers/note_provider.dart';
 import '../../features/sync/providers/p2p_sync_provider.dart';
-import '../../features/sync/presentation/screens/p2p_sync_screen.dart';
 import 'package:note_taking_app/features/settings/presentation/screens/settings_screen.dart';
 import '../../core/theme/app_layout.dart';
 import '../../utils/app_route.dart';
@@ -579,17 +578,16 @@ class _HomeAppBarState extends State<HomeAppBar> {
         ),
         Consumer<P2pSyncProvider>(
           builder: (context, syncProvider, _) {
+            if (!syncProvider.isAutoSyncEnabled || syncProvider.pairedDevices.isEmpty) {
+              return const SizedBox.shrink();
+            }
             final isSyncing = syncProvider.status == SyncStatus.syncing;
             return BouncingWidget(
               onTap: () async {
                 unawaited(HapticFeedback.lightImpact());
-                if (syncProvider.pairedDevices.isEmpty) {
-                  unawaited(AppRoute.push(context, const P2pSyncScreen()).then((_) => widget.onRefresh()));
-                } else {
-                  await syncProvider.syncNow(onCompleted: () {
-                    noteProvider.refreshNotes();
-                  });
-                }
+                await syncProvider.syncNow(onCompleted: () {
+                  noteProvider.refreshNotes();
+                });
               },
               child: IconButton(
                 icon: isSyncing
@@ -607,18 +605,14 @@ class _HomeAppBarState extends State<HomeAppBar> {
                             ? Theme.of(context).colorScheme.primary
                             : null,
                       ),
-                tooltip: isSyncing ? 'Syncing notes...' : 'P2P Sync Now',
+                tooltip: isSyncing ? 'Syncing notes...' : '1-Tap Quick Sync with Paired Devices',
                 padding: EdgeInsets.zero,
                 visualDensity: VisualDensity.compact,
                 onPressed: () async {
                   unawaited(HapticFeedback.lightImpact());
-                  if (syncProvider.pairedDevices.isEmpty) {
-                    unawaited(AppRoute.push(context, const P2pSyncScreen()).then((_) => widget.onRefresh()));
-                  } else {
-                    await syncProvider.syncNow(onCompleted: () {
-                      noteProvider.refreshNotes();
-                    });
-                  }
+                  await syncProvider.syncNow(onCompleted: () {
+                    noteProvider.refreshNotes();
+                  });
                 },
               ),
             );

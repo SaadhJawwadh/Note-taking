@@ -55,20 +55,6 @@ class AppLockScreenState extends State<AppLockScreen>
 
   static const MethodChannel _channel = MethodChannel('com.saadhjawwadh.notebook/device_lock');
 
-  Future<bool> _isDeviceLockedNative() async {
-    if (kIsWeb) return false;
-    if (Platform.isAndroid) {
-      try {
-        final bool isLocked = await _channel.invokeMethod('isDeviceLocked');
-        return isLocked;
-      } catch (e) {
-        debugPrint('Error checking device lock status: $e');
-        return false;
-      }
-    }
-    return false;
-  }
-
   @override
   void initState() {
     super.initState();
@@ -136,15 +122,21 @@ class AppLockScreenState extends State<AppLockScreen>
       });
     }
 
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
+
     if (isBackground) {
       // Record when the app went to the background
       _backgroundTime ??= DateTime.now();
+      // Only lock immediately on true background (paused), NOT on inactive
+      // (notification shade, permission dialogs, split-screen transitions).
+      if (settings.appLockTimeout == 0 && state == AppLifecycleState.paused) {
+        _isSessionAuthenticated = false;
+      }
     } else {
       // App is resuming
       if (AppLockScreen._ignoreNextResumeLock) {
         AppLockScreen._ignoreNextResumeLock = false;
       } else if (_backgroundTime != null) {
-        final settings = Provider.of<SettingsProvider>(context, listen: false);
         final elapsed = DateTime.now().difference(_backgroundTime!).inSeconds;
         if (elapsed >= settings.appLockTimeout) {
           _isSessionAuthenticated = false;
@@ -153,32 +145,14 @@ class AppLockScreenState extends State<AppLockScreen>
       _backgroundTime = null;
     }
 
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      unawaited(_checkDeviceLockOnBackground());
-    } else if (state == AppLifecycleState.resumed) {
+    if (state == AppLifecycleState.resumed) {
       unawaited(_checkAuthOnResume());
-    }
-  }
-
-  Future<void> _checkDeviceLockOnBackground() async {
-    final isLocked = await _isDeviceLockedNative();
-    if (isLocked) {
-      setState(() {
-        _isSessionAuthenticated = false;
-      });
     }
   }
 
   Future<void> _checkAuthOnResume() async {
     // Wait 150ms to allow incoming sharing intents to fire and call unlockSession()
     await Future.delayed(const Duration(milliseconds: 150));
-
-    final isLocked = await _isDeviceLockedNative();
-    if (isLocked) {
-      setState(() {
-        _isSessionAuthenticated = false;
-      });
-    }
 
     if (!_isSessionAuthenticated) {
       if (mounted) {
@@ -249,7 +223,7 @@ class AppLockScreenState extends State<AppLockScreen>
       return widget.child;
     }
 
-    if (!_isSessionAuthenticated || _isInBackground) {
+    if (!_isSessionAuthenticated) {
       final isDark = Theme.of(context).brightness == Brightness.dark;
       final lockOverlay = Positioned.fill(
         child: ClipRect(
@@ -338,20 +312,15 @@ class AppLockScreenState extends State<AppLockScreen>
         ),
       );
 
-      if (_isInBackground) {
-        return Stack(
-          children: [
-            widget.child,
-            lockOverlay,
-          ],
-        );
-      } else {
-        return Stack(
-          children: [
-            lockOverlay,
-          ],
-        );
-      }
+      return Stack(
+        children: [
+          IgnorePointer(
+            ignoring: true,
+            child: widget.child,
+          ),
+          lockOverlay,
+        ],
+      );
     }
 
     return widget.child;

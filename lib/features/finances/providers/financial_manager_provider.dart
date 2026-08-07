@@ -12,6 +12,7 @@ class FinancialManagerProvider extends ChangeNotifier {
 
   List<TransactionModel> _allTransactions = [];
   List<TransactionModel> _filteredTransactions = [];
+  List<TransactionModel> _trashedTransactions = [];
   bool _isLoading = false;
 
   FinancialManagerProvider() {
@@ -37,6 +38,7 @@ class FinancialManagerProvider extends ChangeNotifier {
   double _balance = 0;
 
   List<TransactionModel> get transactions => List.unmodifiable(_filteredTransactions);
+  List<TransactionModel> get trashedTransactions => List.unmodifiable(_trashedTransactions);
   bool get isLoading => _isLoading;
   String get searchQuery => _searchQuery;
   String get selectedCategory => _selectedCategory;
@@ -52,9 +54,11 @@ class FinancialManagerProvider extends ChangeNotifier {
 
     try {
       await RecurringRuleRepository.instance.materializeDueRules();
+      await _repository.clearOldTransactionTrash(days: 30);
     } catch (_) {}
 
     _allTransactions = await _repository.readAllTransactions();
+    _trashedTransactions = await _repository.readTrashedTransactions();
     _applyFilters();
 
     _isLoading = false;
@@ -118,7 +122,22 @@ class FinancialManagerProvider extends ChangeNotifier {
   }
 
   Future<void> deleteTransaction(int id) async {
-    await _repository.deleteTransaction(id);
+    await _repository.softDeleteTransaction(id);
+    await loadTransactions();
+  }
+
+  Future<void> restoreTransaction(int id) async {
+    await _repository.restoreTransaction(id);
+    await loadTransactions();
+  }
+
+  Future<void> permanentlyDeleteTransaction(int id) async {
+    await _repository.permanentlyDeleteTransaction(id);
+    await loadTransactions();
+  }
+
+  Future<void> emptyTrash() async {
+    await _repository.emptyTrash();
     await loadTransactions();
   }
 

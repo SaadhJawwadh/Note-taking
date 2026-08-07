@@ -120,6 +120,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   int _currentSearchIndex = -1;
   bool _isEditingTableCell = false;
   bool _wasKeyboardOpen = false;
+  int? _selectionAnchor;
 
   // Slash commands & checklist collapse state
   bool _showSlashMenu = false;
@@ -442,6 +443,51 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       return (leaf.value as BlockEmbed).type == 'image';
     }
     return false;
+  }
+
+  void _moveCursor({required int delta, required bool expandSelection}) {
+    final selection = _quillController.selection;
+    final docLen = _quillController.document.length;
+    if (!selection.isValid || docLen <= 0) return;
+
+    // Capture anchor on first selection-expanding press (e.g. Gboard "Select" toggle).
+    if (expandSelection) {
+      _selectionAnchor ??= selection.baseOffset;
+    } else {
+      // Normal cursor move: clear any stale anchor from a previous selection session.
+      _selectionAnchor = null;
+    }
+
+    final currentOffset = selection.extentOffset;
+    final newExtent = (currentOffset + delta).clamp(0, docLen - 1);
+
+    if (_selectionAnchor != null) {
+      // Anchor mode: hold start fixed, move end.
+      _quillController.updateSelection(
+        TextSelection(baseOffset: _selectionAnchor!, extentOffset: newExtent),
+        ChangeSource.local,
+      );
+      // Reset anchor when selection fully collapses back to the anchor point.
+      if (newExtent == _selectionAnchor) {
+        _selectionAnchor = null;
+      }
+    } else {
+      // Normal mode: move the single cursor.
+      _quillController.updateSelection(
+        TextSelection.collapsed(offset: newExtent),
+        ChangeSource.local,
+      );
+    }
+  }
+
+  void _selectAllText() {
+    final docLen = _quillController.document.length;
+    if (docLen <= 1) return;
+    _selectionAnchor = null;
+    _quillController.updateSelection(
+      TextSelection(baseOffset: 0, extentOffset: docLen - 1),
+      ChangeSource.local,
+    );
   }
 
   Future<void> _loadTags() async {
@@ -3167,145 +3213,128 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                         });
                                         return true;
                                       },
-                                      child: QuillEditor.basic(
-                                        controller: _quillController,
-                                        focusNode: _focusNode,
-                                        config: QuillEditorConfig(
-                                          padding: const EdgeInsets.only(bottom: 16),
-                                          autoFocus: false,
-                                          showCursor: !_isEditingTableCell,
-                                          // Markdown-style typing: '- ', '1. ',
-                                          // '# ', '**bold**', and '[] ' for a
-                                          // checklist item.
-                                          // ignore: experimental_member_use
-                                          characterShortcutEvents:
-                                              standardCharactersShortcutEvents,
-                                          // ignore: experimental_member_use
-                                          spaceShortcutEvents: [
-                                            ...standardSpaceShorcutEvents,
+                                      child: CallbackShortcuts(
+                                        bindings: {
+                                          const SingleActivator(LogicalKeyboardKey.arrowLeft): () => _moveCursor(delta: -1, expandSelection: false),
+                                          const SingleActivator(LogicalKeyboardKey.arrowRight): () => _moveCursor(delta: 1, expandSelection: false),
+                                          const SingleActivator(LogicalKeyboardKey.arrowLeft, shift: true): () => _moveCursor(delta: -1, expandSelection: true),
+                                          const SingleActivator(LogicalKeyboardKey.arrowRight, shift: true): () => _moveCursor(delta: 1, expandSelection: true),
+                                          const SingleActivator(LogicalKeyboardKey.keyA, control: true): () => _selectAllText(),
+                                          const SingleActivator(LogicalKeyboardKey.keyA, meta: true): () => _selectAllText(),
+                                        },
+                                        child: QuillEditor.basic(
+                                          controller: _quillController,
+                                          focusNode: _focusNode,
+                                          config: QuillEditorConfig(
+                                            padding: const EdgeInsets.only(bottom: 16),
+                                            autoFocus: false,
+                                            showCursor: !_isEditingTableCell,
+                                            enableInteractiveSelection: true,
+                                            enableSelectionToolbar: true,
                                             // ignore: experimental_member_use
-                                            SpaceShortcutEvent(
-                                              character: '[]',
-                                              handler: (node, controller) {
-                                                // package uses internally for
-                                                // '- ' → bullet, via public APIs.
-                                                controller.replaceText(
-                                                    controller
-                                                            .selection.baseOffset -
-                                                        2,
-                                                    2,
-                                                    '\n',
-                                                    null);
-                                                final base = controller
-                                                        .selection.baseOffset -
-                                                    2;
-                                                controller.updateSelection(
-                                                  controller.selection.copyWith(
-                                                    baseOffset: base,
-                                                    extentOffset: base,
-                                                  ),
-                                                  ChangeSource.local,
-                                                );
-                                                controller
-                                                  ..formatSelection(
-                                                      Attribute.unchecked)
-                                                  ..replaceText(
-                                                      controller.selection
-                                                              .baseOffset +
-                                                          1,
-                                                      1,
-                                                      '',
-                                                      null);
-                                                return true;
-                                              },
-                                            ),
-                                          ],
-                                          expands: false,
-                                          scrollable: false,
-                                          placeholder: 'Start typing...',
-                                          embedBuilders: [
-                                            const RoundedImageEmbedBuilder(),
-                                            const TableEmbedBuilder(),
-                                            ...FlutterQuillEmbeds.editorBuilders(),
-                                          ],
-                                          customStyles: DefaultStyles(
-                                            inlineCode: InlineCodeStyle(
-                                              style: TextStyle(
-                                                color: noteScheme.onSurface,
-                                                backgroundColor: noteScheme.onSurface
-                                                    .withValues(alpha: 0.15),
-                                                fontFamily: 'monospace',
+                                            characterShortcutEvents: standardCharactersShortcutEvents,
+                                            // ignore: experimental_member_use
+                                            spaceShortcutEvents: [
+                                              ...standardSpaceShorcutEvents,
+                                              // ignore: experimental_member_use
+                                              SpaceShortcutEvent(
+                                                character: '[]',
+                                                handler: (node, controller) {
+                                                  controller.replaceText(
+                                                      controller.selection.baseOffset - 2, 2, '\n', null);
+                                                  final base = controller.selection.baseOffset - 2;
+                                                  controller.updateSelection(
+                                                    controller.selection.copyWith(baseOffset: base, extentOffset: base),
+                                                    ChangeSource.local,
+                                                  );
+                                                  controller
+                                                    ..formatSelection(Attribute.unchecked)
+                                                    ..replaceText(controller.selection.baseOffset + 1, 1, '', null);
+                                                  return true;
+                                                },
                                               ),
-                                            ),
-                                            h1: DefaultTextBlockStyle(
-                                              theme.textTheme.displaySmall!.copyWith(
-                                                color: noteScheme.onSurface,
-                                                fontWeight: FontWeight.bold,
+                                            ],
+                                            expands: false,
+                                            scrollable: false,
+                                            placeholder: 'Start typing...',
+                                            embedBuilders: [
+                                              const RoundedImageEmbedBuilder(),
+                                              const TableEmbedBuilder(),
+                                              ...FlutterQuillEmbeds.editorBuilders(),
+                                            ],
+                                            customStyles: DefaultStyles(
+                                              inlineCode: InlineCodeStyle(
+                                                style: TextStyle(
+                                                  color: noteScheme.onSurface,
+                                                  backgroundColor: noteScheme.onSurface.withValues(alpha: 0.15),
+                                                  fontFamily: 'monospace',
+                                                ),
                                               ),
-                                              const HorizontalSpacing(0, 0),
-                                              const VerticalSpacing(16, 0),
-                                              const VerticalSpacing(0, 0),
-                                              null,
-                                            ),
-                                            h2: DefaultTextBlockStyle(
-                                              theme.textTheme.headlineMedium!
-                                                  .copyWith(
-                                                color: noteScheme.onSurface,
-                                                fontWeight: FontWeight.bold,
+                                              h1: DefaultTextBlockStyle(
+                                                theme.textTheme.displaySmall!.copyWith(
+                                                  color: noteScheme.onSurface,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                                const HorizontalSpacing(0, 0),
+                                                const VerticalSpacing(16, 0),
+                                                const VerticalSpacing(0, 0),
+                                                null,
                                               ),
-                                              const HorizontalSpacing(0, 0),
-                                              const VerticalSpacing(14, 0),
-                                              const VerticalSpacing(0, 0),
-                                              null,
-                                            ),
-                                            h3: DefaultTextBlockStyle(
-                                              theme.textTheme.headlineSmall!.copyWith(
-                                                color: noteScheme.onSurface,
-                                                fontWeight: FontWeight.bold,
+                                              h2: DefaultTextBlockStyle(
+                                                theme.textTheme.headlineMedium!.copyWith(
+                                                  color: noteScheme.onSurface,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                                const HorizontalSpacing(0, 0),
+                                                const VerticalSpacing(14, 0),
+                                                const VerticalSpacing(0, 0),
+                                                null,
                                               ),
-                                              const HorizontalSpacing(0, 0),
-                                              const VerticalSpacing(12, 0),
-                                              const VerticalSpacing(0, 0),
-                                              null,
-                                            ),
-                                            quote: DefaultTextBlockStyle(
-                                              TextStyle(
-                                                color: noteScheme.onSurface
-                                                    .withValues(alpha: 0.7),
-                                                fontStyle: FontStyle.italic,
-                                                fontSize: 16,
+                                              h3: DefaultTextBlockStyle(
+                                                theme.textTheme.headlineSmall!.copyWith(
+                                                  color: noteScheme.onSurface,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                                const HorizontalSpacing(0, 0),
+                                                const VerticalSpacing(12, 0),
+                                                const VerticalSpacing(0, 0),
+                                                null,
                                               ),
-                                              const HorizontalSpacing(16, 0),
-                                              const VerticalSpacing(8, 8),
-                                              const VerticalSpacing(0, 0),
-                                              BoxDecoration(
-                                                border: Border(
-                                                  left: BorderSide(
-                                                    width: 4,
-                                                    color: noteScheme.primary,
+                                              quote: DefaultTextBlockStyle(
+                                                TextStyle(
+                                                  color: noteScheme.onSurface.withValues(alpha: 0.7),
+                                                  fontStyle: FontStyle.italic,
+                                                  fontSize: 16,
+                                                ),
+                                                const HorizontalSpacing(16, 0),
+                                                const VerticalSpacing(8, 8),
+                                                const VerticalSpacing(0, 0),
+                                                BoxDecoration(
+                                                  border: Border(
+                                                    left: BorderSide(
+                                                      width: 4,
+                                                      color: noteScheme.primary,
+                                                    ),
                                                   ),
                                                 ),
                                               ),
-                                            ),
-                                            code: DefaultTextBlockStyle(
-                                              TextStyle(
-                                                color: noteScheme.onSurface,
-                                                fontFamily: 'monospace',
-                                                fontSize: 13.5,
-                                                height: 1.4,
-                                              ),
-                                              const HorizontalSpacing(12, 12),
-                                              const VerticalSpacing(8, 8),
-                                              const VerticalSpacing(0, 0),
-                                              BoxDecoration(
-                                                color: noteScheme.surfaceContainerHighest
-                                                    .withValues(alpha: 0.5),
-                                                borderRadius:
-                                                    BorderRadius.circular(AppLayout.radiusM),
-                                                border: Border.all(
-                                                  color: noteScheme.outlineVariant
-                                                      .withValues(alpha: 0.4),
-                                                  width: 1.0,
+                                              code: DefaultTextBlockStyle(
+                                                TextStyle(
+                                                  color: noteScheme.onSurface,
+                                                  fontFamily: 'monospace',
+                                                  fontSize: 13.5,
+                                                  height: 1.4,
+                                                ),
+                                                const HorizontalSpacing(12, 12),
+                                                const VerticalSpacing(8, 8),
+                                                const VerticalSpacing(0, 0),
+                                                BoxDecoration(
+                                                  color: noteScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                                                  borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                                                  border: Border.all(
+                                                    color: noteScheme.outlineVariant.withValues(alpha: 0.4),
+                                                    width: 1.0,
+                                                  ),
                                                 ),
                                               ),
                                             ),

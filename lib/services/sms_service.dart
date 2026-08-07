@@ -9,6 +9,7 @@ import '../data/transaction_category.dart';
 import 'sms_parser.dart';
 import 'sms_constants.dart';
 import 'gemini_nano_service.dart';
+import 'offline_ai_fallback_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:workmanager/workmanager.dart';
 import 'notification_service.dart';
@@ -267,7 +268,7 @@ class SmsService {
     TransactionModel? transaction;
     bool isAiParsed = false;
 
-    // 1. Try AI-First parsing if enabled & supported
+    // 1. Try AI-First / NLP parsing if enabled
     try {
       final prefs = await SharedPreferences.getInstance();
       final useAi = prefs.getBool('useOnDeviceAi') ?? false;
@@ -277,35 +278,46 @@ class SmsService {
             allowedSenderIds: allowedSenderIds,
             blockedSenderIds: blockedSenderIds,
           )) {
+        await TransactionCategory.reload();
+        final activeCategories = TransactionCategory.allNames;
         final aiService = GeminiNanoService();
-        if (await aiService.isSupported()) {
-          await TransactionCategory.reload();
-          final activeCategories = TransactionCategory.allNames;
-          final aiParsed = await aiService.parseSmsTransaction(body, activeCategories);
-          if (aiParsed != null && aiParsed['amount'] != null && (aiParsed['amount'] as num) > 0) {
-            final date = messageDate != null
-                ? DateTime.fromMillisecondsSinceEpoch(messageDate)
-                : DateTime.now();
-            final smsId = messageId != null
-                ? '${messageId}_$messageDate'
-                : 'hash_${body.hashCode}_$messageDate';
+        Map<String, dynamic>? aiParsed;
 
-            final description = aiParsed['description'] ?? aiParsed['merchant'] ?? 'AI Parsed Transaction';
-            String category = aiParsed['category'] ?? 'Other';
-            if (!activeCategories.contains(category)) {
-              category = TransactionCategory.fromDescriptionCached('$description $body');
-            }
-
-            transaction = TransactionModel(
-              amount: (aiParsed['amount'] as num).toDouble(),
-              description: description,
-              date: date,
-              isExpense: aiParsed['isExpense'] ?? true,
-              category: category,
-              smsId: smsId,
-            );
-            isAiParsed = true;
+        try {
+          if (await aiService.isSupported()) {
+            aiParsed = await aiService.parseSmsTransaction(body, activeCategories);
           }
+        } catch (_) {
+          aiParsed = null;
+        }
+
+        // Fallback to offline rule-based NLP engine if native AI channel fails or is unsupported
+        aiParsed ??= OfflineAiFallbackService.parseSmsTransaction(body, activeCategories);
+
+        if (aiParsed != null && aiParsed['amount'] != null && (aiParsed['amount'] as num) > 0) {
+          final date = messageDate != null
+              ? DateTime.fromMillisecondsSinceEpoch(messageDate)
+              : DateTime.now();
+          final normalizedBody = body.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+          final smsId = messageId != null
+              ? '${messageId}_$messageDate'
+              : 'hash_${address.toLowerCase()}_${normalizedBody.hashCode}_$messageDate';
+
+          final description = aiParsed['description'] ?? aiParsed['merchant'] ?? 'AI Parsed Transaction';
+          String category = aiParsed['category'] ?? 'Other';
+          if (!activeCategories.contains(category)) {
+            category = TransactionCategory.fromDescriptionCached('$description $body');
+          }
+
+          transaction = TransactionModel(
+            amount: (aiParsed['amount'] as num).toDouble(),
+            description: description,
+            date: date,
+            isExpense: aiParsed['isExpense'] ?? true,
+            category: category,
+            smsId: smsId,
+          );
+          isAiParsed = true;
         }
       }
     } catch (e) {
@@ -348,6 +360,26 @@ class SmsService {
     }
 
     return transaction;
+  }
+
+  /// Manually triggers the exact daily auto-sync pipeline (scanning recent SMS)
+  /// and updates SharedPreferences last sync stats. Returns the count of imported transactions.
+  static Future<int> performDailySyncManualTrigger({
+    void Function(int scanned, int total, int found)? onProgress,
+  }) async {
+    if (!await hasPermission()) return 0;
+    await reloadSmsContacts();
+    await TransactionCategory.reload();
+
+    final now = DateTime.now();
+    final fromTime = now.subtract(const Duration(hours: 48));
+    final count = await syncInboxFrom(fromTime, onProgress: onProgress);
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('lastSmsSyncTime', now.toIso8601String());
+    await prefs.setInt('lastSmsSyncCount', count);
+
+    return count;
   }
 
   static const kDailySyncTaskName = 'com.saadhjawwadh.notebook.dailySync';

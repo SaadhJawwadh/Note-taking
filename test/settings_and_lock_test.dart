@@ -153,7 +153,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('App Locked'), findsOneWidget);
-      expect(find.text('Sensitive Workspace'), findsNothing);
+      expect(find.ancestor(of: find.text('Sensitive Workspace'), matching: find.byWidgetPredicate((w) => w is IgnorePointer && w.ignoring)), findsWidgets);
 
       // Now set mockAuthResult = true and trigger unlock
       mockAuthResult = true;

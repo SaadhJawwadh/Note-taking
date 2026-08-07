@@ -1,24 +1,18 @@
 <en-US>
 🌟 What's New
-• Bi-directional P2P Wi-Fi device sync.
-• Reliable SMS auto-sync with 48h catch-up & test button.
+• Financial Trash Bin with 30-day retention & SMS import tombstones.
+• Expanded bank SMS auto-import for DFCC, NDB, ComBank, HNB & more.
 
 🚀 Improvements
-• Ultra-smooth text editing & D-Pad selection in editor.
-• Seamless borderless top & bottom glass navigation bars.
-
-🐛 Fixes
-• Isolate-safe background permissions & database options.
+• Theme-aware text selection handles & editor keyboard layout polish.
+• Smooth app lock screen resume and biometric authentication safety.
 </en-US>
 <ta-IN>
 🌟 புதிய அம்சங்கள்
-• சாதனங்களுக்கு இடையே இருவழி P2P Wi-Fi ஒத்திசைவு.
-• 48h பிந்தைய ஒத்திசைவு கொண்ட வங்கியின் SMS தானியங்கி இறக்குமதி.
+• 30 நாட்கள் கழித்து தானாக அழியும் நிதி மறுசுழற்சி தொட்டி மற்றும் SMS தடுப்பு அமைப்பு.
+• DFCC, NDB, Commercial, HNB போன்ற வங்கிகளின் SMS தானியங்கி இறக்குமதி விரிவாக்கம்.
 
 🚀 மேம்பாடுகள்
-• தட்டச்சு மற்றும் எழுத்துத் தேர்வில் அதிவேக செயல்பாடு.
-• விளிம்புகள் இல்லாத மென்மையான கண்ணாடி வழிசெலுத்தல் பட்டி.
-
-🐛 பிழை திருத்தங்கள்
-• பின்னணி ஒத்திசைவு மற்றும் தரவுத்தள நிலைத்தன்மை திருத்தங்கள்.
+• உரை தேர்வு மற்றும் விசைப்பலகை அமைப்பில் மென்மையான மாற்றம்.
+• பயன்பாட்டு பூட்டு திரையின் மீளுருவாக்கம் மற்றும் கைரேகை பாதுகாப்பு மேம்பாடு.
 </ta-IN>

@@ -6,6 +6,7 @@ class TableNames {
   static const String smsContacts = 'sms_contacts';
   static const String periodLogs = 'period_logs';
   static const String recurringRules = 'recurring_rules';
+  static const String deletedTransactionSmsIds = 'deleted_transaction_sms_ids';
 }
 
 class NoteFields {

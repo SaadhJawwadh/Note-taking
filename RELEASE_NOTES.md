@@ -1,13 +1,11 @@
-
 ### 🌟 What's New
-- **Bi-Directional P2P Wi-Fi Sync**: Seamlessly merge notes, financial ledgers, and settings between devices over Wi-Fi non-destructively without losing local edits.
-- **Reliable SMS Auto-Sync Engine**: Background bank transaction sync now runs reliably with 48-hour catch-up sync for offline or powered-off devices, live "Last Synced" status, and a 1-tap "Sync SMS Now" test action.
+- **Financial Trash Bin & Permanent Tombstones**: Soft-delete financial transactions with a 30-day auto-purge retention period and dedicated Financial Trash Bin modal.
+- **Permanent SMS Tombstones**: Manually deleted SMS transactions write their `smsId` to permanent tombstone storage (`deleted_transaction_sms_ids`), preventing background auto-sync from re-importing deleted transactions.
 
 ### 🚀 Improvements
-- **Ultra-Smooth Text Selection**: Fixed keyboard D-Pad arrow key navigation and text selection lag in the editor for instant, stutter-free typing.
-- **Dynamic Light & Dark Hero Cards**: Hero cards dynamically adjust pastel opacities in Light Mode and deep translucent fills in Dark Mode for crisp visual contrast.
+- **Expanded Bank SMS Auto-Import Engine**: Updated Sri Lankan bank SMS regex patterns and sender mappings for DFCC, NDB, Commercial Bank, HNB, Sampath, Union Bank, and HSBC with improved multi-currency and account number parsing.
+- **WYSIWYG Note Editor Polish**: Integrated theme-aware text selection handles and cursor colors, refined rich-text delta-to-markdown conversion accuracy, and improved soft keyboard bottom inset handling.
+- **App Lock Lifecycle Resilience**: Fixed app lock screen resume behavior in `MainActivity` on Android, ensuring seamless biometric session restoration without lockout loops.
 
-### 🐛 Fixes
-- **Database Subtype Options Safety**: Resolved database option type casting issues for encrypted local storage.
-- **Onboarding P2P Entry Point**: Verified seamless navigation from initial onboarding tips to the P2P device sync hub.
-
+### 🐛 Fixes & Tests
+- **Comprehensive Test Suite**: Added complete unit test coverage for financial trash operations, soft deletion, and SMS import tombstone verification (`financial_trash_and_sms_fetch_test.dart`).

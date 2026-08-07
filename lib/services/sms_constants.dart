@@ -55,7 +55,15 @@ class SmsConstants {
   static final creditRegex = RegExp(r'\b(credit(?:ed)?(?!\s+card)|received|deposited|deposit|transferred\s+to\s+you|credited\s+to|salary|payment\s+received|incoming\s+transfer|cash\s+deposit)\b', caseSensitive: false);
   static final reversalRegex = RegExp(r'\b(reversal|reversed|refund(?:ed)?|chargeback|credit\s+back|amount\s+refunded|money\s+returned|returned\s+to\s+your\s+card|reversed\s+back)\b', caseSensitive: false);
   static final cancellationRegex = RegExp(r'\b(cancelled|cancellation|transaction\s+failed|declined|not\s+processed|unsuccessful)\b', caseSensitive: false);
-  static final promotionalRegex = RegExp(r'\b(offer|win|congratulations|promo|discount|exclusive|earn\s+\d+\s+points|cashback\s+up\s+to|get\s+\d+%|voucher|reward\s+point)\b', caseSensitive: false);
+  static final promotionalRegex = RegExp(
+      r'\b(offer|win|congratulations|promo|discount|exclusive|earn\s+\d+\s+points|cashback|get\s+\d+%|voucher|reward\s+point|apply\s+now|eligible|loan\s+up\s+to|credit\s+limit\s+increase|special\s+deal|enjoy|subscribe|deal)\b',
+      caseSensitive: false);
+  static final otpRegex = RegExp(
+      r'\b(otp|verification\s+code|v-code|one\s+time\s+password|secret\s+code|do\s+not\s+share|use\s+code|pin\s+code)\b',
+      caseSensitive: false);
+  static final executedTransactionRegex = RegExp(
+      r'\b(debit(?:ed)?|credit(?:ed)?|withdrawn|withdrawal|spent|charged|purchase(?:d)?|paid|deposited|received|transferred)\b',
+      caseSensitive: false);
   
   static final piiCardRegex = RegExp(r'\*\d{4,}|ending\s+[#\*]?\d{4,}|\bno\.?\s*\d{4,}|\ba\/c\s*[\d*x]+|\bxxxx\d{4,}|\b\d{16}\b|\b\d{4,}\*+\d{4,}\b', caseSensitive: false);
   static final piiRefRegex = RegExp(r'\bref(?:\s*no\.?)?\s*:?\s*\w+|\btxn(?:\s*id)?\s*:?\s*[\w\d]+|\bauth(?:\s*code)?\s*:?\s*[\w\d]+|\btran\s*id\s*:?\s*[\w\d]+|\border\s+id\s*:?\s*[\w\d]+|\border\s*#?\s*[\d]+|\bcode\s*\d+|\b[A-Za-z0-9]{10,}\b', caseSensitive: false);

@@ -354,6 +354,11 @@ class AppTheme {
           borderRadius: BorderRadius.circular(28),
         ),
       ),
+      textSelectionTheme: TextSelectionThemeData(
+        selectionColor: scheme.primary.withValues(alpha: 0.3),
+        selectionHandleColor: scheme.primary,
+        cursorColor: scheme.primary,
+      ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(

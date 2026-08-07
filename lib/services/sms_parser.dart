@@ -20,6 +20,14 @@ class SmsParser {
     final senderLower = address.toLowerCase();
     if (blockedSenderIds.any((s) => senderLower.contains(s))) return false;
 
+    // Reject OTP/verification messages
+    if (SmsConstants.otpRegex.hasMatch(body)) return false;
+
+    // Reject promotional SMS unless explicit executed transaction terms exist
+    final isPromotional = SmsConstants.promotionalRegex.hasMatch(body);
+    final hasExecuted = SmsConstants.executedTransactionRegex.hasMatch(body);
+    if (isPromotional && !hasExecuted) return false;
+
     // Check if it has a valid amount match
     final hasAmount = SmsConstants.amountRegex.hasMatch(body) || SmsConstants.bareAmountRegex.hasMatch(body);
     if (!hasAmount) return false;
@@ -56,6 +64,14 @@ class SmsParser {
     final senderLower = address.toLowerCase();
     if (blockedSenderIds.any((s) => senderLower.contains(s))) return null;
 
+    // Reject OTP/verification codes
+    if (SmsConstants.otpRegex.hasMatch(body)) return null;
+
+    // Reject promotional SMS unless explicit executed transaction terms exist
+    final isPromotional = SmsConstants.promotionalRegex.hasMatch(body);
+    final hasExecuted = SmsConstants.executedTransactionRegex.hasMatch(body);
+    if (isPromotional && !hasExecuted) return null;
+
     final bodyLower = body.toLowerCase();
     final matchesExpenseRule = customExpenseRules.any((r) => bodyLower.contains(r.toLowerCase()));
     final matchesIncomeRule = customIncomeRules.any((r) => bodyLower.contains(r.toLowerCase()));
@@ -72,7 +88,6 @@ class SmsParser {
     if (!isKnownSender && !isDebit && !isCredit && !hasInstalment && !isTransfer) return null;
 
     if (SmsConstants.dueReminderRegex.hasMatch(body) && !isDebit) return null;
-    if (SmsConstants.promotionalRegex.hasMatch(body) && !isDebit && !isCredit && !hasInstalment) return null;
 
     double? amount;
     var amountMatch = SmsConstants.amountRegex.firstMatch(body);
@@ -96,7 +111,10 @@ class SmsParser {
         : TransactionCategory.fromDescriptionCached('$description $body');
 
     final date = messageDate != null ? DateTime.fromMillisecondsSinceEpoch(messageDate) : DateTime.now();
-    final smsId = messageId != null ? '${messageId}_$messageDate' : 'hash_${body.hashCode}_$messageDate';
+    final normalizedBody = body.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+    final smsId = messageId != null
+        ? '${messageId}_$messageDate'
+        : 'hash_${address.toLowerCase()}_${normalizedBody.hashCode}_$messageDate';
 
     return TransactionModel(
       amount: amount,

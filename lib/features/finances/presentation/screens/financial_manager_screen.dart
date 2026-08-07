@@ -25,6 +25,7 @@ import '../../../../core/theme/app_layout.dart';
 
 import '../../../../widgets/finance/financial_category_donut_card.dart';
 import '../../../../widgets/finance/financial_trend_regression_card.dart';
+import '../widgets/financial_trash_sheet.dart';
 
 
 class FinancialManagerScreen extends StatefulWidget {
@@ -51,6 +52,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
 
   List<Map<String, dynamic>> _monthlyData = [];
   bool _isDashboardLoading = true;
+  int _trashedCount = 0;
 
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -143,8 +145,11 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     _monthlyData =
         await TransactionRepository.instance.getMonthlyTransactionSummary(6);
 
+    final trashed = await TransactionRepository.instance.readTrashedTransactions();
+
     _applyFilters();
     setState(() {
+      _trashedCount = trashed.length;
       _isDashboardLoading = false;
     });
   }
@@ -469,9 +474,8 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
       ),
     );
 
-    // Fetch the last 24 hours (1 day)
-    final from = DateTime.now().subtract(const Duration(days: 1));
-    final count = await SmsService.syncInboxFrom(from);
+    // Trigger daily auto-sync pipeline (48h lookback)
+    final count = await SmsService.performDailySyncManualTrigger();
 
     if (!mounted) return;
     await _refreshTransactions();
@@ -481,7 +485,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
       SnackBar(
         content: Text(
           count == 0
-              ? 'No new bank SMS detected in past 24h.'
+              ? 'No new bank SMS detected in recent messages.'
               : 'Successfully imported $count new transaction${count == 1 ? '' : 's'}! 🎉',
         ),
         behavior: SnackBarBehavior.floating,
@@ -1152,6 +1156,10 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                   _cleanupLedgerDuplicates();
                                 } else if (value == 'discover') {
                                   _discoverBankSenders();
+                                } else if (value == 'trash') {
+                                  FinancialTrashSheet.show(context).then((_) {
+                                    if (mounted) _refreshTransactions();
+                                  });
                                 } else if (value == 'export') {
                                   BackupService.exportTransactionsToCsv(context);
                                 } else if (value == 'settings') {
@@ -1159,51 +1167,69 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                 }
                               },
                               itemBuilder: (context) => [
-                                PopupMenuItem(
-                                  value: 'cleanup',
-                                  height: 48,
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.cleaning_services_outlined, size: 20, color: colorScheme.onSurfaceVariant),
-                                      const SizedBox(width: 12),
-                                      Text('Purge Duplicates', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                                    ],
-                                  ),
-                                ),
-                                PopupMenuItem(
-                                  value: 'discover',
-                                  height: 48,
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.radar_outlined, size: 20, color: colorScheme.onSurfaceVariant),
-                                      const SizedBox(width: 12),
-                                      Text('Discover Bank Senders', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                                    ],
-                                  ),
-                                ),
-                                PopupMenuItem(
-                                  value: 'export',
-                                  height: 48,
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.table_view_outlined, size: 20, color: colorScheme.onSurfaceVariant),
-                                      const SizedBox(width: 12),
-                                      Text('Export to CSV', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                                    ],
-                                  ),
-                                ),
-                                PopupMenuItem(
-                                  value: 'settings',
-                                  height: 48,
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.settings_outlined, size: 20, color: colorScheme.onSurfaceVariant),
-                                      const SizedBox(width: 12),
-                                      Text('Settings', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                                 PopupMenuItem(
+                                   value: 'cleanup',
+                                   height: 48,
+                                   child: Row(
+                                     children: [
+                                       Icon(Icons.cleaning_services_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                                       const SizedBox(width: 12),
+                                       Text('Purge Duplicates', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                     ],
+                                   ),
+                                 ),
+                                 PopupMenuItem(
+                                   value: 'discover',
+                                   height: 48,
+                                   child: Row(
+                                     children: [
+                                       Icon(Icons.radar_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                                       const SizedBox(width: 12),
+                                       Text('Discover Bank Senders', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                     ],
+                                   ),
+                                 ),
+                                 PopupMenuItem(
+                                   value: 'trash',
+                                   height: 48,
+                                   child: Row(
+                                     children: [
+                                       Icon(Icons.delete_outline_rounded, size: 20, color: colorScheme.onSurfaceVariant),
+                                       const SizedBox(width: 12),
+                                       Expanded(
+                                         child: Text('Trash Bin', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                       ),
+                                       if (_trashedCount > 0)
+                                         Badge(
+                                           label: Text('$_trashedCount'),
+                                           backgroundColor: colorScheme.error,
+                                         ),
+                                     ],
+                                   ),
+                                 ),
+                                 PopupMenuItem(
+                                   value: 'export',
+                                   height: 48,
+                                   child: Row(
+                                     children: [
+                                       Icon(Icons.table_view_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                                       const SizedBox(width: 12),
+                                       Text('Export to CSV', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                     ],
+                                   ),
+                                 ),
+                                 PopupMenuItem(
+                                   value: 'settings',
+                                   height: 48,
+                                   child: Row(
+                                     children: [
+                                       Icon(Icons.settings_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                                       const SizedBox(width: 12),
+                                       Text('Settings', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                     ],
+                                   ),
+                                 ),
+                               ],
                             ),
                           ],
                         ),
