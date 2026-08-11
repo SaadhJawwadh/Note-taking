@@ -120,6 +120,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
   int _currentSearchIndex = -1;
   bool _isEditingTableCell = false;
   bool _wasKeyboardOpen = false;
+  bool _isAppSelectionMode = false;
   int? _selectionAnchor;
 
   // Slash commands & checklist collapse state
@@ -445,39 +446,70 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     return false;
   }
 
-  void _moveCursor({required int delta, required bool expandSelection}) {
+  void _extendAppSelectionByCharacter(int delta) {
+    if (!_isAppSelectionMode || _isEditingTableCell) return;
     final selection = _quillController.selection;
     final docLen = _quillController.document.length;
     if (!selection.isValid || docLen <= 0) return;
 
-    // Capture anchor on first selection-expanding press (e.g. Gboard "Select" toggle).
-    if (expandSelection) {
-      _selectionAnchor ??= selection.baseOffset;
-    } else {
-      // Normal cursor move: clear any stale anchor from a previous selection session.
-      _selectionAnchor = null;
-    }
-
+    _focusNode.requestFocus();
+    _selectionAnchor ??= selection.baseOffset;
     final currentOffset = selection.extentOffset;
     final newExtent = (currentOffset + delta).clamp(0, docLen - 1);
+    _quillController.updateSelection(
+      TextSelection(baseOffset: _selectionAnchor!, extentOffset: newExtent),
+      ChangeSource.local,
+    );
+  }
 
-    if (_selectionAnchor != null) {
-      // Anchor mode: hold start fixed, move end.
+  void _toggleAppSelectionMode() {
+    if (_isEditingTableCell) return;
+    final selection = _quillController.selection;
+    if (!selection.isValid) return;
+
+    if (_isAppSelectionMode) {
       _quillController.updateSelection(
-        TextSelection(baseOffset: _selectionAnchor!, extentOffset: newExtent),
+        TextSelection.collapsed(offset: selection.extentOffset),
         ChangeSource.local,
       );
-      // Reset anchor when selection fully collapses back to the anchor point.
-      if (newExtent == _selectionAnchor) {
-        _selectionAnchor = null;
+      _selectionAnchor = null;
+    } else {
+      _focusNode.requestFocus();
+      _selectionAnchor = selection.baseOffset;
+    }
+    setState(() => _isAppSelectionMode = !_isAppSelectionMode);
+  }
+
+  void _extendAppSelectionByWord({required bool forward}) {
+    if (!_isAppSelectionMode || _isEditingTableCell) return;
+    final selection = _quillController.selection;
+    final documentLength = _quillController.document.length;
+    if (!selection.isValid || documentLength <= 1) return;
+
+    final currentOffset = selection.extentOffset.clamp(0, documentLength - 1);
+    final words = RegExp(r'\w+').allMatches(
+      _quillController.document.toPlainText(),
+    );
+    var targetOffset = forward ? documentLength - 1 : 0;
+    if (forward) {
+      for (final word in words) {
+        if (word.end > currentOffset) {
+          targetOffset = word.end;
+          break;
+        }
       }
     } else {
-      // Normal mode: move the single cursor.
-      _quillController.updateSelection(
-        TextSelection.collapsed(offset: newExtent),
-        ChangeSource.local,
-      );
+      for (final word in words) {
+        if (word.start >= currentOffset) break;
+        targetOffset = word.start;
+      }
     }
+
+    _selectionAnchor ??= selection.baseOffset;
+    _quillController.updateSelection(
+      TextSelection(baseOffset: _selectionAnchor!, extentOffset: targetOffset),
+      ChangeSource.local,
+    );
   }
 
   void _selectAllText() {
@@ -3210,15 +3242,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                       onNotification: (notification) {
                                         setState(() {
                                           _isEditingTableCell = notification.isFocused;
+                                          if (notification.isFocused) {
+                                            _isAppSelectionMode = false;
+                                            _selectionAnchor = null;
+                                          }
                                         });
                                         return true;
                                       },
                                       child: CallbackShortcuts(
                                         bindings: {
-                                          const SingleActivator(LogicalKeyboardKey.arrowLeft): () => _moveCursor(delta: -1, expandSelection: false),
-                                          const SingleActivator(LogicalKeyboardKey.arrowRight): () => _moveCursor(delta: 1, expandSelection: false),
-                                          const SingleActivator(LogicalKeyboardKey.arrowLeft, shift: true): () => _moveCursor(delta: -1, expandSelection: true),
-                                          const SingleActivator(LogicalKeyboardKey.arrowRight, shift: true): () => _moveCursor(delta: 1, expandSelection: true),
                                           const SingleActivator(LogicalKeyboardKey.keyA, control: true): () => _selectAllText(),
                                           const SingleActivator(LogicalKeyboardKey.keyA, meta: true): () => _selectAllText(),
                                         },
@@ -3768,60 +3800,118 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                   if (settings.useOnDeviceAi)
                                     IconButton.filledTonal(
                                       icon: const Icon(Icons.auto_awesome_rounded, size: 20),
-                                      tooltip: 'Gemini AI Assist',
-                                      onPressed: _showAiOptionsSheet,
+                                      tooltip: _isAppSelectionMode
+                                          ? 'Finish selection to use AI Assist'
+                                          : 'Gemini AI Assist',
+                                      onPressed: _isAppSelectionMode
+                                          ? null
+                                          : _showAiOptionsSheet,
                                       style: IconButton.styleFrom(
                                         backgroundColor: noteScheme.primaryContainer,
                                         foregroundColor: noteScheme.onPrimaryContainer,
                                       ),
                                     ),
-                                  IconButton(
-                                    icon: const Icon(Icons.table_chart_outlined),
-                                    tooltip: 'Insert Table',
-                                    onPressed: _showTableInsertionDialog,
-                                    style: IconButton.styleFrom(
-                                      foregroundColor: textColor,
+                                  if (!_isEditingTableCell)
+                                    IconButton.filledTonal(
+                                      icon: Icon(_isAppSelectionMode
+                                          ? Icons.close_rounded
+                                          : Icons.ads_click_rounded),
+                                      tooltip: _isAppSelectionMode
+                                          ? 'Finish selection'
+                                        : 'Precision selection',
+                                      onPressed: _toggleAppSelectionMode,
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: noteScheme.primaryContainer,
+                                        foregroundColor: noteScheme.onPrimaryContainer,
+                                      ),
                                     ),
-                                  ),
-                                  QuillToolbarToggleCheckListButton(
-                                    controller: _quillController,
-                                    options: QuillToolbarToggleCheckListButtonOptions(
-                                        iconData: Icons.check_box_outlined,
-                                        iconTheme: QuillIconTheme(
-                                            iconButtonUnselectedData:
-                                                IconButtonData(
-                                                    style: IconButton.styleFrom(
-                                                        foregroundColor:
-                                                            textColor)),
-                                            iconButtonSelectedData:
-                                                IconButtonData(
-                                                    style: IconButton.styleFrom(
-                                                        foregroundColor: theme
-                                                            .colorScheme
-                                                            .onPrimary)))),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.image_outlined),
-                                    tooltip: 'Attach Image',
-                                    onPressed: _showImageOptions,
-                                    style: IconButton.styleFrom(
-                                      foregroundColor: textColor,
+                                  if (settings.useOnDeviceAi || !_isEditingTableCell)
+                                    Container(
+                                      height: 24,
+                                      width: 1,
+                                      color: noteScheme.outlineVariant.withValues(alpha: 0.5),
+                                      margin: const EdgeInsets.symmetric(horizontal: 2),
                                     ),
-                                  ),
-                                  IconButton(
-                                    icon: Icon(_isListening
-                                        ? Icons.mic
-                                        : Icons.mic_none),
-                                    tooltip: _isListening
-                                        ? 'Stop dictation'
-                                        : 'Dictate',
-                                    onPressed: _toggleDictation,
-                                    style: IconButton.styleFrom(
-                                      foregroundColor: _isListening
-                                          ? theme.colorScheme.error
-                                          : textColor,
+                                  if (_isAppSelectionMode) ...[
+                                    IconButton(
+                                      icon: const Icon(Icons.keyboard_double_arrow_left_rounded),
+                                      tooltip: 'Extend selection by previous word',
+                                      onPressed: () => _extendAppSelectionByWord(forward: false),
+                                      style: IconButton.styleFrom(foregroundColor: textColor),
                                     ),
-                                  ),
+                                    IconButton(
+                                      icon: const Icon(Icons.arrow_back_rounded),
+                                      tooltip: 'Extend selection left',
+                                      onPressed: () => _extendAppSelectionByCharacter(-1),
+                                      style: IconButton.styleFrom(foregroundColor: textColor),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.arrow_forward_rounded),
+                                      tooltip: 'Extend selection right',
+                                      onPressed: () => _extendAppSelectionByCharacter(1),
+                                      style: IconButton.styleFrom(foregroundColor: textColor),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.keyboard_double_arrow_right_rounded),
+                                      tooltip: 'Extend selection by next word',
+                                      onPressed: () => _extendAppSelectionByWord(forward: true),
+                                      style: IconButton.styleFrom(foregroundColor: textColor),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.select_all_rounded),
+                                      tooltip: 'Select all text',
+                                      onPressed: _selectAllText,
+                                      style: IconButton.styleFrom(foregroundColor: textColor),
+                                    ),
+                                  ] else ...[
+                                    IconButton(
+                                      icon: const Icon(Icons.table_chart_outlined),
+                                      tooltip: 'Insert Table',
+                                      onPressed: _showTableInsertionDialog,
+                                      style: IconButton.styleFrom(
+                                        foregroundColor: textColor,
+                                      ),
+                                    ),
+                                    QuillToolbarToggleCheckListButton(
+                                      controller: _quillController,
+                                      options: QuillToolbarToggleCheckListButtonOptions(
+                                          iconData: Icons.check_box_outlined,
+                                          iconTheme: QuillIconTheme(
+                                              iconButtonUnselectedData:
+                                                  IconButtonData(
+                                                      style: IconButton.styleFrom(
+                                                          foregroundColor:
+                                                              textColor)),
+                                              iconButtonSelectedData:
+                                                  IconButtonData(
+                                                      style: IconButton.styleFrom(
+                                                          foregroundColor: theme
+                                                              .colorScheme
+                                                              .onPrimary)))),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.image_outlined),
+                                      tooltip: 'Attach Image',
+                                      onPressed: _showImageOptions,
+                                      style: IconButton.styleFrom(
+                                        foregroundColor: textColor,
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: Icon(_isListening
+                                          ? Icons.mic
+                                          : Icons.mic_none),
+                                      tooltip: _isListening
+                                          ? 'Stop dictation'
+                                          : 'Dictate',
+                                      onPressed: _toggleDictation,
+                                      style: IconButton.styleFrom(
+                                        foregroundColor: _isListening
+                                            ? theme.colorScheme.error
+                                            : textColor,
+                                      ),
+                                    ),
+                                  ],
                                   if (isKeyboardOpen)
                                     IconButton(
                                       icon: const Icon(Icons.keyboard_hide_rounded),
@@ -4323,6 +4413,23 @@ class _TableWidgetState extends State<TableWidget> {
     _triggerSave();
   }
 
+  Widget _buildTableStructureActionIcon({
+    required IconData structureIcon,
+    required IconData actionIcon,
+  }) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Icon(structureIcon, size: 20),
+        Positioned(
+          right: -5,
+          bottom: -5,
+          child: Icon(actionIcon, size: 12),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -4413,12 +4520,18 @@ class _TableWidgetState extends State<TableWidget> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.playlist_add, size: 20),
+                            icon: _buildTableStructureActionIcon(
+                              structureIcon: Icons.table_rows_outlined,
+                              actionIcon: Icons.add_rounded,
+                            ),
                             tooltip: 'Add Row',
                             onPressed: _cells.length < 20 ? _addRow : null,
                           ),
                           IconButton(
-                            icon: const Icon(Icons.playlist_remove, size: 20),
+                            icon: _buildTableStructureActionIcon(
+                              structureIcon: Icons.table_rows_outlined,
+                              actionIcon: Icons.remove_rounded,
+                            ),
                             tooltip: 'Remove Row',
                             onPressed: _cells.length > 1 ? _removeRow : null,
                           ),
@@ -4428,12 +4541,18 @@ class _TableWidgetState extends State<TableWidget> {
                             color: borderColor,
                           ),
                           IconButton(
-                            icon: const Icon(Icons.view_column_outlined, size: 20),
+                            icon: _buildTableStructureActionIcon(
+                              structureIcon: Icons.view_column_outlined,
+                              actionIcon: Icons.add_rounded,
+                            ),
                             tooltip: 'Add Column',
                             onPressed: _cells[0].length < 10 ? _addColumn : null,
                           ),
                           IconButton(
-                            icon: const Icon(Icons.view_column, size: 20),
+                            icon: _buildTableStructureActionIcon(
+                              structureIcon: Icons.view_column_outlined,
+                              actionIcon: Icons.remove_rounded,
+                            ),
                             tooltip: 'Remove Column',
                             onPressed: _cells[0].length > 1 ? _removeColumn : null,
                           ),

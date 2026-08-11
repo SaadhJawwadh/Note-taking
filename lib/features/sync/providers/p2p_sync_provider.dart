@@ -1,49 +1,54 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
+
 import '../../../services/p2p_sync_service.dart';
 import '../data/p2p_pairing_model.dart';
 
 enum SyncStatus { idle, hosting, connecting, syncing, completed, error }
 
 class P2pSyncProvider with ChangeNotifier {
-  static const String _storageKey = 'p2p_paired_devices_v1';
-  static const String _autoSyncKey = 'p2p_auto_sync_enabled';
+  static const _storageKey = 'p2p_paired_devices_v2';
+  static const _legacyStorageKey = 'p2p_paired_devices_v1';
+  static const _autoSyncKey = 'p2p_auto_sync_enabled';
+  static const _deviceNameKey = 'p2p_local_device_name_v1';
+  static const _pairCodeKey = 'p2p_local_pair_code_v2';
 
+  final P2pSyncService _service = P2pSyncService.instance;
   List<PairedDevice> _pairedDevices = [];
   List<PairedDevice> get pairedDevices => List.unmodifiable(_pairedDevices);
-
   SyncStatus _status = SyncStatus.idle;
   SyncStatus get status => _status;
-
   bool _isAutoSyncEnabled = true;
   bool get isAutoSyncEnabled => _isAutoSyncEnabled;
-
   DateTime? _lastSyncedAt;
   DateTime? get lastSyncedAt => _lastSyncedAt;
-
   String? _lastMessage;
   String? get lastMessage => _lastMessage;
-
   String _currentPairCode = '';
   String get currentPairCode => _currentPairCode;
-
+  String _localDeviceId = '';
+  String get localDeviceId => _localDeviceId;
+  String _localDeviceName = '';
+  String get localDeviceName => _localDeviceName;
   String? _localIpAddress;
   String? get localIpAddress => _localIpAddress;
-
   SystemDiagnostics? _diagnostics;
   SystemDiagnostics? get diagnostics => _diagnostics;
 
-  final P2pSyncService _service = P2pSyncService.instance;
   StreamSubscription<SyncResult>? _syncResultSubscription;
   StreamSubscription<PairedDevice>? _remotePairSubscription;
   Timer? _eventDebounceTimer;
+  static P2pSyncProvider? _activeInstance;
+  static P2pSyncProvider? get activeInstance => _activeInstance;
 
   P2pSyncProvider() {
-    loadSettings();
+    _activeInstance = this;
+    unawaited(loadSettings());
   }
 
   @override
@@ -51,73 +56,77 @@ class P2pSyncProvider with ChangeNotifier {
     _eventDebounceTimer?.cancel();
     _syncResultSubscription?.cancel();
     _remotePairSubscription?.cancel();
-    _service.stopPrimaryHostServer();
+    unawaited(_service.stopPrimaryHostServer());
+    if (identical(_activeInstance, this)) _activeInstance = null;
     super.dispose();
   }
 
   Future<void> loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     _isAutoSyncEnabled = prefs.getBool(_autoSyncKey) ?? true;
+    _localDeviceId = await _service.getDeviceId();
+    _localDeviceName = prefs.getString(_deviceNameKey) ?? _defaultDeviceName(_localDeviceId);
+    await prefs.setString(_deviceNameKey, _localDeviceName);
+    _currentPairCode = prefs.getString(_pairCodeKey) ?? _newPairCode();
+    await prefs.setString(_pairCodeKey, _currentPairCode);
 
-    final rawJson = prefs.getString(_storageKey);
+    final rawJson = prefs.getString(_storageKey) ?? prefs.getString(_legacyStorageKey);
     if (rawJson != null && rawJson.isNotEmpty) {
       try {
-        final List<dynamic> list = json.decode(rawJson);
-        final loadedList = list.map((item) => PairedDevice.fromMap(item as Map<String, dynamic>)).toList();
-        
-        // Strict Deduplication by unique deviceId
-        final Map<String, PairedDevice> uniqueMap = {};
-        for (final device in loadedList) {
-          uniqueMap[device.deviceId] = device;
-        }
-        _pairedDevices = uniqueMap.values.toList();
+        final rawList = json.decode(rawJson) as List<dynamic>;
+        final usedIds = <String>{};
+        _pairedDevices = rawList.map((item) => PairedDevice.fromMap(Map<String, dynamic>.from(item as Map))).map((device) {
+          if (usedIds.add(device.deviceId)) return device;
+          final migrated = PairedDevice(
+            deviceId: const Uuid().v4(),
+            deviceName: device.deviceName,
+            pairCode: device.pairCode,
+            lastSyncedAt: device.lastSyncedAt,
+            transportMode: device.transportMode,
+            isPaired: device.isPaired,
+            role: device.role,
+            endpointId: device.endpointId,
+            endpoints: device.endpoints,
+            isNameCustom: device.isNameCustom,
+          );
+          usedIds.add(migrated.deviceId);
+          return migrated;
+        }).toList();
+        await _saveDevicesToStorage();
       } catch (e) {
         debugPrint('[P2pSyncProvider] Failed to parse paired devices: $e');
         _pairedDevices = [];
       }
     }
 
-    if (_pairedDevices.isNotEmpty) {
-      _currentPairCode = _pairedDevices.first.pairCode;
-    } else {
-      generateNewPairCode();
-    }
-
-    // Subscribe to sync results
-    _syncResultSubscription = _service.syncEvents.listen((result) {
-      if (result.success) {
-        _status = SyncStatus.completed;
-        _lastSyncedAt = DateTime.now();
-        if (result.latencyMs != null) {
-          _lastMessage = 'Test Ping Succeeded (${result.latencyMs}ms)';
-        } else {
-          _lastMessage = result.syncedCount > 0 ? 'Master State Synced' : result.transportUsed;
-        }
-      } else {
-        _status = SyncStatus.error;
-        _lastMessage = result.errorMessage ?? 'Sync error';
-      }
-      notifyListeners();
-    });
-
-    // Subscribe to remote device auto-pairing events (1-Scan Bidirectional pairing)
-    _remotePairSubscription = _service.remoteDevicePaired.listen((incomingDevice) async {
-      final index = _pairedDevices.indexWhere((d) =>
-          d.deviceId == incomingDevice.deviceId ||
-          (d.ipAddress != null && incomingDevice.ipAddress != null && d.ipAddress == incomingDevice.ipAddress) ||
-          d.pairCode == incomingDevice.pairCode);
-      if (index != -1) {
-        _pairedDevices[index] = incomingDevice;
-      } else {
-        _pairedDevices.add(incomingDevice);
-      }
-      await _saveDevicesToStorage();
-      notifyListeners();
-    });
-
+    _syncResultSubscription ??= _service.syncEvents.listen(_handleSyncEvent);
+    _remotePairSubscription ??= _service.remoteDevicePaired.listen((device) async => _upsertDevice(device));
     await refreshDiagnostics();
     await startPrimaryHostServer();
     notifyListeners();
+  }
+
+  void _handleSyncEvent(SyncResult result) {
+    if (result.success) {
+      _status = SyncStatus.completed;
+      _lastSyncedAt = DateTime.now();
+      _lastMessage = result.latencyMs != null
+          ? 'Test ping succeeded (${result.latencyMs}ms)'
+          : (result.syncedCount > 0 ? 'Sync complete' : result.transportUsed);
+    } else {
+      _status = SyncStatus.error;
+      _lastMessage = result.errorMessage ?? 'Sync error';
+    }
+    notifyListeners();
+  }
+
+  String _newPairCode() => (100000 + Random.secure().nextInt(900000)).toString();
+
+  String _defaultDeviceName(String deviceId) {
+    const adjectives = ['Blue', 'Bright', 'Calm', 'Gentle', 'Quiet', 'Swift'];
+    const nouns = ['Comet', 'Finch', 'Harbor', 'Maple', 'Orchid', 'Willow'];
+    final hash = deviceId.codeUnits.fold<int>(0, (value, codeUnit) => value + codeUnit);
+    return '${adjectives[hash % adjectives.length]} ${nouns[(hash ~/ adjectives.length) % nouns.length]}';
   }
 
   Future<void> refreshDiagnostics() async {
@@ -126,42 +135,28 @@ class P2pSyncProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Starts Primary Host Server on this device.
   Future<void> startPrimaryHostServer() async {
     _status = SyncStatus.hosting;
     notifyListeners();
-
-    await _service.startPrimaryHostServer('Primary Device', _currentPairCode);
+    await _service.startPrimaryHostServer(_localDeviceName, _currentPairCode);
   }
 
-  /// Sends a test ping to Primary Device IP with latency measurement
-  Future<bool> sendTestPing({String? targetIp}) async {
-    final ipToPing = targetIp ?? (_pairedDevices.isNotEmpty ? _pairedDevices.first.ipAddress : null) ?? _localIpAddress;
-    if (ipToPing == null || ipToPing.isEmpty) {
-      _lastMessage = 'Test Ping Failed: Target IP address unavailable';
-      _status = SyncStatus.error;
-      notifyListeners();
-      return false;
-    }
-
-    _lastMessage = 'Pinging $ipToPing...';
+  Future<void> renameLocalDevice(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+    _localDeviceName = trimmed;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_deviceNameKey, trimmed);
+    await startPrimaryHostServer();
     notifyListeners();
-
-    final result = await _service.sendTestPing(ipToPing, _currentPairCode);
-    if (!result.success) {
-      _lastMessage = result.errorMessage ?? 'Test Ping Failed: $ipToPing unreachable';
-      _status = SyncStatus.error;
-    }
-    notifyListeners();
-    return result.success;
   }
 
-  String generateNewPairCode() {
-    final rng = Random();
-    final code = (100000 + rng.nextInt(900000)).toString();
-    _currentPairCode = code;
+  Future<void> renamePairedDevice(String deviceId, String name) async {
+    final index = _pairedDevices.indexWhere((device) => device.deviceId == deviceId);
+    if (index == -1 || name.trim().isEmpty) return;
+    _pairedDevices[index] = _pairedDevices[index].copyWith(deviceName: name.trim(), isNameCustom: true);
+    await _saveDevicesToStorage();
     notifyListeners();
-    return code;
   }
 
   Future<void> setAutoSyncEnabled(bool enabled) async {
@@ -171,158 +166,206 @@ class P2pSyncProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Pairs device and performs instant 1-scan bidirectional handshake
+  String generateNewPairCode() {
+    _currentPairCode = _newPairCode();
+    unawaited(_persistPairCodeAndRestart());
+    notifyListeners();
+    return _currentPairCode;
+  }
+
+  Future<void> _persistPairCodeAndRestart() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_pairCodeKey, _currentPairCode);
+    await startPrimaryHostServer();
+  }
+
   Future<PairedDevice> pairNewDevice({
     required String deviceName,
     required String pairCode,
     String? targetIp,
+    int targetPort = P2pSyncService.httpSyncPort,
+    String? remoteDeviceId,
     String role = 'PRIMARY',
   }) async {
-    final newDevice = PairedDevice(
-      deviceId: const Uuid().v4(),
-      deviceName: deviceName.trim().isEmpty ? 'Paired Device' : deviceName.trim(),
-      pairCode: pairCode.trim(),
-      lastSyncedAt: DateTime.now(),
-      transportMode: 'Primary Direct Sync',
-      ipAddress: targetIp,
-      role: role,
-    );
-
-    // Deduplicate by deviceId, pairCode, or targetIp
-    _pairedDevices.removeWhere((d) =>
-        d.deviceId == newDevice.deviceId ||
-        d.pairCode == pairCode.trim() ||
-        (targetIp != null && targetIp.isNotEmpty && d.ipAddress == targetIp));
-    _pairedDevices.add(newDevice);
+    if (targetIp == null || targetIp.trim().isEmpty || pairCode.trim().length != 6) {
+      throw ArgumentError('A valid local IP address and six-digit pair code are required.');
+    }
+    final verifiedTargetIp = targetIp.trim();
+    _status = SyncStatus.connecting;
+    _lastMessage = 'Verifying ${deviceName.trim().isEmpty ? 'device' : deviceName}…';
+    notifyListeners();
 
     _currentPairCode = pairCode.trim();
-    await _saveDevicesToStorage();
-    await startPrimaryHostServer();
-
-    if (targetIp != null && targetIp.isNotEmpty) {
-      await _service.sendPairHandshake(_currentPairCode, deviceName, targetIp);
+    await _persistPairCodeAndRestart();
+    final verifiedRemoteDevice = await _service.sendPairHandshake(
+      _currentPairCode,
+      _localDeviceName,
+      verifiedTargetIp,
+      targetPort: targetPort,
+    );
+    if (verifiedRemoteDevice == null) {
+      _status = SyncStatus.error;
+      _lastMessage = 'Could not verify the device. Confirm both devices are on the same Wi-Fi and retry.';
+      notifyListeners();
+      throw StateError(_lastMessage!);
     }
+    final verifiedRemoteDeviceId = remoteDeviceId?.trim();
 
+    final device = PairedDevice(
+      deviceId: verifiedRemoteDeviceId?.isNotEmpty == true ? verifiedRemoteDeviceId! : verifiedRemoteDevice.deviceId,
+      deviceName: deviceName.trim().isEmpty ? verifiedRemoteDevice.deviceName : deviceName.trim(),
+      pairCode: _currentPairCode,
+      lastSyncedAt: DateTime.now(),
+      transportMode: 'Primary Direct Sync',
+      endpoints: [DeviceEndpoint(ipAddress: verifiedTargetIp, port: targetPort, lastSeenAt: DateTime.now())],
+      role: role,
+    );
+    await _upsertDevice(device);
+    _status = SyncStatus.completed;
+    _lastMessage = 'Paired with ${device.deviceName}';
     notifyListeners();
-    return newDevice;
+    return device;
+  }
+
+  Future<void> _upsertDevice(PairedDevice incoming) async {
+    final index = _pairedDevices.indexWhere((device) => device.deviceId == incoming.deviceId);
+    if (index == -1) {
+      _pairedDevices.add(incoming);
+    } else {
+      final existing = _pairedDevices[index];
+      var updated = existing.copyWith(
+        deviceName: existing.isNameCustom ? existing.deviceName : incoming.deviceName,
+        pairCode: incoming.pairCode.isEmpty ? existing.pairCode : incoming.pairCode,
+        lastSyncedAt: incoming.lastSyncedAt ?? existing.lastSyncedAt,
+        transportMode: incoming.transportMode,
+        role: incoming.role,
+      );
+      for (final endpoint in incoming.endpoints) {
+        updated = updated.withEndpoint(endpoint);
+      }
+      _pairedDevices[index] = updated;
+    }
+    await _saveDevicesToStorage();
+    notifyListeners();
   }
 
   Future<void> unpairDevice(String deviceId) async {
-    _pairedDevices.removeWhere((d) => d.deviceId == deviceId);
+    _pairedDevices.removeWhere((device) => device.deviceId == deviceId);
     await _saveDevicesToStorage();
-    if (_pairedDevices.isEmpty) {
-      generateNewPairCode();
-    }
     notifyListeners();
   }
 
-  /// Triggers a 3-second debounced background sync when data changes (notes/expenses).
+  Future<void> removeEndpoint(String deviceId, String ipAddress) async {
+    final index = _pairedDevices.indexWhere((device) => device.deviceId == deviceId);
+    if (index == -1) return;
+    final device = _pairedDevices[index];
+    _pairedDevices[index] = device.copyWith(endpoints: device.endpoints.where((endpoint) => endpoint.ipAddress != ipAddress).toList());
+    await _saveDevicesToStorage();
+    notifyListeners();
+  }
+
+  Future<bool> sendTestPing({PairedDevice? device, String? targetIp}) async {
+    final peer = device ?? (_pairedDevices.isEmpty ? null : _pairedDevices.first);
+    final endpoint = targetIp == null ? peer?.preferredEndpoint : DeviceEndpoint(ipAddress: targetIp);
+    if (endpoint == null || peer == null) {
+      _status = SyncStatus.error;
+      _lastMessage = 'Test ping failed: no paired device endpoint is available.';
+      notifyListeners();
+      return false;
+    }
+    _lastMessage = 'Pinging ${endpoint.ipAddress}…';
+    notifyListeners();
+    final result = await _service.sendTestPing(endpoint.ipAddress, peer.pairCode, targetPort: endpoint.port);
+    _handleSyncEvent(result);
+    return result.success;
+  }
+
   void triggerEventSync() {
     if (!_isAutoSyncEnabled || _pairedDevices.isEmpty) return;
     _eventDebounceTimer?.cancel();
-    _eventDebounceTimer = Timer(const Duration(seconds: 3), () async {
-      final targetIp = _pairedDevices.first.ipAddress;
-      if (targetIp != null && targetIp.isNotEmpty) {
-        await syncBiDirectional(targetIp: targetIp);
+    _eventDebounceTimer = Timer(const Duration(seconds: 3), () => unawaited(syncAllPairedDevices()));
+  }
+
+  Future<SyncResult> syncNow({Function()? onCompleted}) => syncAllPairedDevices(onCompleted: onCompleted);
+
+  Future<SyncResult> syncAllPairedDevices({Function()? onCompleted}) async {
+    if (_pairedDevices.isEmpty) return SyncResult(success: false, errorMessage: 'No paired devices available.');
+    SyncResult? lastSuccess;
+    String? lastError;
+    for (final device in _pairedDevices) {
+      final result = await syncDevice(device, onCompleted: onCompleted);
+      if (result.success) {
+        lastSuccess = result;
+      } else {
+        lastError = result.errorMessage;
       }
-    });
-  }
-
-  /// Alias for syncBiDirectional for home app bar button compatibility.
-  Future<SyncResult> syncNow({Function()? onCompleted}) async {
-    return syncBiDirectional(onCompleted: onCompleted);
-  }
-
-  /// Performs non-destructive Bi-Directional Delta Merge with Target Device
-  Future<SyncResult> syncBiDirectional({String? targetIp, Function()? onCompleted}) async {
-    final ipToSync = targetIp ?? (_pairedDevices.isNotEmpty ? _pairedDevices.first.ipAddress : null);
-    if (ipToSync == null || ipToSync.isEmpty) {
-      _status = SyncStatus.error;
-      _lastMessage = 'Sync Failed: Peer IP unavailable. Scan QR code to pair.';
-      notifyListeners();
-      return SyncResult(success: false, errorMessage: _lastMessage);
     }
+    return lastSuccess ?? SyncResult(success: false, errorMessage: lastError ?? 'No paired devices were reachable.');
+  }
 
+  Future<SyncResult> syncDevice(PairedDevice device, {Function()? onCompleted}) async {
+    if (device.endpoints.isEmpty) return SyncResult(success: false, errorMessage: 'No saved endpoint for ${device.deviceName}. Scan its QR code again.');
     _status = SyncStatus.syncing;
-    _lastMessage = 'Syncing & merging with peer ($ipToSync)...';
     notifyListeners();
-
-    final result = await _service.syncBiDirectional(ipToSync, _currentPairCode);
-
-    if (result.success) {
-      _status = SyncStatus.completed;
-      _lastSyncedAt = DateTime.now();
-      _lastMessage = 'Synced & merged state with $ipToSync';
-
-      final updatedIndex = _pairedDevices.indexWhere((d) => d.ipAddress == ipToSync);
-      if (updatedIndex != -1) {
-        _pairedDevices[updatedIndex] = _pairedDevices[updatedIndex].copyWith(
-          lastSyncedAt: _lastSyncedAt,
-          transportMode: result.transportUsed,
-        );
-        await _saveDevicesToStorage();
+    SyncResult? lastFailure;
+    final endpoints = [...device.endpoints]
+      ..sort((a, b) => (b.lastSyncedAt ?? b.lastSeenAt ?? DateTime.fromMillisecondsSinceEpoch(0))
+          .compareTo(a.lastSyncedAt ?? a.lastSeenAt ?? DateTime.fromMillisecondsSinceEpoch(0)));
+    for (final endpoint in endpoints) {
+      final result = await _service.syncBiDirectional(endpoint.ipAddress, device.pairCode, targetPort: endpoint.port);
+      if (result.success) {
+        final index = _pairedDevices.indexWhere((item) => item.deviceId == device.deviceId);
+        if (index != -1) {
+          _pairedDevices[index] = _pairedDevices[index].withEndpoint(endpoint.copyWith(lastSeenAt: DateTime.now(), lastSyncedAt: DateTime.now())).copyWith(
+                lastSyncedAt: DateTime.now(),
+                transportMode: result.transportUsed,
+              );
+          await _saveDevicesToStorage();
+        }
+        _status = SyncStatus.completed;
+        _lastSyncedAt = DateTime.now();
+        _lastMessage = 'Synced with ${device.deviceName}';
+        if (onCompleted != null) onCompleted();
+        notifyListeners();
+        return result;
       }
-
-      if (onCompleted != null) onCompleted();
-    } else {
-      _status = SyncStatus.error;
-      _lastMessage = result.errorMessage ?? 'Bi-directional sync failed';
+      lastFailure = result;
     }
-
+    _status = SyncStatus.error;
+    _lastMessage = lastFailure?.errorMessage ?? 'Sync failed';
     notifyListeners();
-    return result;
+    return lastFailure ?? SyncResult(success: false, errorMessage: _lastMessage);
   }
 
-  /// Secondary pulls master state from Primary Device (1-Way Fallback)
+  Future<SyncResult> syncBiDirectional({String? targetIp, Function()? onCompleted}) {
+    final device = targetIp == null
+        ? (_pairedDevices.isEmpty ? null : _pairedDevices.first)
+        : _pairedDevices.cast<PairedDevice?>().firstWhere(
+              (item) => item?.endpoints.any((endpoint) => endpoint.ipAddress == targetIp) ?? false,
+              orElse: () => null,
+            );
+    if (device == null) return Future.value(SyncResult(success: false, errorMessage: 'No paired device endpoint is available.'));
+    return syncDevice(device, onCompleted: onCompleted);
+  }
+
   Future<SyncResult> pullFromPrimary({String? targetIp, Function()? onCompleted}) async {
-    final ipToSync = targetIp ?? (_pairedDevices.isNotEmpty ? _pairedDevices.first.ipAddress : null);
-    if (ipToSync == null || ipToSync.isEmpty) {
-      _status = SyncStatus.error;
-      _lastMessage = 'Master Sync Failed: Primary Device IP unavailable. Scan QR code to pair.';
-      notifyListeners();
-      return SyncResult(success: false, errorMessage: _lastMessage);
-    }
-
-    _status = SyncStatus.syncing;
-    _lastMessage = 'Pulling master state from Primary ($ipToSync)...';
-    notifyListeners();
-
-    final result = await _service.pullMasterFromPrimary(ipToSync, _currentPairCode);
-
-    if (result.success) {
-      _status = SyncStatus.completed;
-      _lastSyncedAt = DateTime.now();
-      _lastMessage = 'Synced master snapshot from $ipToSync';
-
-      final updatedIndex = _pairedDevices.indexWhere((d) => d.ipAddress == ipToSync);
-      if (updatedIndex != -1) {
-        _pairedDevices[updatedIndex] = _pairedDevices[updatedIndex].copyWith(
-          lastSyncedAt: _lastSyncedAt,
-          transportMode: result.transportUsed,
-        );
-        await _saveDevicesToStorage();
-      }
-
-      if (onCompleted != null) onCompleted();
-    } else {
-      _status = SyncStatus.error;
-      _lastMessage = result.errorMessage ?? 'Master Sync failed';
-    }
-
-    notifyListeners();
+    final device = targetIp == null
+        ? (_pairedDevices.isEmpty ? null : _pairedDevices.first)
+        : _pairedDevices.cast<PairedDevice?>().firstWhere(
+              (item) => item?.endpoints.any((endpoint) => endpoint.ipAddress == targetIp) ?? false,
+              orElse: () => null,
+            );
+    final endpoint = device?.preferredEndpoint;
+    if (device == null || endpoint == null) return SyncResult(success: false, errorMessage: 'Primary device endpoint unavailable.');
+    final result = await _service.pullMasterFromPrimary(endpoint.ipAddress, device.pairCode, targetPort: endpoint.port);
+    if (result.success && onCompleted != null) onCompleted();
     return result;
   }
 
   Future<void> _saveDevicesToStorage() async {
     final prefs = await SharedPreferences.getInstance();
-    // Strict deduplication before saving to SharedPreferences
-    final Map<String, PairedDevice> uniqueMap = {};
-    for (final device in _pairedDevices) {
-      uniqueMap[device.deviceId] = device;
-    }
-    _pairedDevices = uniqueMap.values.toList();
-
-    final jsonString = json.encode(_pairedDevices.map((d) => d.toMap()).toList());
-    await prefs.setString(_storageKey, jsonString);
+    final unique = <String, PairedDevice>{for (final device in _pairedDevices) device.deviceId: device};
+    _pairedDevices = unique.values.toList();
+    await prefs.setString(_storageKey, json.encode(_pairedDevices.map((device) => device.toMap()).toList()));
   }
 }

@@ -47,6 +47,8 @@
 		<true/>
 		<key>NSPhotoLibraryAddUsageDescription</key>
 		<string>We need access to your gallery to attach images to notes.</string>
+		<key>NSCameraUsageDescription</key>
+		<string>The camera is used to scan a nearby device's pairing QR code.</string>
 		<key>NSMicrophoneUsageDescription</key>
 		<string>The microphone is used to dictate notes with your voice.</string>
 		<key>NSSpeechRecognitionUsageDescription</key>

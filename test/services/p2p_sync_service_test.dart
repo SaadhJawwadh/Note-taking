@@ -67,5 +67,44 @@ void main() {
       final updated = restored.copyWith(transportMode: 'Backup File');
       expect(updated.transportMode, equals('Backup File'));
     });
+
+    test('migrates a legacy IP address into an endpoint without data loss', () {
+      final restored = PairedDevice.fromMap({
+        'deviceId': 'legacy-peer',
+        'deviceName': 'Old Phone',
+        'pairCode': '654321',
+        'ipAddress': '192.168.1.20',
+      });
+
+      expect(restored.endpoints, hasLength(1));
+      expect(restored.preferredEndpoint?.ipAddress, '192.168.1.20');
+      expect(restored.toMap()['ipAddress'], '192.168.1.20');
+    });
+
+    test('retains home and work endpoints for the same paired device', () {
+      final device = PairedDevice(
+        deviceId: 'peer-1',
+        deviceName: 'Pixel 8',
+        pairCode: '654321',
+        endpoints: const [DeviceEndpoint(ipAddress: '192.168.1.20')],
+      ).withEndpoint(const DeviceEndpoint(ipAddress: '10.0.0.24', networkLabel: 'Work Wi-Fi'));
+
+      final restored = PairedDevice.fromMap(device.toMap());
+      expect(restored.endpoints, hasLength(2));
+      expect(restored.endpoints.map((endpoint) => endpoint.ipAddress), containsAll(['192.168.1.20', '10.0.0.24']));
+    });
+
+    test('preserves a user-renamed paired device', () {
+      final renamed = PairedDevice(
+        deviceId: 'peer-2',
+        deviceName: 'Work Tablet',
+        pairCode: '654321',
+        isNameCustom: true,
+      );
+
+      final restored = PairedDevice.fromMap(renamed.toMap());
+      expect(restored.deviceName, 'Work Tablet');
+      expect(restored.isNameCustom, isTrue);
+    });
   });
 }

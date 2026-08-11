@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import 'backup_service.dart';
 import 'sync_merge_service.dart';
@@ -47,6 +48,7 @@ class P2pSyncService {
 
   static const int httpSyncPort = 8765;
   static const int udpBeaconPort = 8766;
+  static const String _deviceIdStorageKey = 'p2p_local_device_id_v1';
 
   String? _deviceId;
   HttpServer? _httpServer;
@@ -69,7 +71,19 @@ class P2pSyncService {
 
   Future<String> getDeviceId() async {
     if (_deviceId != null) return _deviceId!;
-    _deviceId = const Uuid().v4();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final storedId = prefs.getString(_deviceIdStorageKey);
+      if (storedId != null && storedId.isNotEmpty) {
+        _deviceId = storedId;
+        return _deviceId!;
+      }
+      _deviceId = const Uuid().v4();
+      await prefs.setString(_deviceIdStorageKey, _deviceId!);
+    } catch (_) {
+      // Keep P2P usable if preference storage is unavailable in a test or recovery path.
+      _deviceId = const Uuid().v4();
+    }
     return _deviceId!;
   }
 
@@ -193,7 +207,13 @@ class P2pSyncService {
           pairCode: pairCode,
           lastSyncedAt: DateTime.now(),
           transportMode: 'Primary Direct Sync',
-          ipAddress: senderIp,
+          endpoints: [
+            DeviceEndpoint(
+              ipAddress: senderIp,
+              port: map['port'] is int ? map['port'] as int : httpSyncPort,
+              lastSeenAt: DateTime.now(),
+            ),
+          ],
           role: map['role'] as String? ?? 'PRIMARY',
         );
         _remoteDevicePairedController.add(remoteDevice);
@@ -242,7 +262,13 @@ class P2pSyncService {
             pairCode: pairCode,
             lastSyncedAt: DateTime.now(),
             transportMode: 'Primary Direct Sync',
-            ipAddress: request.connectionInfo?.remoteAddress.address,
+            endpoints: [
+              DeviceEndpoint(
+                ipAddress: request.connectionInfo?.remoteAddress.address ?? '',
+                port: map['port'] is int ? map['port'] as int : httpSyncPort,
+                lastSeenAt: DateTime.now(),
+              ),
+            ],
             role: 'SECONDARY',
           );
           _remoteDevicePairedController.add(remoteDevice);
@@ -253,6 +279,7 @@ class P2pSyncService {
               'deviceId': await getDeviceId(),
               'deviceName': userName,
               'role': 'PRIMARY',
+              'port': httpSyncPort,
             }),
             pairCode,
           );
@@ -322,7 +349,12 @@ class P2pSyncService {
   }
 
   /// Sends pair handshake to Primary Device IP.
-  Future<bool> sendPairHandshake(String pairCode, String myDeviceName, String targetIp) async {
+  Future<PairedDevice?> sendPairHandshake(
+    String pairCode,
+    String myDeviceName,
+    String targetIp, {
+    int targetPort = httpSyncPort,
+  }) async {
     try {
       final myDeviceId = await getDeviceId();
       final handshakeMap = {
@@ -331,13 +363,14 @@ class P2pSyncService {
         'deviceName': myDeviceName,
         'pairCode': pairCode,
         'role': 'PEER',
+        'port': httpSyncPort,
       };
 
       final encrypted = _crypto.encryptPayload(json.encode(handshakeMap), pairCode);
-      if (encrypted == null) return false;
+      if (encrypted == null) return null;
 
       final client = HttpClient()..connectionTimeout = const Duration(seconds: 4);
-      final req = await client.postUrl(Uri.parse('http://$targetIp:$httpSyncPort/api/sync/pair_handshake'));
+      final req = await client.postUrl(Uri.parse('http://$targetIp:$targetPort/api/sync/pair_handshake'));
       req.write(encrypted);
       final res = await req.close();
 
@@ -352,17 +385,17 @@ class P2pSyncService {
             pairCode: pairCode,
             lastSyncedAt: DateTime.now(),
             transportMode: 'Bi-Directional Sync',
-            ipAddress: targetIp,
+            endpoints: [DeviceEndpoint(ipAddress: targetIp, port: targetPort, lastSeenAt: DateTime.now())],
             role: map['role'] as String? ?? 'PEER',
           );
           _remoteDevicePairedController.add(remoteDevice);
-          return true;
+          return remoteDevice;
         }
       }
-      return false;
+      return null;
     } catch (e) {
       debugPrint('[P2pSyncService] Pair handshake error: $e');
-      return false;
+      return null;
     }
   }
 
@@ -379,7 +412,7 @@ class P2pSyncService {
   }
 
   /// Sends a direct test ping with round-trip latency measurement.
-  Future<SyncResult> sendTestPing(String targetIp, String pairCode) async {
+  Future<SyncResult> sendTestPing(String targetIp, String pairCode, {int targetPort = httpSyncPort}) async {
     final startTime = DateTime.now().millisecondsSinceEpoch;
     try {
       final pingMap = {
@@ -392,7 +425,7 @@ class P2pSyncService {
       }
 
       final client = HttpClient()..connectionTimeout = const Duration(seconds: 4);
-      final req = await client.postUrl(Uri.parse('http://$targetIp:$httpSyncPort/api/sync/ping'));
+      final req = await client.postUrl(Uri.parse('http://$targetIp:$targetPort/api/sync/ping'));
       req.write(encrypted);
       final res = await req.close();
 
@@ -425,7 +458,7 @@ class P2pSyncService {
   }
 
   /// Secondary pulls master state from Primary and overwrites local DB 100%.
-  Future<SyncResult> pullMasterFromPrimary(String targetIp, String pairCode) async {
+  Future<SyncResult> pullMasterFromPrimary(String targetIp, String pairCode, {int targetPort = httpSyncPort}) async {
     if (_isSyncing) {
       return SyncResult(success: false, errorMessage: 'Sync already in progress');
     }
@@ -442,7 +475,7 @@ class P2pSyncService {
       }
 
       final client = HttpClient()..connectionTimeout = const Duration(seconds: 8);
-      final req = await client.postUrl(Uri.parse('http://$targetIp:$httpSyncPort/api/sync/pull_master'));
+      final req = await client.postUrl(Uri.parse('http://$targetIp:$targetPort/api/sync/pull_master'));
       req.write(encrypted);
       final res = await req.close();
 
@@ -477,7 +510,7 @@ class P2pSyncService {
   }
 
   /// Performs non-destructive Bi-Directional Delta Merge with Target Peer Device.
-  Future<SyncResult> syncBiDirectional(String targetIp, String pairCode) async {
+  Future<SyncResult> syncBiDirectional(String targetIp, String pairCode, {int targetPort = httpSyncPort}) async {
     if (_isSyncing) {
       return SyncResult(success: false, errorMessage: 'Sync already in progress');
     }
@@ -491,7 +524,7 @@ class P2pSyncService {
       }
 
       final client = HttpClient()..connectionTimeout = const Duration(seconds: 8);
-      final req = await client.postUrl(Uri.parse('http://$targetIp:$httpSyncPort/api/sync/bidirectional_sync'));
+      final req = await client.postUrl(Uri.parse('http://$targetIp:$targetPort/api/sync/bidirectional_sync'));
       req.write(encrypted);
       final res = await req.close();
 

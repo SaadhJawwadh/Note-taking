@@ -39,8 +39,8 @@ class WhatsNewSheet extends StatelessWidget {
         items: [
           _WhatsNewItem(
             icon: Icons.sync_rounded,
-            title: "Bi-Directional P2P Wi-Fi Sync",
-            desc: "Merge notes, financial ledgers, and settings between devices over Wi-Fi without losing local edits.",
+            title: "Smarter Device Sync",
+            desc: "Name paired devices and keep them connected across home, work, and other Wi-Fi networks.",
             actionLabel: "Try P2P Sync ➔",
             onAction: () {
               Navigator.push(
@@ -50,9 +50,9 @@ class WhatsNewSheet extends StatelessWidget {
             },
           ),
           _WhatsNewItem(
-            icon: Icons.sync_lock_rounded,
-            title: "Reliable SMS Auto-Sync Engine",
-            desc: "Background bank transaction sync now runs reliably with 48-hour catch-up sync, live status badges, and 1-tap test scanning.",
+            icon: Icons.ads_click_rounded,
+            title: "Precision Text Selection",
+            desc: "Use the new cursor tool to adjust selected text one character or word at a time.",
           ),
         ],
       ),
@@ -62,14 +62,14 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.tertiaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.keyboard_rounded,
-            title: "Ultra-Smooth Text Selection",
-            desc: "Optimized keyboard D-Pad arrow key navigation and text selection in the editor for instant, stutter-free typing.",
+            icon: Icons.auto_awesome_rounded,
+            title: "Clearer Editor Tools",
+            desc: "AI Assist and Precision Selection now have separate toolbar buttons, so writing tools are easier to find.",
           ),
           _WhatsNewItem(
-            icon: Icons.palette_rounded,
-            title: "Dynamic Light & Dark Hero Cards",
-            desc: "Hero cards dynamically adjust pastel opacities in Light Mode and deep translucent fills in Dark Mode for crisp contrast.",
+            icon: Icons.manage_search_rounded,
+            title: "Faster Navigation",
+            desc: "Search now surfaces P2P Sync and more settings shortcuts, while folder moves are quicker.",
           ),
         ],
       ),
@@ -79,9 +79,9 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.secondaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.check_circle_outline_rounded,
-            title: "RenderEditor Caret Calculation",
-            desc: "Resolved issue where Quill editor container wrappers obscured cursor position calculations.",
+            icon: Icons.verified_user_rounded,
+            title: "Reliable Pairing & Scanning",
+            desc: "QR pairing confirms connections before saving them, remembers alternate Wi-Fi paths, and requests camera access correctly.",
           ),
         ],
       ),

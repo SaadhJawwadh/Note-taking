@@ -324,6 +324,125 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     context.read<NoteProvider>().toggleSelection(note.id);
   }
 
+  Future<void> bulkMoveToFolder() async {
+    final noteProvider = context.read<NoteProvider>();
+    if (noteProvider.selectedNoteIds.isEmpty) return;
+
+    final allFolders = await NoteRepository.instance.getAllFolders();
+    if (!mounted) return;
+
+    final controller = TextEditingController();
+    final chosen = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppLayout.radiusXXL),
+        ),
+        title: const Text('Move to folder'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    Material(
+                      color: Colors.transparent,
+                      child: ListTile(
+                        leading: const Icon(Icons.notes_outlined),
+                        title: const Text('All Notes'),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                        ),
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          Navigator.pop(ctx, 'All Notes');
+                        },
+                      ),
+                    ),
+                    ...allFolders.map((f) => Material(
+                          color: Colors.transparent,
+                          child: ListTile(
+                            leading: const Icon(Icons.folder_outlined),
+                            title: Text(f),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                            ),
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              Navigator.pop(ctx, f);
+                            },
+                          ),
+                        )),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppLayout.spaceS),
+              TextField(
+                controller: controller,
+                decoration: InputDecoration(
+                  hintText: 'New folder name',
+                  prefixIcon: const Icon(Icons.create_new_folder_outlined),
+                  filled: false,
+                  fillColor: Colors.transparent,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                    borderSide: BorderSide(
+                      color: Theme.of(ctx).colorScheme.primary,
+                      width: 2,
+                    ),
+                  ),
+                ),
+                onSubmitted: (v) {
+                  if (v.trim().isNotEmpty) Navigator.pop(ctx, v.trim());
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () {
+              final v = controller.text.trim();
+              if (v.isNotEmpty) Navigator.pop(ctx, v);
+            },
+            child: const Text('Create & Move'),
+          ),
+        ],
+      ),
+    );
+
+    if (chosen == null || !mounted) return;
+    final ids = noteProvider.selectedNoteIds.toList();
+    for (final id in ids) {
+      final note = await NoteRepository.instance.readNote(id);
+      if (note != null) {
+        await NoteRepository.instance.updateNote(
+          note.copyWith(category: chosen == 'All Notes' ? '' : chosen),
+        );
+      }
+    }
+    noteProvider.clearSelection();
+    await refreshNotes();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(chosen == 'All Notes'
+            ? '${ids.length} note${ids.length == 1 ? '' : 's'} removed from folder'
+            : '${ids.length} note${ids.length == 1 ? '' : 's'} moved to "$chosen"'),
+        behavior: SnackBarBehavior.floating,
+      ));
+    }
+  }
+
   Future<void> bulkTag() async {
     final noteProvider = context.read<NoteProvider>();
     final availableTags = noteProvider.allTags.where((t) => t != 'All' && t != 'Archived' && t != 'Trash').toList();
@@ -662,6 +781,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             onBulkArchive: () => noteProvider.bulkArchive(),
             onBulkDelete: () => _bulkDeleteWithUndo(noteProvider),
             onBulkTag: bulkTag,
+            onBulkMoveToFolder: bulkMoveToFolder,
             onCycleViewMode: () => _cycleViewMode(settings),
             onRefresh: refreshNotes,
           ),

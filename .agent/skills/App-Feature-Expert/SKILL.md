@@ -89,7 +89,11 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 - **Reactive UI Auto-Refresh Pattern**: Passive HTTP host servers merge payloads in background threads. Domain providers (`NoteProvider`, `FinancialManagerProvider`) MUST subscribe to `P2pSyncService.instance.syncEvents` to automatically re-query SQLite (`refreshNotes()`, `loadTransactions()`) whenever incoming or outgoing sync payloads are merged.
 - **Direct REST HTTP Server (Port 8765) + UDP Radio Beacon (Port 8766)**: Direct socket connections bypass cloud servers and BLE daemons entirely, discovering peers and executing transfers in < 10 ms across dynamic DHCP IPs and VPN split-tunneling.
 - **Deduplicated Device Cards**: Devices are strictly deduplicated by unique `deviceId`.
+- **Stable Identity & Multi-Network Endpoints**: Persist each local device UUID (`P2pSyncService.getDeviceId`) and user-editable device name. A `PairedDevice` represents one immutable peer identity and may retain multiple `DeviceEndpoint`s (for example, home and work Wi-Fi); never deduplicate or replace peers by pair code or IP address. Migrate legacy `ipAddress` records into endpoint lists without deleting user pairings.
+- **Pairing Contract**: QR payloads must carry a protocol version, peer `deviceId`, user-visible name, current IP, and port. A scanner must send its own persisted identity in the handshake; persist a new pairing only after the acknowledgement verifies the target, and use the acknowledged device ID for manual pairing to avoid duplicate cards. Preserve a user-renamed peer name when later discovery events arrive.
+- **Per-Peer Sync Routing**: Ping, merge, and auto-sync must use the selected peer's pair secret and endpoint port. Try the most recently successful endpoint first, then fall back to the peer's other saved endpoints. Route save-event auto-sync through `P2pSyncProvider`, never through a synthetic record with an empty pair code.
 - **Permission-Lean Guardrail**: No Bluetooth (`BLUETOOTH_*`) or Location permissions required. Retains minimal network permissions (`INTERNET`, `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE`, `CHANGE_WIFI_MULTICAST_STATE`).
+- **QR Scanner Platform Declarations**: Keep `android.permission.CAMERA` and `NSCameraUsageDescription` present for QR pairing while retaining optional camera hardware declarations for Wi-Fi tablets.
 
 ---
 

@@ -340,6 +340,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       deviceName: map['name']?.toString() ?? 'Primary Phone',
                       pairCode: pairCode,
                       targetIp: ip,
+                      targetPort: map['port'] is int ? map['port'] as int : int.tryParse('${map['port']}') ?? 8765,
+                      remoteDeviceId: map['deviceId']?.toString(),
                       role: 'SECONDARY',
                     );
                     await syncProvider.syncBiDirectional(

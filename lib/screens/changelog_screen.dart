@@ -28,9 +28,39 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
+                  version: 'v2.16.0',
+                  date: 'August 11, 2026',
+                  isLatest: true,
+                  changes: [
+                    _ChangelogGroup(
+                      title: '🌟 What\'s New',
+                      items: [
+                        'Smarter Device Sync: Give each paired device a name and keep it connected across home, work, and other Wi-Fi networks.',
+                        'Precision Text Selection: Use the new cursor tool in the note editor to adjust selected text one character or word at a time.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🚀 Improvements',
+                      items: [
+                        'Clearer Editor Tools: AI Assist and Precision Selection now have their own toolbar buttons, keeping writing tools easier to find.',
+                        'Faster Navigation: Search now surfaces P2P Sync and more settings shortcuts, while long-pressing a note makes moving it to a folder quicker.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🐛 Fixes',
+                      items: [
+                        'Reliable Pairing & Scanning: Pairing is confirmed before it is saved, remembers alternate Wi-Fi connections, and QR scanning now requests camera access correctly.',
+                        'Editor & Data Stability: Improved selection-toolbar layout, table editing behavior, and fresh-install database setup.',
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppLayout.spaceXL),
+                _buildVersionSection(
+                  context,
                   version: 'v2.14.0',
                   date: 'August 5, 2026',
-                  isLatest: true,
+                  isLatest: false,
                   changes: [
                     _ChangelogGroup(
                       title: '🌟 What\'s New',

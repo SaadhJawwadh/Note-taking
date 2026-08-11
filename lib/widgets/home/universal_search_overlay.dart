@@ -13,6 +13,7 @@ import '../../features/health/health.dart';
 import '../../features/settings/settings.dart';
 import 'package:note_taking_app/features/notes/presentation/screens/manage_tags_screen.dart';
 import 'package:note_taking_app/features/notes/presentation/screens/filtered_notes_screen.dart';
+import 'package:note_taking_app/features/sync/presentation/screens/p2p_sync_screen.dart';
 import '../recurring_rules_sheet.dart';
 import '../../services/backup_service.dart';
 import '../../services/sms_service.dart';
@@ -386,6 +387,46 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
         icon: Icons.currency_exchange_outlined,
         keywords: ['currency', 'symbol', 'usd', 'lkr', 'eur', 'gbp', 'money'],
         onTap: () => AppRoute.push(context, const SettingsScreen(initialQuery: 'Currency')),
+      ),
+      SettingsSearchResult(
+        title: 'P2P Device Sync',
+        subtitle: 'Sync notes & finances with paired devices over Wi-Fi',
+        icon: Icons.sync_rounded,
+        keywords: [
+          'p2p', 'sync', 'device sync', 'pair', 'wifi sync',
+          'pair device', 'qr code', 'paired devices', 'p2p sync'
+        ],
+        onTap: () => AppRoute.push(context, const P2pSyncScreen()),
+      ),
+      SettingsSearchResult(
+        title: 'Text Size',
+        subtitle: 'Adjust app-wide font size for comfortable reading',
+        icon: Icons.text_fields_outlined,
+        keywords: [
+          'text size', 'font size', 'font', 'reading', 'accessibility',
+          'large text', 'small text', 'text scale'
+        ],
+        onTap: () => AppRoute.push(context, const SettingsScreen(initialQuery: 'Text Size')),
+      ),
+      SettingsSearchResult(
+        title: 'App Theme & Color',
+        subtitle: 'Switch light/dark mode and dynamic Material You colors',
+        icon: Icons.palette_outlined,
+        keywords: [
+          'theme', 'dark mode', 'light mode', 'color', 'dynamic color',
+          'material you', 'wallpaper', 'appearance', 'dark', 'light'
+        ],
+        onTap: () => AppRoute.push(context, const SettingsScreen(initialQuery: 'Theme')),
+      ),
+      SettingsSearchResult(
+        title: 'Folders',
+        subtitle: 'Organize and manage note folders',
+        icon: Icons.folder_outlined,
+        keywords: [
+          'folder', 'folders', 'organize', 'category', 'notebook',
+          'move note', 'create folder'
+        ],
+        onTap: () => AppRoute.push(context, const SettingsScreen(initialQuery: 'Folders')),
       ),
     ];
 

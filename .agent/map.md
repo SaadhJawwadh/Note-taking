@@ -74,8 +74,10 @@ lib/
 │       │   └── widgets/
 │       │       ├── p2p_setup_wizard_sheet.dart# 1-tap onboarding pairing wizard
 │       │       └── qr_scanner_dialog.dart# Camera QR code scanner dialog
+│       ├── data/
+│       │   └── p2p_pairing_model.dart# Stable peer records and multi-network endpoints
 │       └── providers/
-│           └── p2p_sync_provider.dart# Direct REST HTTP/UDP server & pair code state
+│           └── p2p_sync_provider.dart# Stable identity, pairing state, endpoint fallback & sync routing
 ├── data/                             # Models, Database Helpers & Legacy Compatibility Exports
 │   ├── repositories/                 # Re-exports feature repositories for backward compatibility
 │   ├── category_constants.dart       # Built-in transaction categories and colors
@@ -200,6 +202,11 @@ Consolidates global app configuration, security timeouts, and data backups.
     *   `AppChip`: Standardized pill/chip widget for tags, categories, phase badges, and filters.
     *   `AppDialog`: Standardized responsive confirmation and input dialogs.
     *   `FrostedGlassSliverAppBar`: Glassmorphic top bar with edge-to-edge blur.
+
+### 6. Master P2P Device Sync (`lib/features/sync/`)
+*   **Stable Peer Identity**: `P2pSyncService` persists a UUID per installation. `PairedDevice` records are deduplicated only by that UUID, not by dynamic DHCP IP addresses or pair codes.
+*   **Dynamic Wi-Fi Endpoints**: A peer can keep several `DeviceEndpoint` records. The provider migrates legacy single-IP pairing data and tries the most recently successful endpoint before fallbacks.
+*   **QR Handshake**: Versioned QR payloads provide the host ID, friendly name, local IP and port; pairing is persisted only after the host acknowledgement succeeds. Device names may be changed after pairing.
 
 ---
 

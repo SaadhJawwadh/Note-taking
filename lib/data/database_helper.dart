@@ -276,6 +276,9 @@ class DatabaseHelper {
         ${RecurringRuleFields.nextDue} TEXT NOT NULL
       )
     ''');
+
+    // tombstone table — must match the _upgradeDB < 18 migration
+    await db.execute('CREATE TABLE IF NOT EXISTS deleted_notes (id TEXT PRIMARY KEY, deletedAt TEXT NOT NULL)');
   }
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {

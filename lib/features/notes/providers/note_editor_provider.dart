@@ -4,8 +4,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../data/note_model.dart';
 import '../data/note_repository.dart';
-import '../../../services/p2p_sync_service.dart';
-import '../../sync/data/p2p_pairing_model.dart';
+import '../../sync/providers/p2p_sync_provider.dart';
 
 /// ChangeNotifier managing state, auto-saving, and business logic for the Note Editor.
 class NoteEditorProvider extends ChangeNotifier {
@@ -169,18 +168,9 @@ class NoteEditorProvider extends ChangeNotifier {
     _isSaving = false;
     notifyListeners();
 
-    // Background Auto-Sync trigger when devices are paired
-    try {
-      unawaited(
-        P2pSyncService.instance.performSync(
-          PairedDevice(
-            deviceId: 'auto_sync',
-            deviceName: 'Paired Device',
-            pairCode: '',
-          ),
-        ),
-      );
-    } catch (_) {}
+    // Background auto-sync uses the provider's persisted peers and their
+    // individual secrets/endpoints instead of an empty synthetic pairing.
+    P2pSyncProvider.activeInstance?.triggerEventSync();
   }
 
   @override

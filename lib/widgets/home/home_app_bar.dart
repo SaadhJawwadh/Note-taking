@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../data/settings_provider.dart';
 import '../../providers/note_provider.dart';
 import '../../features/sync/providers/p2p_sync_provider.dart';
+import 'package:note_taking_app/features/sync/presentation/screens/p2p_sync_screen.dart';
 import 'package:note_taking_app/features/settings/presentation/screens/settings_screen.dart';
 import '../../core/theme/app_layout.dart';
 import '../../utils/app_route.dart';
@@ -17,6 +18,7 @@ class HomeAppBar extends StatefulWidget implements PreferredSizeWidget {
   final VoidCallback onBulkArchive;
   final VoidCallback onBulkDelete;
   final VoidCallback onBulkTag;
+  final VoidCallback onBulkMoveToFolder;
   final VoidCallback onCycleViewMode;
   final VoidCallback onRefresh;
 
@@ -28,6 +30,7 @@ class HomeAppBar extends StatefulWidget implements PreferredSizeWidget {
     required this.onBulkArchive,
     required this.onBulkDelete,
     required this.onBulkTag,
+    required this.onBulkMoveToFolder,
     required this.onCycleViewMode,
     required this.onRefresh,
   });
@@ -161,17 +164,22 @@ class _HomeAppBarState extends State<HomeAppBar> {
           },
         ),
         const SizedBox(width: 8),
-        Text(
-          '${noteProvider.selectedNoteIds.length} selected',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
-              ),
+        Expanded(
+          child: Text(
+            '${noteProvider.selectedNoteIds.length} selected',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                ),
+          ),
         ),
-        const Spacer(),
         IconButton(
           icon: const Icon(Icons.push_pin_outlined),
           tooltip: 'Pin / unpin selected',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
           onPressed: () {
             HapticFeedback.lightImpact();
             context.read<NoteProvider>().bulkTogglePin();
@@ -180,6 +188,8 @@ class _HomeAppBarState extends State<HomeAppBar> {
         IconButton(
           icon: const Icon(Icons.archive_outlined),
           tooltip: 'Archive selected',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
           onPressed: () {
             HapticFeedback.lightImpact();
             widget.onBulkArchive();
@@ -188,15 +198,29 @@ class _HomeAppBarState extends State<HomeAppBar> {
         IconButton(
           icon: const Icon(Icons.label_outline),
           tooltip: 'Tag selected',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
           onPressed: () {
             HapticFeedback.selectionClick();
             widget.onBulkTag();
           },
         ),
         IconButton(
+          icon: const Icon(Icons.drive_file_move_outlined),
+          tooltip: 'Move to folder',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            widget.onBulkMoveToFolder();
+          },
+        ),
+        IconButton(
           icon: const Icon(Icons.delete_outline),
           tooltip: 'Delete selected',
           color: Theme.of(context).colorScheme.error,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
           onPressed: () {
             HapticFeedback.mediumImpact();
             widget.onBulkDelete();
@@ -578,16 +602,37 @@ class _HomeAppBarState extends State<HomeAppBar> {
         ),
         Consumer<P2pSyncProvider>(
           builder: (context, syncProvider, _) {
-            if (!syncProvider.isAutoSyncEnabled || syncProvider.pairedDevices.isEmpty) {
+            // Show when there are paired devices (regardless of auto-sync toggle)
+            if (syncProvider.pairedDevices.isEmpty) {
               return const SizedBox.shrink();
             }
             final isSyncing = syncProvider.status == SyncStatus.syncing;
+            final isError = syncProvider.status == SyncStatus.error;
+            IconData syncIcon;
+            Color? iconColor;
+            if (isSyncing) {
+              syncIcon = Icons.sync_rounded;
+              iconColor = null;
+            } else if (isError) {
+              syncIcon = Icons.sync_problem_rounded;
+              iconColor = Theme.of(context).colorScheme.error;
+            } else if (syncProvider.status == SyncStatus.completed) {
+              syncIcon = Icons.sync_rounded;
+              iconColor = Theme.of(context).colorScheme.primary;
+            } else {
+              syncIcon = Icons.sync_rounded;
+              iconColor = null;
+            }
             return BouncingWidget(
               onTap: () async {
                 unawaited(HapticFeedback.lightImpact());
                 await syncProvider.syncNow(onCompleted: () {
                   noteProvider.refreshNotes();
                 });
+              },
+              onLongPress: () {
+                HapticFeedback.mediumImpact();
+                AppRoute.push(context, const P2pSyncScreen());
               },
               child: IconButton(
                 icon: isSyncing
@@ -599,13 +644,12 @@ class _HomeAppBarState extends State<HomeAppBar> {
                           valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
                         ),
                       )
-                    : Icon(
-                        Icons.sync_rounded,
-                        color: syncProvider.status == SyncStatus.completed
-                            ? Theme.of(context).colorScheme.primary
-                            : null,
-                      ),
-                tooltip: isSyncing ? 'Syncing notes...' : '1-Tap Quick Sync with Paired Devices',
+                    : Icon(syncIcon, color: iconColor),
+                tooltip: isSyncing
+                    ? 'Syncing...'
+                    : isError
+                        ? 'Sync failed — long-press to open Sync settings'
+                        : 'Quick Sync • Long-press to open Sync settings',
                 padding: EdgeInsets.zero,
                 visualDensity: VisualDensity.compact,
                 onPressed: () async {

@@ -27,6 +27,8 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
   final TextEditingController _pairCodeController = TextEditingController();
   final TextEditingController _deviceNameController = TextEditingController();
   final TextEditingController _targetIpController = TextEditingController();
+  String? _scannedDeviceId;
+  int _scannedTargetPort = 8765;
 
   @override
   void dispose() {
@@ -53,6 +55,8 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                 deviceName: name.isEmpty ? 'Paired Device' : name,
                 pairCode: code,
                 targetIp: ip,
+                targetPort: _scannedTargetPort,
+                remoteDeviceId: _scannedDeviceId,
                 role: 'PEER',
               );
               await syncProvider.syncBiDirectional(
@@ -64,6 +68,8 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
               _pairCodeController.clear();
               _deviceNameController.clear();
               _targetIpController.clear();
+              _scannedDeviceId = null;
+              _scannedTargetPort = 8765;
               if (dialogCtx.mounted) Navigator.pop(dialogCtx);
             }
           },
@@ -96,6 +102,10 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                               _pairCodeController.text = map['code']?.toString() ?? scanned;
                               if (map['ip'] != null) _targetIpController.text = map['ip'].toString();
                               if (map['name'] != null) _deviceNameController.text = map['name'].toString();
+                                _scannedDeviceId = map['deviceId']?.toString();
+                                _scannedTargetPort = map['port'] is int
+                                  ? map['port'] as int
+                                  : int.tryParse('${map['port']}') ?? 8765;
                             });
                           } catch (_) {
                             setDialogState(() {
@@ -163,10 +173,13 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
 
   void _showQrCodeModal(BuildContext context, P2pSyncProvider provider) {
     final qrData = json.encode({
+      'version': 2,
       'role': 'PRIMARY',
       'code': provider.currentPairCode,
-      'name': 'Primary Notebook Device',
+      'deviceId': provider.localDeviceId,
+      'name': provider.localDeviceName,
       'ip': provider.localIpAddress ?? '',
+      'port': 8765,
     });
 
     AppBottomSheet.show(
@@ -222,6 +235,34 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
         ],
       ),
     );
+  }
+
+  void _showRenameDeviceDialog({
+    required BuildContext context,
+    required String currentName,
+    required Future<void> Function(String name) onSave,
+  }) {
+    final controller = TextEditingController(text: currentName);
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AppDialog(
+        title: 'Rename Device',
+        confirmLabel: 'Save Name',
+        onConfirm: () async {
+          await onSave(controller.text);
+          if (dialogContext.mounted) Navigator.pop(dialogContext);
+        },
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(
+            labelText: 'Device name',
+            prefixIcon: Icon(Icons.devices_outlined),
+          ),
+        ),
+      ),
+    ).whenComplete(controller.dispose);
   }
 
   @override
@@ -415,15 +456,32 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Row(
-                                children: [
-                                  Icon(Icons.router_rounded, color: colorScheme.primary, size: 20),
-                                  const SizedBox(width: AppLayout.spaceS),
-                                  Text(
-                                    'This Device Hosting Info',
-                                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                                  ),
-                                ],
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.router_rounded, color: colorScheme.primary, size: 20),
+                                    const SizedBox(width: AppLayout.spaceS),
+                                    Expanded(
+                                      child: Text(
+                                        syncProvider.localDeviceName.isEmpty
+                                            ? 'This Device Hosting Info'
+                                            : syncProvider.localDeviceName,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined),
+                                tooltip: 'Rename this device',
+                                onPressed: () => _showRenameDeviceDialog(
+                                  context: context,
+                                  currentName: syncProvider.localDeviceName,
+                                  onSave: syncProvider.renameLocalDevice,
+                                ),
                               ),
                               IconButton(
                                 icon: const Icon(Icons.refresh_rounded),
@@ -541,7 +599,7 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                           const SizedBox(height: AppLayout.spaceM),
                           SizedBox(
                             width: double.infinity,
-                            height: 44,
+                            height: 48,
                             child: FilledButton.tonalIcon(
                               onPressed: () => _showQrCodeModal(context, syncProvider),
                               icon: const Icon(Icons.qr_code_2_rounded),
@@ -630,10 +688,12 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                                       const SizedBox(height: 2),
                                       Text(
                                         targetIp != null && targetIp.isNotEmpty
-                                            ? 'IP: $targetIp • ${device.lastSyncedAt != null ? DateFormat.jm().format(device.lastSyncedAt!) : 'Not synced'}'
+                                            ? '${device.endpoints.length} network ${device.endpoints.length == 1 ? 'endpoint' : 'endpoints'} • $targetIp • ${device.lastSyncedAt != null ? DateFormat.jm().format(device.lastSyncedAt!) : 'Not synced'}'
                                             : (device.lastSyncedAt != null
                                                 ? 'Last synced ${DateFormat.jm().format(device.lastSyncedAt!)}'
                                                 : 'Not synced yet'),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                         style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
                                       ),
                                     ],
@@ -664,6 +724,15 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                                             }
                                           },
                                   ),
+                                IconButton(
+                                  icon: const Icon(Icons.edit_outlined),
+                                  tooltip: 'Rename ${device.deviceName}',
+                                  onPressed: () => _showRenameDeviceDialog(
+                                    context: context,
+                                    currentName: device.deviceName,
+                                    onSave: (name) => syncProvider.renamePairedDevice(device.deviceId, name),
+                                  ),
+                                ),
                                 IconButton(
                                   icon: const Icon(Icons.delete_outline_rounded),
                                   color: colorScheme.error,

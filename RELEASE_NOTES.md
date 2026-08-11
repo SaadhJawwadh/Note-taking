@@ -1,11 +1,13 @@
+
 ### 🌟 What's New
-- **Financial Trash Bin & Permanent Tombstones**: Soft-delete financial transactions with a 30-day auto-purge retention period and dedicated Financial Trash Bin modal.
-- **Permanent SMS Tombstones**: Manually deleted SMS transactions write their `smsId` to permanent tombstone storage (`deleted_transaction_sms_ids`), preventing background auto-sync from re-importing deleted transactions.
+- **Smarter Device Sync**: Give each paired device a name and keep it connected across home, work, and other Wi-Fi networks.
+- **Precision Text Selection**: Use the new cursor tool in the note editor to adjust selected text one character or word at a time.
 
 ### 🚀 Improvements
-- **Expanded Bank SMS Auto-Import Engine**: Updated Sri Lankan bank SMS regex patterns and sender mappings for DFCC, NDB, Commercial Bank, HNB, Sampath, Union Bank, and HSBC with improved multi-currency and account number parsing.
-- **WYSIWYG Note Editor Polish**: Integrated theme-aware text selection handles and cursor colors, refined rich-text delta-to-markdown conversion accuracy, and improved soft keyboard bottom inset handling.
-- **App Lock Lifecycle Resilience**: Fixed app lock screen resume behavior in `MainActivity` on Android, ensuring seamless biometric session restoration without lockout loops.
+- **Clearer Editor Tools**: AI Assist and Precision Selection now have their own toolbar buttons, keeping writing tools easier to find.
+- **Faster Navigation**: Search now surfaces P2P Sync and more settings shortcuts, while long-pressing a note makes moving it to a folder quicker.
 
-### 🐛 Fixes & Tests
-- **Comprehensive Test Suite**: Added complete unit test coverage for financial trash operations, soft deletion, and SMS import tombstone verification (`financial_trash_and_sms_fetch_test.dart`).
+### 🐛 Fixes
+- **Reliable Pairing & Scanning**: Pairing is confirmed before it is saved, remembers alternate Wi-Fi connections, and QR scanning now requests camera access correctly.
+- **Editor & Data Stability**: Improved selection-toolbar layout, table editing behavior, and fresh-install database setup.
+

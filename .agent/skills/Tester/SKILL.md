@@ -72,3 +72,9 @@ Use this skill to execute QA verifications, unit/widget tests, security audits, 
 
 ## 9. Global Text Scaling & Viewport Audits
 * **Dynamic Text Scaling Validation**: Test widget trees across `settings.textSize` boundaries (14.0dp Small, 16.0dp Medium, 20.0dp Large) using `tester.binding.platformDispatcher.textScaleFactorTestValue` to verify text wrapping and prevent layout overflow.
+
+## 10. P2P Pairing & Dynamic-Network QA
+* **Identity and Migration Tests**: Cover persisted local device IDs, legacy `ipAddress` migration into `DeviceEndpoint` lists, custom peer-name persistence, and multiple endpoints for one `deviceId`. Never test or assert deduplication by IP address or pair code.
+* **Handshake Integrity**: Verify that a failed handshake does not create a paired record and that both QR and manual pairing use the acknowledged peer identity. Cover malformed/legacy QR payload handling without crashing the onboarding or pairing dialog.
+* **Physical Two-Device Matrix**: Before release, pair two real devices via QR on the same Wi-Fi, rename both peers, restart each app, then pair a third device. Re-scan after changing one device's Wi-Fi and confirm the original and new endpoints remain stored, with sync falling back when the newest endpoint is unreachable.
+* **QR Permissions and Layout**: Confirm Android camera permission and iOS camera usage text are present; exercise the scanner on-device. Verify P2P cards and actions at Large text scale, ensuring all actions retain a $48 \times 48\text{ dp}$ touch target and peer names/IPs use ellipsis instead of overflowing.
