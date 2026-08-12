@@ -25,10 +25,13 @@ jobs:
           distribution: "zulu"
           java-version: "17"
 
+      - uses: gradle/actions/setup-gradle@v3
+
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.44.x"
           channel: "stable"
+          cache: true
 
       # ── Derive version from tag ──────────────────────────────────────
       - name: Extract version from tag
