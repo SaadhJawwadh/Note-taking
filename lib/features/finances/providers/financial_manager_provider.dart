@@ -4,16 +4,20 @@ import '../../../data/transaction_model.dart';
 import '../data/transaction_repository.dart';
 import '../../../data/repositories/recurring_rule_repository.dart';
 import '../../../services/p2p_sync_service.dart';
+import '../../../services/sms_service.dart';
 
 /// ChangeNotifier managing state and financial metrics for Financial Manager.
 class FinancialManagerProvider extends ChangeNotifier {
   final TransactionRepository _repository = TransactionRepository.instance;
   StreamSubscription? _syncSubscription;
+  StreamSubscription? _smsSyncSubscription;
 
   List<TransactionModel> _allTransactions = [];
   List<TransactionModel> _filteredTransactions = [];
   List<TransactionModel> _trashedTransactions = [];
   bool _isLoading = false;
+  bool _isSmsSyncing = false;
+  SmsSyncProgress? _smsSyncProgress;
 
   FinancialManagerProvider() {
     _syncSubscription = P2pSyncService.instance.syncEvents.listen((result) {
@@ -21,11 +25,20 @@ class FinancialManagerProvider extends ChangeNotifier {
         loadTransactions();
       }
     });
+    _smsSyncSubscription = SmsService.syncProgressStream.listen((progress) {
+      _isSmsSyncing = progress.isSyncing;
+      _smsSyncProgress = progress;
+      if (!progress.isSyncing && progress.found > 0) {
+        loadTransactions();
+      }
+      notifyListeners();
+    });
   }
 
   @override
   void dispose() {
     _syncSubscription?.cancel();
+    _smsSyncSubscription?.cancel();
     super.dispose();
   }
 
@@ -40,6 +53,8 @@ class FinancialManagerProvider extends ChangeNotifier {
   List<TransactionModel> get transactions => List.unmodifiable(_filteredTransactions);
   List<TransactionModel> get trashedTransactions => List.unmodifiable(_trashedTransactions);
   bool get isLoading => _isLoading;
+  bool get isSmsSyncing => _isSmsSyncing;
+  SmsSyncProgress? get smsSyncProgress => _smsSyncProgress;
   String get searchQuery => _searchQuery;
   String get selectedCategory => _selectedCategory;
   DateTime get selectedMonth => _selectedMonth;

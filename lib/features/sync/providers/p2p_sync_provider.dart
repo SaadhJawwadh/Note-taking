@@ -123,10 +123,7 @@ class P2pSyncProvider with ChangeNotifier {
   String _newPairCode() => (100000 + Random.secure().nextInt(900000)).toString();
 
   String _defaultDeviceName(String deviceId) {
-    const adjectives = ['Blue', 'Bright', 'Calm', 'Gentle', 'Quiet', 'Swift'];
-    const nouns = ['Comet', 'Finch', 'Harbor', 'Maple', 'Orchid', 'Willow'];
-    final hash = deviceId.codeUnits.fold<int>(0, (value, codeUnit) => value + codeUnit);
-    return '${adjectives[hash % adjectives.length]} ${nouns[(hash ~/ adjectives.length) % nouns.length]}';
+    return PairedDevice.generateRandomName();
   }
 
   Future<void> refreshDiagnostics() async {

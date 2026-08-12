@@ -1691,6 +1691,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
   void _showAiOptionsSheet() {
     final aiService = Provider.of<LocalAiService>(context, listen: false);
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
     bool isLoading = false;
     String? statusText;
 
@@ -1747,40 +1748,47 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Center(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-                              border: Border.all(
-                                color: Colors.green.withValues(alpha: 0.35),
+                        (() {
+                          final badgeColor = settings.isDeviceAiSupported
+                              ? (theme.extension<AppSemanticColors>()?.success ?? colorScheme.primary)
+                              : colorScheme.tertiary;
+                          return Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: badgeColor.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+                                border: Border.all(
+                                  color: badgeColor.withValues(alpha: 0.35),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 7,
+                                    height: 7,
+                                    decoration: BoxDecoration(
+                                      color: badgeColor,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    settings.isDeviceAiSupported
+                                        ? 'NPU Hardware Ready • 100% Offline'
+                                        : 'Offline NLP Engines • 100% Offline',
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: badgeColor,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 7,
-                                  height: 7,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.green,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'NPU Hardware Ready • 100% Offline',
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color: Colors.green.shade700,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 10,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+                          );
+                        })(),
                         const SizedBox(height: 10),
                         // Header Avatar Ring
                         Center(
@@ -1815,7 +1823,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Powered by Android AI Core • 100% Offline & Private',
+                          settings.isDeviceAiSupported
+                              ? 'Powered by Android AI Core • 100% Offline & Private'
+                              : 'Powered by offline rules & patterns • 100% Offline & Private',
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                             fontSize: 11,
@@ -3812,17 +3822,18 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                       ),
                                     ),
                                   if (!_isEditingTableCell)
-                                    IconButton.filledTonal(
+                                    IconButton(
                                       icon: Icon(_isAppSelectionMode
                                           ? Icons.close_rounded
                                           : Icons.ads_click_rounded),
                                       tooltip: _isAppSelectionMode
                                           ? 'Finish selection'
-                                        : 'Precision selection',
+                                          : 'Precision selection',
                                       onPressed: _toggleAppSelectionMode,
                                       style: IconButton.styleFrom(
-                                        backgroundColor: noteScheme.primaryContainer,
-                                        foregroundColor: noteScheme.onPrimaryContainer,
+                                        foregroundColor: _isAppSelectionMode
+                                            ? theme.colorScheme.primary
+                                            : textColor,
                                       ),
                                     ),
                                   if (settings.useOnDeviceAi || !_isEditingTableCell)

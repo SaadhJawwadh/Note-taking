@@ -15,8 +15,33 @@ import 'package:workmanager/workmanager.dart';
 import 'notification_service.dart';
 import 'dart:io';
 
+enum SmsSyncTrigger { manualDashboard, historicalSheet, backgroundScheduled, catchUp }
+
+class SmsSyncProgress {
+  final bool isSyncing;
+  final int scanned;
+  final int total;
+  final int found;
+  final String? message;
+
+  const SmsSyncProgress({
+    required this.isSyncing,
+    this.scanned = 0,
+    this.total = 0,
+    this.found = 0,
+    this.message,
+  });
+}
+
 class SmsService {
   static final Telephony telephony = Telephony.instance;
+
+  static bool _isSyncingLock = false;
+  static bool get isSyncing => _isSyncingLock;
+
+  static final StreamController<SmsSyncProgress> _syncProgressController =
+      StreamController<SmsSyncProgress>.broadcast();
+  static Stream<SmsSyncProgress> get syncProgressStream => _syncProgressController.stream;
 
   static Future<TransactionModel?> _handleNewSms(SmsMessage sms) async {
     await TransactionCategory.reload();
@@ -266,62 +291,52 @@ class SmsService {
     if (body.trim().isEmpty) return null;
 
     TransactionModel? transaction;
-    bool isAiParsed = false;
 
-    // 1. Try AI-First / NLP parsing if enabled
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final useAi = prefs.getBool('useOnDeviceAi') ?? false;
-      if (useAi && SmsParser.isPotentiallyRelevant(
-            body: body,
-            address: address,
-            allowedSenderIds: allowedSenderIds,
-            blockedSenderIds: blockedSenderIds,
-          )) {
-        await TransactionCategory.reload();
-        final activeCategories = TransactionCategory.allNames;
-        final aiService = GeminiNanoService();
-        Map<String, dynamic>? aiParsed;
+    final prefs = await SharedPreferences.getInstance();
+    final useAi = prefs.getBool('useOnDeviceAi') ?? false;
 
-        try {
-          if (await aiService.isSupported()) {
-            aiParsed = await aiService.parseSmsTransaction(body, activeCategories);
+    // 1. Try AI-First (Gemini Nano) if enabled and supported
+    if (useAi && SmsParser.isPotentiallyRelevant(
+          body: body,
+          address: address,
+          allowedSenderIds: allowedSenderIds,
+          blockedSenderIds: blockedSenderIds,
+        )) {
+      await TransactionCategory.reload();
+      final activeCategories = TransactionCategory.allNames;
+      final aiService = GeminiNanoService();
+
+      try {
+        if (await aiService.isSupported()) {
+          final aiParsed = await aiService.parseSmsTransaction(body, activeCategories);
+          if (aiParsed != null && aiParsed['amount'] != null && (aiParsed['amount'] as num) > 0) {
+            final date = messageDate != null
+                ? DateTime.fromMillisecondsSinceEpoch(messageDate)
+                : DateTime.now();
+            final normalizedBody = body.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+            final smsId = messageId != null
+                ? '${messageId}_$messageDate'
+                : 'hash_${address.toLowerCase()}_${normalizedBody.hashCode}_$messageDate';
+
+            final description = aiParsed['description'] ?? aiParsed['merchant'] ?? 'AI Parsed Transaction';
+            String category = aiParsed['category'] ?? 'Other';
+            if (category == 'Other' || !activeCategories.contains(category)) {
+              category = TransactionCategory.fromDescriptionCached('$description $body');
+            }
+
+            transaction = TransactionModel(
+              amount: (aiParsed['amount'] as num).toDouble(),
+              description: description,
+              date: date,
+              isExpense: aiParsed['isExpense'] ?? true,
+              category: category,
+              smsId: smsId,
+            );
           }
-        } catch (_) {
-          aiParsed = null;
         }
-
-        // Fallback to offline rule-based NLP engine if native AI channel fails or is unsupported
-        aiParsed ??= OfflineAiFallbackService.parseSmsTransaction(body, activeCategories);
-
-        if (aiParsed != null && aiParsed['amount'] != null && (aiParsed['amount'] as num) > 0) {
-          final date = messageDate != null
-              ? DateTime.fromMillisecondsSinceEpoch(messageDate)
-              : DateTime.now();
-          final normalizedBody = body.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
-          final smsId = messageId != null
-              ? '${messageId}_$messageDate'
-              : 'hash_${address.toLowerCase()}_${normalizedBody.hashCode}_$messageDate';
-
-          final description = aiParsed['description'] ?? aiParsed['merchant'] ?? 'AI Parsed Transaction';
-          String category = aiParsed['category'] ?? 'Other';
-          if (!activeCategories.contains(category)) {
-            category = TransactionCategory.fromDescriptionCached('$description $body');
-          }
-
-          transaction = TransactionModel(
-            amount: (aiParsed['amount'] as num).toDouble(),
-            description: description,
-            date: date,
-            isExpense: aiParsed['isExpense'] ?? true,
-            category: category,
-            smsId: smsId,
-          );
-          isAiParsed = true;
-        }
+      } catch (e) {
+        debugPrint('On-device AI SMS parsing failed: $e');
       }
-    } catch (e) {
-      debugPrint('On-device AI SMS parsing failed: $e');
     }
 
     // 2. Fallback to Regex parser if AI did not return a valid transaction
@@ -337,20 +352,17 @@ class SmsService {
         customIncomeRules: customIncomeRules,
       );
 
-      // AI Refinement Step: Refine description of regex-parsed transaction if AI is available
-      if (transaction != null && !isAiParsed) {
+      // AI Refinement Step: Refine description of regex-parsed transaction if AI is enabled and supported
+      if (transaction != null && useAi) {
         try {
-          final prefs = await SharedPreferences.getInstance();
-          if (prefs.getBool('useOnDeviceAi') ?? false) {
-            final aiService = GeminiNanoService();
-            if (await aiService.isSupported()) {
-              final refined = await aiService.refineTransactionDescription(
-                transaction.description,
-                body,
-              );
-              if (refined != null && refined.isNotEmpty) {
-                transaction = transaction.copy(description: refined);
-              }
+          final aiService = GeminiNanoService();
+          if (await aiService.isSupported()) {
+            final refined = await aiService.refineTransactionDescription(
+              transaction.description,
+              body,
+            );
+            if (refined != null && refined.isNotEmpty) {
+              transaction = transaction.copy(description: refined);
             }
           }
         } catch (e) {
@@ -359,7 +371,115 @@ class SmsService {
       }
     }
 
+    // 3. Fallback to Generic Offline NLP Engine if Regex parser also failed
+    if (transaction == null &&
+        SmsParser.isPotentiallyRelevant(
+          body: body,
+          address: address,
+          allowedSenderIds: allowedSenderIds,
+          blockedSenderIds: blockedSenderIds,
+        )) {
+      await TransactionCategory.reload();
+      final activeCategories = TransactionCategory.allNames;
+      final aiParsed = OfflineAiFallbackService.parseSmsTransaction(body, activeCategories);
+
+      if (aiParsed != null && aiParsed['amount'] != null && (aiParsed['amount'] as num) > 0) {
+        final date = messageDate != null
+            ? DateTime.fromMillisecondsSinceEpoch(messageDate)
+            : DateTime.now();
+        final normalizedBody = body.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+        final smsId = messageId != null
+            ? '${messageId}_$messageDate'
+            : 'hash_${address.toLowerCase()}_${normalizedBody.hashCode}_$messageDate';
+
+        final description = aiParsed['description'] ?? aiParsed['merchant'] ?? 'Offline Parsed Transaction';
+        String category = aiParsed['category'] ?? 'Other';
+        if (category == 'Other' || !activeCategories.contains(category)) {
+          category = TransactionCategory.fromDescriptionCached('$description $body');
+        }
+
+        transaction = TransactionModel(
+          amount: (aiParsed['amount'] as num).toDouble(),
+          description: description,
+          date: date,
+          isExpense: aiParsed['isExpense'] ?? true,
+          category: category,
+          smsId: smsId,
+        );
+      }
+    }
+
     return transaction;
+  }
+
+  /// Unified, thread-safe entry point for SMS synchronization across manual & background triggers.
+  static Future<int> performSmsSync({
+    required SmsSyncTrigger trigger,
+    DateTime? fromTime,
+    bool bypassTombstones = false,
+    void Function(int scanned, int total, int found)? onProgress,
+  }) async {
+    if (_isSyncingLock) {
+      debugPrint('[SmsService] Sync already active. Skipping trigger: $trigger');
+      return 0;
+    }
+    _isSyncingLock = true;
+    _syncProgressController.add(const SmsSyncProgress(isSyncing: true, message: 'Initializing SMS scanner...'));
+
+    try {
+      if (!await hasPermission()) {
+        _syncProgressController.add(const SmsSyncProgress(isSyncing: false, message: 'SMS permission not granted.'));
+        return 0;
+      }
+
+      await reloadSmsContacts();
+      await TransactionCategory.reload();
+
+      final prefs = await SharedPreferences.getInstance();
+      DateTime startCutoff;
+
+      if (fromTime != null) {
+        startCutoff = fromTime;
+      } else {
+        final lastSyncStr = prefs.getString('lastSmsSyncTime');
+        final lastSync = lastSyncStr != null ? DateTime.tryParse(lastSyncStr) : null;
+        final maxLookback = DateTime.now().subtract(const Duration(hours: 48));
+        startCutoff = (lastSync != null && lastSync.isAfter(maxLookback)) ? lastSync : maxLookback;
+      }
+
+      final count = await syncInboxFrom(
+        startCutoff,
+        onProgress: (scanned, total, found) {
+          onProgress?.call(scanned, total, found);
+          _syncProgressController.add(SmsSyncProgress(
+            isSyncing: true,
+            scanned: scanned,
+            total: total,
+            found: found,
+          ));
+        },
+      );
+
+      final now = DateTime.now();
+      await prefs.setString('lastSmsSyncTime', now.toIso8601String());
+      await prefs.setInt('lastSmsSyncCount', count);
+
+      _syncProgressController.add(SmsSyncProgress(
+        isSyncing: false,
+        scanned: 0,
+        total: 0,
+        found: count,
+        message: 'Imported $count transaction${count == 1 ? "" : "s"}',
+      ));
+
+      return count;
+    } catch (e) {
+      debugPrint('SmsService.performSmsSync error: $e');
+      _syncProgressController.add(SmsSyncProgress(isSyncing: false, message: 'Sync error: $e'));
+      return 0;
+    } finally {
+      _isSyncingLock = false;
+    }
   }
 
   /// Manually triggers the exact daily auto-sync pipeline (scanning recent SMS)
@@ -367,19 +487,10 @@ class SmsService {
   static Future<int> performDailySyncManualTrigger({
     void Function(int scanned, int total, int found)? onProgress,
   }) async {
-    if (!await hasPermission()) return 0;
-    await reloadSmsContacts();
-    await TransactionCategory.reload();
-
-    final now = DateTime.now();
-    final fromTime = now.subtract(const Duration(hours: 48));
-    final count = await syncInboxFrom(fromTime, onProgress: onProgress);
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('lastSmsSyncTime', now.toIso8601String());
-    await prefs.setInt('lastSmsSyncCount', count);
-
-    return count;
+    return performSmsSync(
+      trigger: SmsSyncTrigger.manualDashboard,
+      onProgress: onProgress,
+    );
   }
 
   static const kDailySyncTaskName = 'com.saadhjawwadh.notebook.dailySync';
@@ -440,13 +551,7 @@ class SmsService {
       if (!(prefs.getBool('dailySyncEnabled') ?? false)) return true;
       if (!await hasPermission()) return true;
 
-      // Sync transactions over the last 48 hours (to cover power-off / offline periods)
-      final now = DateTime.now();
-      final fromTime = now.subtract(const Duration(hours: 48));
-      final count = await syncInboxFrom(fromTime);
-
-      await prefs.setString('lastSmsSyncTime', now.toIso8601String());
-      await prefs.setInt('lastSmsSyncCount', count);
+      final count = await performSmsSync(trigger: SmsSyncTrigger.backgroundScheduled);
 
       // Notify the user ONLY if 1 or more new transactions were synced
       if (count > 0) {
@@ -496,18 +601,16 @@ class SmsService {
       if (lastSyncStr != null) {
         final parsed = DateTime.tryParse(lastSyncStr);
         if (parsed != null) {
-          // Use last sync time, capped to max 48 hours ago
           final maxLookback = DateTime.now().subtract(const Duration(hours: 48));
           from = parsed.isBefore(maxLookback) ? maxLookback : parsed;
         }
       }
 
-      // Perform catch-up if last sync was more than 15 minutes ago
       if (DateTime.now().difference(from).inMinutes >= 15) {
-        final count = await syncInboxFrom(from);
-        final now = DateTime.now();
-        await prefs.setString('lastSmsSyncTime', now.toIso8601String());
-        await prefs.setInt('lastSmsSyncCount', count);
+        final count = await performSmsSync(
+          trigger: SmsSyncTrigger.catchUp,
+          fromTime: from,
+        );
         debugPrint('App-launch catch-up sync completed: $count transactions imported');
       }
     } catch (e) {

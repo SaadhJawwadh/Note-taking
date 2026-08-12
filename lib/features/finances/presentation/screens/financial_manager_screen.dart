@@ -20,6 +20,7 @@ import 'package:note_taking_app/features/settings/presentation/screens/settings_
 import '../../../../screens/app_lock_screen.dart';
 import '../../../../services/backup_service.dart';
 import '../../../../utils/app_route.dart';
+import 'package:note_taking_app/features/finances/providers/financial_manager_provider.dart';
 
 import '../../../../core/theme/app_layout.dart';
 
@@ -465,32 +466,16 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
       }
     }
 
-    setState(() => _isLoading = true);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Scanning recent messages...'),
+        content: Text('Scanning recent messages in background...'),
         behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 1),
+        duration: Duration(seconds: 2),
       ),
     );
 
-    // Trigger daily auto-sync pipeline (48h lookback)
-    final count = await SmsService.performDailySyncManualTrigger();
-
-    if (!mounted) return;
-    await _refreshTransactions();
-    
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          count == 0
-              ? 'No new bank SMS detected in recent messages.'
-              : 'Successfully imported $count new transaction${count == 1 ? '' : 's'}! 🎉',
-        ),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    // Non-blocking trigger of daily auto-sync pipeline
+    unawaited(SmsService.performDailySyncManualTrigger());
   }
 
   Future<void> _cleanupLedgerDuplicates() async {
@@ -1025,13 +1010,72 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     final textTheme = Theme.of(context).textTheme;
     final settings = Provider.of<SettingsProvider>(context);
     final currency = settings.currency;
+    final finProvider = Provider.of<FinancialManagerProvider>(context);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: AnimationLimiter(
-        child: CustomScrollView(
-          slivers: _buildSlivers(colorScheme, textTheme, currency, settings),
-        ),
+      body: Stack(
+        children: [
+          AnimationLimiter(
+            child: CustomScrollView(
+              slivers: _buildSlivers(colorScheme, textTheme, currency, settings),
+            ),
+          ),
+          if (finProvider.isSmsSyncing && finProvider.smsSyncProgress != null)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 70,
+              left: 16,
+              right: 16,
+              child: _buildSyncProgressBanner(context, finProvider.smsSyncProgress!),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSyncProgressBanner(BuildContext context, SmsSyncProgress progress) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.35)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.12),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: theme.colorScheme.onPrimaryContainer,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              progress.total > 0
+                  ? 'Scanning SMS (${progress.scanned}/${progress.total})... Found ${progress.found}'
+                  : progress.message ?? 'Scanning bank messages in background...',
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.onPrimaryContainer,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
     );
   }

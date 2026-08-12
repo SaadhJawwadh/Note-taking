@@ -1,3 +1,5 @@
+import 'dart:math';
+
 class DeviceEndpoint {
   final String ipAddress;
   final int port;
@@ -93,6 +95,21 @@ class PairedDevice {
     return sorted.first;
   }
 
+  static String generateRandomName() {
+    const adjectives = [
+      'Blue', 'Bright', 'Calm', 'Gentle', 'Quiet', 'Swift', 'Aero', 'Solar',
+      'Lunar', 'Quantum', 'Nebula', 'Echo', 'Frost', 'Amber', 'Nova'
+    ];
+    const nouns = [
+      'Comet', 'Finch', 'Harbor', 'Maple', 'Orchid', 'Willow', 'Falcon', 'Beacon',
+      'Pebble', 'Aurora', 'Zenith', 'Summit', 'Haven', 'Breeze', 'Pulse'
+    ];
+    final random = Random();
+    final adj = adjectives[random.nextInt(adjectives.length)];
+    final noun = nouns[random.nextInt(nouns.length)];
+    return '$adj $noun';
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'deviceId': deviceId,
@@ -119,7 +136,7 @@ class PairedDevice {
         : <DeviceEndpoint>[];
     return PairedDevice(
       deviceId: map['deviceId'] as String? ?? 'dev_${map['pairCode'] ?? '01'}',
-      deviceName: map['deviceName'] as String? ?? 'Paired Device',
+      deviceName: map['deviceName'] as String? ?? PairedDevice.generateRandomName(),
       pairCode: map['pairCode'] as String? ?? '',
       lastSyncedAt: map['lastSyncedAt'] != null
           ? DateTime.tryParse(map['lastSyncedAt'].toString())

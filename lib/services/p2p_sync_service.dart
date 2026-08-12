@@ -194,7 +194,7 @@ class P2pSyncService {
 
       final Map<String, dynamic> map = json.decode(decrypted);
       final senderDeviceId = map['deviceId'] as String?;
-      final senderName = map['deviceName'] as String? ?? 'Primary Device';
+      final senderName = map['deviceName'] as String? ?? PairedDevice.generateRandomName();
 
       if (senderDeviceId == null || senderDeviceId == await getDeviceId()) return;
 
@@ -258,7 +258,7 @@ class P2pSyncService {
           final Map<String, dynamic> map = json.decode(decrypted);
           final remoteDevice = PairedDevice(
             deviceId: map['deviceId'] ?? const Uuid().v4(),
-            deviceName: map['deviceName'] ?? 'Secondary Device',
+            deviceName: map['deviceName'] ?? PairedDevice.generateRandomName(),
             pairCode: pairCode,
             lastSyncedAt: DateTime.now(),
             transportMode: 'Primary Direct Sync',
@@ -381,7 +381,7 @@ class P2pSyncService {
           final Map<String, dynamic> map = json.decode(decrypted);
           final remoteDevice = PairedDevice(
             deviceId: map['deviceId'] ?? const Uuid().v4(),
-            deviceName: map['deviceName'] ?? 'Paired Device',
+            deviceName: map['deviceName'] ?? PairedDevice.generateRandomName(),
             pairCode: pairCode,
             lastSyncedAt: DateTime.now(),
             transportMode: 'Bi-Directional Sync',

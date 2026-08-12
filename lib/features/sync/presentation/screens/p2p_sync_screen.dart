@@ -14,6 +14,7 @@ import 'package:note_taking_app/widgets/bouncing_widget.dart';
 import 'package:note_taking_app/providers/note_provider.dart';
 import 'package:note_taking_app/services/backup_service.dart';
 import 'package:note_taking_app/features/sync/providers/p2p_sync_provider.dart';
+import 'package:note_taking_app/features/sync/data/p2p_pairing_model.dart';
 import 'package:note_taking_app/features/sync/presentation/widgets/qr_scanner_dialog.dart';
 
 class P2pSyncScreen extends StatefulWidget {
@@ -52,7 +53,7 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
             if (code.length == 6 && ip.isNotEmpty) {
               final noteProvider = Provider.of<NoteProvider>(context, listen: false);
               await syncProvider.pairNewDevice(
-                deviceName: name.isEmpty ? 'Paired Device' : name,
+                deviceName: name.isEmpty ? PairedDevice.generateRandomName() : name,
                 pairCode: code,
                 targetIp: ip,
                 targetPort: _scannedTargetPort,

@@ -636,7 +636,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Text(
-                      'Auto-parse bank debit/credit notifications in background.',
+                      'Non-blocking background sync for bank debit/credit notifications.',
                       style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     ),
                     value: settings.dailySyncEnabled,
@@ -757,20 +757,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 decoration: BoxDecoration(
                   color: isSupported
                       ? theme.colorScheme.primaryContainer.withValues(alpha: 0.5)
-                      : theme.colorScheme.surfaceContainerHighest,
+                      : theme.colorScheme.tertiaryContainer.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(AppLayout.radiusM),
                   border: Border.all(
                     color: isSupported
                         ? theme.colorScheme.primary.withValues(alpha: 0.3)
-                        : theme.colorScheme.outlineVariant,
+                        : theme.colorScheme.tertiary.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      isSupported ? Icons.check_circle_rounded : Icons.info_outline_rounded,
-                      color: isSupported ? theme.colorScheme.primary : theme.colorScheme.outline,
+                      isSupported ? Icons.check_circle_rounded : Icons.offline_bolt_outlined,
+                      color: isSupported ? theme.colorScheme.primary : theme.colorScheme.tertiary,
                       size: 20,
                     ),
                     const SizedBox(width: AppLayout.spaceS),
@@ -778,13 +778,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       child: Text(
                         isSupported
                             ? 'Android AI Core & Hardware NPU Ready'
-                            : 'On-Device AI is not available on this device',
+                            : 'Offline NLP Rule Engines Active (100% Private)',
                         style: theme.textTheme.labelMedium?.copyWith(
                           color: isSupported
                               ? theme.colorScheme.onPrimaryContainer
-                              : theme.colorScheme.onSurfaceVariant,
+                              : theme.colorScheme.onTertiaryContainer,
                           fontWeight: FontWeight.w600,
                         ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -823,13 +824,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               else
                 AppCard(
                   padding: AppLayout.paddingAllL,
-                  child: Text(
-                    'Your hardware does not currently report Android AI Core support. You can still use all core note, finance, and health tracking features with maximum performance.',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      height: 1.4,
-                    ),
-                    textAlign: TextAlign.center,
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.rule_rounded,
+                        color: theme.colorScheme.tertiary,
+                        size: 24,
+                      ),
+                      const SizedBox(width: AppLayout.spaceM),
+                      Expanded(
+                        child: Text(
+                          'Your device will use high-speed offline NLP pattern matchers for formatting, smart tags, and bank SMS categorization.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
             ],
@@ -880,7 +892,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             theme,
             icon: Icons.sync_lock_rounded,
             title: 'P2P Device Sync & Backups',
-            desc: 'Bi-directional P2P Wi-Fi notebook sync, automatic SMS parsing, and AES-256 encrypted backups.',
+            desc: 'Bi-directional P2P Wi-Fi sync, non-blocking background SMS auto-parsing, and encrypted AES-256 backups.',
             actionLabel: 'Configure P2P Sync ➔',
             onAction: () {
               Navigator.push(

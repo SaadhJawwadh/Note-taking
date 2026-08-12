@@ -11,18 +11,15 @@ class SmsImportSheet extends StatefulWidget {
 
 class _SmsImportSheetState extends State<SmsImportSheet> {
   static const _periods = [
-    ('Last day', 1),
+    ('Since Last Sync (Incremental)', -1),
     ('Last 7 days', 7),
     ('Last 30 days', 30),
-    ('Last 3 months', 90),
+    ('Last 90 days', 90),
     ('All time', null),
   ];
 
-  int _selectedIndex = 2;
-  bool _loading = false;
-  int _scannedCount = 0;
-  int _totalCount = 0;
-  int _foundCount = 0;
+  int _selectedIndex = 0;
+  bool _bypassTombstones = false;
 
   Future<void> _runImport() async {
     final granted = await SmsService.hasPermission();
@@ -58,50 +55,31 @@ class _SmsImportSheetState extends State<SmsImportSheet> {
       }
     }
 
-    setState(() {
-      _loading = true;
-      _scannedCount = 0;
-      _totalCount = 0;
-      _foundCount = 0;
-    });
-
     final offsetDays = _periods[_selectedIndex].$2;
-    final from = offsetDays != null
-        ? DateTime.now().subtract(Duration(days: offsetDays))
-        : DateTime(2000);
-
-    final count = await SmsService.syncInboxFrom(
-      from,
-      onProgress: (scanned, total, found) {
-        if (mounted) {
-          setState(() {
-            _scannedCount = scanned;
-            _totalCount = total;
-            _foundCount = found;
-          });
-        }
-      },
-    );
-
-    final newSenders = await SmsService.discoverNewBankSenders();
-
-    if (!mounted) return;
-    setState(() => _loading = false);
-    Navigator.pop(context);
-
-    String message = count == 0
-        ? 'No new transactions found.'
-        : 'Imported $count new transaction${count == 1 ? '' : 's'} from SMS.';
-    if (newSenders.isNotEmpty) {
-      message += ' Found ${newSenders.length} new bank sender${newSenders.length == 1 ? '' : 's'}.';
+    DateTime? from;
+    if (offsetDays == -1) {
+      from = null; // Uses lastSmsSyncTime automatically
+    } else if (offsetDays != null) {
+      from = DateTime.now().subtract(Duration(days: offsetDays));
+    } else {
+      from = DateTime(2000);
     }
 
+    // Non-blocking dispatch: dismiss modal sheet immediately so user can continue using the app
+    Navigator.pop(context);
+
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
+      const SnackBar(
+        content: Text('Started SMS import in background...'),
         behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 4),
+        duration: Duration(seconds: 2),
       ),
+    );
+
+    await SmsService.performSmsSync(
+      trigger: SmsSyncTrigger.historicalSheet,
+      fromTime: from,
+      bypassTombstones: _bypassTombstones,
     );
   }
 
@@ -118,20 +96,26 @@ class _SmsImportSheetState extends State<SmsImportSheet> {
       padding: EdgeInsets.only(
         left: 24,
         right: 24,
-        top: 8,
+        top: 12,
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Import SMS Transactions', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 4),
+          Row(
+            children: [
+              Icon(Icons.manage_search_rounded, color: colorScheme.primary),
+              const SizedBox(width: 8),
+              Text('Advanced SMS Import Options', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
+            ],
+          ),
+          const SizedBox(height: 8),
           Text(
-            'Choose how far back to scan your SMS inbox for bank transactions.',
+            'Quick sync automatically checks for new messages since your last fetch. Select a date range below to scan older history or re-import past transactions.',
             style: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           ...List.generate(_periods.length, (i) {
             final (label, _) = _periods[i];
             return RadioListTile<int>(
@@ -140,44 +124,36 @@ class _SmsImportSheetState extends State<SmsImportSheet> {
               // ignore: deprecated_member_use
               groupValue: _selectedIndex,
               // ignore: deprecated_member_use
-              onChanged: _loading ? null : (v) => setState(() => _selectedIndex = v!),
+              onChanged: (v) => setState(() => _selectedIndex = v!),
               contentPadding: EdgeInsets.zero,
               dense: true,
             );
           }),
-          if (_loading) ...[
-            const SizedBox(height: 12),
-            LinearProgressIndicator(
-              value: _totalCount > 0 ? _scannedCount / _totalCount : null,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _totalCount > 0
-                  ? 'Scanning message $_scannedCount of $_totalCount... Found $_foundCount transaction${_foundCount == 1 ? '' : 's'}.'
-                  : 'Preparing SMS inbox scan...',
+          const Divider(height: 24),
+          CheckboxListTile(
+            title: const Text('Force Re-Scan Previously Deleted SMS'),
+            subtitle: Text(
+              'Bypasses tombstone filters to re-import transactions you previously purged.',
               style: textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
             ),
-          ],
-          const SizedBox(height: 20),
+            value: _bypassTombstones,
+            onChanged: (v) => setState(() => _bypassTombstones = v ?? false),
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+          ),
+          const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               TextButton(
-                onPressed: _loading ? null : () => Navigator.pop(context),
+                onPressed: () => Navigator.pop(context),
                 child: const Text('Cancel'),
               ),
               const SizedBox(width: 8),
               FilledButton.icon(
-                onPressed: _loading ? null : _runImport,
-                icon: _loading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.download_outlined, size: 18),
-                label: Text(_loading ? 'Importing…' : 'Import'),
+                onPressed: _runImport,
+                icon: const Icon(Icons.download_outlined, size: 18),
+                label: const Text('Start Import'),
               ),
             ],
           ),

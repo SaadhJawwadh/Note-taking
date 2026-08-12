@@ -39,8 +39,13 @@ class WhatsNewSheet extends StatelessWidget {
         items: [
           _WhatsNewItem(
             icon: Icons.sync_rounded,
-            title: "Smarter Device Sync",
-            desc: "Name paired devices and keep them connected across home, work, and other Wi-Fi networks.",
+            title: "Non-Blocking SMS Import",
+            desc: "Bank SMS imports now run smoothly in the background with a live floating progress pill.",
+          ),
+          _WhatsNewItem(
+            icon: Icons.devices_rounded,
+            title: "Friendly Device Naming",
+            desc: "Paired devices now get friendly names (e.g., Nimble Falcon) and stay connected across Wi-Fi networks.",
             actionLabel: "Try P2P Sync ➔",
             onAction: () {
               Navigator.push(
@@ -52,7 +57,7 @@ class WhatsNewSheet extends StatelessWidget {
           _WhatsNewItem(
             icon: Icons.ads_click_rounded,
             title: "Precision Text Selection",
-            desc: "Use the new cursor tool to adjust selected text one character or word at a time.",
+            desc: "Use the new cursor tool in the editor to adjust selected text one character or word at a time.",
           ),
         ],
       ),
@@ -63,13 +68,13 @@ class WhatsNewSheet extends StatelessWidget {
         items: [
           _WhatsNewItem(
             icon: Icons.auto_awesome_rounded,
-            title: "Clearer Editor Tools",
-            desc: "AI Assist and Precision Selection now have separate toolbar buttons, so writing tools are easier to find.",
+            title: "Smart Toolbar & Hardware AI",
+            desc: "Toolbar controls adapt dynamically based on your device's hardware NPU capabilities.",
           ),
           _WhatsNewItem(
-            icon: Icons.manage_search_rounded,
-            title: "Faster Navigation",
-            desc: "Search now surfaces P2P Sync and more settings shortcuts, while folder moves are quicker.",
+            icon: Icons.palette_outlined,
+            title: "Material 3 Visual Polish",
+            desc: "Symmetric borderless frosted glass headers, depth filters, and ink splash protections.",
           ),
         ],
       ),
@@ -80,8 +85,8 @@ class WhatsNewSheet extends StatelessWidget {
         items: [
           _WhatsNewItem(
             icon: Icons.verified_user_rounded,
-            title: "Reliable Pairing & Scanning",
-            desc: "QR pairing confirms connections before saving them, remembers alternate Wi-Fi paths, and requests camera access correctly.",
+            title: "Stability & Reliability",
+            desc: "Fixed finance screen provider setup and improved multi-network device pairing stability.",
           ),
         ],
       ),

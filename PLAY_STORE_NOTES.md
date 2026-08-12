@@ -1,24 +1,26 @@
 <en-US>
 🌟 What's New
-• Name paired devices and keep syncing across home, work, and other Wi-Fi networks.
-• New Precision Selection cursor for character- and word-level editing.
+• Non-blocking background bank SMS import with live progress pill.
+• Friendly P2P device naming and multi-network Wi-Fi sync.
+• Advanced SMS import date ranges and tombstone protections.
+• Smart toolbar with NPU hardware detection and precision text selection.
 
 🚀 Improvements
-• Separate AI Assist and selection controls make editor tools easier to use.
-• Faster P2P and Settings shortcuts in search, plus smoother folder moves.
+• Seamless borderless Material 3 design and frosted glass depth.
 
 🐛 Fixes
-• More reliable QR pairing, camera access, and editor stability.
+• Fixed finance provider stability and QR scanner pairing.
 </en-US>
 <ta-IN>
 🌟 புதிய அம்சங்கள்
-• இணைக்கப்பட்ட சாதனங்களுக்கு பெயரிடலாம்; வீடு, அலுவலகம் போன்ற பல Wi‑Fi-களில் ஒத்திசைக்கலாம்.
-• எழுத்து மற்றும் சொல் அளவில் திருத்த புதிய துல்லியத் தேர்வு கருவி.
+• பின்னணி வங்கி SMS பதிவிறக்கம் மற்றும் நிகழ்நேர முன்னேற்றம்.
+• எளிய P2P சாதன பெயர்கள் மற்றும் வலைப்பின்னல் இணைப்பு.
+• மேம்பட்ட வரலாற்று இறக்குமதி மற்றும் நீக்கப்பட்டவை பாதுகாப்பு.
+• AI வன்பொருள் கண்டறிதல் மற்றும் நுட்பமான உரை தேர்வு.
 
 🚀 மேம்பாடுகள்
-• AI உதவி மற்றும் தேர்வு கருவிகள் தனித்தனி பொத்தான்களாக எளிதில் கிடைக்கும்.
-• தேடல் குறுக்குவழிகள் மற்றும் கோப்புறை நகர்த்தல் வேகமாகும்.
+• மென்மையான Material 3 வடிவமைப்பு மற்றும் தெளிவான தோற்றம்.
 
 🐛 பிழை திருத்தங்கள்
-• QR இணைப்பு, கேமரா அணுகல், குறிப்பு திருத்தி நிலைத்தன்மை மேம்படுத்தப்பட்டது.
+• நிதி பக்கம் மற்றும் QR குறியீடு இணைப்பில் பிழைகள் சரி செய்யப்பட்டன.
 </ta-IN>

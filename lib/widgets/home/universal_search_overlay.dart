@@ -585,7 +585,9 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
           width: 1.0,
         ),
       ),
-      child: ListTile(
+      child: Material(
+        color: Colors.transparent,
+        child: ListTile(
         leading: Container(
           width: 36,
           height: 36,
@@ -623,7 +625,8 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
                 size: 14, color: theme.colorScheme.onSurfaceVariant),
         onTap: s.onTap,
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildTransactionCard(BuildContext context, TransactionModel t) {
@@ -642,7 +645,9 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
           width: 1.0,
         ),
       ),
-      child: ListTile(
+      child: Material(
+        color: Colors.transparent,
+        child: ListTile(
         leading: Container(
           width: 36,
           height: 36,
@@ -679,7 +684,8 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
         onTap: () =>
             AppRoute.push(context, TransactionEditorScreen(transaction: t)),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildPeriodLogCard(BuildContext context, PeriodLog log) {
@@ -697,7 +703,9 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
           width: 1.0,
         ),
       ),
-      child: ListTile(
+      child: Material(
+        color: Colors.transparent,
+        child: ListTile(
         leading: Container(
           width: 36,
           height: 36,
@@ -724,6 +732,7 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
             style: const TextStyle(fontSize: 12)),
         onTap: () => AppRoute.push(context, const PeriodTrackerScreen()),
       ),
-    );
+    ),
+  );
   }
 }
