@@ -37,6 +37,7 @@ New features and domain logic MUST follow the feature-driven architecture under 
 *   `lib/features/health/`: Period log model, `PeriodRepository`, `PeriodTrackerProvider`, and cycle prediction screens.
 *   `lib/features/settings/`: `SettingsProvider`, backup services, app lock, and settings screens.
 *   **Decoupled Providers**: Keep business logic, auto-save timers, filtering, and queries inside `ChangeNotifier` providers rather than monolithic widget `State` classes.
+*   **Root Provider Registration Invariant**: Always register domain `ChangeNotifierProvider`s (`FinancialManagerProvider`, `NoteProvider`, `P2pSyncProvider`) in `main.dart`'s root `MultiProvider` list so state is globally accessible across screens, push routes, and modal bottom sheets.
 
 ---
 

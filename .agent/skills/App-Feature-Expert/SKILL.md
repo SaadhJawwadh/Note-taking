@@ -23,6 +23,7 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 - **Single Source of Truth Rules**:
   - **No Magic Numbers / Hardcoded Styles**: All spacings, radii, animation curves, and colors MUST be referenced from `AppLayout` and `AppTheme` / `Theme.of(context).colorScheme`.
   - **Shared UI Primitives**: Use `AppCard` for cards, `AppBottomSheet` for modal sheets, `AppChip` for tag/filter pills, `AppDialog` for confirmation prompts, and `FrostedGlassSliverAppBar` for glassmorphic headers.
+  - **Root Provider Registration Invariant**: Always register domain `ChangeNotifierProvider`s (`FinancialManagerProvider`, `NoteProvider`, `P2pSyncProvider`) in `main.dart`'s root `MultiProvider` list so state is globally accessible across screens, push routes, and modal bottom sheets.
   - **Variable Font System**: Always use `GoogleSansFlex` variable font (`GoogleSansFlex-VariableFont_*.ttf`) for font definitions. Avoid adding static font weight binaries (`Bold`, `Medium`, `Regular`) to assets.
   - **Overlay & Modal Provider Safety**: Modal bottom sheets (`AppBottomSheet`) and `PopupMenuButton` items run in separate `OverlayEntry` route contexts. Never wrap `PopupMenuButton.itemBuilder` entries in `Consumer<T>` or rely on route-scoped providers inside popups; use local state variables (e.g., `_trashedCount`) and convert popup sheets to `StatefulWidget`s that read repository singletons (`TransactionRepository.instance`) directly.
 
@@ -54,6 +55,7 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 ## 3. Financial Manager & SMS Ledger (`lib/features/finances/`)
 
 - **SMS Auto-Import Pipeline**: Decoupled regex parsing (`SmsParser` + `sms_constants.dart`) and `SmsService`. 5-minute transaction deduplication window. Reversals purge target transaction within 7 days.
+- **Non-Blocking Background Progress Stream**: Background SMS fetches execute asynchronously using an atomic mutex guard (`_isSyncingLock`) and broadcast progress (`SmsSyncProgress`) over `syncProgressStream`, allowing the user to navigate the app while progress updates render reactively in a floating M3 progress pill.
 - **Financial Trash Bin & Permanent Tombstones**: Soft-deleted transactions (`deletedAt != null`) are excluded from active ledger queries but retained for 30-day auto-purge retention. Permanently purged transactions write their `smsId` to `deleted_transaction_sms_ids` tombstone table so `smsExists()` never re-imports deleted transactions.
 - **Background Isolate & Workmanager Safety**: `backgroundMessageHandler` and `performDailyTransactionSync` MUST invoke `WidgetsFlutterBinding.ensureInitialized()` at entry to prevent isolate crashes when accessing `SharedPreferences`, `DatabaseHelper`, or platform channels. Task re-scheduling in `performDailyTransactionSync` MUST be wrapped in a `finally` block so daily sync chains never break on execution errors.
 - **Service Initialization & Permission Grants**: `SmsService.init()` initializes telephony listening on launch if permission is granted and syncs Workmanager schedules. `requestPermissions()` automatically triggers listening and schedule sync upon grant.
