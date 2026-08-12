@@ -33,6 +33,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
   DateTime _selectedDate = DateTime.now();
   bool _isExpense = true;
   bool _isLoading = false;
+  bool _isRefiningAi = false;
   String _category = TransactionCategory.other;
   RecurringFrequency? _repeatFrequency;
 
@@ -321,6 +322,66 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
     }
   }
 
+  Future<void> _refineDescriptionWithAi() async {
+    final text = _descriptionController.text.trim();
+    if (text.isEmpty && widget.transaction == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a description first or select a transaction.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+    await HapticFeedback.lightImpact();
+    setState(() => _isRefiningAi = true);
+
+    try {
+      final dummyTxn = widget.transaction ??
+          TransactionModel(
+            amount: double.tryParse(_amountController.text) ?? 0,
+            description: text,
+            date: _selectedDate,
+            isExpense: _isExpense,
+            category: _category,
+          );
+
+      final refined = await SmsService.refineSingleTransactionWithAi(dummyTxn);
+      if (!mounted) return;
+
+      if (refined != null) {
+        await HapticFeedback.mediumImpact();
+        setState(() {
+          _descriptionController.text = refined.description;
+          _category = refined.category;
+        });
+        messenger.clearSnackBars();
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Refined title & category with Gemini Nano ✨'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else {
+        messenger.clearSnackBars();
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Gemini Nano unavailable on this device or could not refine text.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error refining transaction with AI: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isRefiningAi = false);
+      }
+    }
+  }
+
   static const _colorSwatches = [
     Color(0xFFE06D53), // Coral Dusk
     Color(0xFFD9779B), // Soft Rose
@@ -560,6 +621,17 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                   borderRadius: BorderRadius.circular(AppLayout.radiusL),
                 ),
                 prefixIcon: const Icon(Icons.description_outlined),
+                suffixIcon: IconButton(
+                  onPressed: _isRefiningAi ? null : _refineDescriptionWithAi,
+                  icon: _isRefiningAi
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.auto_awesome_rounded),
+                  tooltip: 'Refine Title with AI',
+                ),
               ),
             ),
             const SizedBox(height: 24),

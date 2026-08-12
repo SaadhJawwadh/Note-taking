@@ -15,6 +15,7 @@ import '../../../../data/transaction_category.dart';
 import '../../../../data/sms_contact.dart';
 import '../../../../services/sms_service.dart';
 import '../../../../services/sms_constants.dart';
+import '../../../../services/gemini_nano_service.dart';
 import 'package:note_taking_app/features/finances/presentation/screens/transaction_editor_screen.dart';
 import 'package:note_taking_app/features/settings/presentation/screens/settings_screen.dart';
 import '../../../../screens/app_lock_screen.dart';
@@ -26,6 +27,8 @@ import '../../../../core/theme/app_layout.dart';
 
 import '../../../../widgets/finance/financial_category_donut_card.dart';
 import '../../../../widgets/finance/financial_trend_regression_card.dart';
+import '../../../../widgets/bouncing_widget.dart';
+import '../../../../widgets/sms_import_sheet.dart';
 import '../widgets/financial_trash_sheet.dart';
 
 
@@ -59,6 +62,8 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
   String _searchQuery = '';
 
   StreamSubscription<TransactionModel>? _smsSubscription;
+  StreamSubscription<SmsSyncProgress>? _smsProgressSub;
+  bool _isSmsSyncing = false;
 
   @override
   void initState() {
@@ -78,6 +83,11 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     _smsSubscription = SmsService.incomingTransactions.listen((t) async {
       if (!mounted) return;
       await _refreshTransactions();
+    });
+    _smsProgressSub = SmsService.syncProgressStream.listen((progress) {
+      if (mounted && _isSmsSyncing != progress.isSyncing) {
+        setState(() => _isSmsSyncing = progress.isSyncing);
+      }
     });
   }
 
@@ -114,6 +124,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
   void dispose() {
     FinancialManagerScreen.tabRedirectNotifier.removeListener(_handleTabRedirect);
     _smsSubscription?.cancel();
+    _smsProgressSub?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -491,6 +502,50 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
           count == 0
               ? 'Ledger is 100% clean! No duplicate transactions found.'
               : 'Successfully cleaned up $count duplicate transaction${count == 1 ? '' : 's'}!',
+        ),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _bulkRefineRecentTransactionsWithAi() async {
+    final messenger = ScaffoldMessenger.of(context);
+    await HapticFeedback.mediumImpact();
+
+    final aiService = GeminiNanoService();
+    if (!await aiService.isSupported()) {
+      messenger.clearSnackBars();
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Gemini Nano on-device AI is unsupported or disabled on this device.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('Refining recent transaction titles with Gemini Nano... ✨'),
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 3),
+      ),
+    );
+
+    final count = await SmsService.performBulkAiRefine(
+      lookbackWindow: const Duration(hours: 48),
+    );
+
+    if (!mounted) return;
+    await _refreshTransactions();
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          count == 0
+              ? 'All recent transaction titles are already refined!'
+              : 'Successfully refined $count transaction title${count == 1 ? '' : 's'} with AI ✨!',
         ),
         behavior: SnackBarBehavior.floating,
       ),
@@ -1164,15 +1219,38 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                 ),
                               ),
                             ),
+                             BouncingWidget(
+                               onTap: () {
+                                 HapticFeedback.lightImpact();
+                                 _quickImportRecentSms();
+                               },
+                               onLongPress: () {
+                                 HapticFeedback.mediumImpact();
+                                 showModalBottomSheet(
+                                   context: context,
+                                   isScrollControlled: true,
+                                   showDragHandle: true,
+                                   builder: (_) => const SmsImportSheet(),
+                                 );
+                               },
+                               child: IconButton(
+                                 icon: _isSmsSyncing
+                                     ? SizedBox(
+                                         width: 18,
+                                         height: 18,
+                                         child: CircularProgressIndicator(
+                                           strokeWidth: 2,
+                                           valueColor: AlwaysStoppedAnimation<Color>(
+                                             Theme.of(context).colorScheme.primary,
+                                           ),
+                                         ),
+                                       )
+                                     : const Icon(Icons.sync_rounded),
+                                 tooltip: 'Quick Sync (Tap) | Advanced Import (Hold)',
+                                 onPressed: null,
+                               ),
+                             ),
                             const Spacer(),
-                            IconButton(
-                              icon: const Icon(Icons.sync_outlined),
-                              tooltip: 'Quick Import (24h)',
-                              onPressed: () {
-                                HapticFeedback.lightImpact();
-                                _quickImportRecentSms();
-                              },
-                            ),
                             IconButton(
                               icon: const Icon(Icons.calendar_today_outlined),
                               tooltip: 'Select Date Range',
@@ -1196,7 +1274,9 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                               color: colorScheme.surfaceContainerHigh,
                               onSelected: (value) {
                                 HapticFeedback.selectionClick();
-                                if (value == 'cleanup') {
+                                if (value == 'ai_refine') {
+                                  _bulkRefineRecentTransactionsWithAi();
+                                } else if (value == 'cleanup') {
                                   _cleanupLedgerDuplicates();
                                 } else if (value == 'discover') {
                                   _discoverBankSenders();
@@ -1211,6 +1291,17 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                 }
                               },
                               itemBuilder: (context) => [
+                                 PopupMenuItem(
+                                   value: 'ai_refine',
+                                   height: 48,
+                                   child: Row(
+                                     children: [
+                                       Icon(Icons.auto_awesome_rounded, size: 20, color: colorScheme.primary),
+                                       const SizedBox(width: 12),
+                                       Text('Refine Titles with AI (48h)', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                     ],
+                                   ),
+                                 ),
                                  PopupMenuItem(
                                    value: 'cleanup',
                                    height: 48,

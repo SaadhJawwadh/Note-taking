@@ -38,14 +38,19 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.primaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.sync_rounded,
-            title: "Non-Blocking SMS Import",
-            desc: "Bank SMS imports now run smoothly in the background with a live floating progress pill.",
+            icon: Icons.auto_awesome_rounded,
+            title: "AI Transaction Title Refine",
+            desc: "Clean up cryptic bank SMS codes into crisp merchant titles with single-tap or 48-hour bulk AI refinement.",
+          ),
+          _WhatsNewItem(
+            icon: Icons.touch_app_rounded,
+            title: "Unified Dual-Gesture Sync",
+            desc: "Tap sync icons for fast quick sync, or hold to open advanced import options across Notes & Finances.",
           ),
           _WhatsNewItem(
             icon: Icons.devices_rounded,
             title: "Friendly Device Naming",
-            desc: "Paired devices now get friendly names (e.g., Nimble Falcon) and stay connected across Wi-Fi networks.",
+            desc: "Paired devices get memorable names (e.g. Nimble Falcon) and stay connected across Wi-Fi networks.",
             actionLabel: "Try P2P Sync ➔",
             onAction: () {
               Navigator.push(
@@ -53,11 +58,6 @@ class WhatsNewSheet extends StatelessWidget {
                 MaterialPageRoute(builder: (_) => const P2pSyncScreen()),
               );
             },
-          ),
-          _WhatsNewItem(
-            icon: Icons.ads_click_rounded,
-            title: "Precision Text Selection",
-            desc: "Use the new cursor tool in the editor to adjust selected text one character or word at a time.",
           ),
         ],
       ),
@@ -67,14 +67,14 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.tertiaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.auto_awesome_rounded,
-            title: "Smart Toolbar & Hardware AI",
-            desc: "Toolbar controls adapt dynamically based on your device's hardware NPU capabilities.",
+            icon: Icons.network_check_rounded,
+            title: "Human-Readable Diagnostics",
+            desc: "Clear troubleshooting advice for P2P network status with dynamic red warning cards and retry options.",
           ),
           _WhatsNewItem(
-            icon: Icons.palette_outlined,
-            title: "Material 3 Visual Polish",
-            desc: "Symmetric borderless frosted glass headers, depth filters, and ink splash protections.",
+            icon: Icons.refresh_rounded,
+            title: "Interactive Wi-Fi IP Refresh",
+            desc: "Instant Toast feedback when re-scanning Wi-Fi network interfaces and binding P2P host ports.",
           ),
         ],
       ),
@@ -84,9 +84,9 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.secondaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.verified_user_rounded,
-            title: "Stability & Reliability",
-            desc: "Fixed finance screen provider setup and improved multi-network device pairing stability.",
+            icon: Icons.shield_rounded,
+            title: "Android Permission Stability",
+            desc: "Resolved native telephony channel issues when SMS permissions are revoked, and handled pairing timeouts gracefully.",
           ),
         ],
       ),

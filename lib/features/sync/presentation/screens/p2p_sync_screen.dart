@@ -52,26 +52,30 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
             final ip = _targetIpController.text.trim();
             if (code.length == 6 && ip.isNotEmpty) {
               final noteProvider = Provider.of<NoteProvider>(context, listen: false);
-              await syncProvider.pairNewDevice(
-                deviceName: name.isEmpty ? PairedDevice.generateRandomName() : name,
-                pairCode: code,
-                targetIp: ip,
-                targetPort: _scannedTargetPort,
-                remoteDeviceId: _scannedDeviceId,
-                role: 'PEER',
-              );
-              await syncProvider.syncBiDirectional(
-                targetIp: ip,
-                onCompleted: () {
-                  noteProvider.refreshNotes();
-                },
-              );
-              _pairCodeController.clear();
-              _deviceNameController.clear();
-              _targetIpController.clear();
-              _scannedDeviceId = null;
-              _scannedTargetPort = 8765;
-              if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+              try {
+                await syncProvider.pairNewDevice(
+                  deviceName: name.isEmpty ? PairedDevice.generateRandomName() : name,
+                  pairCode: code,
+                  targetIp: ip,
+                  targetPort: _scannedTargetPort,
+                  remoteDeviceId: _scannedDeviceId,
+                  role: 'PEER',
+                );
+                await syncProvider.syncBiDirectional(
+                  targetIp: ip,
+                  onCompleted: () {
+                    noteProvider.refreshNotes();
+                  },
+                );
+                _pairCodeController.clear();
+                _deviceNameController.clear();
+                _targetIpController.clear();
+                _scannedDeviceId = null;
+                _scannedTargetPort = 8765;
+                if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+              } catch (_) {
+                // Handled via syncProvider status & lastMessage state
+              }
             }
           },
           content: StatefulBuilder(
@@ -275,6 +279,15 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
     return Consumer<P2pSyncProvider>(
       builder: (context, syncProvider, child) {
         final isSyncing = syncProvider.status == SyncStatus.syncing;
+        final isError = syncProvider.status == SyncStatus.error;
+
+        final heroBg = isError
+            ? colorScheme.errorContainer.withValues(alpha: isDark ? 0.22 : 0.55)
+            : colorScheme.primaryContainer.withValues(alpha: isDark ? 0.22 : 0.55);
+        final heroBorder = isError
+            ? colorScheme.error.withValues(alpha: isDark ? 0.35 : 0.45)
+            : colorScheme.primary.withValues(alpha: isDark ? 0.35 : 0.45);
+        final heroIconColor = isError ? colorScheme.error : colorScheme.primary;
 
         return Scaffold(
           body: CustomScrollView(
@@ -289,11 +302,9 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                   delegate: SliverChildListDelegate([
                     // Top Hero Status Card
                     AppCard.frosted(
-                      backgroundColor: colorScheme.primaryContainer
-                          .withValues(alpha: isDark ? 0.22 : 0.55),
+                      backgroundColor: heroBg,
                       border: BorderSide(
-                        color: colorScheme.primary
-                            .withValues(alpha: isDark ? 0.35 : 0.45),
+                        color: heroBorder,
                         width: 1.2,
                       ),
                       child: Column(
@@ -307,7 +318,7 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                                 decoration: BoxDecoration(
                                   color: isSyncing
                                       ? colorScheme.primaryContainer
-                                      : colorScheme.surfaceContainerHighest,
+                                      : (isError ? colorScheme.errorContainer : colorScheme.surfaceContainerHighest),
                                   shape: BoxShape.circle,
                                 ),
                                 child: isSyncing
@@ -320,8 +331,8 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                                         ),
                                       )
                                     : Icon(
-                                        Icons.sync_rounded,
-                                        color: colorScheme.primary,
+                                        isError ? Icons.sync_problem_rounded : Icons.sync_rounded,
+                                        color: heroIconColor,
                                         size: 26,
                                       ),
                               ),
@@ -389,6 +400,7 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                                                 noteProvider.refreshNotes();
                                               });
                                               if (context.mounted) {
+                                                ScaffoldMessenger.of(context).clearSnackBars();
                                                 ScaffoldMessenger.of(context).showSnackBar(
                                                   SnackBar(
                                                     content: Text(
@@ -400,6 +412,15 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                                                         ? colorScheme.primary
                                                         : colorScheme.error,
                                                     behavior: SnackBarBehavior.floating,
+                                                    action: result.success
+                                                        ? null
+                                                        : SnackBarAction(
+                                                            label: 'Retry',
+                                                            textColor: colorScheme.onError,
+                                                            onPressed: () => syncProvider.syncBiDirectional(onCompleted: () {
+                                                              noteProvider.refreshNotes();
+                                                            }),
+                                                          ),
                                                   ),
                                                 );
                                               }
@@ -424,6 +445,7 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                                     onPressed: () async {
                                       final success = await syncProvider.sendTestPing();
                                       if (context.mounted) {
+                                        ScaffoldMessenger.of(context).clearSnackBars();
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(
                                             content: Text(
@@ -432,6 +454,13 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                                             ),
                                             backgroundColor: success ? colorScheme.primary : colorScheme.error,
                                             behavior: SnackBarBehavior.floating,
+                                            action: success
+                                                ? null
+                                                : SnackBarAction(
+                                                    label: 'Retry',
+                                                    textColor: colorScheme.onError,
+                                                    onPressed: () => syncProvider.sendTestPing(),
+                                                  ),
                                           ),
                                         );
                                       }
@@ -484,11 +513,28 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                                   onSave: syncProvider.renameLocalDevice,
                                 ),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.refresh_rounded),
-                                tooltip: 'Refresh Wi-Fi IP Address',
-                                onPressed: () => syncProvider.refreshDiagnostics(),
-                              ),
+                               IconButton(
+                                 icon: const Icon(Icons.refresh_rounded),
+                                 tooltip: 'Refresh Wi-Fi IP Address',
+                                 onPressed: () async {
+                                   await HapticFeedback.lightImpact();
+                                   await syncProvider.refreshDiagnostics();
+                                   if (context.mounted) {
+                                     final ip = syncProvider.localIpAddress;
+                                     ScaffoldMessenger.of(context).clearSnackBars();
+                                     ScaffoldMessenger.of(context).showSnackBar(
+                                       SnackBar(
+                                         content: Text(
+                                           ip != null && ip.isNotEmpty
+                                               ? 'Wi-Fi Interface Refreshed: $ip'
+                                               : 'Wi-Fi Interface Refreshed (Offline / Hotspot)',
+                                         ),
+                                         behavior: SnackBarBehavior.floating,
+                                       ),
+                                     );
+                                   }
+                                 },
+                               ),
                             ],
                           ),
                           const SizedBox(height: AppLayout.spaceM),

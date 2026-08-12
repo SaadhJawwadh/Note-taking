@@ -399,17 +399,23 @@ class P2pSyncService {
     }
   }
 
-  String _formatUserFriendlyError(dynamic e, String targetIp) {
+  static String formatUserFriendlyErrorMessage(dynamic e, [String? targetIp]) {
     final str = e.toString();
-    if (str.contains('SocketException') || str.contains('Connection refused')) {
-      return 'Peer at $targetIp unreachable. Make sure both devices are on the same Wi-Fi.';
+    final ipSuffix = (targetIp != null && targetIp.isNotEmpty) ? ' ($targetIp)' : '';
+    if (str.contains('SocketException') || str.contains('Connection refused') || str.contains('No route to host')) {
+      return '📡 Peer unreachable$ipSuffix. Make sure both devices are on the same Wi-Fi.';
     } else if (str.contains('TimeoutException') || str.contains('timed out')) {
-      return 'Connection to $targetIp timed out. Open the app on the other device.';
-    } else if (str.contains('HandshakeException')) {
-      return 'Network handshake failed with $targetIp. Check pair code.';
+      return '⏳ Connection timed out$ipSuffix. Open Note Taking on your peer device.';
+    } else if (str.contains('HandshakeException') || str.contains('Pair Code mismatch')) {
+      return '🔑 Pair code mismatch. Re-scan QR code or check 6-digit pair code.';
+    } else if (str.contains('FormatException')) {
+      return '⚠️ Unexpected data format received during sync.';
     }
-    return 'Connection error ($targetIp): ${e.toString().split('\n').first}';
+    final firstLine = str.split('\n').first;
+    return 'Sync error$ipSuffix: ${firstLine.length > 80 ? firstLine.substring(0, 80) : firstLine}';
   }
+
+  String _formatUserFriendlyError(dynamic e, String targetIp) => formatUserFriendlyErrorMessage(e, targetIp);
 
   /// Sends a direct test ping with round-trip latency measurement.
   Future<SyncResult> sendTestPing(String targetIp, String pairCode, {int targetPort = httpSyncPort}) async {

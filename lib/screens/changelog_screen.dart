@@ -28,9 +28,38 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
-                  version: 'v2.17.0',
+                  version: 'v2.17.1',
                   date: 'August 12, 2026',
                   isLatest: true,
+                  changes: [
+                    _ChangelogGroup(
+                      title: '🌟 What\'s New',
+                      items: [
+                        'AI Transaction Title Refinement: Clean up cryptic bank SMS transaction descriptions into clean merchant names with single-tap or 48-hour bulk AI title refinement.',
+                        'Unified Dual-Gesture Sync: Tap sync icons for fast 24-hour sync, or long-press to open advanced historical import sheets across Notes and Finances.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🚀 Improvements',
+                      items: [
+                        'Human-Readable P2P Diagnostics: Clear, actionable troubleshooting guidance for P2P connection failures with dynamic red error cards and instant retry options.',
+                        'Interactive Wi-Fi Refresh: Instant SnackBar feedback when re-scanning Wi-Fi network interfaces and binding P2P host ports.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🐛 Fixes',
+                      items: [
+                        'Android Telephony Stability: Resolved native Android channel exception crashes when SMS permissions are revoked, and handled pairing timeouts gracefully.',
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppLayout.spaceXL),
+                _buildVersionSection(
+                  context,
+                  version: 'v2.17.0',
+                  date: 'August 12, 2026',
+                  isLatest: false,
                   changes: [
                     _ChangelogGroup(
                       title: '🌟 What\'s New',

@@ -252,10 +252,12 @@ class SmsService {
 
   static Future<void> _startTelephonyListening() async {
     if (_isListeningToTelephony) return;
-    if (!await hasPermission()) return;
-    
-    _isListeningToTelephony = true;
     try {
+      if (!await hasPermission()) {
+        _isListeningToTelephony = false;
+        return;
+      }
+      _isListeningToTelephony = true;
       telephony.listenIncomingSms(
         onNewMessage: (SmsMessage message) async {
           await reloadSmsContacts();
@@ -269,7 +271,7 @@ class SmsService {
       );
     } catch (e) {
       _isListeningToTelephony = false;
-      debugPrint('Error starting telephony listener: $e');
+      debugPrint('Error starting telephony listener safely: $e');
     }
   }
 
@@ -616,6 +618,109 @@ class SmsService {
     } catch (e) {
       debugPrint('App-launch catch-up sync error: $e');
     }
+  }
+
+  /// Attempts to locate the original raw SMS body from the device inbox using transaction.smsId.
+  static Future<String?> getOriginalSmsBody(TransactionModel transaction) async {
+    if (transaction.smsId == null) return null;
+    try {
+      final parts = transaction.smsId!.split('_');
+      final messageId = int.tryParse(parts.first);
+      if (messageId != null && await hasPermission()) {
+        final messages = await telephony.getInboxSms(
+          columns: [SmsColumn.BODY, SmsColumn.ID],
+          filter: SmsFilter.where(SmsColumn.ID).equals(messageId.toString()),
+        );
+        if (messages.isNotEmpty && messages.first.body != null && messages.first.body!.isNotEmpty) {
+          return messages.first.body;
+        }
+      }
+    } catch (e) {
+      debugPrint('SmsService.getOriginalSmsBody error: $e');
+    }
+    return null;
+  }
+
+  /// Refines a single transaction using Gemini Nano AI.
+  /// First attempts full SMS re-parsing using the original SMS body if available;
+  /// falls back to refining the current description string directly.
+  static Future<TransactionModel?> refineSingleTransactionWithAi(TransactionModel transaction) async {
+    final aiService = GeminiNanoService();
+    if (!await aiService.isSupported()) return null;
+
+    await TransactionCategory.reload();
+    final activeCategories = TransactionCategory.allNames;
+    final fullSmsBody = await getOriginalSmsBody(transaction);
+
+    if (fullSmsBody != null && fullSmsBody.isNotEmpty) {
+      try {
+        final aiParsed = await aiService.parseSmsTransaction(fullSmsBody, activeCategories);
+        if (aiParsed != null) {
+          final description = aiParsed['description'] ?? aiParsed['merchant'] ?? transaction.description;
+          String category = aiParsed['category'] ?? transaction.category;
+          if (category == 'Other' || !activeCategories.contains(category)) {
+            category = TransactionCategory.fromDescriptionCached('$description $fullSmsBody');
+          }
+          return transaction.copy(
+            description: description,
+            category: category,
+          );
+        }
+      } catch (e) {
+        debugPrint('AI re-parsing failed: $e');
+      }
+    }
+
+    // Fallback refinement using current description text
+    try {
+      final refinedDesc = await aiService.refineTransactionDescription(
+        transaction.description,
+        fullSmsBody ?? transaction.description,
+      );
+      if (refinedDesc != null && refinedDesc.isNotEmpty) {
+        return transaction.copy(description: refinedDesc);
+      }
+    } catch (e) {
+      debugPrint('AI description refinement failed: $e');
+    }
+
+    return null;
+  }
+
+  /// Bulk refines SMS transactions created within the specified lookback window (default: 48 hours).
+  /// Returns the total count of successfully refined transactions.
+  static Future<int> performBulkAiRefine({
+    Duration lookbackWindow = const Duration(hours: 48),
+    void Function(int processed, int total)? onProgress,
+  }) async {
+    final aiService = GeminiNanoService();
+    if (!await aiService.isSupported()) return 0;
+
+    final cutoff = DateTime.now().subtract(lookbackWindow);
+    final allTransactions = await TransactionRepository.instance.readAllTransactions();
+    final candidates = allTransactions.where((t) {
+      return t.deletedAt == null &&
+          t.smsId != null &&
+          t.date.isAfter(cutoff);
+    }).toList();
+
+    if (candidates.isEmpty) return 0;
+
+    int refinedCount = 0;
+    int processedCount = 0;
+    onProgress?.call(0, candidates.length);
+
+    for (final t in candidates) {
+      processedCount++;
+      final refined = await refineSingleTransactionWithAi(t);
+      if (refined != null && (refined.description != t.description || refined.category != t.category)) {
+        await TransactionRepository.instance.updateTransaction(refined);
+        refinedCount++;
+      }
+      onProgress?.call(processedCount, candidates.length);
+    }
+
+    return refinedCount;
   }
 }
 

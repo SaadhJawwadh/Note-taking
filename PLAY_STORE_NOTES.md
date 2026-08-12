@@ -1,26 +1,23 @@
 <en-US>
 🌟 What's New
-• Non-blocking background bank SMS import with live progress pill.
-• Friendly P2P device naming and multi-network Wi-Fi sync.
-• Advanced SMS import date ranges and tombstone protections.
-• Smart toolbar with NPU hardware detection and precision text selection.
+• Clean up cryptic bank SMS titles into merchant names with AI.
+• Single-tap for quick sync; hold for advanced import options.
 
 🚀 Improvements
-• Seamless borderless Material 3 design and frosted glass depth.
+• Friendly P2P network diagnostics and red warning cards.
+• Instant feedback when refreshing Wi-Fi network interfaces.
 
 🐛 Fixes
-• Fixed finance provider stability and QR scanner pairing.
+• Improved Android SMS permission and network timeout stability.
 </en-US>
 <ta-IN>
 🌟 புதிய அம்சங்கள்
-• பின்னணி வங்கி SMS பதிவிறக்கம் மற்றும் நிகழ்நேர முன்னேற்றம்.
-• எளிய P2P சாதன பெயர்கள் மற்றும் வலைப்பின்னல் இணைப்பு.
-• மேம்பட்ட வரலாற்று இறக்குமதி மற்றும் நீக்கப்பட்டவை பாதுகாப்பு.
-• AI வன்பொருள் கண்டறிதல் மற்றும் நுட்பமான உரை தேர்வு.
+• வங்கி SMS தலைப்புகளை AI மூலம் தெளிவான கடைகளின் பெயர்களாக மாற்றலாம்.
+• விரைவான ஒத்திசைவுக்கு ஒரு தட்டு; கூடுதல் விருப்பங்களுக்கு அழுத்திப் பிடிக்கவும்.
 
 🚀 மேம்பாடுகள்
-• மென்மையான Material 3 வடிவமைப்பு மற்றும் தெளிவான தோற்றம்.
+• எளிய P2P பிணையக் கண்டறிதல் மற்றும் சிவப்பு எச்சரிக்கை அட்டைகள்.
 
 🐛 பிழை திருத்தங்கள்
-• நிதி பக்கம் மற்றும் QR குறியீடு இணைப்பில் பிழைகள் சரி செய்யப்பட்டன.
+• SMS அனுமதி மற்றும் இணைப்பு நிலைப்புத்தன்மை மேம்படுத்தப்பட்டது.
 </ta-IN>

@@ -34,10 +34,11 @@ lib/
 ├── features/                         # Modular Domain Feature Bundles
 │   ├── finances/                     # Financial Manager Feature Module
 │   │   ├── data/
-│   │   │   └── transaction_repository.dart# Transactions, categories, SMS senders CRUD
+│   │   │   └── transaction_repository.dart# Transactions, categories, SMS senders CRUD & tombstones
 │   │   ├── presentation/
 │   │   │   ├── screens/
-│   │   │   │   └── financial_manager_screen.dart# Ledger, analytics, category breakdowns
+│   │   │   │   ├── financial_manager_screen.dart# Ledger, analytics, bulk 48h AI title refine, dual-gesture sync
+│   │   │   │   └── transaction_editor_screen.dart# Single transaction editor with inline AI title refine
 │   │   │   └── widgets/              # Feature-specific finance UI widgets
 │   │   └── providers/
 │   │       └── financial_manager_provider.dart# Income/expense calculations, filters, state
