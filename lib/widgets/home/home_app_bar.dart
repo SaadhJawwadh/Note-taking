@@ -623,41 +623,38 @@ class _HomeAppBarState extends State<HomeAppBar> {
               syncIcon = Icons.sync_rounded;
               iconColor = null;
             }
-            return BouncingWidget(
-              onTap: () async {
-                unawaited(HapticFeedback.lightImpact());
-                await syncProvider.syncNow(onCompleted: () {
-                  noteProvider.refreshNotes();
-                });
-              },
-              onLongPress: () {
-                HapticFeedback.mediumImpact();
-                AppRoute.push(context, const P2pSyncScreen());
-              },
-              child: IconButton(
-                icon: isSyncing
-                    ? SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
-                        ),
-                      )
-                    : Icon(syncIcon, color: iconColor),
-                tooltip: isSyncing
-                    ? 'Syncing...'
-                    : isError
-                        ? 'Sync failed — long-press to open Sync settings'
-                        : 'Quick Sync • Long-press to open Sync settings',
-                padding: EdgeInsets.zero,
-                visualDensity: VisualDensity.compact,
-                onPressed: () async {
-                  unawaited(HapticFeedback.lightImpact());
-                  await syncProvider.syncNow(onCompleted: () {
-                    noteProvider.refreshNotes();
-                  });
+            return Tooltip(
+              message: isSyncing
+                  ? 'Syncing...'
+                  : isError
+                      ? 'Sync failed — long-press for Sync settings'
+                      : 'Quick Sync (Tap) | P2P Sync Hub (Hold)',
+              child: BouncingWidget(
+                onTap: isSyncing
+                    ? null
+                    : () async {
+                        unawaited(HapticFeedback.lightImpact());
+                        await syncProvider.syncNow(onCompleted: () {
+                          noteProvider.refreshNotes();
+                        });
+                      },
+                onLongPress: () {
+                  HapticFeedback.mediumImpact();
+                  AppRoute.push(context, const P2pSyncScreen());
                 },
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: isSyncing
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
+                          ),
+                        )
+                      : Icon(syncIcon, color: iconColor),
+                ),
               ),
             );
           },

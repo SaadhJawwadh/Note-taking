@@ -57,14 +57,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _scrollController.addListener(_scrollListener);
 
-    // Update home screen widget on startup to ensure intents are fresh
-    unawaited(WidgetHelper.updateWidgetData());
-
     AppLockScreen.sessionAuthenticated.addListener(_handleSessionUnlock);
     AppLockScreen.sharedMediaTick.addListener(_handleSharedMediaTick);
 
-    // Warm shares while unlocked land here; locked ones are parked by
-    // AppLockScreen and consumed in _checkAndProcessPendingIntents.
     _intentDataStreamSubscription =
         ReceiveSharingIntent.instance.getMediaStream().listen((files) {
       if (files.isEmpty || !mounted) return;
@@ -80,6 +75,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
+        unawaited(WidgetHelper.updateWidgetData());
         _checkAndProcessPendingIntents();
         unawaited(SmsService.performAppLaunchCatchUpSync());
       }

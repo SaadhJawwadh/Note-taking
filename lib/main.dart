@@ -32,6 +32,10 @@ Future<void> main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
 
+    // Optimize image cache limits to prevent memory pressure & OOM pauses
+    PaintingBinding.instance.imageCache.maximumSizeBytes = 100 * 1024 * 1024; // 100 MB
+    PaintingBinding.instance.imageCache.maximumSize = 100;
+
     // Edge-to-edge: draw behind the system bars with a transparent nav bar
     // (also the enforced default on Android 15+; this keeps older versions
     // consistent).

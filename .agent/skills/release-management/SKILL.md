@@ -34,6 +34,7 @@ Before bumping the version or running deployment, ensure all of the following ar
   * Target everyday users with friendly emojis.
   * **500 Character Maximum Limit**: Keep total character count under **450 characters** per language block to prevent Google Play API publication failures.
 * **Codebase Knowledge Graph (`map.md`)**: Ensure [.agent/map.md](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/.agent/map.md) is updated with any new files or feature architecture.
+* **Cumulative Patch & Minor Release Notes Policy**: For all sub-versions and patch releases (e.g., `2.17.1`, `2.17.2`), release notes in `PLAY_STORE_NOTES.md`, `lib/widgets/whats_new_sheet.dart`, `lib/screens/changelog_screen.dart`, and `CHANGELOG.md` MUST include the cumulative set of user-facing changes since the base major/minor release (`2.17.0`) so users updating directly from older versions see all new features, UI improvements, and stability fixes added across the release series.
 * Version number in `pubspec.yaml` is bumped using the project convention:
   * **Minor bump** (new features): `1.X.0+Y` where `Y = X * 10000` (e.g. `1.34.0+13400`)
   * **Patch bump** (bug fixes): `1.X.Y+Z` (e.g. `1.33.1+13301`)

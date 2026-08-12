@@ -37,7 +37,7 @@ lib/
 │   │   │   └── transaction_repository.dart# Transactions, categories, SMS senders CRUD & tombstones
 │   │   ├── presentation/
 │   │   │   ├── screens/
-│   │   │   │   ├── financial_manager_screen.dart# Ledger, analytics, bulk 48h AI title refine, dual-gesture sync
+│   │   │   │   ├── financial_manager_screen.dart# Ledger, analytics, bulk 48h AI title refine, dual-gesture sync, RepaintBoundary chart isolation
 │   │   │   │   └── transaction_editor_screen.dart# Single transaction editor with inline AI title refine
 │   │   │   └── widgets/              # Feature-specific finance UI widgets
 │   │   └── providers/

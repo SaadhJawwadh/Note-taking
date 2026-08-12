@@ -43,6 +43,7 @@ Refer to [design.md](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/.ag
   - Light Mode (`Brightness.light`): Use 50%–55% alpha opacity of semantic container colors (`primaryContainer`, `tertiaryContainer`, `errorContainer`) with 45% border opacity for vibrant, non-muddy card fills.
   - Dark Mode (`Brightness.dark`): Use 20%–22% alpha opacity with 35% border opacity for deep translucent depth against OLED backdrops.
 * **Settings Tile Text Overflow Guardrails**: Enforce `maxLines: 1` and `TextOverflow.ellipsis` on `SettingsTile` titles, and constrain trailing `valueBadge` chips (`maxWidth: 120dp`) to guarantee single-line title alignment across all device widths.
+* **RepaintBoundary & Scroll Isolation Standards**: Wrap complex canvas rendering widgets (`fl_chart` charts, custom painters, period calendar views) inside `RepaintBoundary` to prevent unnecessary raster repaint passes during parent list scrolling. Apply `cacheExtent: 250` to primary `CustomScrollView` and `ListView` containers for smooth 60–120 FPS fling-scrolling.
 
 ## 2. Material 3 Official Components Catalog ([m3.material.io](https://m3.material.io/components))
 When implementing UI components, strictly follow the M3 guidelines codified in [design.md Section 9](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/.agent/skills/UI-UX-Specialist/design.md#9-comprehensive-material-3-component-specifications--guidance-catalog-m3materialio):

@@ -98,6 +98,7 @@ class DatabaseHelper {
         version: 19,
         onCreate: _createDB,
         onUpgrade: _upgradeDB,
+        onOpen: _onOpenDB,
       );
     } catch (e) {
       if (e.toString().contains('open_failed') || e.toString().contains('26')) {
@@ -118,9 +119,27 @@ class DatabaseHelper {
           version: 18,
           onCreate: _createDB,
           onUpgrade: _upgradeDB,
+          onOpen: _onOpenDB,
         );
       }
       rethrow;
+    }
+  }
+
+  static Future<void> _onOpenDB(Database db) async {
+    try {
+      await db.rawQuery('PRAGMA journal_mode = WAL;');
+      await db.rawQuery('PRAGMA synchronous = NORMAL;');
+
+      // Performance Indexes
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_notes_deleted ON notes(deletedAt);');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_notes_modified ON notes(dateModified);');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date);');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_transactions_smsid ON transactions(smsId);');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_transactions_deleted ON transactions(deletedAt);');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_tombstones_smsid ON deleted_transaction_sms_ids(smsId);');
+    } catch (e) {
+      debugPrint('[DatabaseHelper] PRAGMA & Index creation onOpen warning: $e');
     }
   }
 

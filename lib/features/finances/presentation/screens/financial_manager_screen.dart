@@ -791,8 +791,9 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
         .map((d) => DateFormat.MMM().format(d['month'] as DateTime))
         .toList();
 
-    return Card(
-      elevation: 0,
+    return RepaintBoundary(
+      child: Card(
+        elevation: 0,
       color: cs.surfaceContainerHigh,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -907,44 +908,6 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                         },
                       ),
                     ),
-                    topTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false)),
-                    rightTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false)),
-                  ),
-                  gridData: FlGridData(
-                    drawVerticalLine: false,
-                    getDrawingHorizontalLine: (value) => FlLine(
-                      color: cs.outlineVariant.withValues(alpha: 0.5),
-                      strokeWidth: 1,
-                    ),
-                  ),
-                  borderData: FlBorderData(show: false),
-                  barTouchData: BarTouchData(
-                    touchTooltipData: BarTouchTooltipData(
-                      getTooltipColor: (group) => cs.surfaceContainerHighest,
-                      tooltipBorder: BorderSide(
-                        color: cs.outlineVariant.withValues(alpha: 0.3),
-                        width: 1,
-                      ),
-                      getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                        final type = rodIndex == 0 ? 'Income' : 'Expense';
-                        final color = rodIndex == 0 ? cs.tertiary : cs.error;
-                        return BarTooltipItem(
-                          '$type\n',
-                          tt.labelSmall?.copyWith(color: cs.onSurfaceVariant) ?? const TextStyle(),
-                          children: [
-                            TextSpan(
-                              text: '$currency ${rod.toY.toStringAsFixed(0)}',
-                              style: tt.bodySmall?.copyWith(
-                                color: color,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
                   ),
                 ),
               ),
@@ -952,8 +915,9 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _comparisonTile(
     ColorScheme cs,
@@ -1219,38 +1183,40 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                 ),
                               ),
                             ),
-                             BouncingWidget(
-                               onTap: () {
-                                 HapticFeedback.lightImpact();
-                                 _quickImportRecentSms();
-                               },
-                               onLongPress: () {
-                                 HapticFeedback.mediumImpact();
-                                 showModalBottomSheet(
-                                   context: context,
-                                   isScrollControlled: true,
-                                   showDragHandle: true,
-                                   builder: (_) => const SmsImportSheet(),
-                                 );
-                               },
-                               child: IconButton(
-                                 icon: _isSmsSyncing
-                                     ? SizedBox(
-                                         width: 18,
-                                         height: 18,
-                                         child: CircularProgressIndicator(
-                                           strokeWidth: 2,
-                                           valueColor: AlwaysStoppedAnimation<Color>(
-                                             Theme.of(context).colorScheme.primary,
-                                           ),
-                                         ),
-                                       )
-                                     : const Icon(Icons.sync_rounded),
-                                 tooltip: 'Quick Sync (Tap) | Advanced Import (Hold)',
-                                 onPressed: null,
-                               ),
-                             ),
                             const Spacer(),
+                            Tooltip(
+                              message: 'Quick Sync (Tap) | Advanced Import (Hold)',
+                              child: BouncingWidget(
+                                onTap: () {
+                                  HapticFeedback.lightImpact();
+                                  _quickImportRecentSms();
+                                },
+                                onLongPress: () {
+                                  HapticFeedback.mediumImpact();
+                                  showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    showDragHandle: true,
+                                    builder: (_) => const SmsImportSheet(),
+                                  );
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: _isSmsSyncing
+                                      ? SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor: AlwaysStoppedAnimation<Color>(
+                                              Theme.of(context).colorScheme.primary,
+                                            ),
+                                          ),
+                                        )
+                                      : const Icon(Icons.sync_rounded),
+                                ),
+                              ),
+                            ),
                             IconButton(
                               icon: const Icon(Icons.calendar_today_outlined),
                               tooltip: 'Select Date Range',

@@ -118,28 +118,34 @@ class _SmsImportSheetState extends State<SmsImportSheet> {
           const SizedBox(height: 16),
           ...List.generate(_periods.length, (i) {
             final (label, _) = _periods[i];
-            return RadioListTile<int>(
-              title: Text(label),
-              value: i,
-              // ignore: deprecated_member_use
-              groupValue: _selectedIndex,
-              // ignore: deprecated_member_use
-              onChanged: (v) => setState(() => _selectedIndex = v!),
-              contentPadding: EdgeInsets.zero,
-              dense: true,
+            return Material(
+              color: Colors.transparent,
+              child: RadioListTile<int>(
+                title: Text(label),
+                value: i,
+                // ignore: deprecated_member_use
+                groupValue: _selectedIndex,
+                // ignore: deprecated_member_use
+                onChanged: (v) => setState(() => _selectedIndex = v!),
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+              ),
             );
           }),
           const Divider(height: 24),
-          CheckboxListTile(
-            title: const Text('Force Re-Scan Previously Deleted SMS'),
-            subtitle: Text(
-              'Bypasses tombstone filters to re-import transactions you previously purged.',
-              style: textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+          Material(
+            color: Colors.transparent,
+            child: CheckboxListTile(
+              title: const Text('Force Re-Scan Previously Deleted SMS'),
+              subtitle: Text(
+                'Bypasses tombstone filters to re-import transactions you previously purged.',
+                style: textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+              ),
+              value: _bypassTombstones,
+              onChanged: (v) => setState(() => _bypassTombstones = v ?? false),
+              contentPadding: EdgeInsets.zero,
+              dense: true,
             ),
-            value: _bypassTombstones,
-            onChanged: (v) => setState(() => _bypassTombstones = v ?? false),
-            contentPadding: EdgeInsets.zero,
-            dense: true,
           ),
           const SizedBox(height: 16),
           Row(

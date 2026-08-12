@@ -38,6 +38,11 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.primaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
+            icon: Icons.sync_rounded,
+            title: "Background Bank SMS Auto-Import",
+            desc: "Scan bank transactions asynchronously with a floating M3 progress indicator while using the app.",
+          ),
+          _WhatsNewItem(
             icon: Icons.auto_awesome_rounded,
             title: "AI Transaction Title Refine",
             desc: "Clean up cryptic bank SMS codes into crisp merchant titles with single-tap or 48-hour bulk AI refinement.",
@@ -66,6 +71,11 @@ class WhatsNewSheet extends StatelessWidget {
         categoryColor: theme.colorScheme.tertiary,
         bgColor: theme.colorScheme.tertiaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
+          _WhatsNewItem(
+            icon: Icons.speed_rounded,
+            title: "60–120 FPS Performance & WAL Mode",
+            desc: "Isolated chart GPU rendering and enabled SQLite WAL mode for smooth fling-scrolling and non-blocking background syncs.",
+          ),
           _WhatsNewItem(
             icon: Icons.network_check_rounded,
             title: "Human-Readable Diagnostics",
