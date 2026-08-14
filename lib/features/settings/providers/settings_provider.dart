@@ -77,6 +77,9 @@ class SettingsProvider extends ChangeNotifier {
   bool _isDeviceAiSupported = false;
   bool get isDeviceAiSupported => _isDeviceAiSupported;
 
+  /// True ONLY when the device hardware supports AI (Gemini Nano / AICore) AND the user has enabled it in settings.
+  bool get isAiActive => _useOnDeviceAi && _isDeviceAiSupported;
+
   bool _hasSeenOnboarding = false;
   bool get hasSeenOnboarding => _hasSeenOnboarding;
 

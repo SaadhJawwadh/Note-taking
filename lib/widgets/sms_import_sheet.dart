@@ -12,6 +12,7 @@ class SmsImportSheet extends StatefulWidget {
 class _SmsImportSheetState extends State<SmsImportSheet> {
   static const _periods = [
     ('Since Last Sync (Incremental)', -1),
+    ('Last 24 hours (1 day)', 1),
     ('Last 7 days', 7),
     ('Last 30 days', 30),
     ('Last 90 days', 90),

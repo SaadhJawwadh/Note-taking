@@ -3487,98 +3487,174 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                   child: Row(
                                     children: [
                                       // Cluster 1: Header Hierarchy Switcher
-                                      PopupMenuButton<int>(
-                                        tooltip: 'Text Style',
-                                        elevation: 3,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(AppLayout.radiusL),
-                                          side: BorderSide(
-                                            color: noteScheme.outlineVariant.withValues(alpha: 0.35),
-                                            width: 1,
-                                          ),
-                                        ),
-                                        color: theme.colorScheme.surfaceContainerHigh,
-                                        onSelected: (level) {
-                                          HapticFeedback.selectionClick();
-                                          if (level == 0) {
-                                            _quillController.formatSelection(
-                                              const Attribute('header', AttributeScope.block, null),
-                                            );
-                                          } else if (level == 1) {
-                                            _quillController.formatSelection(Attribute.h1);
-                                          } else if (level == 2) {
-                                            _quillController.formatSelection(Attribute.h2);
-                                          } else if (level == 3) {
-                                            _quillController.formatSelection(Attribute.h3);
+                                      ListenableBuilder(
+                                        listenable: _quillController,
+                                        builder: (context, _) {
+                                          final style = _quillController.getSelectionStyle();
+                                          final headerAttr = style.attributes[Attribute.header.key];
+                                          final int currentLevel;
+                                          final String currentLabel;
+                                          final IconData currentIcon;
+                                          if (headerAttr == Attribute.h1) {
+                                            currentLevel = 1;
+                                            currentLabel = 'H1';
+                                            currentIcon = Icons.title;
+                                          } else if (headerAttr == Attribute.h2) {
+                                            currentLevel = 2;
+                                            currentLabel = 'H2';
+                                            currentIcon = Icons.title;
+                                          } else if (headerAttr == Attribute.h3) {
+                                            currentLevel = 3;
+                                            currentLabel = 'H3';
+                                            currentIcon = Icons.title;
+                                          } else {
+                                            currentLevel = 0;
+                                            currentLabel = 'Body';
+                                            currentIcon = Icons.segment;
                                           }
-                                        },
-                                        itemBuilder: (context) => [
-                                          PopupMenuItem<int>(
-                                            value: 0,
-                                            child: Row(
-                                              children: [
-                                                Icon(Icons.segment, size: 18, color: textColor),
-                                                const SizedBox(width: 10),
-                                                Text('Body Text', style: theme.textTheme.bodyMedium),
-                                              ],
+
+                                          return PopupMenuButton<int>(
+                                            tooltip: 'Text Style',
+                                            elevation: 3,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(AppLayout.radiusL),
+                                              side: BorderSide(
+                                                color: noteScheme.outlineVariant.withValues(alpha: 0.35),
+                                                width: 1,
+                                              ),
                                             ),
-                                          ),
-                                          PopupMenuItem<int>(
-                                            value: 1,
-                                            child: Row(
-                                              children: [
-                                                Icon(Icons.title, size: 20, color: textColor),
-                                                const SizedBox(width: 10),
-                                                Text('Heading 1', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                                              ],
-                                            ),
-                                          ),
-                                          PopupMenuItem<int>(
-                                            value: 2,
-                                            child: Row(
-                                              children: [
-                                                Icon(Icons.title, size: 18, color: textColor),
-                                                const SizedBox(width: 10),
-                                                Text('Heading 2', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-                                              ],
-                                            ),
-                                          ),
-                                          PopupMenuItem<int>(
-                                            value: 3,
-                                            child: Row(
-                                              children: [
-                                                Icon(Icons.title, size: 16, color: textColor),
-                                                const SizedBox(width: 10),
-                                                Text('Heading 3', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: noteScheme.primaryContainer.withValues(alpha: 0.6),
-                                            borderRadius: BorderRadius.circular(AppLayout.radiusS),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                'H1 / Body',
-                                                style: theme.textTheme.labelMedium?.copyWith(
-                                                  color: noteScheme.onPrimaryContainer,
-                                                  fontWeight: FontWeight.bold,
+                                            color: theme.colorScheme.surfaceContainerHigh,
+                                            onSelected: (level) {
+                                              HapticFeedback.selectionClick();
+                                              if (level == 0) {
+                                                _quillController.formatSelection(
+                                                  const Attribute('header', AttributeScope.block, null),
+                                                );
+                                              } else if (level == 1) {
+                                                _quillController.formatSelection(Attribute.h1);
+                                              } else if (level == 2) {
+                                                _quillController.formatSelection(Attribute.h2);
+                                              } else if (level == 3) {
+                                                _quillController.formatSelection(Attribute.h3);
+                                              }
+                                            },
+                                            itemBuilder: (context) => [
+                                              PopupMenuItem<int>(
+                                                value: 0,
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.segment, size: 18, color: currentLevel == 0 ? noteScheme.primary : textColor),
+                                                    const SizedBox(width: 10),
+                                                    Expanded(
+                                                      child: Text(
+                                                        'Body Text',
+                                                        style: theme.textTheme.bodyMedium?.copyWith(
+                                                          color: currentLevel == 0 ? noteScheme.primary : null,
+                                                          fontWeight: currentLevel == 0 ? FontWeight.bold : null,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    if (currentLevel == 0)
+                                                      Icon(Icons.check_rounded, size: 18, color: noteScheme.primary),
+                                                  ],
                                                 ),
                                               ),
-                                              const SizedBox(width: 2),
-                                              Icon(
-                                                Icons.arrow_drop_down,
-                                                size: 16,
-                                                color: noteScheme.onPrimaryContainer,
+                                              PopupMenuItem<int>(
+                                                value: 1,
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.title, size: 20, color: currentLevel == 1 ? noteScheme.primary : textColor),
+                                                    const SizedBox(width: 10),
+                                                    Expanded(
+                                                      child: Text(
+                                                        'Heading 1',
+                                                        style: theme.textTheme.titleMedium?.copyWith(
+                                                          color: currentLevel == 1 ? noteScheme.primary : null,
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    if (currentLevel == 1)
+                                                      Icon(Icons.check_rounded, size: 18, color: noteScheme.primary),
+                                                  ],
+                                                ),
+                                              ),
+                                              PopupMenuItem<int>(
+                                                value: 2,
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.title, size: 18, color: currentLevel == 2 ? noteScheme.primary : textColor),
+                                                    const SizedBox(width: 10),
+                                                    Expanded(
+                                                      child: Text(
+                                                        'Heading 2',
+                                                        style: theme.textTheme.titleSmall?.copyWith(
+                                                          color: currentLevel == 2 ? noteScheme.primary : null,
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    if (currentLevel == 2)
+                                                      Icon(Icons.check_rounded, size: 18, color: noteScheme.primary),
+                                                  ],
+                                                ),
+                                              ),
+                                              PopupMenuItem<int>(
+                                                value: 3,
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.title, size: 16, color: currentLevel == 3 ? noteScheme.primary : textColor),
+                                                    const SizedBox(width: 10),
+                                                    Expanded(
+                                                      child: Text(
+                                                        'Heading 3',
+                                                        style: theme.textTheme.bodyMedium?.copyWith(
+                                                          color: currentLevel == 3 ? noteScheme.primary : null,
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    if (currentLevel == 3)
+                                                      Icon(Icons.check_rounded, size: 18, color: noteScheme.primary),
+                                                  ],
+                                                ),
                                               ),
                                             ],
-                                          ),
-                                        ),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: currentLevel != 0
+                                                    ? noteScheme.primaryContainer
+                                                    : noteScheme.primaryContainer.withValues(alpha: 0.6),
+                                                borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    currentIcon,
+                                                    size: 15,
+                                                    color: noteScheme.onPrimaryContainer,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    currentLabel,
+                                                    style: theme.textTheme.labelMedium?.copyWith(
+                                                      color: noteScheme.onPrimaryContainer,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 2),
+                                                  Icon(
+                                                    Icons.arrow_drop_down,
+                                                    size: 16,
+                                                    color: noteScheme.onPrimaryContainer,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        },
                                       ),
 
                                       SizedBox(
@@ -3720,6 +3796,40 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                                                 .colorScheme
                                                                 .onPrimary)))),
                                       ),
+                                      QuillToolbarIndentButton(
+                                        controller: _quillController,
+                                        isIncrease: false,
+                                        options: QuillToolbarIndentButtonOptions(
+                                            iconData: Icons.format_indent_decrease,
+                                            iconTheme: QuillIconTheme(
+                                                iconButtonUnselectedData:
+                                                    IconButtonData(
+                                                        style: IconButton.styleFrom(
+                                                            foregroundColor: textColor)),
+                                                iconButtonSelectedData:
+                                                    IconButtonData(
+                                                        style: IconButton.styleFrom(
+                                                            foregroundColor: theme
+                                                                .colorScheme
+                                                                .onPrimary)))),
+                                      ),
+                                      QuillToolbarIndentButton(
+                                        controller: _quillController,
+                                        isIncrease: true,
+                                        options: QuillToolbarIndentButtonOptions(
+                                            iconData: Icons.format_indent_increase,
+                                            iconTheme: QuillIconTheme(
+                                                iconButtonUnselectedData:
+                                                    IconButtonData(
+                                                        style: IconButton.styleFrom(
+                                                            foregroundColor: textColor)),
+                                                iconButtonSelectedData:
+                                                    IconButtonData(
+                                                        style: IconButton.styleFrom(
+                                                            foregroundColor: theme
+                                                                .colorScheme
+                                                                .onPrimary)))),
+                                      ),
                                       QuillToolbarToggleStyleButton(
                                         attribute: Attribute.blockQuote,
                                         controller: _quillController,
@@ -3807,7 +3917,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                           : textColor,
                                     ),
                                   ),
-                                  if (settings.useOnDeviceAi)
+                                  if (settings.isAiActive)
                                     IconButton.filledTonal(
                                       icon: const Icon(Icons.auto_awesome_rounded, size: 20),
                                       tooltip: _isAppSelectionMode
@@ -3825,7 +3935,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                     IconButton(
                                       icon: Icon(_isAppSelectionMode
                                           ? Icons.close_rounded
-                                          : Icons.ads_click_rounded),
+                                          : Icons.start_rounded),
                                       tooltip: _isAppSelectionMode
                                           ? 'Finish selection'
                                           : 'Precision selection',
@@ -3836,7 +3946,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                             : textColor,
                                       ),
                                     ),
-                                  if (settings.useOnDeviceAi || !_isEditingTableCell)
+                                  if (settings.isAiActive || !_isEditingTableCell)
                                     Container(
                                       height: 24,
                                       width: 1,

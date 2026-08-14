@@ -20,6 +20,8 @@ import '../data/repositories/recurring_rule_repository.dart';
 import '../providers/note_provider.dart';
 import '../utils/rich_text_utils.dart';
 import '../utils/widget_helper.dart';
+import 'package:intl/intl.dart';
+import 'notification_service.dart';
 import 'sms_service.dart';
 
 const kAutoBackupTaskName = 'com.saadhjawwadh.notebook.autoBackup';
@@ -30,6 +32,7 @@ void callbackDispatcher() {
   try {
     Workmanager().executeTask((task, inputData) async {
       WidgetsFlutterBinding.ensureInitialized();
+      await NotificationService.initialize();
       if (task == kAutoBackupTaskName) return await performAutoBackup();
       if (task == SmsService.kDailySyncTaskName) return await SmsService.performDailyTransactionSync();
       if (task == kWidgetRefreshTaskName) {
@@ -141,6 +144,13 @@ Future<bool> performAutoBackup() async {
     await file.writeAsString(jsonContent);
     await prefs.setString('lastAutoBackupTime', DateTime.now().toIso8601String());
     await _rotateBackups(targetPath);
+
+    final formattedTime = DateFormat('h:mm a, MMM d').format(DateTime.now());
+    final fileName = file.path.split('/').last;
+    await NotificationService.showBackupNotification(
+      title: '📦 Auto-Backup Complete',
+      body: 'Data safely backed up ($fileName) at $formattedTime.',
+    );
     return true;
   } catch (e) {
     debugPrint('AutoBackup failed: $e');

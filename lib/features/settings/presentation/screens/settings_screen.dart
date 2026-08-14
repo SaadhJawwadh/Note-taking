@@ -466,6 +466,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       ),
                                       const _Divider(),
                                       SettingsTile(
+                                        icon: Icons.rule_folder_outlined,
+                                        iconColor: colorScheme.secondary,
+                                        title: 'SMS Import Rules & Test',
+                                        subtitle: 'Define custom keywords, test SMS parser & filter senders',
+                                        showArrow: true,
+                                        onTap: () => AppRoute.push(context, const SmsRulesScreen()),
+                                      ),
+                                      const _Divider(),
+                                      SettingsTile(
                                         icon: Icons.category_outlined,
                                         iconColor: colorScheme.tertiary,
                                         title: 'Manage Categories',
@@ -1450,43 +1459,167 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showCurrencyPicker(BuildContext context, SettingsProvider settings) {
+    final colorScheme = Theme.of(context).colorScheme;
+    const curated = AppConstants.curatedCurrencies;
+
     AppBottomSheet.show(
       context: context,
       title: 'Select Currency',
       child: Container(
-        constraints: const BoxConstraints(maxHeight: 380),
-        child: ListView.builder(
+        constraints: const BoxConstraints(maxHeight: 420),
+        child: ListView.separated(
           shrinkWrap: true,
-          itemCount: AppConstants.currencies.length,
+          itemCount: curated.length + 1,
+          separatorBuilder: (_, __) => const Divider(height: 1),
           itemBuilder: (context, index) {
-            final currency = AppConstants.currencies[index];
-            final isSelected = settings.currency == currency;
-            final colorScheme = Theme.of(context).colorScheme;
+            if (index == curated.length) {
+              // Custom currency entry
+              final isCustom = !curated.any((c) => c.code == settings.currency);
+              return ListTile(
+                leading: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: isCustom
+                        ? colorScheme.primaryContainer
+                        : colorScheme.surfaceContainerHighest,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.add_rounded,
+                    size: 20,
+                    color: isCustom
+                        ? colorScheme.onPrimaryContainer
+                        : colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                title: Text(
+                  isCustom ? 'Custom (${settings.currency})' : 'Custom Currency Code',
+                  style: TextStyle(
+                    fontWeight: isCustom ? FontWeight.bold : FontWeight.w500,
+                    color: isCustom ? colorScheme.primary : colorScheme.onSurface,
+                  ),
+                ),
+                subtitle: const Text('Enter any 3-letter currency (e.g. BRL, KRW, THB)'),
+                trailing: isCustom
+                    ? Icon(Icons.check_circle_rounded, color: colorScheme.primary)
+                    : null,
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  Navigator.pop(context);
+                  _showCustomCurrencyDialog(context, settings);
+                },
+              );
+            }
+
+            final info = curated[index];
+            final isSelected = settings.currency.toUpperCase() == info.code;
 
             return ListTile(
-              leading: Icon(
-                Icons.monetization_on_outlined,
-                color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
+              leading: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? colorScheme.primaryContainer
+                      : colorScheme.surfaceContainerHighest,
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  info.symbol,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected
+                        ? colorScheme.onPrimaryContainer
+                        : colorScheme.onSurfaceVariant,
+                  ),
+                ),
               ),
               title: Text(
-                currency,
+                info.code,
                 style: TextStyle(
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                   color: isSelected ? colorScheme.primary : colorScheme.onSurface,
                 ),
+              ),
+              subtitle: Text(
+                info.name,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
               ),
               trailing: isSelected
                   ? Icon(Icons.check_circle_rounded, color: colorScheme.primary)
                   : null,
               onTap: () {
                 HapticFeedback.selectionClick();
-                settings.setCurrency(currency);
+                settings.setCurrency(info.code);
                 WidgetHelper.updateWidgetData();
                 Navigator.pop(context);
               },
             );
           },
         ),
+      ),
+    );
+  }
+
+  void _showCustomCurrencyDialog(BuildContext context, SettingsProvider settings) {
+    final controller = TextEditingController(text: settings.currency);
+    AppBottomSheet.show(
+      context: context,
+      title: 'Custom Currency',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Enter the 3-letter currency code or custom symbol you want to use for ledgers.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: controller,
+            autofocus: true,
+            textCapitalization: TextCapitalization.characters,
+            maxLength: 5,
+            decoration: InputDecoration(
+              hintText: 'e.g. BRL, KRW, THB',
+              labelText: 'Currency Code / Symbol',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppLayout.radiusM),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              const SizedBox(width: 8),
+              FilledButton(
+                onPressed: () {
+                  HapticFeedback.selectionClick();
+                  final val = controller.text.trim().toUpperCase();
+                  if (val.isNotEmpty) {
+                    settings.setCurrency(val);
+                    WidgetHelper.updateWidgetData();
+                  }
+                  Navigator.pop(context);
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

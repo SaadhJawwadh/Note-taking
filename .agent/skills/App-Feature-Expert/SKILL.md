@@ -60,7 +60,10 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 
 ## 3. Financial Manager & SMS Ledger (`lib/features/finances/`)
 
-- **SMS Auto-Import Pipeline**: Decoupled regex parsing (`SmsParser` + `sms_constants.dart`) and `SmsService`. 5-minute transaction deduplication window. Reversals purge target transaction within 7 days.
+- **SMS Auto-Import & Sandbox Pipeline**: Decoupled regex parsing (`SmsParser` + `sms_constants.dart`) and `SmsService`. 5-minute transaction deduplication window. Reversals purge target transaction within 7 days. `SmsParser` allows long merchant descriptions up to 60 characters and recognizes sandbox test identifiers (`'BANK_SMS'`, `'CARD'`, `'ALERTS'`, `'BANK'`) alongside major banks. PII reference cleaners MUST use digit lookaheads (`\b(?=[A-Za-z0-9]*\d)[A-Za-z0-9]{10,}\b`) to avoid truncating legitimate 10+ character English words.
+- **Currencies & Multi-Currency Extraction**: Curated currency metadata (`CurrencyInfo` in `AppConstants`) provides authentic symbols and supports custom currency codes. `SmsConstants.buildPreferredAmountRegex(currency)` prioritizes matching against the user's active preferred currency before general currency fallbacks.
+- **One-Tap Category Learning**: When editing transactions, wrap category suggestions in a scoped `ListenableBuilder` tied to `_descriptionController` with stopword protection (`_stopwords`) to let users persist clean merchant keywords directly into `CategoryDefinition`.
+- **Hardware-Aware AI Gating (`isAiActive`)**: All AI feature triggers across domain screens (`FinancialManagerScreen` overflow menu, `TransactionEditorScreen` description suffix icon, `NoteEditorScreen` floating toolbar) MUST be guarded by `settings.isAiActive` (`_useOnDeviceAi && _isDeviceAiSupported`) rather than `useOnDeviceAi` alone, preventing dead AI buttons on emulators and non-NPU devices.
 - **Non-Blocking Background Progress Stream**: Background SMS fetches execute asynchronously using an atomic mutex guard (`_isSyncingLock`) and broadcast progress (`SmsSyncProgress`) over `syncProgressStream`, allowing the user to navigate the app while progress updates render reactively in a floating M3 progress pill.
 - **Financial Trash Bin & Permanent Tombstones**: Soft-deleted transactions (`deletedAt != null`) are excluded from active ledger queries but retained for 30-day auto-purge retention. Permanently purged transactions write their `smsId` to `deleted_transaction_sms_ids` tombstone table so `smsExists()` never re-imports deleted transactions.
 - **Native Telephony Channel Safety Guardrail**: Wrap `_startTelephonyListening()` and `listenIncomingSms` in safe try-catch blocks and verify `await hasPermission()` BEFORE invoking `telephony.listenIncomingSms()`. Prevents `IllegalStateException: Reply already submitted` crashes on Android when SMS permissions are revoked or denied.
@@ -85,6 +88,7 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 ## 5. Settings & App Configuration (`lib/features/settings/`)
 
 - **Settings State (`SettingsProvider`)**: Manages theme mode, dynamic color schemes, currency selection, custom transaction rules, app lock timeouts, and category budgets.
+- **Hardware-Aware AI Support State**: `checkAiCoreSupport(LocalAiService)` checks Android AICore on launch, setting `_isDeviceAiSupported`. `isAiActive` provides a single source of truth for both hardware capability and user preference.
 - **Schedule Sync On Preference Changes**: Setter methods (`setAutoBackupEnabled`, `setAutoBackupFrequency`, `setAutoBackupPath`, `setDailySyncEnabled`) MUST invoke their respective schedule sync helpers (`syncAutoBackupSchedule`, `syncDailySyncSchedule`) to guarantee Workmanager tasks stay in sync with stored preferences.
 - **Backup & Restore**: Encryption-guarded backup JSON via `BackupService`. Excludes sensitive biometric settings to prevent override via untrusted files.
 

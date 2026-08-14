@@ -296,6 +296,7 @@ class SmsService {
 
     final prefs = await SharedPreferences.getInstance();
     final useAi = prefs.getBool('useOnDeviceAi') ?? false;
+    final preferredCurrency = prefs.getString('currency');
 
     // 1. Try AI-First (Gemini Nano) if enabled and supported
     if (useAi && SmsParser.isPotentiallyRelevant(
@@ -303,6 +304,7 @@ class SmsService {
           address: address,
           allowedSenderIds: allowedSenderIds,
           blockedSenderIds: blockedSenderIds,
+          preferredCurrency: preferredCurrency,
         )) {
       await TransactionCategory.reload();
       final activeCategories = TransactionCategory.allNames;
@@ -352,6 +354,7 @@ class SmsService {
         blockedSenderIds: blockedSenderIds,
         customExpenseRules: customExpenseRules,
         customIncomeRules: customIncomeRules,
+        preferredCurrency: preferredCurrency,
       );
 
       // AI Refinement Step: Refine description of regex-parsed transaction if AI is enabled and supported

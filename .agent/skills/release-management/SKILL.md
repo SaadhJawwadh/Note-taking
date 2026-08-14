@@ -37,6 +37,9 @@ Before bumping the version or running deployment, ensure all of the following ar
 * **Stable Release & Cumulative Sub-Version Release Notes Mandate**:
   - Whenever the user specifies *"this is a stable release"* or *"minor/patch version release"*, the agent MUST automatically inspect git tags (`git tag -l`) for the last base minor release (e.g. `v2.17.0`) and aggregate all cumulative user-facing features, UI polish, performance improvements (database WAL, GPU chart isolation), and stability fixes up to the target version.
   - Release notes in `PLAY_STORE_NOTES.md`, `lib/widgets/whats_new_sheet.dart`, `lib/screens/changelog_screen.dart`, and `CHANGELOG.md` MUST be updated **atomically in a single step BEFORE** compiling the local release APK (`flutter build apk --release`) so the test build matches production 100%.
+* **CI/CD Gradle Wrapper & Caching Invariant**:
+  - `android/gradle/wrapper/gradle-wrapper.properties` MUST specify the binary distribution URL (`gradle-X.X-bin.zip`) rather than the heavy `-all.zip` payload to optimize network payload size (~120MB vs ~200MB) and prevent download socket timeouts on CI runners.
+  - `.github/workflows/release.yml` MUST include `gradle/actions/setup-gradle@v3` before building Flutter release targets, and enable `cache: true` under `subosito/flutter-action@v2` to persist Gradle wrapper distributions across workflow runs.
 * Version number in `pubspec.yaml` is bumped using the project convention:
   * **Minor bump** (new features): `1.X.0+Y` where `Y = X * 10000` (e.g. `1.34.0+13400`)
   * **Patch bump** (bug fixes): `1.X.Y+Z` (e.g. `1.33.1+13301`)

@@ -10,6 +10,8 @@ class SmsConstants {
     'AMANABNK', 'AMANA', 'AMANABK',
     'NTB', 'NTBBANK',
     'LOLC',
+    'HSBC', 'SCB', 'CITI', 'AXIS', 'ICICI', 'SBI', 'HDFC', 'KOTAK',
+    'ENBD', 'DBS', 'CHASE', 'BOA', 'BARCLAYS', 'BANK', 'ALERTS', 'CARD',
   };
 
   static const senderToBankName = <String, String>{
@@ -43,8 +45,29 @@ class SmsConstants {
     'LOLC': 'LOLC Finance',
   };
 
-  static final amountRegex = RegExp(r'(?:LKR|Rs\.?)\s*([\d,]+(?:\.\d{1,2})?)', caseSensitive: false);
-  static final bareAmountRegex = RegExp(r'\bof\s+([\d,]+(?:\.\d{1,2})?)', caseSensitive: false);
+  static final amountRegex = RegExp(
+      r'(?:LKR|Rs\.?|INR|USD|EUR|GBP|AED|SAR|JPY|CAD|AUD|SGD|MYR|NZD|CHF|[₹\$€£¥])\s*([\d,]+(?:\.\d{1,2})?)',
+      caseSensitive: false);
+  static final bareAmountRegex = RegExp(r'\b(?:of|amt|amount|sum)\s+([\d,]+(?:\.\d{1,2})?)', caseSensitive: false);
+
+  static RegExp buildPreferredAmountRegex(String currency) {
+    final escaped = RegExp.escape(currency.trim());
+    return RegExp(
+      r'(?:' + escaped + r')\s*([\d,]+(?:\.\d{1,2})?)',
+      caseSensitive: false,
+    );
+  }
+
+  static final posMerchantRegex = RegExp(
+      r"\b(?:POS|ECOM|AUTH|MERCHANT)[\s/:\-]+(?:\d+[\s/:\-]+)?([A-Za-z][A-Za-z0-9\s&'\-\.]{1,60}?)(?=\s*(?:[,.\n]|$|\bref\b|\bauth\b|\bbal\b|\bon\b|\bvia\b))",
+      caseSensitive: false);
+  static final vpaMerchantRegex = RegExp(
+      r"\b(?:VPA|UPI(?:\s*ID)?|to)\s*[:/]?\s*([a-zA-Z0-9.\-_]{2,30})@",
+      caseSensitive: false);
+  static final quotedMerchantRegex = RegExp(
+      r'(?:at|to|for|from|merchant)\s*["\u201C\u2018\u0027]([A-Za-z0-9\s&\u0027\-\.]{2,60}?)["\u201D\u2019\u0027]',
+      caseSensitive: false);
+
   static final depositRegex = RegExp(r'\b(deposit(?:ed)?|crm\s+deposit|cash\s+deposit)\b', caseSensitive: false);
   static final purchaseRegex = RegExp(r'\b(purchase(?:d)?|authorised|authorized)\b', caseSensitive: false);
   static final instalmentRegex = RegExp(r'\b(instalment|installment|emi|monthly\s+payment)\b', caseSensitive: false);
@@ -66,7 +89,7 @@ class SmsConstants {
       caseSensitive: false);
   
   static final piiCardRegex = RegExp(r'\*\d{4,}|ending\s+[#\*]?\d{4,}|\bno\.?\s*\d{4,}|\ba\/c\s*[\d*x]+|\bxxxx\d{4,}|\b\d{16}\b|\b\d{4,}\*+\d{4,}\b', caseSensitive: false);
-  static final piiRefRegex = RegExp(r'\bref(?:\s*no\.?)?\s*:?\s*\w+|\btxn(?:\s*id)?\s*:?\s*[\w\d]+|\bauth(?:\s*code)?\s*:?\s*[\w\d]+|\btran\s*id\s*:?\s*[\w\d]+|\border\s+id\s*:?\s*[\w\d]+|\border\s*#?\s*[\d]+|\bcode\s*\d+|\b[A-Za-z0-9]{10,}\b', caseSensitive: false);
+  static final piiRefRegex = RegExp(r'\bref(?:\s*no\.?)?\s*:?\s*[\w\d]+|\btxn(?:\s*id)?\s*:?\s*[\w\d]+|\bauth(?:\s*code)?\s*:?\s*[\w\d]+|\btran\s*id\s*:?\s*[\w\d]+|\border\s+id\s*:?\s*[\w\d]+|\border\s*#?\s*[\d]+|\bcode\s*\d+|\b(?=[A-Za-z0-9]*\d)[A-Za-z0-9]{10,}\b', caseSensitive: false);
   static final piiBalanceRegex = RegExp(r'avl\s*bal[^\d]*[\d,]+(?:\.\d{1,2})?|avail?(?:able)?\s*bal(?:ance)?\s*:?\s*(?:lkr|rs\.?)?\s*[\d,]+(?:\.\d{1,2})?|\bbal\s*:?\s*(?:lkr|rs\.?)?\s*[\d,]+(?:\.\d{1,2})?', caseSensitive: false);
   static final piiDateTimePhoneRegex = RegExp(r'\b\d{1,2}[-/]\d{1,2}[-/]\d{2,4}\b|\b\d{1,2}:\d{2}\s*(?:[ap]m)?\b|\b0\d{9}\b|\b\d{10,11}\b', caseSensitive: false);
   static final urlRegex = RegExp(r'https?://\S+', caseSensitive: false);

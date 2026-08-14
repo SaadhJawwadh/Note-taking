@@ -1256,40 +1256,43 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                   AppRoute.push(context, const SettingsScreen());
                                 }
                               },
-                              itemBuilder: (context) => [
-                                 PopupMenuItem(
-                                   value: 'ai_refine',
-                                   height: 48,
-                                   child: Row(
-                                     children: [
-                                       Icon(Icons.auto_awesome_rounded, size: 20, color: colorScheme.primary),
-                                       const SizedBox(width: 12),
-                                       Text('Refine Titles with AI (48h)', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                                     ],
+                               itemBuilder: (ctx) {
+                                 final isAiEnabled = ctx.read<SettingsProvider>().isAiActive;
+                                 return [
+                                   if (isAiEnabled)
+                                     PopupMenuItem(
+                                       value: 'ai_refine',
+                                       height: 48,
+                                       child: Row(
+                                         children: [
+                                           Icon(Icons.auto_awesome_rounded, size: 20, color: colorScheme.primary),
+                                           const SizedBox(width: 12),
+                                           Text('Refine Titles with AI (48h)', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                         ],
+                                       ),
+                                     ),
+                                   PopupMenuItem(
+                                     value: 'cleanup',
+                                     height: 48,
+                                     child: Row(
+                                       children: [
+                                         Icon(Icons.cleaning_services_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                                         const SizedBox(width: 12),
+                                         Text('Purge Duplicates', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                       ],
+                                     ),
                                    ),
-                                 ),
-                                 PopupMenuItem(
-                                   value: 'cleanup',
-                                   height: 48,
-                                   child: Row(
-                                     children: [
-                                       Icon(Icons.cleaning_services_outlined, size: 20, color: colorScheme.onSurfaceVariant),
-                                       const SizedBox(width: 12),
-                                       Text('Purge Duplicates', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                                     ],
+                                   PopupMenuItem(
+                                     value: 'discover',
+                                     height: 48,
+                                     child: Row(
+                                       children: [
+                                         Icon(Icons.radar_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                                         const SizedBox(width: 12),
+                                         Text('Discover Bank Senders', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                       ],
+                                     ),
                                    ),
-                                 ),
-                                 PopupMenuItem(
-                                   value: 'discover',
-                                   height: 48,
-                                   child: Row(
-                                     children: [
-                                       Icon(Icons.radar_outlined, size: 20, color: colorScheme.onSurfaceVariant),
-                                       const SizedBox(width: 12),
-                                       Text('Discover Bank Senders', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                                     ],
-                                   ),
-                                 ),
                                  PopupMenuItem(
                                    value: 'trash',
                                    height: 48,
@@ -1330,7 +1333,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                      ],
                                    ),
                                  ),
-                               ],
+                               ]; },
                             ),
                           ],
                         ),

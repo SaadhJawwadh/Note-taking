@@ -290,6 +290,45 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
     );
   }
 
+  static const _stopwords = {
+    'debit', 'credit', 'payment', 'purchase', 'transfer', 'card', 'bank',
+    'paid', 'sent', 'received', 'withdrawal', 'deposit', 'pos', 'atm',
+    'online', 'charge', 'money', 'store', 'shop', 'order', 'total', 'bill',
+    'lkr', 'usd', 'eur', 'gbp', 'inr', 'rs', 'at', 'to', 'for', 'from', 'in', 'the', 'a', 'an',
+  };
+
+  String? _extractCleanMerchantKeyword(String rawDesc) {
+    var cleaned = rawDesc
+        .replaceAll(RegExp(r'(?:Debit|Credit|Payment at|Purchase at|Transfer to|Received from)\s*', caseSensitive: false), '')
+        .replaceAll(RegExp(r'[\d,]+\.?\d*'), '')
+        .replaceAll(RegExp(r"[^A-Za-z0-9\s&'\-]"), ' ')
+        .replaceAll(RegExp(r'\s{2,}'), ' ')
+        .trim();
+    if (cleaned.length < 3) return null;
+    if (_stopwords.contains(cleaned.toLowerCase())) return null;
+    return cleaned;
+  }
+
+  Future<void> _trainCategoryKeyword(String keyword, String category) async {
+    final db = TransactionRepository.instance;
+    final defs = await db.getAllCategoryDefinitions();
+    CategoryDefinition? targetDef;
+    for (final d in defs) {
+      if (d.name == category) {
+        targetDef = d;
+        break;
+      }
+    }
+    if (targetDef != null) {
+      final updatedKeywords = List<String>.from(targetDef.keywords);
+      if (!updatedKeywords.any((k) => k.toLowerCase() == keyword.toLowerCase())) {
+        updatedKeywords.add(keyword);
+        await db.upsertCategoryDefinition(targetDef.copyWith(keywords: updatedKeywords));
+        await TransactionCategory.reload();
+      }
+    }
+  }
+
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -621,17 +660,19 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                   borderRadius: BorderRadius.circular(AppLayout.radiusL),
                 ),
                 prefixIcon: const Icon(Icons.description_outlined),
-                suffixIcon: IconButton(
-                  onPressed: _isRefiningAi ? null : _refineDescriptionWithAi,
-                  icon: _isRefiningAi
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.auto_awesome_rounded),
-                  tooltip: 'Refine Title with AI',
-                ),
+                suffixIcon: settings.isAiActive
+                    ? IconButton(
+                        onPressed: _isRefiningAi ? null : _refineDescriptionWithAi,
+                        icon: _isRefiningAi
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.auto_awesome_rounded),
+                        tooltip: 'Refine Title with AI',
+                      )
+                    : null,
               ),
             ),
             const SizedBox(height: 24),
@@ -703,6 +744,37 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                       borderRadius: BorderRadius.circular(AppLayout.radiusS)),
                 ),
               ],
+            ),
+            ListenableBuilder(
+              listenable: _descriptionController,
+              builder: (context, _) {
+                final candidate = _extractCleanMerchantKeyword(_descriptionController.text);
+                if (candidate == null || candidate.isEmpty) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: ActionChip(
+                    avatar: const Icon(Icons.auto_awesome, size: 16, color: Colors.amber),
+                    label: Text(
+                      'Always categorize "$candidate" as $_category',
+                      style: textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    backgroundColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+                    side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusM)),
+                    onPressed: () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      await HapticFeedback.selectionClick();
+                      await _trainCategoryKeyword(candidate, _category);
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text('Future SMS matching "$candidate" will be categorized as "$_category"'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 24),
 

@@ -7,7 +7,7 @@ import '../data/settings_provider.dart';
 import '../core/theme/app_layout.dart';
 import '../core/ui/app_card.dart';
 import '../widgets/bouncing_widget.dart';
-import '../features/sync/presentation/screens/p2p_sync_screen.dart';
+import '../features/finances/presentation/screens/sms_rules_screen.dart';
 
 class WhatsNewSheet extends StatelessWidget {
   final String currentVersion;
@@ -38,31 +38,31 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.primaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.sync_rounded,
-            title: "Background Bank SMS Auto-Import",
-            desc: "Scan bank transactions asynchronously with a floating M3 progress indicator while using the app.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.auto_awesome_rounded,
-            title: "AI Transaction Title Refine",
-            desc: "Clean up cryptic bank SMS codes into crisp merchant titles with single-tap or 48-hour bulk AI refinement.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.touch_app_rounded,
-            title: "Unified Dual-Gesture Sync",
-            desc: "Tap sync icons for fast quick sync, or hold to open advanced import options across Notes & Finances.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.devices_rounded,
-            title: "Friendly Device Naming",
-            desc: "Paired devices get memorable names (e.g. Nimble Falcon) and stay connected across Wi-Fi networks.",
-            actionLabel: "Try P2P Sync ➔",
+            icon: Icons.science_outlined,
+            title: "Interactive SMS Test Sandbox",
+            desc: "Test bank SMS messages live with instant amount, transaction direction, and category preview.",
+            actionLabel: "Try Sandbox ➔",
             onAction: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const P2pSyncScreen()),
+                MaterialPageRoute(builder: (_) => const SmsRulesScreen()),
               );
             },
+          ),
+          _WhatsNewItem(
+            icon: Icons.paid_outlined,
+            title: "Curated & Custom Currencies",
+            desc: "Choose from world currencies with authentic symbol badges or add your own custom currency code.",
+          ),
+          _WhatsNewItem(
+            icon: Icons.category_outlined,
+            title: "One-Tap Category Learning",
+            desc: "Train recurring merchant rules directly into your category definitions with a single tap.",
+          ),
+          _WhatsNewItem(
+            icon: Icons.auto_awesome_rounded,
+            title: "Hardware-Aware AI Smart Gating",
+            desc: "Intelligently hides AI tools on devices without NPU hardware for a clean, distraction-free UI.",
           ),
         ],
       ),
@@ -72,19 +72,19 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.tertiaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.speed_rounded,
-            title: "60–120 FPS Performance & WAL Mode",
-            desc: "Isolated chart GPU rendering and enabled SQLite WAL mode for smooth fling-scrolling and non-blocking background syncs.",
+            icon: Icons.start_rounded,
+            title: "Precision Text Selection Toolbar",
+            desc: "Fine-tune cursor selections with character-by-character and word-by-word directional stepper arrows.",
           ),
           _WhatsNewItem(
-            icon: Icons.network_check_rounded,
-            title: "Human-Readable Diagnostics",
-            desc: "Clear troubleshooting advice for P2P network status with dynamic red warning cards and retry options.",
+            icon: Icons.backup_outlined,
+            title: "Quiet Auto-Backup Channel",
+            desc: "Background backups run silently in a quiet notification channel without interrupting your workflow.",
           ),
           _WhatsNewItem(
-            icon: Icons.refresh_rounded,
-            title: "Interactive Wi-Fi IP Refresh",
-            desc: "Instant Toast feedback when re-scanning Wi-Fi network interfaces and binding P2P host ports.",
+            icon: Icons.format_indent_increase_rounded,
+            title: "Note Editor Heading & Indent Tools",
+            desc: "Visual heading level badges and dedicated indentation buttons inside the rich-text note editor.",
           ),
         ],
       ),
@@ -94,9 +94,9 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.secondaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.shield_rounded,
-            title: "Android Permission Stability",
-            desc: "Resolved native telephony channel issues when SMS permissions are revoked, and handled pairing timeouts gracefully.",
+            icon: Icons.receipt_long_outlined,
+            title: "Enhanced SMS Merchant Parsing",
+            desc: "Extended store name recognition up to 60 characters with smarter PII reference number sanitization.",
           ),
         ],
       ),

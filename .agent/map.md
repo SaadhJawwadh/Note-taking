@@ -162,15 +162,20 @@ Manages note creation, organization, formatting, auto-saving, and viewing modes.
 A private ledger to track expenses, earnings, and financial habits.
 *   **Key Features**:
     *   **Decoupled State**: `FinancialManagerProvider` manages balance calculations, range filters, and transactions reactively.
+    *   **Curated & Custom Currencies**: `CurrencyInfo` metadata (`lib/utils/app_constants.dart`) provides authentic currency symbols (`Rs.`, `₹`, `$`, `€`, `£`, `¥`, `د.إ`, `﷼`, `C$`, `A$`, `S$`, `RM`, `NZ$`, `CHF`) and supports custom currency codes.
+    *   **SMS Import Rules & Test Sandbox**: Interactive sandbox in `SmsRulesScreen` with clipboard paste and live parsing feedback.
+    *   **One-Tap Category Learning**: Contextual suggestion chip in `TransactionEditorScreen` with stopword protection to train custom keywords into `CategoryDefinition`.
+    *   **Hardware-Aware AI Gating (`isAiActive`)**: AI refine options and sparkle icons are strictly gated by `settings.isAiActive` (`_useOnDeviceAi && _isDeviceAiSupported`) so devices without Gemini Nano/AICore hardware hide dead controls.
     *   **Tabular Figures & Typography**: All financial ledgers, numbers, and balance cards use `Inter` with tabular figures (`fontFeatures: [FontFeature.tabularFigures()]`).
     *   **Inline Calculator**: Accessible during expense creation inside `CalculatorDialog`.
     *   **Trend Visuals & Regression**: Exponentially-weighted linear regression with Huber-style outlier dampening.
     *   **Double-Level Categorization**: Auto-categorization matches transaction descriptions using keyword rules.
 *   **Key Files**:
     *   Main UI: `lib/features/finances/presentation/screens/financial_manager_screen.dart`
+    *   Rules & Test Sandbox: `lib/features/finances/presentation/screens/sms_rules_screen.dart`
     *   State Manager: `lib/features/finances/providers/financial_manager_provider.dart`
     *   Database CRUD: `lib/features/finances/data/transaction_repository.dart`
-    *   Editor Panel: `lib/screens/transaction_editor_screen.dart`
+    *   Editor Panel: `lib/features/finances/presentation/screens/transaction_editor_screen.dart`
     *   Custom Categories UI: `lib/screens/category_management_screen.dart`
 
 ### 3. Health & Period Tracker Module (`lib/features/health/`)

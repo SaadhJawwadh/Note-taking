@@ -240,4 +240,32 @@ class NotificationService {
       platformChannelSpecifics,
     );
   }
+
+  static Future<void> showBackupNotification({
+    required String title,
+    required String body,
+    int id = 102,
+  }) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'auto_backup_channel',
+      'Auto-Backup Alerts',
+      channelDescription: 'Notifications when automatic backups are completed',
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+    );
+    const NotificationDetails platformChannelSpecifics =
+        NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    try {
+      await _notificationsPlugin.show(
+        id,
+        title,
+        body,
+        platformChannelSpecifics,
+      );
+    } catch (e) {
+      debugPrint('Error showing auto-backup notification: $e');
+    }
+  }
 }

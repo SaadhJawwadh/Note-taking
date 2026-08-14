@@ -8,6 +8,7 @@ class SmsParser {
     required String address,
     required Set<String> allowedSenderIds,
     required Set<String> blockedSenderIds,
+    String? preferredCurrency,
   }) {
     if (body.trim().isEmpty) return false;
 
@@ -28,12 +29,22 @@ class SmsParser {
     final hasExecuted = SmsConstants.executedTransactionRegex.hasMatch(body);
     if (isPromotional && !hasExecuted) return false;
 
-    // Check if it has a valid amount match
-    final hasAmount = SmsConstants.amountRegex.hasMatch(body) || SmsConstants.bareAmountRegex.hasMatch(body);
+    // Check if it has a valid amount match (checking preferred currency, general currencies, or bare amount)
+    final hasPreferred = preferredCurrency != null &&
+        preferredCurrency.trim().isNotEmpty &&
+        SmsConstants.buildPreferredAmountRegex(preferredCurrency).hasMatch(body);
+    final hasAmount = hasPreferred ||
+        SmsConstants.amountRegex.hasMatch(body) ||
+        SmsConstants.bareAmountRegex.hasMatch(body);
     if (!hasAmount) return false;
 
     // Check if known sender, or matches transaction action terms
-    final isBank = SmsConstants.bankSenders.any((s) => address.toUpperCase().contains(s.toUpperCase()));
+    final isBank = SmsConstants.bankSenders.any((s) => address.toUpperCase().contains(s.toUpperCase())) ||
+        address.toUpperCase().contains('BANK') ||
+        address.toUpperCase().contains('ALERT') ||
+        address.toUpperCase().contains('CARD') ||
+        address == 'TEST' ||
+        address == 'BANK_SMS';
     final isKnownSender = isBank || allowedSenderIds.any((s) => senderLower.contains(s));
     
     final hasTransactionAction = SmsConstants.debitRegex.hasMatch(body) || 
@@ -54,6 +65,7 @@ class SmsParser {
     required Set<String> blockedSenderIds,
     required List<String> customExpenseRules,
     required List<String> customIncomeRules,
+    String? preferredCurrency,
   }) {
     if (body.trim().isEmpty) return null;
 
@@ -76,7 +88,12 @@ class SmsParser {
     final matchesExpenseRule = customExpenseRules.any((r) => bodyLower.contains(r.toLowerCase()));
     final matchesIncomeRule = customIncomeRules.any((r) => bodyLower.contains(r.toLowerCase()));
 
-    final isBank = SmsConstants.bankSenders.any((s) => address.toUpperCase().contains(s.toUpperCase()));
+    final isBank = SmsConstants.bankSenders.any((s) => address.toUpperCase().contains(s.toUpperCase())) ||
+        address.toUpperCase().contains('BANK') ||
+        address.toUpperCase().contains('ALERT') ||
+        address.toUpperCase().contains('CARD') ||
+        address == 'TEST' ||
+        address == 'BANK_SMS';
     final isKnownSender = isBank ||
         allowedSenderIds.any((s) => senderLower.contains(s));
     
@@ -90,10 +107,26 @@ class SmsParser {
     if (SmsConstants.dueReminderRegex.hasMatch(body) && !isDebit) return null;
 
     double? amount;
-    var amountMatch = SmsConstants.amountRegex.firstMatch(body);
-    if (amountMatch != null) {
-      amount = double.tryParse(amountMatch.group(1)!.replaceAll(',', ''));
-    } else {
+
+    // 1. Try preferred currency specific pattern first if available
+    if (preferredCurrency != null && preferredCurrency.trim().isNotEmpty) {
+      final preferredRegex = SmsConstants.buildPreferredAmountRegex(preferredCurrency);
+      final preferredMatch = preferredRegex.firstMatch(body);
+      if (preferredMatch != null) {
+        amount = double.tryParse(preferredMatch.group(1)!.replaceAll(',', ''));
+      }
+    }
+
+    // 2. Try general multi-currency amount regex
+    if (amount == null) {
+      final amountMatch = SmsConstants.amountRegex.firstMatch(body);
+      if (amountMatch != null) {
+        amount = double.tryParse(amountMatch.group(1)!.replaceAll(',', ''));
+      }
+    }
+
+    // 3. Fallback to bare amount regex ("of 1,500.00")
+    if (amount == null) {
       final bareMatch = SmsConstants.bareAmountRegex.firstMatch(body);
       if (bareMatch != null) {
         amount = double.tryParse(bareMatch.group(1)!.replaceAll(',', ''));
@@ -192,9 +225,31 @@ class SmsParser {
   }
 
   static String? extractMerchant(String text) {
+    // 1. Check quoted merchant name: at "STARBUCKS" or for 'UBER'
+    final quotedMatch = SmsConstants.quotedMerchantRegex.firstMatch(text);
+    if (quotedMatch != null) {
+      final candidate = quotedMatch.group(1)!.trim();
+      if (candidate.length >= 2) return cleanTitle(candidate);
+    }
+
+    // 2. Check POS / ECOM merchant name: POS/UBER TRIP or POS 49201 STARBUCKS
+    final posMatch = SmsConstants.posMerchantRegex.firstMatch(text);
+    if (posMatch != null) {
+      final candidate = posMatch.group(1)!.trim();
+      if (candidate.length >= 2 && !candidate.toLowerCase().startsWith('ref')) return cleanTitle(candidate);
+    }
+
+    // 3. Check UPI / VPA handle: to coffee@hdfc
+    final vpaMatch = SmsConstants.vpaMerchantRegex.firstMatch(text);
+    if (vpaMatch != null) {
+      final handle = vpaMatch.group(1)!.trim().replaceAll('.', ' ').replaceAll('_', ' ').replaceAll('-', ' ');
+      if (handle.length >= 2) return cleanTitle(handle);
+    }
+
+    // 4. Standard prefix search: at / for / from
     const terminators = r"(?=\s*(?:[,.\n]|$|\bref\b|\bauth\b|\bavl\b|\bbal\b|\bon\b|\bvia\b|\bif\b|\bfor\b|\bhas\b|\bto\b))";
     for (final prefix in ['at', 'for', 'from']) {
-      final m = RegExp(r"\b" + prefix + r"\s+(?!(?:your|the|our|my|lkr|rs)\b)([A-Za-z][A-Za-z0-9\s&'\-\.]{1,35}?)" + terminators, caseSensitive: false).firstMatch(text);
+      final m = RegExp(r"\b" + prefix + r"\s+(?!(?:your|the|our|my|lkr|rs|inr|usd|eur|gbp|aed|sar)\b)([A-Za-z][A-Za-z0-9\s&'\-\.]{1,60}?)" + terminators, caseSensitive: false).firstMatch(text);
       if (m != null) {
         final candidate = m.group(1)!.trim().replaceAll(RegExp(r'\s{2,}'), ' ');
         if (candidate.length >= 2) return cleanTitle(candidate);
@@ -232,7 +287,7 @@ class SmsParser {
     return buffer.toString();
   }
 
-  static String cleanTitle(String s) => s.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).map((w) => (w.length <= 4 && w == w.toUpperCase() && RegExp(r'^[A-Z]+$').hasMatch(w)) ? w : '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}').join(' ');
+  static String cleanTitle(String s) => s.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).map((w) => (w.length <= 3 && w == w.toUpperCase() && RegExp(r'^[A-Z]+$').hasMatch(w)) ? w : '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}').join(' ');
 
   static String appendBankSuffix(String desc, String? bankName) => (bankName == null || desc.contains(bankName)) ? desc : '$desc – $bankName';
 }
