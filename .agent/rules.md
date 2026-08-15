@@ -78,3 +78,18 @@ Before running deployment scripts (`./deploy.sh`) or tagging a release:
 2. **Dynamic Light/Dark Hero Container Tint**: Hero cards (`SettingsHeroCard`, Net Balance, P2P Sync Status, Period Tracker Moon Phase, Trash Auto-Purge Banner) must dynamically adjust container opacity (50%–55% alpha in Light Mode; 20%–22% alpha in Dark Mode) to preserve vibrant fills without returning to gradient or dull grey decorations.
 3. **SQLCipher Safety**: Always pass `password: ''` (or explicit key) to `openDatabase()` calls when using `sqflite_sqlcipher` to prevent runtime options cast crashes.
 
+---
+
+## 🤖 Rule 9: Hardware-Aware AI Capability Gating (`isAiActive`)
+Never gate AI UI controls (refine buttons, sparkle icons, toolbar assist pills) on `useOnDeviceAi` alone.
+* Always distinguish between user preference (`useOnDeviceAi`) and physical hardware availability (`isDeviceAiSupported`).
+* UI controls MUST query `settings.isAiActive` (`_useOnDeviceAi && _isDeviceAiSupported`) to prevent displaying non-functional or error-prone AI triggers on emulators and devices lacking on-device Gemini Nano/AICore hardware.
+
+---
+
+## 💳 Rule 10: Currencies, SMS Parsing & PII Regex Invariants
+* **Authentic Currency Badges**: Currency selection dialogs and settings tiles MUST render authentic tonal circular avatars displaying the genuine currency symbol (e.g. `Rs.`, `₹`, `$`, `€`, `£`, `¥`, `د.إ`, `﷼`, `C$`, `A$`, `S$`, `RM`, `NZ$`, `CHF`), bold code, and full name instead of generic dollar icons.
+* **PII Number Sanitization**: Reference number stripping regexes MUST require digit lookahead assertions (`\b(?=[A-Za-z0-9]*\d)[A-Za-z0-9]{10,}\b`) to avoid truncating legitimate 10+ character English words.
+* **SMS Sandbox Whitelisting**: SMS parsing engines must recognize simulated test senders (`'BANK_SMS'`, `'CARD'`, `'ALERTS'`, `'BANK'`) as verified financial senders to support sandbox test execution.
+
+

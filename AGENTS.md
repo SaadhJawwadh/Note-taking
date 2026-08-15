@@ -9,3 +9,6 @@ Refer to [.agent/rules.md](file:///Users/saadhjawwadh/Documents/Code/Note%20taki
 4. **Mandatory Analysis & Testing**: Run `flutter analyze` and `flutter test` after code changes.
 5. **No Unprompted Git Commits/Pushes**: Request explicit user confirmation before committing or pushing.
 6. **Seamless Borderless Bars & Hero Tints**: Keep top/bottom bars 100% borderless (`border: null`) and dynamically scale Hero Container alpha opacities (50%–55% Light Mode vs 20%–22% Dark Mode).
+7. **Hardware-Aware AI Gating (`isAiActive`)**: Gate AI UI controls on `settings.isAiActive` (`_useOnDeviceAi && _isDeviceAiSupported`) so non-NPU devices and emulators hide dead buttons.
+8. **Authentic Currencies & PII Regex Safety**: Render authentic symbol badges in pickers; protect 10+ character words with digit lookaheads (`(?=[A-Za-z0-9]*\d)`).
+
