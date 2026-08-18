@@ -1,14 +1,14 @@
 
 ### 🌟 What's New
-- **Symmetrical Precision Text Toolbar**: Directional horizontal nudges, double-tap word jumping, and vertical line traversal in a frosted floating bar.
-- **Health Cycle Regularity Insights**: Real-time regularity scoring (0–100%), average flow duration analytics, moon phase guidance, and symptom tracking.
-- **Category Spending Budgets & CSV Export**: Category spending progress bars with threshold alerts, recurring subscription rules, and RFC-compliant CSV ledger export.
-- **Tombstone Sync & Backup Protection**: Permanent deletion retention prevents purged transactions from ever resurrecting across backups or P2P sync.
+- **Interactive Expense Breakdown Donut**: Centered interactive donut chart with live center-hole total and bi-directional touch linking with ranked category spending.
+- **3-Slide Swipable Visual Intelligence Deck**: Trajectory forecast spline, category breakdown donut, and monthly budget pacing with circular progress gauge.
+- **Dynamic Home Screen Widget Sparkline**: Replaced text with native anti-aliased canvas sparkline curve plot, gradient underfill, and glowing forecast dot.
 
 ### 🚀 Improvements
-- **Fluid Spring Animations & Tactile Haptics**: Smooth slide transitions and tactile click responses across formatting tools and cycle insights.
-- **Ultra-Modular Screen Architecture**: Cleaner, faster performance with decoupled state providers across Notes, Finances, and Health.
+- **Adaptive Ongoing Month-End Run-Rate Forecast**: Extrapolates current month finish with days 1–3 early-month smoothing to prevent artificial bill spikes.
+- **Context-Aware Deep Linking**: Tapping "Details >" on any slide routes directly to the exact corresponding sub-tab with zero guesswork.
+- **Zero-Dead-Code Cleanup**: Purged deprecated legacy widgets, streamlined header badges (`Est ~395.8k 🔮`), and unified all forecasting logic into `SpendingForecastService`.
 
 ### 🐛 Fixes
-- **SMS Re-import & Duplication Resilience**: Rock-solid P2P two-way merge resolution and deletion tombstone propagation.
+- **Resolved Title Clipping & Whitespace Imbalance**: Fixed text truncation on small screens and balanced budget pacing cards with dual-column layout.
 

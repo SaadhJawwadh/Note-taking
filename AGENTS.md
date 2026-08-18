@@ -104,3 +104,4 @@ Activate deep procedural skills in [.agent/skills/](file:///Users/saadhjawwadh/D
 * **[release-management](file:///.agent/skills/release-management/SKILL.md)**: End-to-end release procedures, R8/ProGuard verification, local APK smoke testing, bilingual `PLAY_STORE_NOTES.md` sync, and `./deploy.sh` automation.
 * **[Tester](file:///.agent/skills/Tester/SKILL.md)**: Comprehensive QA verification, viewport setups for full-screen widget tests, path provider mocks, SQLCipher & Workmanager isolate validation.
 * **[skill-trainer](file:///.agent/skills/skill-trainer/SKILL.md)**: Protocol for extracting session learnings, updating skills, and maintaining the developer map.
+* **[Loop-Engineer](file:///.agent/skills/Loop-Engineer/SKILL.md)**: Universal 4-tier autonomous loop engineering harness grounded in Flow Engineering, TDD self-healing, monotonic zero-regression verifiers, live UI/UX research with interactive grilling, and Small-to-Mighty roadmaps.

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:provider/provider.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/services.dart';
 import '../../../../data/settings_provider.dart';
 import '../../data/transaction_repository.dart';
@@ -23,16 +22,15 @@ import 'package:note_taking_app/features/finances/providers/financial_manager_pr
 
 import '../../../../core/theme/app_layout.dart';
 
-import '../../../../widgets/finance/financial_category_donut_card.dart';
-import '../../../../widgets/finance/financial_trend_regression_card.dart';
 import '../../../../widgets/bouncing_widget.dart';
 import '../../../../widgets/sms_import_sheet.dart';
 import '../widgets/financial_trash_sheet.dart';
 import '../widgets/financial_ledger_tab.dart';
+import '../widgets/financial_analytics_tab.dart';
+import '../widgets/minimal_chart_deck.dart';
 import '../widgets/recurring_rules_sheet.dart';
-import '../widgets/category_budgets_card.dart';
-import '../widgets/top_merchants_card.dart';
 import '../../services/financial_export_service.dart';
+import '../../services/spending_forecast_service.dart';
 
 
 class FinancialManagerScreen extends StatefulWidget {
@@ -55,14 +53,17 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
   String? _selectedCategory;
   List<String> _activeCategories = [];
   late String _selectedTab;
-  String _analyticsSegment = 'Trends';
 
   List<Map<String, dynamic>> _monthlyData = [];
-  bool _isDashboardLoading = true;
   int _trashedCount = 0;
 
   final TextEditingController _searchController = TextEditingController();
+  late final PageController _heroPageController;
+  int _heroCardMode = 0; // 0: Net Cash Flow, 1: Daily Burn Rate, 2: Savings Rate
+  int _analyticsSubView = 0; // 0: Breakdown, 1: Budgets
   String _searchQuery = '';
+  Timer? _heroAutoCycleTimer;
+  bool _heroUserInteracted = false;
 
   StreamSubscription<TransactionModel>? _smsSubscription;
   StreamSubscription<SmsSyncProgress>? _smsProgressSub;
@@ -71,18 +72,17 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
   @override
   void initState() {
     super.initState();
+    _heroPageController = PageController(initialPage: 0);
     final initialTab = FinancialManagerScreen.tabRedirectNotifier.value;
     if (initialTab != null) {
-      _selectedTab = initialTab;
-      if (initialTab != 'Ledger') {
-        _analyticsSegment = initialTab;
-      }
+      _selectedTab = (initialTab == 'Ledger') ? 'Ledger' : 'Budgets';
       FinancialManagerScreen.tabRedirectNotifier.value = null; // consume
     } else {
       _selectedTab = 'Ledger';
     }
     FinancialManagerScreen.tabRedirectNotifier.addListener(_handleTabRedirect);
     _refreshTransactions();
+    _startHeroAutoCycleTimer();
     _smsSubscription = SmsService.incomingTransactions.listen((t) async {
       if (!mounted) return;
       await _refreshTransactions();
@@ -94,17 +94,49 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     });
   }
 
+  void _startHeroAutoCycleTimer() {
+    _heroAutoCycleTimer?.cancel();
+    if (_heroUserInteracted) return;
+    _heroAutoCycleTimer = Timer.periodic(const Duration(milliseconds: 5500), (timer) {
+      if (!mounted || _heroUserInteracted || !_heroPageController.hasClients) {
+        timer.cancel();
+        return;
+      }
+      final nextPage = (_heroCardMode + 1) % 3;
+      _heroPageController.animateToPage(
+        nextPage,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOutCubic,
+      );
+    });
+  }
+
+  void _pauseHeroAutoCycle({bool userAction = true}) {
+    if (userAction) {
+      _heroUserInteracted = true;
+    }
+    _heroAutoCycleTimer?.cancel();
+  }
+
   void _handleTabRedirect() {
     final newTab = FinancialManagerScreen.tabRedirectNotifier.value;
     if (newTab != null && mounted) {
       setState(() {
-        _selectedTab = newTab;
-        if (newTab != 'Ledger') {
-          _analyticsSegment = newTab;
-        }
+        _selectedTab = (newTab == 'Ledger') ? 'Ledger' : 'Budgets';
       });
       FinancialManagerScreen.tabRedirectNotifier.value = null; // consume
     }
+  }
+
+  @override
+  void dispose() {
+    _heroAutoCycleTimer?.cancel();
+    _heroPageController.dispose();
+    _searchController.dispose();
+    FinancialManagerScreen.tabRedirectNotifier.removeListener(_handleTabRedirect);
+    _smsSubscription?.cancel();
+    _smsProgressSub?.cancel();
+    super.dispose();
   }
 
   Map<String, double> get _categoryExpenses {
@@ -123,19 +155,9 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
-  @override
-  void dispose() {
-    FinancialManagerScreen.tabRedirectNotifier.removeListener(_handleTabRedirect);
-    _smsSubscription?.cancel();
-    _smsProgressSub?.cancel();
-    _searchController.dispose();
-    super.dispose();
-  }
-
   Future<void> _refreshTransactions() async {
     setState(() {
       _isLoading = true;
-      _isDashboardLoading = true;
     });
     // Materialize any recurring transactions that came due since last visit.
     try {
@@ -165,7 +187,6 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     _applyFilters();
     setState(() {
       _trashedCount = trashed.length;
-      _isDashboardLoading = false;
     });
   }
 
@@ -644,8 +665,10 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     );
   }
 
-  /// Combined hero card: net balance + income/expense breakdown for the
-  /// currently selected date range.
+  /// Combined hero card: net balance +   /// Builds an interactive Swipable Hero Summary Card with 3 distinct insight modes:
+  /// Slide 0: Net Cash Flow (Income vs Expense)
+  /// Slide 1: Daily Burn Rate & Pace Projection
+  /// Slide 2: Savings Efficiency & Rate
   Widget _buildHeroSummaryCard(ColorScheme cs, TextTheme tt, String currency) {
     if (_isLoading) {
       return const SizedBox(
@@ -659,6 +682,16 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
         : '${DateFormat.MMMd().format(_selectedRange.start)} – ${DateFormat.MMMd().format(_selectedRange.end)}';
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final daysInPeriod = _selectedRange.duration.inDays > 0 ? (_selectedRange.duration.inDays + 1) : 1;
+    final dailyAvgExpense = _totalExpense / daysInPeriod;
+
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
+    final spendingForecast = SpendingForecastService.calculateMonthlyForecast(
+      transactions: _transactions,
+      categoryBudgets: settings.categoryBudgets,
+    );
+    final numberFormat = NumberFormat('#,##0');
+
     return Card(
       elevation: 0,
       color: isPositive
@@ -674,11 +707,11 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Date range + trend icon
+            // Top Bar: Range Label + Mode Switcher Dots + Trend Icon
             Row(
               children: [
                 Text(
@@ -686,28 +719,136 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                   style: tt.labelMedium?.copyWith(color: onColor),
                 ),
                 const Spacer(),
+                // Interactive Mode indicator dots
+                Row(
+                  children: List.generate(3, (idx) {
+                    final isActive = idx == _heroCardMode;
+                    return GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        _pauseHeroAutoCycle(userAction: true);
+                        _heroPageController.animateToPage(
+                          idx,
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOutCubic,
+                        );
+                        setState(() => _heroCardMode = idx);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
+                          curve: Curves.easeOutCubic,
+                          width: isActive ? 14 : 5,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: isActive ? onColor : onColor.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+                const SizedBox(width: 8),
                 Icon(
-                  isPositive
-                      ? Icons.trending_up_rounded
-                      : Icons.trending_down_rounded,
-                  size: 24,
+                  _heroCardMode == 1
+                      ? Icons.speed_rounded
+                      : _heroCardMode == 2
+                          ? Icons.auto_graph_rounded
+                          : (isPositive
+                              ? Icons.trending_up_rounded
+                              : Icons.trending_down_rounded),
+                  size: 20,
                   color: onColor,
                 ),
               ],
             ),
             const SizedBox(height: 6),
-            // Net balance headline
-            Text(
-              '${isPositive ? '+' : '-'} $currency ${net.abs().toStringAsFixed(0)}',
-              style: tt.headlineMedium?.copyWith(
-                color: onColor,
-                fontWeight: FontWeight.bold,
+
+            // Swipable Carousel for Metrics with Auto-Cycle Touch-Freeze
+            Listener(
+              onPointerDown: (_) => _pauseHeroAutoCycle(userAction: true),
+              child: SizedBox(
+                height: 58,
+                child: PageView(
+                  controller: _heroPageController,
+                  physics: const BouncingScrollPhysics(),
+                  onPageChanged: (idx) {
+                    HapticFeedback.selectionClick();
+                    setState(() => _heroCardMode = idx);
+                  },
+                  children: [
+                  // Slide 0: Net Cash Flow
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '${isPositive ? '+' : '-'} $currency ${net.abs().toStringAsFixed(0)}',
+                        style: tt.headlineMedium?.copyWith(
+                          color: onColor,
+                          fontWeight: FontWeight.bold,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      Text(
+                        isPositive ? 'Net Savings Surplus' : 'Net Cash Flow Deficit',
+                        style: tt.labelSmall?.copyWith(color: onColor.withValues(alpha: 0.8)),
+                      ),
+                    ],
+                  ),
+
+                  // Slide 1: Daily Burn Rate
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '$currency ${dailyAvgExpense.toStringAsFixed(0)} / day',
+                        style: tt.headlineMedium?.copyWith(
+                          color: onColor,
+                          fontWeight: FontWeight.bold,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      Text(
+                        'Daily Burn Rate (over $daysInPeriod day${daysInPeriod == 1 ? '' : 's'})',
+                        style: tt.labelSmall?.copyWith(color: onColor.withValues(alpha: 0.8)),
+                      ),
+                    ],
+                  ),
+
+                  // Slide 2: Ongoing Month-End Projection
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '~$currency ${numberFormat.format(spendingForecast.projectedMonthEndSpend)}',
+                        style: tt.headlineMedium?.copyWith(
+                          color: onColor,
+                          fontWeight: FontWeight.bold,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      Text(
+                        'This Month Projected • Day ${spendingForecast.currentDay}/${spendingForecast.totalDaysInMonth} (${spendingForecast.status == SpendingPaceStatus.overPace ? 'Pacing Fast 🟠' : spendingForecast.status == SpendingPaceStatus.exhausted ? 'Exhausted 🔴' : 'On Track 🟢'})',
+                        style: tt.labelSmall?.copyWith(color: onColor.withValues(alpha: 0.85)),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
+          ),
+
+          const SizedBox(height: 10),
             Divider(color: onColor.withValues(alpha: 0.2), height: 1),
-            const SizedBox(height: 12),
-            // Income / Expense breakdown
+            const SizedBox(height: 8),
+
+            // Income / Expense breakdown Row
             IntrinsicHeight(
               child: Row(
                 children: [
@@ -754,275 +895,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     );
   }
 
-  Widget _legendDot(Color color) {
-    return Container(
-      width: 10,
-      height: 10,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-    );
-  }
 
-  Widget _buildBarChartCard(ColorScheme cs, TextTheme tt, String currency) {
-    if (_isDashboardLoading || _monthlyData.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    final barGroups = _monthlyData.asMap().entries.map((e) {
-      final idx = e.key;
-      final data = e.value;
-      return BarChartGroupData(
-        x: idx,
-        barRods: [
-          BarChartRodData(
-            toY: data['totalIncome'] as double,
-            width: 10,
-            borderRadius: BorderRadius.circular(6),
-            color: cs.tertiary,
-          ),
-          BarChartRodData(
-            toY: data['totalExpense'] as double,
-            width: 10,
-            borderRadius: BorderRadius.circular(6),
-            color: cs.error,
-          ),
-        ],
-        barsSpace: 4,
-      );
-    }).toList();
-
-    final monthLabels = _monthlyData
-        .map((d) => DateFormat.MMM().format(d['month'] as DateTime))
-        .toList();
-
-    return RepaintBoundary(
-      child: Card(
-        elevation: 0,
-      color: cs.surfaceContainerHigh,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      Icon(Icons.bar_chart, color: cs.primary, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Last 6 Months',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: tt.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: cs.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(AppLayout.radiusS),
-                    border: Border.all(
-                      color: cs.outlineVariant.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _legendDot(cs.tertiary),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Income',
-                        style: tt.labelSmall?.copyWith(
-                          color: cs.onSurfaceVariant,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      _legendDot(cs.error),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Expense',
-                        style: tt.labelSmall?.copyWith(
-                          color: cs.onSurfaceVariant,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 160,
-              child: BarChart(
-                BarChartData(
-                  barGroups: barGroups,
-                  titlesData: FlTitlesData(
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        interval: 1,
-                        getTitlesWidget: (value, meta) {
-                          final idx = value.toInt();
-                          if (idx < 0 || idx >= monthLabels.length) {
-                            return const SizedBox.shrink();
-                          }
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(
-                              monthLabels[idx],
-                              style: tt.labelSmall
-                                  ?.copyWith(color: cs.onSurfaceVariant),
-                            ),
-                          );
-                        },
-                        reservedSize: 24,
-                      ),
-                    ),
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 52,
-                        getTitlesWidget: (value, meta) {
-                          if (value == 0 || value == meta.min) {
-                            return const SizedBox.shrink();
-                          }
-                          final formatted = value >= 1000
-                              ? '${(value / 1000).toStringAsFixed(value % 1000 == 0 ? 0 : 1)}K'
-                              : value.toStringAsFixed(0);
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 4),
-                            child: Text(
-                              formatted,
-                              style: tt.labelSmall
-                                  ?.copyWith(color: cs.onSurfaceVariant),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-  Widget _comparisonTile(
-    ColorScheme cs,
-    TextTheme tt,
-    String label,
-    double amount,
-    double pctChange,
-    String currency,
-    bool negativeIsGood,
-  ) {
-    final isIncrease = pctChange >= 0;
-    final Color changeColor;
-    if (negativeIsGood) {
-      changeColor = isIncrease ? cs.error : cs.tertiary;
-    } else {
-      changeColor = isIncrease ? cs.tertiary : cs.error;
-    }
-
-    return Column(
-      children: [
-        Text(label, style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
-        const SizedBox(height: 4),
-        Text(
-          '$currency ${amount.abs().toStringAsFixed(0)}',
-          style: tt.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 2),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              isIncrease ? Icons.arrow_upward : Icons.arrow_downward,
-              size: 12,
-              color: changeColor,
-            ),
-            Text(
-              '${pctChange.abs().toStringAsFixed(1)}%',
-              style: tt.labelSmall?.copyWith(color: changeColor),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMonthComparisonCard(
-      ColorScheme cs, TextTheme tt, String currency) {
-    if (_isDashboardLoading || _monthlyData.length < 2) {
-      return const SizedBox.shrink();
-    }
-
-    final thisMonth = _monthlyData.last;
-    final lastMonth = _monthlyData[_monthlyData.length - 2];
-
-    double pctChange(double current, double previous) {
-      if (previous == 0) return current > 0 ? 100.0 : (current < 0 ? -100.0 : 0.0);
-      return ((current - previous) / previous.abs()) * 100.0;
-    }
-
-    final thisIncome = thisMonth['totalIncome'] as double;
-    final thisExpense = thisMonth['totalExpense'] as double;
-    final lastIncome = lastMonth['totalIncome'] as double;
-    final lastExpense = lastMonth['totalExpense'] as double;
-    final thisNet = thisIncome - thisExpense;
-    final lastNet = lastIncome - lastExpense;
-
-    return Card(
-      elevation: 0,
-      color: cs.surfaceContainerHigh,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'This Month vs Last Month',
-              style: tt.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _comparisonTile(cs, tt, 'Income', thisIncome,
-                      pctChange(thisIncome, lastIncome), currency, false),
-                ),
-                Container(width: 1, height: 48, color: cs.outlineVariant),
-                Expanded(
-                  child: _comparisonTile(cs, tt, 'Expense', thisExpense,
-                      pctChange(thisExpense, lastExpense), currency, true),
-                ),
-                Container(width: 1, height: 48, color: cs.outlineVariant),
-                Expanded(
-                  child: _comparisonTile(cs, tt, 'Net', thisNet,
-                      pctChange(thisNet, lastNet), currency, false),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   // ── Build ────────────────────────────────────────────────────────────────
 
@@ -1142,51 +1015,58 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                         child: Row(
                           children: [
                             const SizedBox(width: 4),
-                            InkWell(
-                              onTap: () {
-                                HapticFeedback.lightImpact();
-                                _selectDateRange(context);
-                              },
-                              borderRadius: BorderRadius.circular(12),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      'Finances',
-                                      style: textTheme.titleLarge?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 18,
+                            Expanded(
+                              child: InkWell(
+                                onTap: () {
+                                  HapticFeedback.lightImpact();
+                                  _selectDateRange(context);
+                                },
+                                borderRadius: BorderRadius.circular(12),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'Finances',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: textTheme.titleLarge?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 18,
+                                        ),
                                       ),
-                                    ),
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          _selectedRange.duration.inDays == 0
-                                              ? DateFormat.MMMd().format(_selectedRange.start)
-                                              : '${DateFormat.MMMd().format(_selectedRange.start)} – ${DateFormat.MMMd().format(_selectedRange.end)}',
-                                          style: textTheme.bodySmall?.copyWith(
-                                            color: colorScheme.primary,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              _selectedRange.duration.inDays == 0
+                                                  ? DateFormat.MMMd().format(_selectedRange.start)
+                                                  : '${DateFormat.MMMd().format(_selectedRange.start)} – ${DateFormat.MMMd().format(_selectedRange.end)}',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: textTheme.bodySmall?.copyWith(
+                                                color: colorScheme.primary,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 2),
-                                        Icon(
-                                          Icons.arrow_drop_down,
-                                          size: 18,
-                                          color: colorScheme.primary,
-                                        ),
-                                      ],
-                                    ),
-                                  ],
+                                          const SizedBox(width: 2),
+                                          Icon(
+                                            Icons.arrow_drop_down,
+                                            size: 18,
+                                            color: colorScheme.primary,
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                            const Spacer(),
                             Tooltip(
                               message: 'Quick Sync (Tap) | Advanced Import (Hold)',
                               child: BouncingWidget(
@@ -1387,19 +1267,64 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
               ),
             ),
 
-      // ── Tab selector ──────────────────────────────────────────────
-      SliverToBoxAdapter(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: _buildTabSelector(colorScheme),
-        ),
-      ),
-      if (_selectedTab == 'Ledger') ...[
+            // ── Tab selector ──────────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: _buildTabSelector(colorScheme),
+              ),
+            ),
+            if (_selectedTab == 'Ledger') ...[
+        // ── Minimalist Visual Chart Deck on Ledger (Tap jumps to Budgets) ──
+        if (_categoryExpenses.isNotEmpty || _monthlyData.isNotEmpty) ...[
+          SliverToBoxAdapter(
+            child: AnimationConfiguration.staggeredList(
+              position: 3,
+              duration: const Duration(milliseconds: 220),
+              child: SlideAnimation(
+                verticalOffset: 24.0,
+                child: FadeInAnimation(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: Consumer<SettingsProvider>(
+                      builder: (context, settings, _) {
+                        final forecast =
+                            SpendingForecastService.calculateMonthlyForecast(
+                          transactions: _transactions,
+                          categoryBudgets: settings.categoryBudgets,
+                        );
+                        return MinimalChartDeck(
+                          monthlyData: _monthlyData,
+                          categoryExpenses: _categoryExpenses,
+                          totalExpense: _totalDateExpense,
+                          currency: currency,
+                          forecast: forecast,
+                          onTapDetailsWithPage: (page) {
+                            setState(() {
+                              _selectedTab = 'Budgets';
+                              _analyticsSubView = (page == 2) ? 1 : 0;
+                            });
+                          },
+                          onTapDetails: () {
+                            setState(() {
+                              _selectedTab = 'Budgets';
+                              _analyticsSubView = 0;
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+
         // ── Search bar ──────────────────────────────────────────────
-            // ── Search bar ────────────────────────────────────────────────
             SliverToBoxAdapter(
               child: AnimationConfiguration.staggeredList(
-                position: 3,
+                position: 4,
                 duration: const Duration(milliseconds: 220),
                 child: SlideAnimation(
                   verticalOffset: 24.0,
@@ -1443,10 +1368,10 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
             ),
 
         // ── Category filter chips ────────────────────────────────────
-        if (_activeCategories.isNotEmpty)
+        if (_activeCategories.isNotEmpty) ...[
           SliverToBoxAdapter(
             child: AnimationConfiguration.staggeredList(
-              position: 4,
+              position: 5,
               duration: const Duration(milliseconds: 220),
               child: SlideAnimation(
                 verticalOffset: 24.0,
@@ -1502,17 +1427,17 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                               ),
                             );
                           }),
-                            ],
-                          ),
-                        ),
+                        ],
                       ),
                     ),
                   ),
                 ),
               ),
+            ),
+          ),
+        ],
 
         // ── Transaction list ──────────────────────────────────────────
-            // ── Transaction list ──────────────────────────────────────────
             if (_isLoading)
               const SliverFillRemaining(
                 child: Center(child: CircularProgressIndicator()),
@@ -1579,176 +1504,39 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                 },
               ),
       ] else ...[
-        // ── Analytics Sub-Views (Trends / Breakdown / Budgets) ───────────────────
-        if (MediaQuery.sizeOf(context).width >= 600)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (_analyticsSegment == 'Breakdown')
-                          FinancialCategoryDonutCard(
-                            categoryExpenses: _categoryExpenses,
-                            totalExpense: _totalDateExpense,
-                            currency: currency,
-                          ),
-                        if (_analyticsSegment == 'Trends') ...[
-                          FinancialTrendRegressionCard(
-                            monthlyData: _monthlyData,
-                            currency: currency,
-                          ),
-                          const SizedBox(height: 16),
-                          _buildBarChartCard(colorScheme, textTheme, currency),
-                        ],
-                        if (_analyticsSegment == 'Budgets')
-                          Consumer<SettingsProvider>(
-                            builder: (context, settings, child) {
-                              return CategoryBudgetsCard(
-                                categoryExpenses: _categoryExpenses,
-                                settings: settings,
-                                currency: currency,
-                                onBudgetChanged: _refreshTransactions,
-                              );
-                            },
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (_analyticsSegment == 'Trends')
-                          _buildMonthComparisonCard(colorScheme, textTheme, currency),
-                        if (_analyticsSegment == 'Budgets' || _analyticsSegment == 'Breakdown')
-                          TopMerchantsCard(
-                            transactions: _transactions,
-                            currency: currency,
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          )
-        else ...[
-          // ── Segment 1: Category Breakdown ────────────────────────────
-          if (_analyticsSegment == 'Breakdown') ...[
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                child: FinancialCategoryDonutCard(
-                  categoryExpenses: _categoryExpenses,
-                  totalExpense: _totalDateExpense,
-                  currency: currency,
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                child: TopMerchantsCard(
-                  transactions: _transactions,
-                  currency: currency,
-                ),
-              ),
-            ),
-          ],
-
-          // ── Segment 2: Spending Trends ────────────────────────────────
-          if (_analyticsSegment == 'Trends') ...[
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: FinancialTrendRegressionCard(
-                  monthlyData: _monthlyData,
-                  currency: currency,
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: _buildBarChartCard(colorScheme, textTheme, currency),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                child: _buildMonthComparisonCard(colorScheme, textTheme, currency),
-              ),
-            ),
-          ],
-
-          // ── Segment 3: Budgets & Merchants ────────────────────────────
-          if (_analyticsSegment == 'Budgets') ...[
-            SliverToBoxAdapter(
-              child: Consumer<SettingsProvider>(
-                builder: (context, settings, child) {
-                  return Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                    child: CategoryBudgetsCard(
-                      categoryExpenses: _categoryExpenses,
-                      settings: settings,
-                      currency: currency,
-                      onBudgetChanged: _refreshTransactions,
-                    ),
-                  );
-                },
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                child: TopMerchantsCard(
-                  transactions: _transactions,
-                  currency: currency,
-                ),
-              ),
-            ),
-          ],
-        ],
+        // ── Tab 2: Budgets & Intelligence Dashboard ────────────────────
+        Consumer<SettingsProvider>(
+          builder: (context, settings, child) {
+            return FinancialAnalyticsTab(
+              transactions: _transactions,
+              monthlyData: _monthlyData,
+              currency: currency,
+              settings: settings,
+              onRefresh: _refreshTransactions,
+              initialDeckIndex: _analyticsSubView,
+            );
+          },
+        ),
       ],
     ];
   }
 
-
-  // Helper tab selector: Responsive single row for Ledger, Trends, Breakdown, and Budgets
+  // Helper tab selector: Clean 2-segment toggle for Ledger vs Budgets
   Widget _buildTabSelector(ColorScheme colorScheme) {
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final isCompact = screenWidth < 480;
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: SegmentedButton<String>(
         showSelectedIcon: false,
-        segments: [
+        segments: const [
           ButtonSegment<String>(
             value: 'Ledger',
-            label: const Text('Ledger', maxLines: 1, softWrap: false),
-            icon: isCompact ? null : const Icon(Icons.list_alt_outlined, size: 16),
-          ),
-          ButtonSegment<String>(
-            value: 'Trends',
-            label: const Text('Trends', maxLines: 1, softWrap: false),
-            icon: isCompact ? null : const Icon(Icons.auto_graph, size: 16),
-          ),
-          ButtonSegment<String>(
-            value: 'Breakdown',
-            label: Text(isCompact ? 'Charts' : 'Breakdown', maxLines: 1, softWrap: false),
-            icon: isCompact ? null : const Icon(Icons.pie_chart_outline, size: 16),
+            label: Text('Ledger', maxLines: 1, softWrap: false),
+            icon: Icon(Icons.receipt_long_outlined, size: 18),
           ),
           ButtonSegment<String>(
             value: 'Budgets',
-            label: const Text('Budgets', maxLines: 1, softWrap: false),
-            icon: isCompact ? null : const Icon(Icons.track_changes, size: 16),
+            label: Text('Budgets', maxLines: 1, softWrap: false),
+            icon: Icon(Icons.track_changes_rounded, size: 18),
           ),
         ],
         selected: {_selectedTab},
@@ -1756,15 +1544,12 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
           HapticFeedback.lightImpact();
           setState(() {
             _selectedTab = newSelection.first;
-            if (_selectedTab != 'Ledger') {
-              _analyticsSegment = _selectedTab;
-            }
           });
         },
         style: SegmentedButton.styleFrom(
           visualDensity: VisualDensity.compact,
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          padding: EdgeInsets.symmetric(horizontal: isCompact ? 6 : 4),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           selectedBackgroundColor: colorScheme.secondaryContainer,
           selectedForegroundColor: colorScheme.onSecondaryContainer,
           backgroundColor: colorScheme.surfaceContainerLow,
@@ -1774,4 +1559,3 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     );
   }
 }
-

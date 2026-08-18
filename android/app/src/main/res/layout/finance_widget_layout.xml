@@ -156,7 +156,7 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Analytics Bottom Highlight Card (Linear Regression & Top Category) -->
+    <!-- Analytics Bottom Highlight Card (Mini Sparkline Plot & Ongoing Month Projection) -->
     <LinearLayout
         android:id="@+id/widget_analytics_card"
         android:layout_width="match_parent"
@@ -174,15 +174,15 @@
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1.2"
+            android:layout_weight="1"
             android:orientation="vertical">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="FORECAST (NEXT MO)"
+                android:text="THIS MONTH EST"
                 android:textColor="@color/widget_text_secondary"
-                android:textSize="11sp"
+                android:textSize="10.5sp"
                 android:letterSpacing="0.04"
                 android:fontFamily="@font/inter"
                 android:textStyle="bold" />
@@ -195,39 +195,29 @@
                 android:fontFamily="@font/google_sans_flex"
                 android:text="$0.00"
                 android:textColor="@color/widget_text_primary"
-                android:textSize="15.5sp"
+                android:textSize="14.5sp"
                 android:textStyle="bold" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="end"
-            android:orientation="vertical">
 
             <TextView
                 android:id="@+id/widget_forecast_trend"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="@font/google_sans_flex"
-                android:text="+$0/mo"
-                android:textColor="@color/widget_expense"
-                android:textSize="11.5sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/widget_top_category"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:ellipsize="end"
-                android:singleLine="true"
+                android:layout_marginTop="1dp"
                 android:fontFamily="@font/inter"
-                android:text="Top: Food (42%)"
-                android:textColor="@color/widget_text_secondary"
-                android:textSize="11.5sp" />
+                android:text="On Track 🟢"
+                android:textColor="@color/widget_income"
+                android:textSize="10.5sp"
+                android:textStyle="bold" />
         </LinearLayout>
+
+        <!-- Dynamic Mini Sparkline Curve Plot -->
+        <ImageView
+            android:id="@+id/widget_sparkline_plot"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1.2"
+            android:layout_marginStart="6dp"
+            android:scaleType="fitCenter" />
     </LinearLayout>
 
 </LinearLayout>

@@ -37,24 +37,19 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.primaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.unfold_more_rounded,
-            title: "Symmetrical Precision Text Toolbar",
-            desc: "Dual-axis text selection with smart character nudges, word-boundary jumping, and line traversal in a frosted floating bar.",
+            icon: Icons.donut_large_rounded,
+            title: "Interactive Expense Donut Chart",
+            desc: "Centered interactive donut chart with live dynamic center-hole total and bi-directional touch linking with ranked categories.",
           ),
           _WhatsNewItem(
-            icon: Icons.calendar_month_rounded,
-            title: "Health Cycle Regularity Insights",
-            desc: "Real-time cycle regularity scoring (0–100%), average flow duration analytics, moon phase guidance, and symptom tracking.",
+            icon: Icons.view_carousel_rounded,
+            title: "3-Slide Visual Intelligence Deck",
+            desc: "Swipe seamlessly between Trajectory Spline with Est predictions, Category Donut Breakdown, and Monthly Budget Pacing.",
           ),
           _WhatsNewItem(
-            icon: Icons.pie_chart_outline_rounded,
-            title: "Category Budgets & CSV Export",
-            desc: "Category spending progress bars with threshold alerts, recurring subscription rules, and RFC-compliant CSV ledger export.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.security_rounded,
-            title: "Tombstone Sync & Backup Protection",
-            desc: "Permanent deletion memory prevents purged transactions from ever resurrecting across backups or P2P sync.",
+            icon: Icons.show_chart_rounded,
+            title: "Dynamic Home Widget Sparkline",
+            desc: "Android home screen widget upgraded with anti-aliased canvas sparkline curves, gradient underfill, and glowing forecast dots.",
           ),
         ],
       ),
@@ -64,14 +59,14 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.tertiaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.animation_rounded,
-            title: "Fluid Animations & Tactile Haptics",
-            desc: "Smooth spring slide transitions and tactile click responses across note editing tools and health insights.",
+            icon: Icons.auto_awesome_rounded,
+            title: "Adaptive Month-End Run-Rate Forecast",
+            desc: "Accurately extrapolates ongoing month spend with days 1–3 early-month smoothing to prevent artificial bill spikes.",
           ),
           _WhatsNewItem(
-            icon: Icons.speed_rounded,
-            title: "Ultra-Modular Architecture",
-            desc: "Cleaner, faster performance with decoupled state providers across Notes, Finances, and Health.",
+            icon: Icons.touch_app_rounded,
+            title: "Context-Aware Deep Linking",
+            desc: "Tapping 'Details >' on any chart deck slide routes straight to the exact corresponding sub-view with zero guesswork.",
           ),
         ],
       ),
@@ -81,9 +76,9 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.secondaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.sync_problem_rounded,
-            title: "SMS Re-import & Duplication Resilience",
-            desc: "Rock-solid P2P two-way merge resolution and deletion tombstone propagation.",
+            icon: Icons.aspect_ratio_rounded,
+            title: "Resolved Title Clipping & Whitespace",
+            desc: "Fixed text truncation on small mobile screens and balanced budget pacing cards with dual-column layout.",
           ),
         ],
       ),

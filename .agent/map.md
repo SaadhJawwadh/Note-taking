@@ -36,17 +36,20 @@ lib/
 │   │   ├── data/
 │   │   │   └── transaction_repository.dart# Transactions, categories, SMS senders CRUD & tombstones
 │   │   ├── services/
-│   │   │   └── financial_export_service.dart# RFC 4180 CSV generation & safe system sharing
+│   │   │   ├── financial_export_service.dart# RFC 4180 CSV generation & safe system sharing
+│   │   │   └── spending_forecast_service.dart# Unified active month run-rate forecasting & smoothing
 │   │   ├── presentation/
 │   │   │   ├── screens/
 │   │   │   │   ├── financial_manager_screen.dart# Ledger, analytics, bulk 48h AI title refine, dual-gesture sync, RepaintBoundary chart isolation
 │   │   │   │   └── transaction_editor_screen.dart# Single transaction editor with inline AI title refine
 │   │   │   └── widgets/              # Feature-specific finance UI widgets
-│   │   │       ├── financial_ledger_tab.dart# Grouped transactions list, swipe duplicate/delete with undo
-│   │   │       ├── financial_analytics_tab.dart# Modular spending charts, donut breakdown & trend forecast
+│   │   │       ├── minimal_chart_deck.dart   # 3-slide visual intelligence deck (Trajectory, Donut, Budget Pace)
+│   │   │       ├── financial_ledger_tab.dart # Grouped transactions list, swipe duplicate/delete with undo
+│   │   │       ├── financial_analytics_tab.dart# Centered interactive donut breakdown & ranked category spend
+│   │   │       ├── burn_rate_forecast_card.dart# Daily Safe-to-Spend burn rate & month-end pacing
 │   │   │       ├── recurring_rules_sheet.dart# Subscriptions & recurring rule manager sheet
 │   │   │       ├── category_budgets_card.dart# Dynamic budget progress card with over-budget alerts
-│   │   │       ├── top_merchants_card.dart# Top spending destinations & merchant breakdown
+│   │   │       ├── top_merchants_card.dart   # Top spending destinations & merchant breakdown
 │   │   │       └── financial_trash_sheet.dart# Trashed transactions manager & bulk purge
 │   │   └── providers/
 │   │       └── financial_manager_provider.dart# Income/expense calculations, filters, state

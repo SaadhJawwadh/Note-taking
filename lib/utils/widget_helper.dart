@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../features/finances/data/transaction_repository.dart';
-import '../services/financial_regression_engine.dart';
+import '../features/finances/services/spending_forecast_service.dart';
 
 /// Workmanager task that recomputes widget data in the background so the
 /// TODAY figure rolls over at midnight without the app being opened.
@@ -96,24 +96,45 @@ class WidgetHelper {
         };
       }).toList();
 
-      // ── Linear Regression Forecast ──
+      // ── Spending Run-Rate & Forecast Sparkline Data ──
       String forecastAmountStr = '';
       String forecastTrendStr = '';
       bool isTrendingUp = false;
+      final sparklinePoints = <double>[];
 
       try {
-        final monthlyData = await repo.getMonthlyTransactionSummary(6);
-        if (monthlyData.length >= 2) {
-          final expenses = monthlyData
-              .map((d) => (d['totalExpense'] as double? ?? 0.0))
-              .toList();
-          final forecast = FinancialRegressionEngine.computeForecast(expenses);
+        final Map<String, double> categoryBudgetsMap = {};
+        if (budgetsStr != null) {
+          try {
+            final Map<String, dynamic> raw = json.decode(budgetsStr);
+            raw.forEach((k, v) => categoryBudgetsMap[k] = (v as num).toDouble());
+          } catch (_) {}
+        }
 
-          isTrendingUp = forecast.isTrendingUp;
-          forecastAmountStr =
-              '~$currency ${numberFormat.format(forecast.projectedExpense)}';
-          forecastTrendStr =
-              '${isTrendingUp ? '+' : '-'}$currency ${numberFormat.format(forecast.monthlySlope.abs())}/mo';
+        final spendingForecast = SpendingForecastService.calculateMonthlyForecast(
+          transactions: allTx,
+          categoryBudgets: categoryBudgetsMap,
+        );
+
+        forecastAmountStr =
+            '~$currency ${numberFormat.format(spendingForecast.projectedMonthEndSpend)}';
+        forecastTrendStr = spendingForecast.status == SpendingPaceStatus.overPace
+            ? 'Pacing Fast 🟠'
+            : spendingForecast.status == SpendingPaceStatus.exhausted
+                ? 'Exhausted 🔴'
+                : 'On Track 🟢';
+        isTrendingUp = spendingForecast.status == SpendingPaceStatus.overPace ||
+            spendingForecast.status == SpendingPaceStatus.exhausted;
+
+        final monthlyData = await repo.getMonthlyTransactionSummary(6);
+        for (final d in monthlyData) {
+          final exp = (d['totalExpense'] as num?)?.toDouble() ??
+              (d['expense'] as num?)?.toDouble() ??
+              0.0;
+          sparklinePoints.add(exp);
+        }
+        if (spendingForecast.projectedMonthEndSpend > 0) {
+          sparklinePoints.add(spendingForecast.projectedMonthEndSpend);
         }
       } catch (_) {}
 
@@ -141,6 +162,7 @@ class WidgetHelper {
       await prefs.setString('widget_forecast_amount', forecastAmountStr);
       await prefs.setString('widget_forecast_trend', forecastTrendStr);
       await prefs.setBool('widget_is_trending_up', isTrendingUp);
+      await prefs.setString('widget_sparkline_data', json.encode(sparklinePoints));
       await prefs.setString('widget_recent_transactions', json.encode(recentList));
 
       // Trigger update on native side

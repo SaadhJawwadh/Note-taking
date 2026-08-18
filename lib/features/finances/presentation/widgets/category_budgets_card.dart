@@ -78,6 +78,10 @@ class CategoryBudgetsCard extends StatelessWidget {
       allDisplayCategories.addAll(TransactionCategory.all.take(5));
     }
 
+    final now = DateTime.now();
+    final totalDays = DateTime(now.year, now.month + 1, 0).day;
+    final elapsedFraction = (now.day / totalDays).clamp(0.01, 1.0);
+
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -112,11 +116,35 @@ class CategoryBudgetsCard extends StatelessWidget {
               final progress = ratio.clamp(0.0, 1.0);
               final isOverBudget = spent > budget && hasBudget;
 
-              final progressColor = isOverBudget
-                  ? colorScheme.error
-                  : ratio >= 0.7
-                      ? Colors.amber.shade700
-                      : colorScheme.primary;
+              final paceRatio = hasBudget ? (spent / (budget * elapsedFraction)) : 0.0;
+
+              final Color progressColor;
+              final String? paceTag;
+              final Color? paceTagColor;
+
+              if (isOverBudget) {
+                progressColor = colorScheme.error;
+                paceTag = 'Exceeded';
+                paceTagColor = colorScheme.error;
+              } else if (hasBudget) {
+                if (paceRatio > 1.15) {
+                  progressColor = Colors.orange;
+                  paceTag = 'Fast Burn';
+                  paceTagColor = Colors.orange;
+                } else if (paceRatio <= 0.85) {
+                  progressColor = Colors.teal;
+                  paceTag = 'Safe';
+                  paceTagColor = Colors.teal;
+                } else {
+                  progressColor = colorScheme.primary;
+                  paceTag = 'On Track';
+                  paceTagColor = Colors.green;
+                }
+              } else {
+                progressColor = colorScheme.primary;
+                paceTag = null;
+                paceTagColor = null;
+              }
 
               return InkWell(
                 onTap: () => _showSetBudgetDialog(context, category, budget),
@@ -135,9 +163,34 @@ class CategoryBudgetsCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 8),
                           Expanded(
-                            child: Text(
-                              category,
-                              style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                            child: Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    category,
+                                    style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (paceTag != null) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: paceTagColor!.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      paceTag,
+                                      style: textTheme.labelSmall?.copyWith(
+                                        color: paceTagColor,
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                           Text(

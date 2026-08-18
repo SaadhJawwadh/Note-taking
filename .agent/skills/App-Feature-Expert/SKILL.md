@@ -56,6 +56,15 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
   - Separate text insertions from newline block insertions when building Deltas for database persistence.
   - Sanitize loaded Deltas before `Document.fromDelta()` by stripping inline attributes from `\n` operations.
 
+### 🖋️ Note Editor & Floating Precision Selection Invariants
+* **Symmetrical Split-Axis Flanks**:
+  - **Left Flank ($64\text{dp}$ Fixed)**: Horizontal stepper `[ ‹ ] [ › ]` (32dp per icon) with single-tap character nudges, double-tap & long-press word-boundary regex jumps, and `HapticFeedback.selectionClick()`.
+  - **Right Flank ($64\text{dp}$ Fixed)**: Vertical stepper `[ ▲ ] [ ▼ ]` (32dp per icon) with line-level vertical navigation.
+  - **Scrollable Center**: Center formatting tools (`Headings`, `B`, `I`, `U`, `S`, `Align`, `Indent`, `Quote`, `Code`) wrapped in `Expanded(child: SingleChildScrollView(scrollDirection: Axis.horizontal, ...))`.
+* **Natural Dismissal & Clean Bottom Toolbar**:
+  - Never render a manual `[ ✕ ]` close button on the floating pill. Tapping in the text collapses selection naturally.
+  - Bottom toolbar stays permanently clean without mode-swapping glitches: `[Formatting] [AI Assist] | [Table] [Checklist] [Image] [Dictate] [Hide Keyboard]`.
+
 ---
 
 ## 3. Financial Manager & SMS Ledger (`lib/features/finances/`)
@@ -72,7 +81,12 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 - **Service Initialization & Permission Grants**: `SmsService.init()` initializes telephony listening on launch if permission is granted and syncs Workmanager schedules. `requestPermissions()` automatically triggers listening and schedule sync upon grant.
 - **Recurring Transactions Materialization**: `RecurringRuleRepository.instance.materializeDueRules()` MUST be invoked at app launch in `main.dart` and inside `FinancialManagerProvider.loadTransactions()`.
 - **Tabular Figures & Typography**: All balance strings and financial figures use `Inter` with tabular figures (`fontFeatures: [FontFeature.tabularFigures()]`).
-- **Trend Forecasting**: Linear regression with Huber-style outlier dampening ($Z > 1.8\sigma$) and exponentially-weighted slopes. Android widgets updated via `WidgetHelper` and WorkManager.
+- **Trend Forecasting & Active Month-End Run-Rate**: `SpendingForecastService.calculateMonthlyForecast()` is the canonical source of truth for ongoing projections. On days 1–3, smoothly blend current daily burn with prior 3-month historical daily average to prevent rent/utility bill spikes.
+- **Dynamic 3-Slide Visual Intelligence Deck (`MinimalChartDeck`)**:
+  - **Dynamic Gating**: Gated on `totalBudget > 0` for 3 slides (Trajectory $\to$ Donut $\to$ Budget Pacing) or 2 slides (Trajectory $\to$ Donut).
+  - **Context-Aware Deep Linking**: Tapping "Details >" inspects active page index and deep-links to sub-tabs (Slide 0/1 $\to$ Breakdown, Slide 2 $\to$ Budgets).
+  - **Compact Badge Invariant**: Keep badges under 15 characters (e.g. `Est ~395.8k 🔮`) so deck titles never truncate into ellipsis on narrow screens.
+- **Android App Widget Dynamic Canvas Sparkline**: Render anti-aliased canvas sparklines in `FinanceWidgetProvider.kt` with gradient underfill and glowing forecast dots, fed by `WidgetHelper.dart` via `widget_sparkline_data`.
 
 ---
 

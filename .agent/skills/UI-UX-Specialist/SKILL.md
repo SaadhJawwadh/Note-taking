@@ -67,4 +67,14 @@ When styling UI screens and custom widgets, strictly enforce the M3 Style system
 5. **Elevation & Depth:** Use tonal surface container elevation instead of static shadows, and glassmorphic backdrop blur (`sigma 16.0–24.0`) for edge-to-edge app headers.
 6. **Material Symbols:** Use official Google Material Symbols (`Icons.<name>_outlined` / `Icons.<name>_rounded`) with minimum $48 \times 48\text{ dp}$ touch target sizes.
 
+## 4. Frozen Flank & Split-Axis Floating Toolbars
+* **Dual-Axis Pinning**: When designing dense floating toolbars with directional steppers, freeze primary navigation axes on the left ($64\text{dp}$) and right ($64\text{dp}$) and place scrollable tools in `Expanded(child: SingleChildScrollView(scrollDirection: Axis.horizontal, ...))`.
+* **Multi-Tier Gestures**:
+  - `onTap`: Single character/item nudge with `HapticFeedback.selectionClick()`.
+  - `onDoubleTap` & `onLongPress`: Smart boundary snap (e.g. word boundary jumping).
+* **Entrance Transitions**: Wrap contextual floating pills in `AnimatedSwitcher` using `SlideTransition(Offset(0, 0.35) -> Offset.zero)` and `FadeTransition` with `Curves.easeOutCubic` over `AppLayout.animShort`.
 
+## 5. Balanced Metric Cards & Bi-Directional Visual Invariants
+* **No-Whitespace Dual-Column Layout**: Never leave wide horizontal empty space on status cards. Split metrics into balanced columns separated by a subtle 1px translucent vertical divider (`colorScheme.outlineVariant.withValues(alpha: 0.35)`).
+* **Bi-Directional Touch Highlighting**: Interactive charts must support dynamic center-hole labels on touch (`_touchedPieIndex`) and bi-directional linking between ranked list items and chart slices with tactile haptics.
+* **Badge Width Guardrail**: Keep floating header badges under 15 characters (e.g. `Est ~395.8k 🔮`) to guarantee that screen titles never get truncated into ellipsis (`TextOverflow.ellipsis`) on narrow mobile screens.

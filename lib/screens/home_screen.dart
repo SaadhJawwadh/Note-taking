@@ -212,7 +212,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               _currentIndex = financesIndex;
             });
             FinancialManagerScreen.tabRedirectNotifier.value =
-                action == 'view_trends' ? 'Trends' : 'Budgets';
+                action == 'view_budgets' ? 'Budgets' : 'Ledger';
           }
         }
       } else if (action == 'new_note' && mounted) {

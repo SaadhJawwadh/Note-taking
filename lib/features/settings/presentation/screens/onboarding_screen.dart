@@ -606,7 +606,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ],
                   ),
                   subtitle: Text(
-                    'Track expense ledgers, budgets, recurring subscriptions, and auto-parse bank SMS alerts.',
+                    'Track expenses, interactive donut charts, 3-slide visual forecast decks, budgets, and bank SMS auto-import.',
                     style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   ),
                   value: settings.showFinancialManager,

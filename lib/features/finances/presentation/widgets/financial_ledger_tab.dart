@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../../data/transaction_model.dart';
 import '../../../../data/transaction_category.dart';
 import '../../../../core/theme/app_layout.dart';
+import '../../../../core/ui/app_card.dart';
 import '../screens/transaction_editor_screen.dart';
 
 /// Modular Ledger Tab widget for FinancialManagerScreen displaying transactions list and date grouping.
@@ -187,23 +188,31 @@ class FinancialLedgerTab extends StatelessWidget {
                             return true;
                           }
                         },
-                        child: Card(
-                          elevation: 0,
-                          margin: const EdgeInsets.only(bottom: 12),
-                          color: colorScheme.surfaceContainer,
+                        child: AppCard(
+                          margin: const EdgeInsets.only(bottom: AppLayout.spaceS),
+                          padding: const EdgeInsets.symmetric(horizontal: AppLayout.spaceM, vertical: AppLayout.spaceXS),
                           child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                            leading: CircleAvatar(
-                              backgroundColor: transaction.isExpense
-                                  ? colorScheme.errorContainer
-                                  : colorScheme.primaryContainer,
-                              child: Icon(
-                                TransactionCategory.iconFor(transaction.category),
-                                color: transaction.isExpense
-                                    ? colorScheme.onErrorContainer
-                                    : colorScheme.onPrimaryContainer,
-                                size: 20,
-                              ),
+                            contentPadding: EdgeInsets.zero,
+                            leading: Builder(
+                              builder: (context) {
+                                final catColor = TransactionCategory.colorFor(transaction.category);
+                                return Container(
+                                  padding: const EdgeInsets.all(AppLayout.spaceS),
+                                  decoration: BoxDecoration(
+                                    color: catColor.withValues(alpha: 0.15),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: catColor.withValues(alpha: 0.3),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    TransactionCategory.iconFor(transaction.category),
+                                    color: catColor,
+                                    size: 20,
+                                  ),
+                                );
+                              },
                             ),
                             title: Text(
                               transaction.description,
