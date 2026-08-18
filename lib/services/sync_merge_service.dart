@@ -31,7 +31,7 @@ class SyncMergeService {
     int categoriesMerged = 0;
 
     await db.transaction((txn) async {
-      // 0. Merge Tombstones (deleted_notes)
+      // 0. Merge Tombstones (deleted_notes & deleted_transaction_sms_ids)
       final Set<String> tombstoneIds = {};
       try {
         final existingTombstones = await txn.query('deleted_notes');
@@ -47,6 +47,27 @@ class SyncMergeService {
               final tid = item['id'].toString();
               tombstoneIds.add(tid);
               batch.insert('deleted_notes', Map<String, Object?>.from(item), conflictAlgorithm: ConflictAlgorithm.ignore);
+            }
+          }
+          await batch.commit(noResult: true);
+        }
+      } catch (_) {}
+
+      final Set<String> tombstoneSmsIds = {};
+      try {
+        final existingTxTombstones = await txn.query('deleted_transaction_sms_ids');
+        for (final row in existingTxTombstones) {
+          final sid = row['smsId'] as String?;
+          if (sid != null) tombstoneSmsIds.add(sid);
+        }
+
+        if (remoteData.containsKey('deletedTransactionSmsIds') && remoteData['deletedTransactionSmsIds'] is List) {
+          final batch = txn.batch();
+          for (final item in remoteData['deletedTransactionSmsIds'] as List) {
+            if (item is Map && item['smsId'] != null) {
+              final sid = item['smsId'].toString();
+              tombstoneSmsIds.add(sid);
+              batch.insert('deleted_transaction_sms_ids', Map<String, Object?>.from(item), conflictAlgorithm: ConflictAlgorithm.ignore);
             }
           }
           await batch.commit(noResult: true);
@@ -212,6 +233,14 @@ class SyncMergeService {
 
           final smsId = remoteMap['smsId'] as String?;
           if (smsId != null && smsId.isNotEmpty) {
+            // Guard: If this transaction was permanently purged, do not resurrect and delete if present locally
+            if (tombstoneSmsIds.contains(smsId)) {
+              if (localSmsMap.containsKey(smsId)) {
+                batch.delete('transactions', where: 'smsId = ?', whereArgs: [smsId]);
+              }
+              continue;
+            }
+
             if (!localSmsMap.containsKey(smsId)) {
               batch.insert('transactions', remoteMap, conflictAlgorithm: ConflictAlgorithm.ignore);
               transactionsMerged++;

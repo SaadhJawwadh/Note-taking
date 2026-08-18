@@ -1,17 +1,46 @@
+import 'dart:math' as math;
+import '../data/period_log_model.dart';
 import '../features/health/data/period_repository.dart';
+
+/// Summary statistical insight for historical menstrual cycles.
+class CycleStats {
+  final int avgCycleLength;
+  final int avgPeriodDuration;
+  final double regularityScore; // 0.0 to 100.0%
+  final String regularityLabel; // 'Very Regular', 'Regular', 'Mildly Irregular', 'Irregular', 'Not Enough Data'
+  final int variationDays;
+  final int cycleCount;
+
+  const CycleStats({
+    required this.avgCycleLength,
+    required this.avgPeriodDuration,
+    required this.regularityScore,
+    required this.regularityLabel,
+    required this.variationDays,
+    required this.cycleCount,
+  });
+
+  factory CycleStats.initial() {
+    return const CycleStats(
+      avgCycleLength: PeriodPredictionService.normalCycleLengthDays,
+      avgPeriodDuration: 5,
+      regularityScore: 100.0,
+      regularityLabel: 'Not Enough Data',
+      variationDays: 0,
+      cycleCount: 0,
+    );
+  }
+}
 
 class PeriodPredictionService {
   static const int normalCycleLengthDays = 28;
-  static const int lutealPhaseLengthDays =
-      14; // Typical days from ovulation to next period
+  static const int lutealPhaseLengthDays = 14; // Typical days from ovulation to next period
 
   /// Calculates the average cycle length based on the last 3-6 logs.
   /// A cycle is the number of days between the start date of one period and the start date of the next.
-  static Future<int> calculateAverageCycleLength() async {
-    final logs = await PeriodRepository.instance.readAllPeriodLogs();
+  static Future<int> calculateAverageCycleLength([List<PeriodLog>? customLogs]) async {
+    final logs = customLogs ?? await PeriodRepository.instance.readAllPeriodLogs();
 
-    // Process only logs that have an earlier log to compare against.
-    // Since readAllPeriodLogs returns sorted by startDate DESC (newest first).
     if (logs.length < 2) {
       return normalCycleLengthDays;
     }
@@ -19,21 +48,16 @@ class PeriodPredictionService {
     int totalDays = 0;
     int cyclesCount = 0;
 
-    // Use up to 6 most recent cycles (which means up to 7 most recent logs)
     final limit = logs.length > 7 ? 7 : logs.length;
 
     for (int i = 0; i < limit - 1; i++) {
       final currentPeriod = logs[i].startDate;
       final previousPeriod = logs[i + 1].startDate;
 
-      // Ensure we compare midnight to midnight in UTC
-      final currentUtc =
-          DateTime.utc(currentPeriod.year, currentPeriod.month, currentPeriod.day);
-      final previousUtc = DateTime.utc(
-          previousPeriod.year, previousPeriod.month, previousPeriod.day);
+      final currentUtc = DateTime.utc(currentPeriod.year, currentPeriod.month, currentPeriod.day);
+      final previousUtc = DateTime.utc(previousPeriod.year, previousPeriod.month, previousPeriod.day);
 
       final diff = currentUtc.difference(previousUtc).inDays;
-      // Filter out unrealistic cycles (e.g. less than 15 days or more than 60 days) to prevent skewed averages
       if (diff >= 15 && diff <= 60) {
         totalDays += diff;
         cyclesCount++;
@@ -47,26 +71,127 @@ class PeriodPredictionService {
     return (totalDays / cyclesCount).round();
   }
 
+  /// Calculates average period duration (days bleeding from start to end date).
+  static Future<int> calculateAveragePeriodDuration([List<PeriodLog>? customLogs]) async {
+    final logs = customLogs ?? await PeriodRepository.instance.readAllPeriodLogs();
+    final finishedLogs = logs.where((l) => l.endDate != null).toList();
+
+    if (finishedLogs.isEmpty) return 5;
+
+    int totalDuration = 0;
+    int count = 0;
+
+    for (final log in finishedLogs.take(6)) {
+      final s = DateTime.utc(log.startDate.year, log.startDate.month, log.startDate.day);
+      final e = DateTime.utc(log.endDate!.year, log.endDate!.month, log.endDate!.day);
+      final days = e.difference(s).inDays + 1;
+      if (days >= 1 && days <= 14) {
+        totalDuration += days;
+        count++;
+      }
+    }
+
+    if (count == 0) return 5;
+    return (totalDuration / count).round();
+  }
+
+  /// Calculates comprehensive cycle statistics including standard deviation regularity scoring.
+  static Future<CycleStats> calculateCycleStats([List<PeriodLog>? customLogs]) async {
+    final logs = customLogs ?? await PeriodRepository.instance.readAllPeriodLogs();
+
+    if (logs.length < 2) {
+      return CycleStats.initial();
+    }
+
+    final cycleLengths = <int>[];
+    final limit = logs.length > 7 ? 7 : logs.length;
+
+    for (int i = 0; i < limit - 1; i++) {
+      final currentPeriod = logs[i].startDate;
+      final previousPeriod = logs[i + 1].startDate;
+
+      final currentUtc = DateTime.utc(currentPeriod.year, currentPeriod.month, currentPeriod.day);
+      final previousUtc = DateTime.utc(previousPeriod.year, previousPeriod.month, previousPeriod.day);
+
+      final diff = currentUtc.difference(previousUtc).inDays;
+      if (diff >= 15 && diff <= 60) {
+        cycleLengths.add(diff);
+      }
+    }
+
+    if (cycleLengths.isEmpty) {
+      return CycleStats.initial();
+    }
+
+    final avgLength = (cycleLengths.reduce((a, b) => a + b) / cycleLengths.length).round();
+    final avgDuration = await calculateAveragePeriodDuration(logs);
+
+    if (cycleLengths.length < 2) {
+      return CycleStats(
+        avgCycleLength: avgLength,
+        avgPeriodDuration: avgDuration,
+        regularityScore: 90.0,
+        regularityLabel: 'Regular',
+        variationDays: 0,
+        cycleCount: 1,
+      );
+    }
+
+    // Standard deviation computation
+    final mean = cycleLengths.reduce((a, b) => a + b) / cycleLengths.length;
+    final variance = cycleLengths.map((x) => math.pow(x - mean, 2)).reduce((a, b) => a + b) / cycleLengths.length;
+    final stdDev = math.sqrt(variance);
+
+    // Max variation from mean
+    int maxDiff = 0;
+    for (final l in cycleLengths) {
+      final d = (l - avgLength).abs();
+      if (d > maxDiff) maxDiff = d;
+    }
+
+    // Score: 100 - (stdDev * 12), clamped between 20 and 100
+    final score = (100.0 - (stdDev * 12.0)).clamp(20.0, 100.0);
+
+    String label;
+    if (stdDev <= 1.5) {
+      label = 'Very Regular';
+    } else if (stdDev <= 3.0) {
+      label = 'Regular';
+    } else if (stdDev <= 5.5) {
+      label = 'Mildly Irregular';
+    } else {
+      label = 'Irregular';
+    }
+
+    return CycleStats(
+      avgCycleLength: avgLength,
+      avgPeriodDuration: avgDuration,
+      regularityScore: score,
+      regularityLabel: label,
+      variationDays: maxDiff,
+      cycleCount: cycleLengths.length,
+    );
+  }
+
   /// Calculates the estimated start date of the next period based on the most recent log
   /// and the average cycle length.
-  static Future<DateTime?> estimateNextPeriod() async {
-    final logs = await PeriodRepository.instance.readAllPeriodLogs();
+  static Future<DateTime?> estimateNextPeriod([List<PeriodLog>? customLogs]) async {
+    final logs = customLogs ?? await PeriodRepository.instance.readAllPeriodLogs();
     if (logs.isEmpty) {
       return null;
     }
 
     final latestLog = logs.first; // newest first
-    final avgCycleLength = await calculateAverageCycleLength();
+    final avgCycleLength = await calculateAverageCycleLength(logs);
 
-    return DateTime.utc(latestLog.startDate.year, latestLog.startDate.month,
-            latestLog.startDate.day)
+    return DateTime.utc(latestLog.startDate.year, latestLog.startDate.month, latestLog.startDate.day)
         .add(Duration(days: avgCycleLength));
   }
 
-  /// Calculates the estimated ovulation date for the *current* cycle
+  /// Calculates the estimated ovulation date for the *current* cycle.
   /// Ovulation typically occurs 14 days before the start of the NEXT period.
-  static Future<DateTime?> estimateOvulationDate() async {
-    final nextPeriod = await estimateNextPeriod();
+  static Future<DateTime?> estimateOvulationDate([List<PeriodLog>? customLogs]) async {
+    final nextPeriod = await estimateNextPeriod(customLogs);
     if (nextPeriod == null) return null;
 
     return nextPeriod.subtract(const Duration(days: lutealPhaseLengthDays));
@@ -74,14 +199,13 @@ class PeriodPredictionService {
 
   /// Returns the number of days until the next predicted period.
   /// Negative means it's overdue.
-  static Future<int?> daysUntilNextPeriod() async {
-    final nextPeriod = await estimateNextPeriod();
+  static Future<int?> daysUntilNextPeriod([List<PeriodLog>? customLogs]) async {
+    final nextPeriod = await estimateNextPeriod(customLogs);
     if (nextPeriod == null) return null;
 
     final now = DateTime.now();
     final today = DateTime.utc(now.year, now.month, now.day);
-    final nextPeriodDay =
-        DateTime.utc(nextPeriod.year, nextPeriod.month, nextPeriod.day);
+    final nextPeriodDay = DateTime.utc(nextPeriod.year, nextPeriod.month, nextPeriod.day);
 
     return nextPeriodDay.difference(today).inDays;
   }

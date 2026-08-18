@@ -35,11 +35,19 @@ lib/
 │   ├── finances/                     # Financial Manager Feature Module
 │   │   ├── data/
 │   │   │   └── transaction_repository.dart# Transactions, categories, SMS senders CRUD & tombstones
+│   │   ├── services/
+│   │   │   └── financial_export_service.dart# RFC 4180 CSV generation & safe system sharing
 │   │   ├── presentation/
 │   │   │   ├── screens/
 │   │   │   │   ├── financial_manager_screen.dart# Ledger, analytics, bulk 48h AI title refine, dual-gesture sync, RepaintBoundary chart isolation
 │   │   │   │   └── transaction_editor_screen.dart# Single transaction editor with inline AI title refine
 │   │   │   └── widgets/              # Feature-specific finance UI widgets
+│   │   │       ├── financial_ledger_tab.dart# Grouped transactions list, swipe duplicate/delete with undo
+│   │   │       ├── financial_analytics_tab.dart# Modular spending charts, donut breakdown & trend forecast
+│   │   │       ├── recurring_rules_sheet.dart# Subscriptions & recurring rule manager sheet
+│   │   │       ├── category_budgets_card.dart# Dynamic budget progress card with over-budget alerts
+│   │   │       ├── top_merchants_card.dart# Top spending destinations & merchant breakdown
+│   │   │       └── financial_trash_sheet.dart# Trashed transactions manager & bulk purge
 │   │   └── providers/
 │   │       └── financial_manager_provider.dart# Income/expense calculations, filters, state
 │   ├── health/                       # Health & Period Tracker Feature Module
@@ -48,9 +56,14 @@ lib/
 │   │   ├── presentation/
 │   │   │   ├── screens/
 │   │   │   │   └── period_tracker_screen.dart# Menstrual calendar & cycle predictions UI
-│   │   │   └── widgets/              # Cycle header and symptom picker widgets
+│   │   │   └── widgets/              # Feature-specific health presentation widgets
+│   │   │       ├── cycle_phase_hero_card.dart# Moon phase visualizer & active cycle guidance
+│   │   │       ├── cycle_insights_card.dart# Cycle regularity score & duration analytics
+│   │   │       ├── period_log_dashboard_card.dart# Active period log manager, flow & symptoms
+│   │   │       ├── period_calendar_card.dart# TableCalendar with semantic phase markers
+│   │   │       └── period_log_editor_sheet.dart# Modal log editor with overlap validation
 │   │   └── providers/
-│   │       └── period_tracker_provider.dart# Cycle predictions, symptom state
+│   │       └── period_tracker_provider.dart# Cycle predictions, stats & symptom state
 │   ├── notes/                        # Notes & WYSIWYG Editor Feature Module
 │   │   ├── data/
 │   │   │   └── note_repository.dart  # Note database CRUD, tagging, trash rotation
@@ -58,7 +71,10 @@ lib/
 │   │   │   ├── screens/
 │   │   │   │   ├── note_editor_screen.dart# WYSIWYG Quill editor, AI actions, toolbar
 │   │   │   │   └── notes_list_screen.dart # Dedicated notes feed viewer
-│   │   │   └── widgets/              # Editor toolbar & header widgets
+│   │   │   └── widgets/              # Editor modular presentation widgets
+│   │   │       ├── note_search_replace_bar.dart# Keyboard-shortcut aware find/replace toolbar
+│   │   │       ├── note_color_picker_sheet.dart# Standardized M3 palette seed picker modal
+│   │   │       └── voice_dictation_pill.dart# Floating live speech-to-text recording status pill
 │   │   └── providers/
 │   │       └── note_editor_provider.dart# Editor state, dirty tracking, auto-save timer
 │   ├── settings/                     # App Settings & Preferences Feature Module

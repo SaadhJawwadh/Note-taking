@@ -1,30 +1,28 @@
 <en-US>
 🌟 What's New
-• Test SMS Parser sandbox with instant feedback.
-• Curated global & custom currency support.
-• 1-tap merchant category learning.
-• Smart hardware-aware AI gating.
+• Symmetrical precision text selection toolbar.
+• Menstrual cycle regularity scoring & insights.
+• Category spending budgets & CSV ledger export.
+• Recurring subscription management rules.
 
 🚀 Improvements
-• Stepper arrows for precision text selection.
-• Silent background auto-backup notifications.
-• Rich-text note editor heading & indent tools.
+• Silky slide animations & tactile haptics.
+• SQLite WAL mode & instant P2P tombstone sync.
 
 🐛 Fixes
-• Expanded merchant name parsing up to 60 characters.
+• Prevented purged transactions from re-importing.
 </en-US>
 <ta-IN>
 🌟 புதிய அம்சங்கள்
-• SMS மாதிரிப் பரிசோதனை வசதி.
-• உலகளாவிய மற்றும் தனிப்பயன் நாணயங்கள்.
-• ஒரே தட்டில் வணிகர் வகை கற்றல்.
-• சாதன வன்பொருளுக்கு ஏற்ற AI மறைப்பு.
+• துல்லியமான உரை தேர்வு மிதக்கும் கருவிப்பட்டி.
+• மாதவிடாய் சுழற்சி ஒழுங்குமுறை கணிப்புகள்.
+• வகை வாரியான வரவு-செலவு வரம்புகள் & CSV ஏற்றுமதி.
+• தொடர்ச்சியான சந்தா மேலாண்மை விதிகள்.
 
 🚀 மேம்பாடுகள்
-• துல்லியமான உரை தேர்வு அம்புக்குறிகள்.
-• அமைதியான பின்னணி தானியங்கி காப்புப்பிரதி.
-• குறிப்பு திருத்தியில் தலைப்பு மற்றும் உள்தள்ளல்.
+• மென்மையான அனிமேஷன்கள் மற்றும் தொடு உணர்வு.
+• வேகமான தரவுத்தளம் மற்றும் P2P ஒத்திசைவு.
 
 🐛 பிழை திருத்தங்கள்
-• நீண்ட வணிகர் பெயர்கள் சரி செய்யப்பட்டது.
+• நீக்கப்பட்ட பரிவர்த்தனைகள் மீண்டும் வருவதை தடுத்தல்.
 </ta-IN>

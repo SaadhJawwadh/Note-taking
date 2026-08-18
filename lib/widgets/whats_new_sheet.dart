@@ -7,7 +7,6 @@ import '../data/settings_provider.dart';
 import '../core/theme/app_layout.dart';
 import '../core/ui/app_card.dart';
 import '../widgets/bouncing_widget.dart';
-import '../features/finances/presentation/screens/sms_rules_screen.dart';
 
 class WhatsNewSheet extends StatelessWidget {
   final String currentVersion;
@@ -38,31 +37,24 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.primaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.science_outlined,
-            title: "Interactive SMS Test Sandbox",
-            desc: "Test bank SMS messages live with instant amount, transaction direction, and category preview.",
-            actionLabel: "Try Sandbox ➔",
-            onAction: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SmsRulesScreen()),
-              );
-            },
+            icon: Icons.unfold_more_rounded,
+            title: "Symmetrical Precision Text Toolbar",
+            desc: "Dual-axis text selection with smart character nudges, word-boundary jumping, and line traversal in a frosted floating bar.",
           ),
           _WhatsNewItem(
-            icon: Icons.paid_outlined,
-            title: "Curated & Custom Currencies",
-            desc: "Choose from world currencies with authentic symbol badges or add your own custom currency code.",
+            icon: Icons.calendar_month_rounded,
+            title: "Health Cycle Regularity Insights",
+            desc: "Real-time cycle regularity scoring (0–100%), average flow duration analytics, moon phase guidance, and symptom tracking.",
           ),
           _WhatsNewItem(
-            icon: Icons.category_outlined,
-            title: "One-Tap Category Learning",
-            desc: "Train recurring merchant rules directly into your category definitions with a single tap.",
+            icon: Icons.pie_chart_outline_rounded,
+            title: "Category Budgets & CSV Export",
+            desc: "Category spending progress bars with threshold alerts, recurring subscription rules, and RFC-compliant CSV ledger export.",
           ),
           _WhatsNewItem(
-            icon: Icons.auto_awesome_rounded,
-            title: "Hardware-Aware AI Smart Gating",
-            desc: "Intelligently hides AI tools on devices without NPU hardware for a clean, distraction-free UI.",
+            icon: Icons.security_rounded,
+            title: "Tombstone Sync & Backup Protection",
+            desc: "Permanent deletion memory prevents purged transactions from ever resurrecting across backups or P2P sync.",
           ),
         ],
       ),
@@ -72,19 +64,14 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.tertiaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.start_rounded,
-            title: "Precision Text Selection Toolbar",
-            desc: "Fine-tune cursor selections with character-by-character and word-by-word directional stepper arrows.",
+            icon: Icons.animation_rounded,
+            title: "Fluid Animations & Tactile Haptics",
+            desc: "Smooth spring slide transitions and tactile click responses across note editing tools and health insights.",
           ),
           _WhatsNewItem(
-            icon: Icons.backup_outlined,
-            title: "Quiet Auto-Backup Channel",
-            desc: "Background backups run silently in a quiet notification channel without interrupting your workflow.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.format_indent_increase_rounded,
-            title: "Note Editor Heading & Indent Tools",
-            desc: "Visual heading level badges and dedicated indentation buttons inside the rich-text note editor.",
+            icon: Icons.speed_rounded,
+            title: "Ultra-Modular Architecture",
+            desc: "Cleaner, faster performance with decoupled state providers across Notes, Finances, and Health.",
           ),
         ],
       ),
@@ -94,9 +81,9 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.secondaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.receipt_long_outlined,
-            title: "Enhanced SMS Merchant Parsing",
-            desc: "Extended store name recognition up to 60 characters with smarter PII reference number sanitization.",
+            icon: Icons.sync_problem_rounded,
+            title: "SMS Re-import & Duplication Resilience",
+            desc: "Rock-solid P2P two-way merge resolution and deletion tombstone propagation.",
           ),
         ],
       ),
@@ -265,32 +252,6 @@ class WhatsNewSheet extends StatelessWidget {
                                                           fontSize: 13,
                                                         ),
                                                       ),
-                                                      if (item.actionLabel != null && item.onAction != null) ...[
-                                                        const SizedBox(height: AppLayout.spaceS),
-                                                        Align(
-                                                          alignment: Alignment.centerLeft,
-                                                          child: TextButton(
-                                                            onPressed: () {
-                                                              _finishWhatsNew(context);
-                                                              item.onAction!();
-                                                            },
-                                                            style: TextButton.styleFrom(
-                                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                                              minimumSize: Size.zero,
-                                                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                                              backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
-                                                              foregroundColor: theme.colorScheme.primary,
-                                                              shape: RoundedRectangleBorder(
-                                                                borderRadius: BorderRadius.circular(AppLayout.radiusS),
-                                                              ),
-                                                            ),
-                                                            child: Text(
-                                                              item.actionLabel!,
-                                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ],
                                                     ],
                                                   ),
                                                 ),
@@ -370,14 +331,10 @@ class _WhatsNewItem {
   final IconData icon;
   final String title;
   final String desc;
-  final String? actionLabel;
-  final VoidCallback? onAction;
 
   _WhatsNewItem({
     required this.icon,
     required this.title,
     required this.desc,
-    this.actionLabel,
-    this.onAction,
   });
 }

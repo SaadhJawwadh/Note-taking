@@ -124,17 +124,29 @@ class SmsService {
   }
 
   static Future<bool> requestPermissions() async {
-    final granted = (await Permission.sms.request()).isGranted;
-    if (granted) {
-      await _startTelephonyListening();
-      await syncDailySyncSchedule();
+    try {
+      final statuses = await [
+        Permission.sms,
+        Permission.phone,
+      ].request();
+      final granted = (statuses[Permission.sms]?.isGranted ?? false) &&
+                      (statuses[Permission.phone]?.isGranted ?? false);
+      if (granted) {
+        await _startTelephonyListening();
+        await syncDailySyncSchedule();
+      }
+      return granted;
+    } catch (e) {
+      debugPrint('SmsService.requestPermissions error: $e');
+      return false;
     }
-    return granted;
   }
 
   static Future<bool> hasPermission() async {
     try {
-      return (await Permission.sms.status).isGranted;
+      final smsStatus = await Permission.sms.status;
+      final phoneStatus = await Permission.phone.status;
+      return smsStatus.isGranted && phoneStatus.isGranted;
     } catch (e) {
       debugPrint('SmsService.hasPermission isolate warning: $e');
       return true; // Fallback in background isolate so getInboxSms can attempt scanning

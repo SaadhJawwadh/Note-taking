@@ -77,6 +77,10 @@ Future<String> generateBackupJson({Map<String, dynamic>? settingsOverride}) asyn
   try {
     deletedNotes = await db.query('deleted_notes');
   } catch (_) {}
+  List<Map<String, dynamic>> deletedTransactionSmsIds = [];
+  try {
+    deletedTransactionSmsIds = await db.query('deleted_transaction_sms_ids');
+  } catch (_) {}
 
   final Map<String, dynamic> settingsMap;
   if (settingsOverride != null) {
@@ -112,6 +116,7 @@ Future<String> generateBackupJson({Map<String, dynamic>? settingsOverride}) asyn
     'periodLogs': periodLogs,
     'recurringRules': recurringRules,
     'deletedNotes': deletedNotes,
+    'deletedTransactionSmsIds': deletedTransactionSmsIds,
     'settings': settingsMap,
     'version': 10,
     'exportedAt': DateTime.now().toIso8601String(),
@@ -334,11 +339,26 @@ class BackupService {
       await txn.delete('transactions');
       await txn.delete('period_logs');
       await txn.delete('recurring_rules');
+      try {
+        await txn.delete('deleted_notes');
+        await txn.delete('deleted_transaction_sms_ids');
+      } catch (_) {}
       // Built-in categories and contacts are kept, but we replace custom ones
       await txn.delete('category_definitions', where: 'isBuiltIn = 0');
       await txn.delete('sms_contacts', where: 'isBuiltIn = 0');
 
       final batch = txn.batch();
+
+      if (data.containsKey('deletedNotes')) {
+        for (final row in data['deletedNotes']) {
+          batch.insert('deleted_notes', Map<String, Object?>.from(row), conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+      }
+      if (data.containsKey('deletedTransactionSmsIds')) {
+        for (final row in data['deletedTransactionSmsIds']) {
+          batch.insert('deleted_transaction_sms_ids', Map<String, Object?>.from(row), conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+      }
 
       if (data.containsKey('notes')) {
         for (final row in data['notes']) {

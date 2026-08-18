@@ -137,4 +137,13 @@ class MainActivity: FlutterFragmentActivity() {
         }
     }
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        try {
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        } catch (e: IllegalStateException) {
+            // Guard against third-party plugins attempting multiple replies on MethodChannel Result
+        } catch (e: Exception) {
+            // Prevent uncaught native exceptions during permission result handling
+        }
+    }
 }

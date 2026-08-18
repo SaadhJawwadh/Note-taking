@@ -124,7 +124,7 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 
 ---
 
-## 7. Changelogs & Release Notes Standards
+## 8. Changelogs & Release Notes Standards
 
 - **General User Target**: Release notes and changelogs MUST target everyday general users with friendly, non-technical language (avoid developer jargon such as "SQLCipher", "WorkManager", "State Provider", "Delta JSON", "BackdropFilter").
 - **3-Category Grouping & Emojis**: Always group entries into 3 explicit categories using expressive emojis:
@@ -135,7 +135,7 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 
 ---
 
-## 8. Widget Testing & Viewport Configurations
+## 9. Widget Testing & Viewport Configurations
 
 - **Full-Screen Widget Test Viewport Configuration**: When writing widget tests for full-screen wizard screens or multi-page `PageView` components, configure mobile view dimensions to prevent offscreen layout clipping and false hit-test warnings:
   ```dart
@@ -147,7 +147,7 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 
 ---
 
-## 9. Global Typography & Dynamic Text Scaling
+## 10. Global Typography & Dynamic Text Scaling
 
 - **Global TextScaler Invariant**: `MaterialApp.builder` in `main.dart` wraps top-level app containers in `MediaQuery` with `textScaler: TextScaler.linear(settings.textSize / 16.0)` to enforce user-configured typography scaling globally across all features.
 - **No Static Height Clippings**: Component layouts MUST honor dynamic text scaling without hardcoding static container heights that cause text clipping or overflow when scaled up to Large (20dp).

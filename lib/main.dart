@@ -16,6 +16,7 @@ import 'package:workmanager/workmanager.dart';
 import 'providers/note_provider.dart';
 import 'features/sync/providers/p2p_sync_provider.dart';
 import 'package:note_taking_app/features/finances/providers/financial_manager_provider.dart';
+import 'package:note_taking_app/features/health/providers/period_tracker_provider.dart';
 import 'l10n/app_localizations.dart';
 
 import 'package:flutter/foundation.dart';
@@ -107,6 +108,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => NoteProvider()),
         ChangeNotifierProvider(create: (_) => P2pSyncProvider()),
         ChangeNotifierProvider(create: (_) => FinancialManagerProvider()),
+        ChangeNotifierProvider(create: (_) => PeriodTrackerProvider()),
       ],
       child: const NoteApp(),
     ),

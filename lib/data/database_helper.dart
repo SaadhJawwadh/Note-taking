@@ -30,7 +30,7 @@ class DatabaseHelper {
 
   @visibleForTesting
   Future<void> createTestDatabase(Database db) async {
-    await _createDB(db, 17);
+    await _createDB(db, 19);
   }
 
   Future<Database> get database {
@@ -116,7 +116,7 @@ class DatabaseHelper {
         return await openDatabase(
           path,
           password: password,
-          version: 18,
+          version: 19,
           onCreate: _createDB,
           onUpgrade: _upgradeDB,
           onOpen: _onOpenDB,

@@ -606,7 +606,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ],
                   ),
                   subtitle: Text(
-                    'Track expense ledgers, income categories, and auto-parse bank SMS alerts.',
+                    'Track expense ledgers, budgets, recurring subscriptions, and auto-parse bank SMS alerts.',
                     style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   ),
                   value: settings.showFinancialManager,
@@ -689,7 +689,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ],
                   ),
                   subtitle: Text(
-                    'Offline cycle logging, predictions, and discreet local notifications.',
+                    'Offline cycle logging, predictions, regularity analytics, and discreet alerts.',
                     style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   ),
                   value: settings.isPeriodTrackerEnabled,
@@ -740,7 +740,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               const SizedBox(height: AppLayout.spaceS),
               Text(
-                'Run Gemini Nano directly on your device NPU for intelligent note summaries and smart SMS tagging.',
+                'Private intelligence powered by Google AICore and on-device NLP.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -748,44 +748,34 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               const SizedBox(height: AppLayout.spaceXL),
 
-              // Hardware Status Badge
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppLayout.spaceM,
-                  vertical: AppLayout.spaceS,
-                ),
-                decoration: BoxDecoration(
-                  color: isSupported
-                      ? theme.colorScheme.primaryContainer.withValues(alpha: 0.5)
-                      : theme.colorScheme.tertiaryContainer.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(AppLayout.radiusM),
-                  border: Border.all(
-                    color: isSupported
-                        ? theme.colorScheme.primary.withValues(alpha: 0.3)
-                        : theme.colorScheme.tertiary.withValues(alpha: 0.3),
-                  ),
-                ),
+              // Hardware Status Badge Card
+              AppCard(
+                padding: AppLayout.paddingAllL,
                 child: Row(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      isSupported ? Icons.check_circle_rounded : Icons.offline_bolt_outlined,
-                      color: isSupported ? theme.colorScheme.primary : theme.colorScheme.tertiary,
-                      size: 20,
+                      isSupported ? Icons.memory_rounded : Icons.info_outline_rounded,
+                      color: isSupported ? theme.colorScheme.primary : theme.colorScheme.outline,
                     ),
-                    const SizedBox(width: AppLayout.spaceS),
-                    Flexible(
-                      child: Text(
-                        isSupported
-                            ? 'Android AI Core & Hardware NPU Ready'
-                            : 'Offline NLP Rule Engines Active (100% Private)',
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: isSupported
-                              ? theme.colorScheme.onPrimaryContainer
-                              : theme.colorScheme.onTertiaryContainer,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                    const SizedBox(width: AppLayout.spaceM),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isSupported ? 'Hardware NPU Detected' : 'Offline Rule-Based AI Engine',
+                            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: AppLayout.spaceXS),
+                          Text(
+                            isSupported
+                                ? 'Your device supports local Gemini Nano hardware acceleration.'
+                                : 'Using high-speed local regular expression engines & heuristics.',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -793,57 +783,33 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               const SizedBox(height: AppLayout.spaceL),
 
-              // AI Toggle Card
-              if (isSupported)
-                AppCard(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppLayout.spaceL,
-                    vertical: AppLayout.spaceS,
-                  ),
-                  child: SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    secondary: Icon(
-                      Icons.psychology_outlined,
-                      color: theme.colorScheme.tertiary,
-                    ),
-                    title: Text(
-                      'Enable Local Gemini Nano AI',
-                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(
-                      'Processes note summaries and SMS categorizations locally. Zero network traffic.',
-                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                    ),
-                    value: settings.useOnDeviceAi,
-                    onChanged: (val) {
-                      HapticFeedback.lightImpact();
-                      settings.setUseOnDeviceAi(val);
-                    },
-                  ),
-                )
-              else
-                AppCard(
-                  padding: AppLayout.paddingAllL,
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.rule_rounded,
-                        color: theme.colorScheme.tertiary,
-                        size: 24,
-                      ),
-                      const SizedBox(width: AppLayout.spaceM),
-                      Expanded(
-                        child: Text(
-                          'Your device will use high-speed offline NLP pattern matchers for formatting, smart tags, and bank SMS categorization.',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                            height: 1.3,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+              // AI Feature Toggle Card
+              AppCard(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppLayout.spaceL,
+                  vertical: AppLayout.spaceS,
                 ),
+                child: SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  secondary: Icon(
+                    Icons.psychology_outlined,
+                    color: theme.colorScheme.tertiary,
+                  ),
+                  title: Text(
+                    'On-Device AI Assistance',
+                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    'Enables note summaries, title suggestions, and smart SMS auto-categorization.',
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                  value: settings.useOnDeviceAi,
+                  onChanged: (val) {
+                    HapticFeedback.lightImpact();
+                    settings.setUseOnDeviceAi(val);
+                  },
+                ),
+              ),
             ],
           ),
         );
@@ -851,7 +817,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  // --- Page 5: Quick Nav & Pro-Tips ---
+  // --- Page 5: Ready to Explore & Pro-Tips ---
   Widget _buildTipsSlide(ThemeData theme) {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: AppLayout.spaceXL),
@@ -900,6 +866,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 MaterialPageRoute(builder: (_) => const P2pSyncScreen()),
               );
             },
+          ),
+          const SizedBox(height: AppLayout.spaceM),
+          _buildFeatureCard(
+            theme,
+            icon: Icons.unfold_more_rounded,
+            title: 'Precision Text Editing & Gestures',
+            desc: 'Floating symmetrical formatting pill with single-tap character nudges, double-tap word jumps, and line-level navigation.',
           ),
           const SizedBox(height: AppLayout.spaceM),
           _buildFeatureCard(
