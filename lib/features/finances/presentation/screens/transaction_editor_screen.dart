@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
@@ -15,6 +16,7 @@ import 'package:note_taking_app/services/sms_service.dart';
 import 'package:note_taking_app/utils/app_route.dart';
 import 'package:uuid/uuid.dart';
 import 'package:note_taking_app/core/theme/app_layout.dart';
+import 'package:note_taking_app/core/ui/app_morphing_fab.dart';
 import 'package:note_taking_app/widgets/frosted_glass_sliver_app_bar.dart';
 
 class TransactionEditorScreen extends StatefulWidget {
@@ -33,9 +35,19 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
   DateTime _selectedDate = DateTime.now();
   bool _isExpense = true;
   bool _isLoading = false;
+  bool _isFabExpanded = true;
   bool _isRefiningAi = false;
   String _category = TransactionCategory.other;
   RecurringFrequency? _repeatFrequency;
+
+  bool _onScrollNotification(UserScrollNotification notification) {
+    if (notification.direction == ScrollDirection.reverse) {
+      if (_isFabExpanded) setState(() => _isFabExpanded = false);
+    } else if (notification.direction == ScrollDirection.forward) {
+      if (!_isFabExpanded) setState(() => _isFabExpanded = true);
+    }
+    return false;
+  }
 
   late String _initialCategory;
 
@@ -93,34 +105,35 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
 
     if (widget.transaction == null) {
       await TransactionRepository.instance.createTransaction(transaction);
-
-      if (_repeatFrequency != null) {
-        // The transaction just saved covers this period; the rule owns the
-        // next one onward.
-        var rule = RecurringRule(
-          id: const Uuid().v4(),
-          description: description,
-          amount: amount,
-          category: _category,
-          isExpense: _isExpense,
-          frequency: _repeatFrequency!,
-          nextDue: _selectedDate,
-        );
-        rule = rule.copyWith(nextDue: rule.advance(_selectedDate));
-        await RecurringRuleRepository.instance.createRule(rule);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                  'Repeats ${_repeatFrequency!.label.toLowerCase()} — manage in Settings → Financial Manager'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
     } else {
       await TransactionRepository.instance.updateTransaction(transaction);
+    }
 
+    if (_repeatFrequency != null) {
+      // The transaction covers this period; the rule owns the next one onward.
+      var rule = RecurringRule(
+        id: const Uuid().v4(),
+        description: description,
+        amount: amount,
+        category: _category,
+        isExpense: _isExpense,
+        frequency: _repeatFrequency!,
+        nextDue: _selectedDate,
+      );
+      rule = rule.copyWith(nextDue: rule.advance(_selectedDate));
+      await RecurringRuleRepository.instance.createRule(rule);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Repeats ${_repeatFrequency!.label.toLowerCase()} — manage in Settings → Financial Manager'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+
+    if (widget.transaction != null) {
       // Training Prompt logic
       if (widget.transaction!.smsId != null &&
           widget.transaction!.isExpense != _isExpense) {
@@ -572,343 +585,304 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
     final currency = settings.currency;
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          FrostedGlassSliverAppBar(
-            titleText: widget.transaction == null
-                ? 'New Transaction'
-                : 'Edit Transaction',
-            showBackButton: true,
-            actions: [
-              if (widget.transaction != null)
-                IconButton(
-                  icon: const Icon(Icons.delete_outline),
-                  color: colorScheme.error,
-                  onPressed: _deleteTransaction,
-                ),
-            ],
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.all(24),
-            sliver: SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-            // Transaction Type Segmented Button
-            SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(
-                  value: true,
-                  label: Text('Expense'),
-                  icon: Icon(Icons.arrow_outward),
-                ),
-                ButtonSegment(
-                  value: false,
-                  label: Text('Income'),
-                  icon: Icon(Icons.south_west),
-                ),
-              ],
-              selected: {_isExpense},
-              onSelectionChanged: (Set<bool> newSelection) {
-                HapticFeedback.selectionClick();
-                setState(() {
-                  _isExpense = newSelection.first;
-                });
-              },
-              style: ButtonStyle(
-                side: WidgetStateProperty.resolveWith<BorderSide>((states) {
-                  return BorderSide(color: colorScheme.outline);
-                }),
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Amount Field with Calculator
-            TextFormField(
-              controller: _amountController,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: _isExpense ? colorScheme.error : colorScheme.tertiary,
-              ),
-              decoration: InputDecoration(
-                prefixText: '$currency ',
-                labelText: 'Amount',
-                hintText: '0.00',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppLayout.radiusL),
-                ),
-                suffixIcon: IconButton(
-                  onPressed: _openCalculator,
-                  icon: const Icon(Icons.calculate_outlined),
-                  tooltip: 'Open Calculator',
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Description Field
-            TextFormField(
-              controller: _descriptionController,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: InputDecoration(
-                labelText: 'Description',
-                hintText: 'e.g., Groceries, Rent',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppLayout.radiusL),
-                ),
-                prefixIcon: const Icon(Icons.description_outlined),
-                suffixIcon: settings.isAiActive
-                    ? IconButton(
-                        onPressed: _isRefiningAi ? null : _refineDescriptionWithAi,
-                        icon: _isRefiningAi
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.auto_awesome_rounded),
-                        tooltip: 'Refine Title with AI',
-                      )
-                    : null,
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Category Picker
-            Row(
-              children: [
-                Text(
-                  'Category',
-                  style: textTheme.labelLarge
-                      ?.copyWith(color: colorScheme.onSurfaceVariant),
-                ),
-                const Spacer(),
-                TextButton.icon(
-                  onPressed: () async {
-                    await AppRoute.push(context, const CategoryManagementScreen());
-                    await TransactionCategory.reload();
-                    if (!TransactionCategory.allNames.contains(_category)) {
-                      _category = TransactionCategory.other;
-                    }
-                    setState(() {});
-                  },
-                  icon: const Icon(Icons.tune, size: 16),
-                  label: const Text('Manage'),
-                  style: TextButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
-                    textStyle: textTheme.labelSmall,
+      body: NotificationListener<UserScrollNotification>(
+        onNotification: _onScrollNotification,
+        child: CustomScrollView(
+          slivers: [
+            FrostedGlassSliverAppBar(
+              titleText: widget.transaction == null
+                  ? 'New Transaction'
+                  : 'Edit Transaction',
+              showBackButton: true,
+              actions: [
+                if (widget.transaction != null)
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline),
+                    color: colorScheme.error,
+                    onPressed: _deleteTransaction,
                   ),
-                ),
               ],
             ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ...TransactionCategory.allNames.map((cat) {
-                  final catColor = TransactionCategory.colorFor(cat);
-                  final selected = _category == cat;
-                  return FilterChip(
-                    label: Text(cat),
-                    selected: selected,
-                    onSelected: (_) {
-                      HapticFeedback.lightImpact();
-                      setState(() => _category = cat);
-                    },
-                    selectedColor: catColor.withValues(alpha: 0.2),
-                    checkmarkColor: catColor,
-                    labelStyle: TextStyle(
-                      color: selected ? catColor : colorScheme.onSurfaceVariant,
-                      fontWeight:
-                          selected ? FontWeight.w600 : FontWeight.normal,
-                    ),
-                    side: BorderSide(
-                      color: selected ? catColor : colorScheme.outline,
-                      width: selected ? 1.5 : 0.5,
-                    ),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppLayout.radiusS)),
-                  );
-                }),
-                ActionChip(
-                  avatar: Icon(Icons.add, size: 18, color: colorScheme.primary),
-                  label:
-                      Text('New', style: TextStyle(color: colorScheme.primary)),
-                  onPressed: _showNewCategoryDialog,
-                  side: BorderSide(color: colorScheme.primary, width: 0.5),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppLayout.radiusS)),
-                ),
-              ],
-            ),
-            ListenableBuilder(
-              listenable: _descriptionController,
-              builder: (context, _) {
-                final candidate = _extractCleanMerchantKeyword(_descriptionController.text);
-                if (candidate == null || candidate.isEmpty) return const SizedBox.shrink();
-                return Padding(
-                  padding: const EdgeInsets.only(top: 10),
-                  child: ActionChip(
-                    avatar: const Icon(Icons.auto_awesome, size: 16, color: Colors.amber),
-                    label: Text(
-                      'Always categorize "$candidate" as $_category',
-                      style: textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
-                    ),
-                    backgroundColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
-                    side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusM)),
-                    onPressed: () async {
-                      final messenger = ScaffoldMessenger.of(context);
-                      await HapticFeedback.selectionClick();
-                      await _trainCategoryKeyword(candidate, _category);
-                      messenger.showSnackBar(
-                        SnackBar(
-                          content: Text('Future SMS matching "$candidate" will be categorized as "$_category"'),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 24),
-
-            // Date Picker
-            InkWell(
-              onTap: _pickDate,
-              borderRadius: BorderRadius.circular(AppLayout.radiusL),
-              child: InputDecorator(
-                decoration: InputDecoration(
-                  labelText: 'Date',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppLayout.radiusL),
-                  ),
-                  prefixIcon: const Icon(Icons.calendar_today_outlined),
-                  enabled: false, // Handle tap via InkWell
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            SliverPadding(
+              padding: const EdgeInsets.all(24),
+              sliver: SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      DateFormat.yMMMd().format(_selectedDate),
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: colorScheme.onSurface,
+                    // Transaction Type Segmented Button
+                    SegmentedButton<bool>(
+                      segments: const [
+                        ButtonSegment(
+                          value: true,
+                          label: Text('Expense'),
+                          icon: Icon(Icons.arrow_outward),
+                        ),
+                        ButtonSegment(
+                          value: false,
+                          label: Text('Income'),
+                          icon: Icon(Icons.south_west),
+                        ),
+                      ],
+                      selected: {_isExpense},
+                      onSelectionChanged: (Set<bool> newSelection) {
+                        HapticFeedback.selectionClick();
+                        setState(() {
+                          _isExpense = newSelection.first;
+                        });
+                      },
+                      style: ButtonStyle(
+                        side: WidgetStateProperty.resolveWith<BorderSide>((states) {
+                          return BorderSide(color: colorScheme.outline);
+                        }),
                       ),
                     ),
-                    Icon(Icons.arrow_drop_down,
-                        color: colorScheme.onSurfaceVariant),
+                    const SizedBox(height: 32),
+
+                    // Amount Field with Calculator
+                    TextFormField(
+                      controller: _amountController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: _isExpense ? colorScheme.error : colorScheme.tertiary,
+                      ),
+                      decoration: InputDecoration(
+                        prefixText: '$currency ',
+                        labelText: 'Amount',
+                        hintText: '0.00',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppLayout.radiusL),
+                        ),
+                        suffixIcon: IconButton(
+                          onPressed: _openCalculator,
+                          icon: const Icon(Icons.calculate_outlined),
+                          tooltip: 'Open Calculator',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Description Field
+                    TextFormField(
+                      controller: _descriptionController,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: InputDecoration(
+                        labelText: 'Description',
+                        hintText: 'e.g., Groceries, Rent',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppLayout.radiusL),
+                        ),
+                        prefixIcon: const Icon(Icons.description_outlined),
+                        suffixIcon: settings.isAiActive
+                            ? IconButton(
+                                onPressed: _isRefiningAi ? null : _refineDescriptionWithAi,
+                                icon: _isRefiningAi
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      )
+                                    : const Icon(Icons.auto_awesome_rounded),
+                                tooltip: 'Refine Title with AI',
+                              )
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Category Picker
+                    Row(
+                      children: [
+                        Text(
+                          'Category',
+                          style: textTheme.labelLarge
+                              ?.copyWith(color: colorScheme.onSurfaceVariant),
+                        ),
+                        const Spacer(),
+                        TextButton.icon(
+                          onPressed: () async {
+                            await AppRoute.push(context, const CategoryManagementScreen());
+                            await TransactionCategory.reload();
+                            if (!TransactionCategory.allNames.contains(_category)) {
+                              _category = TransactionCategory.other;
+                            }
+                            setState(() {});
+                          },
+                          icon: const Icon(Icons.tune, size: 16),
+                          label: const Text('Manage'),
+                          style: TextButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            textStyle: textTheme.labelSmall,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ...TransactionCategory.allNames.map((cat) {
+                          final catColor = TransactionCategory.colorFor(cat);
+                          final selected = _category == cat;
+                          return FilterChip(
+                            label: Text(cat),
+                            selected: selected,
+                            onSelected: (_) {
+                              HapticFeedback.lightImpact();
+                              setState(() => _category = cat);
+                            },
+                            selectedColor: catColor.withValues(alpha: 0.2),
+                            checkmarkColor: catColor,
+                            labelStyle: TextStyle(
+                              color: selected ? catColor : colorScheme.onSurfaceVariant,
+                              fontWeight:
+                                  selected ? FontWeight.w600 : FontWeight.normal,
+                            ),
+                            side: BorderSide(
+                              color: selected ? catColor : colorScheme.outline,
+                              width: selected ? 1.5 : 0.5,
+                            ),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(AppLayout.radiusS)),
+                          );
+                        }),
+                        ActionChip(
+                          avatar: Icon(Icons.add, size: 18, color: colorScheme.primary),
+                          label:
+                              Text('New', style: TextStyle(color: colorScheme.primary)),
+                          onPressed: _showNewCategoryDialog,
+                          side: BorderSide(color: colorScheme.primary, width: 0.5),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppLayout.radiusS)),
+                        ),
+                      ],
+                    ),
+                    ListenableBuilder(
+                      listenable: _descriptionController,
+                      builder: (context, _) {
+                        final candidate = _extractCleanMerchantKeyword(_descriptionController.text);
+                        if (candidate == null || candidate.isEmpty) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: ActionChip(
+                            avatar: const Icon(Icons.auto_awesome, size: 16, color: Colors.amber),
+                            label: Text(
+                              'Always categorize "$candidate" as $_category',
+                              style: textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                            backgroundColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+                            side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusM)),
+                            onPressed: () async {
+                              final messenger = ScaffoldMessenger.of(context);
+                              await HapticFeedback.selectionClick();
+                              await _trainCategoryKeyword(candidate, _category);
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text('Future SMS matching "$candidate" will be categorized as "$_category"'),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Date Picker
+                    InkWell(
+                      onTap: _pickDate,
+                      borderRadius: BorderRadius.circular(AppLayout.radiusL),
+                      child: InputDecorator(
+                        decoration: InputDecoration(
+                          labelText: 'Date',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppLayout.radiusL),
+                          ),
+                          prefixIcon: const Icon(Icons.calendar_today_outlined),
+                          enabled: false,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              DateFormat.yMMMd().format(_selectedDate),
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                            Icon(Icons.arrow_drop_down,
+                                color: colorScheme.onSurfaceVariant),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Repeat picker
+                    const SizedBox(height: 24),
+                    Text(
+                      'Repeat',
+                      style: textTheme.labelLarge
+                          ?.copyWith(color: colorScheme.onSurfaceVariant),
+                    ),
+                    const SizedBox(height: 8),
+                    SegmentedButton<RecurringFrequency?>(
+                      segments: const [
+                        ButtonSegment(value: null, label: Text('Once')),
+                        ButtonSegment(
+                            value: RecurringFrequency.daily, label: Text('Daily')),
+                        ButtonSegment(
+                            value: RecurringFrequency.weekly, label: Text('Weekly')),
+                        ButtonSegment(
+                            value: RecurringFrequency.monthly,
+                            label: Text('Monthly')),
+                      ],
+                      selected: {_repeatFrequency},
+                      onSelectionChanged: (selection) {
+                        HapticFeedback.selectionClick();
+                        setState(() => _repeatFrequency = selection.first);
+                      },
+                    ),
+                    if (_repeatFrequency != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'This will be added automatically every '
+                        '${_repeatFrequency!.label.toLowerCase().replaceFirst('ly', '')} '
+                        'starting from the date above.',
+                        style: textTheme.bodySmall
+                            ?.copyWith(color: colorScheme.onSurfaceVariant),
+                      ),
+                    ],
+
+                    // Guaranteed bottom clearance past floating action button
+                    const SizedBox(height: AppLayout.fabBottomPadding),
                   ],
                 ),
               ),
             ),
-
-            // Repeat picker (creating only — editing a materialized
-            // transaction shouldn't silently spawn a rule)
-            if (widget.transaction == null) ...[
-              const SizedBox(height: 24),
-              Text(
-                'Repeat',
-                style: textTheme.labelLarge
-                    ?.copyWith(color: colorScheme.onSurfaceVariant),
-              ),
-              const SizedBox(height: 8),
-              SegmentedButton<RecurringFrequency?>(
-                segments: const [
-                  ButtonSegment(value: null, label: Text('Once')),
-                  ButtonSegment(
-                      value: RecurringFrequency.daily, label: Text('Daily')),
-                  ButtonSegment(
-                      value: RecurringFrequency.weekly, label: Text('Weekly')),
-                  ButtonSegment(
-                      value: RecurringFrequency.monthly,
-                      label: Text('Monthly')),
-                ],
-                selected: {_repeatFrequency},
-                onSelectionChanged: (selection) {
-                  HapticFeedback.selectionClick();
-                  setState(() => _repeatFrequency = selection.first);
-                },
-              ),
-              if (_repeatFrequency != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'This will be added automatically every '
-                  '${_repeatFrequency!.label.toLowerCase().replaceFirst('ly', '')} '
-                  'starting from the date above.',
-                  style: textTheme.bodySmall
-                      ?.copyWith(color: colorScheme.onSurfaceVariant),
-                ),
-              ],
-            ],
           ],
         ),
       ),
-    ),
-  ],
-),
-  floatingActionButton: Material(
-    elevation: 6.0,
-    borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-    color: colorScheme.primaryContainer,
-    shadowColor: colorScheme.shadow.withValues(alpha: 0.2),
-    child: Container(
-      height: 56,
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-          width: 1,
+      floatingActionButton: AppMorphingFab(
+        isExpanded: _isFabExpanded,
+        icon: _isLoading ? Icons.hourglass_empty_rounded : Icons.save_outlined,
+        collapsedIcon: Icons.save_outlined,
+        label: widget.transaction == null ? 'Save Transaction' : 'Update Transaction',
+        onPressed: _isLoading ? () {} : _saveTransaction,
+        secondaryAction: IconButton(
+          tooltip: 'Categories',
+          icon: Icon(Icons.category_outlined, color: colorScheme.onPrimaryContainer, size: 20),
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            AppRoute.push(context, const CategoryManagementScreen());
+          },
         ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextButton.icon(
-            style: TextButton.styleFrom(
-              foregroundColor: colorScheme.onPrimaryContainer,
-              shape: const StadiumBorder(),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            ),
-            icon: _isLoading
-                ? SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: colorScheme.onPrimaryContainer,
-                    ),
-                  )
-                : const Icon(Icons.save_outlined, size: 22),
-            label: Text(
-              widget.transaction == null ? 'Save Transaction' : 'Update Transaction',
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-            ),
-            onPressed: _isLoading ? null : _saveTransaction,
-          ),
-          Container(
-            height: 24,
-            width: 1,
-            color: colorScheme.onPrimaryContainer.withValues(alpha: 0.2),
-          ),
-          IconButton(
-            tooltip: 'Categories',
-            icon: Icon(Icons.category_outlined, color: colorScheme.onPrimaryContainer, size: 20),
-            onPressed: () {
-              HapticFeedback.lightImpact();
-              AppRoute.push(context, const CategoryManagementScreen());
-            },
-          ),
-        ],
-      ),
-    ),
-  ),
-);
+    );
   }
 }

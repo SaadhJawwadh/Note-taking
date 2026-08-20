@@ -442,6 +442,7 @@ class _MinimalChartDeckState extends State<MinimalChartDeck> {
           lineTouchData: LineTouchData(
             enabled: true,
             touchTooltipData: LineTouchTooltipData(
+              showOnTopOfTheChartBoxArea: true,
               getTooltipColor: (_) => colorScheme.surfaceContainerHighest,
               tooltipRoundedRadius: 10,
               tooltipPadding:
@@ -619,45 +620,60 @@ class _MinimalChartDeckState extends State<MinimalChartDeck> {
         // Donut Chart with Center Total
         Expanded(
           flex: 4,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              PieChart(
-                PieChartData(
-                  sectionsSpace: 2,
-                  centerSpaceRadius: 30,
-                  sections: sorted.map((entry) {
-                    final color = TransactionCategory.colorFor(entry.key);
-                    return PieChartSectionData(
-                      color: color,
-                      value: entry.value,
-                      radius: 14,
-                      showTitle: false,
-                    );
-                  }).toList(),
+          child: Semantics(
+            label: 'Category spending donut chart. Total spent: ${widget.currency} ${NumberFormat('#,##0').format(widget.totalExpense)}. Top category: ${topCategories.isNotEmpty ? topCategories.first.key : 'None'}',
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                PieChart(
+                  PieChartData(
+                    sectionsSpace: 2,
+                    centerSpaceRadius: 30,
+                    sections: sorted.map((entry) {
+                      final color = TransactionCategory.colorFor(entry.key);
+                      final safeVal = widget.totalExpense > 0
+                          ? entry.value.clamp(widget.totalExpense * 0.015, double.infinity)
+                          : entry.value;
+                      return PieChartSectionData(
+                        color: color,
+                        value: safeVal,
+                        radius: 14,
+                        showTitle: false,
+                      );
+                    }).toList(),
+                  ),
                 ),
-              ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Total',
-                    style: textTheme.labelSmall?.copyWith(
-                      fontSize: 9,
-                      color: colorScheme.onSurfaceVariant,
+                SizedBox(
+                  width: 52,
+                  height: 52,
+                  child: Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Total',
+                            style: textTheme.labelSmall?.copyWith(
+                              fontSize: 9,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          Text(
+                            '${widget.currency}${NumberFormat.compact().format(widget.totalExpense)}',
+                            style: textTheme.labelMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                              fontFeatures: const [FontFeature.tabularFigures()],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  Text(
-                    '${widget.currency}${NumberFormat.compact().format(widget.totalExpense)}',
-                    style: textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 11,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
 

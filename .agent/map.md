@@ -30,6 +30,7 @@ lib/
 │       ├── app_card.dart             # Standardized surface card container
 │       ├── app_chip.dart             # Standardized pill/chip widget (tags, categories, phases)
 │       ├── app_dialog.dart           # Standardized M3 confirmation & input dialogs
+│       ├── app_morphing_fab.dart     # Standardized stadium-to-circle morphing action button
 │       └── frosted_sliver_app_bar.dart# Glassmorphic edge-to-edge top app bar
 ├── features/                         # Modular Domain Feature Bundles
 │   ├── finances/                     # Financial Manager Feature Module

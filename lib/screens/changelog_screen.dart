@@ -28,9 +28,40 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
+                  version: 'v2.21.0',
+                  date: 'August 21, 2026',
+                  isLatest: true,
+                  changes: [
+                    _ChangelogGroup(
+                      title: '🌟 What\'s New',
+                      items: [
+                        'Universal Morphing Action Buttons: Standardized fluid floating action buttons that dynamically morph into compact circular buttons while scrolling for distraction-free reading.',
+                        'Recurring Payment Conversion: Seamlessly convert any manual or imported SMS transaction into a recurring schedule directly from the transaction editor.',
+                        'Rotating Pro-Tips System: Helpful dismissible contextual tips on the Home feed and optional 3-day notifications to discover power features.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🚀 Improvements',
+                      items: [
+                        'Real-Time Home Widget Budget Updates: Editing budget limits or adding transactions instantly synchronizes to the Android home screen widget.',
+                        'Donut Chart Precision & Text Scaling: Dynamic downscaling for large currency totals inside donut chart center holes with guaranteed visibility for small slices.',
+                        'Forecast Chart Tooltip Visibility: Tooltips now render above touch targets for crystal-clear finger navigation.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🐛 Fixes',
+                      items: [
+                        'Bottom Content Overlap Safeguards: Standardized bottom clearance padding across all lists, forms, and segmented buttons to eliminate floating button overlap.',
+                        'Smart Recurring Deduplication: Intelligent time and amount tolerance window avoids duplicate transactions when bank clearance schedules shift.',
+                      ],
+                    ),
+                  ],
+                ),
+                _buildVersionSection(
+                  context,
                   version: 'v2.20.0',
                   date: 'August 19, 2026',
-                  isLatest: true,
+                  isLatest: false,
                   changes: [
                     _ChangelogGroup(
                       title: '🌟 What\'s New',

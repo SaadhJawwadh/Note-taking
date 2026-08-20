@@ -50,6 +50,51 @@ class TransactionRepository {
     return result.map((json) => TransactionModel.fromJson(json)).toList();
   }
 
+  /// Reconciles recurring rules against existing manual or SMS transactions within a ±2 day cycle window.
+  Future<TransactionModel?> findMatchingRecurringTransaction({
+    required double amount,
+    required String description,
+    required String category,
+    required DateTime targetDate,
+    required bool isExpense,
+    Duration window = const Duration(days: 2),
+  }) async {
+    final db = await _db;
+    final startDate = targetDate.subtract(window).toIso8601String();
+    final endDate = targetDate.add(window).toIso8601String();
+
+    final result = await db.query(
+      TableNames.transactions,
+      where: '${TransactionFields.deletedAt} IS NULL '
+          'AND ${TransactionFields.isExpense} = ? '
+          'AND ${TransactionFields.date} >= ? '
+          'AND ${TransactionFields.date} <= ?',
+      whereArgs: [isExpense ? 1 : 0, startDate, endDate],
+    );
+
+    final descLower = description.toLowerCase().trim();
+    for (final map in result) {
+      final tx = TransactionModel.fromJson(map);
+      // Check amount within 1% tolerance or less than 1.0 currency unit difference
+      final amountDiff = (tx.amount - amount).abs();
+      final isAmountMatch = amountDiff <= (amount * 0.01) || amountDiff < 1.0;
+      if (!isAmountMatch) continue;
+
+      final txDescLower = tx.description.toLowerCase().trim();
+      final isCategoryMatch = tx.category.toLowerCase() == category.toLowerCase();
+      final isDescMatch = descLower.contains(txDescLower) ||
+          txDescLower.contains(descLower) ||
+          (descLower.isNotEmpty &&
+              txDescLower.isNotEmpty &&
+              descLower.split(' ').any((w) => w.length > 3 && txDescLower.contains(w)));
+
+      if (isCategoryMatch || isDescMatch) {
+        return tx;
+      }
+    }
+    return null;
+  }
+
   Future<List<TransactionModel>> readTrashedTransactions() async {
     final db = await _db;
     final result = await db.query(

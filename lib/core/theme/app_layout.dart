@@ -38,9 +38,10 @@ class AppLayout {
   static const double floatingElevation = 6.0;
 
   // Shared Padding
+  static const double fabBottomPadding = 96.0;
   static const EdgeInsets paddingAllM = EdgeInsets.all(spaceM);
   static const EdgeInsets paddingAllL = EdgeInsets.all(spaceL);
-  static const EdgeInsets paddingHome = EdgeInsets.fromLTRB(spaceL, 0, spaceL, 88);
+  static const EdgeInsets paddingHome = EdgeInsets.fromLTRB(spaceL, 0, spaceL, fabBottomPadding);
 
   /// Theme-driven soft shadow that adapts between light & dark themes.
   static List<BoxShadow> softShadow(BuildContext context, {double blurRadius = 10, Offset offset = const Offset(0, 4)}) {

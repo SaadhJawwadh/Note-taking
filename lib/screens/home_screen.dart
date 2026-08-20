@@ -1,12 +1,12 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:animations/animations.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'dart:async';
 import 'package:flutter/services.dart';
+import 'package:flutter/rendering.dart';
 import 'dart:io';
 
 import '../data/note_model.dart';
@@ -16,10 +16,12 @@ import '../providers/note_provider.dart';
 import '../core/theme/app_theme.dart';
 import '../core/theme/app_layout.dart';
 import '../core/ui/app_chip.dart';
+import '../core/ui/app_morphing_fab.dart';
 import '../widgets/tag_filter_bar.dart';
 import '../widgets/home/home_app_bar.dart';
 import '../widgets/home/note_view_builder.dart';
 import '../widgets/home/universal_search_overlay.dart';
+import '../widgets/home/home_tip_card.dart';
 import 'package:note_taking_app/features/notes/presentation/screens/note_editor_screen.dart';
 import 'package:note_taking_app/features/finances/presentation/screens/financial_manager_screen.dart';
 import 'package:note_taking_app/features/health/presentation/screens/period_tracker_screen.dart';
@@ -47,9 +49,19 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _currentIndex = 0;
   final ScrollController _scrollController = ScrollController();
+  bool _isFabExpanded = true;
   bool _onboardingChecked = false;
   bool _whatsNewChecked = false;
   StreamSubscription? _intentDataStreamSubscription;
+
+  bool _onScrollNotification(UserScrollNotification notification) {
+    if (notification.direction == ScrollDirection.reverse && _isFabExpanded) {
+      setState(() => _isFabExpanded = false);
+    } else if (notification.direction == ScrollDirection.forward && !_isFabExpanded) {
+      setState(() => _isFabExpanded = true);
+    }
+    return false;
+  }
 
   @override
   void initState() {
@@ -665,9 +677,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
               const VerticalDivider(thickness: 1, width: 1),
               Expanded(
-                child: IndexedStack(
-                  index: _currentIndex,
-                  children: _buildFeatureScreens(settings),
+                child: NotificationListener<UserScrollNotification>(
+                  onNotification: _onScrollNotification,
+                  child: IndexedStack(
+                    index: _currentIndex,
+                    children: _buildFeatureScreens(settings),
+                  ),
                 ),
               ),
             ],
@@ -680,9 +695,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
       return Scaffold(
         extendBody: true,
-        body: IndexedStack(
-          index: _currentIndex,
-          children: _buildFeatureScreens(settings),
+        body: NotificationListener<UserScrollNotification>(
+          onNotification: _onScrollNotification,
+          child: IndexedStack(
+            index: _currentIndex,
+            children: _buildFeatureScreens(settings),
+          ),
         ),
         floatingActionButton: _buildCurrentFAB(context, settings),
         bottomNavigationBar: ClipRect(
@@ -769,29 +787,44 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           noteProvider.setSearchQuery('');
         }
       },
-      child: CustomScrollView(
-        controller: _scrollController,
-        slivers: [
-          HomeAppBar(
-            onClearSelection: () => noteProvider.clearSelection(),
-            onBulkArchive: () => noteProvider.bulkArchive(),
-            onBulkDelete: () => _bulkDeleteWithUndo(noteProvider),
-            onBulkTag: bulkTag,
-            onBulkMoveToFolder: bulkMoveToFolder,
-            onCycleViewMode: () => _cycleViewMode(settings),
-            onRefresh: refreshNotes,
-          ),
-          if (noteProvider.searchQuery.isNotEmpty)
-            SliverToBoxAdapter(
-              child: UniversalSearchOverlay(query: noteProvider.searchQuery),
+      child: NotificationListener<UserScrollNotification>(
+        onNotification: _onScrollNotification,
+        child: CustomScrollView(
+          controller: _scrollController,
+          slivers: [
+            HomeAppBar(
+              onClearSelection: () => noteProvider.clearSelection(),
+              onBulkArchive: () => noteProvider.bulkArchive(),
+              onBulkDelete: () => _bulkDeleteWithUndo(noteProvider),
+              onBulkTag: bulkTag,
+              onBulkMoveToFolder: bulkMoveToFolder,
+              onCycleViewMode: () => _cycleViewMode(settings),
+              onRefresh: refreshNotes,
             ),
-          SliverToBoxAdapter(child: TagFilterBar(onTagLongPress: _showTagOptions)),
-          NoteViewBuilder(
-            onRefresh: refreshNotes,
-            onNoteTap: onNoteTap,
-            onNoteLongPress: onNoteLongPress,
-          ),
-        ],
+            if (noteProvider.searchQuery.isNotEmpty)
+              SliverToBoxAdapter(
+                child: UniversalSearchOverlay(query: noteProvider.searchQuery),
+              ),
+            SliverToBoxAdapter(child: TagFilterBar(onTagLongPress: _showTagOptions)),
+            if (settings.showProTips &&
+                settings.isTipDue &&
+                noteProvider.searchQuery.isEmpty &&
+                !noteProvider.isSelectionMode)
+              SliverToBoxAdapter(
+                child: HomeTipCard(
+                  tip: HomeTipCard.getCatalog(context)[settings.currentTipIndex %
+                      HomeTipCard.getCatalog(context).length],
+                  onDismiss: () => settings.dismissCurrentTip(),
+                  onDisable: () => settings.setShowProTips(false),
+                ),
+              ),
+            NoteViewBuilder(
+              onRefresh: refreshNotes,
+              onNoteTap: onNoteTap,
+              onNoteLongPress: onNoteLongPress,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -822,188 +855,69 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildFinancesFAB(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Material(
-      elevation: 6.0,
-      borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-      color: colorScheme.primaryContainer,
-      shadowColor: colorScheme.shadow.withValues(alpha: 0.2),
-      child: Container(
-        height: 56,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-          border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            OpenContainer<bool>(
-              transitionType: ContainerTransitionType.fadeThrough,
-              transitionDuration: AppLayout.animDefault,
-              openBuilder: (context, _) => const TransactionEditorScreen(),
-              closedElevation: 0,
-              openElevation: 0,
-              closedShape: const StadiumBorder(),
-              closedColor: Colors.transparent,
-              openColor: colorScheme.surface,
-              closedBuilder: (context, openContainer) => TextButton.icon(
-                style: TextButton.styleFrom(
-                  foregroundColor: colorScheme.onPrimaryContainer,
-                  shape: const StadiumBorder(),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-                icon: const Icon(Icons.add, size: 22),
-                label: const Text(
-                  'New Transaction',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                ),
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  openContainer();
-                },
-              ),
-            ),
-            Container(
-              height: 24,
-              width: 1,
-              color: colorScheme.onPrimaryContainer.withValues(alpha: 0.2),
-            ),
-            IconButton(
-              tooltip: 'Categories',
-              icon: Icon(Icons.category_outlined, color: colorScheme.onPrimaryContainer, size: 20),
-              onPressed: () {
-                HapticFeedback.lightImpact();
-                AppRoute.push(context, const CategoryManagementScreen());
-              },
-            ),
-          ],
-        ),
+    return AppMorphingFab(
+      isExpanded: _isFabExpanded,
+      icon: Icons.add,
+      label: 'New Transaction',
+      onPressed: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (context) => const TransactionEditorScreen()),
+        );
+      },
+      secondaryAction: IconButton(
+        tooltip: 'Categories',
+        icon: Icon(Icons.category_outlined, color: colorScheme.onPrimaryContainer, size: 20),
+        onPressed: () {
+          HapticFeedback.lightImpact();
+          AppRoute.push(context, const CategoryManagementScreen());
+        },
       ),
     );
   }
 
   Widget _buildTrackerFAB(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Material(
-      elevation: 6.0,
-      borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-      color: colorScheme.tertiaryContainer,
-      shadowColor: colorScheme.shadow.withValues(alpha: 0.2),
-      child: Container(
-        height: 56,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-          border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextButton.icon(
-              style: TextButton.styleFrom(
-                foregroundColor: colorScheme.onTertiaryContainer,
-                shape: const StadiumBorder(),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              ),
-              icon: const Icon(Icons.add, size: 22),
-              label: const Text(
-                'Log Period',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-              ),
-              onPressed: () {
-                HapticFeedback.lightImpact();
-                PeriodTrackerScreen.openLogEditorNotifier.value = DateTime.now();
-              },
-            ),
-            Container(
-              height: 24,
-              width: 1,
-              color: colorScheme.onTertiaryContainer.withValues(alpha: 0.2),
-            ),
-            IconButton(
-              tooltip: 'Jump to Today',
-              icon: Icon(Icons.today, color: colorScheme.onTertiaryContainer, size: 20),
-              onPressed: () async {
-                await HapticFeedback.lightImpact();
-              },
-            ),
-          ],
-        ),
+    return AppMorphingFab(
+      isExpanded: _isFabExpanded,
+      icon: Icons.add,
+      label: 'Log Period',
+      backgroundColor: colorScheme.tertiaryContainer,
+      foregroundColor: colorScheme.onTertiaryContainer,
+      onPressed: () {
+        PeriodTrackerScreen.openLogEditorNotifier.value = DateTime.now();
+      },
+      secondaryAction: IconButton(
+        tooltip: 'Jump to Today',
+        icon: Icon(Icons.today, color: colorScheme.onTertiaryContainer, size: 20),
+        onPressed: () async {
+          await HapticFeedback.lightImpact();
+        },
       ),
     );
   }
 
-
-
   Widget _buildFAB(BuildContext context) {
     final noteProvider = Provider.of<NoteProvider>(context, listen: false);
-    final theme = Theme.of(context);
-    return Material(
-      elevation: 6.0,
-      borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-      color: theme.colorScheme.primaryContainer,
-      shadowColor: theme.colorScheme.shadow.withValues(alpha: 0.2),
-      child: Container(
-        height: 56,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-          border: Border.all(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-            width: 1,
+    final colorScheme = Theme.of(context).colorScheme;
+    return AppMorphingFab(
+      isExpanded: _isFabExpanded,
+      icon: Icons.add,
+      label: 'New Note',
+      onPressed: () async {
+        final returned = await Navigator.of(context).push<bool>(
+          MaterialPageRoute(
+            builder: (context) => NoteEditorScreen(initialFolder: noteProvider.selectedFolder),
           ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            OpenContainer<bool>(
-              transitionType: ContainerTransitionType.fadeThrough,
-              transitionDuration: AppLayout.animDefault,
-              openBuilder: (context, _) => NoteEditorScreen(initialFolder: noteProvider.selectedFolder),
-              closedElevation: 0,
-              openElevation: 0,
-              closedShape: const StadiumBorder(),
-              closedColor: Colors.transparent,
-              openColor: theme.colorScheme.surface,
-              onClosed: (returned) async { if (returned == true) await refreshNotes(); },
-              closedBuilder: (context, openContainer) => TextButton.icon(
-                style: TextButton.styleFrom(
-                  foregroundColor: theme.colorScheme.onPrimaryContainer,
-                  shape: const StadiumBorder(),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-                icon: const Icon(Icons.add, size: 22),
-                label: const Text(
-                  'New Note',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                ),
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  openContainer();
-                },
-              ),
-            ),
-            Container(
-              height: 24,
-              width: 1,
-              color: theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.2),
-            ),
-            IconButton(
-              tooltip: 'Templates',
-              icon: Icon(Icons.style_outlined, color: theme.colorScheme.onPrimaryContainer, size: 20),
-              onPressed: () {
-                HapticFeedback.lightImpact();
-                _showTemplateSheet();
-              },
-            ),
-          ],
-        ),
+        );
+        if (returned == true) await refreshNotes();
+      },
+      secondaryAction: IconButton(
+        tooltip: 'Templates',
+        icon: Icon(Icons.style_outlined, color: colorScheme.onPrimaryContainer, size: 20),
+        onPressed: () {
+          HapticFeedback.lightImpact();
+          _showTemplateSheet();
+        },
       ),
     );
   }

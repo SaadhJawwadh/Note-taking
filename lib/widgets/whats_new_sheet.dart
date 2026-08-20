@@ -37,19 +37,19 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.primaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.donut_large_rounded,
-            title: "Interactive Expense Donut Chart",
-            desc: "Centered interactive donut chart with live dynamic center-hole total and bi-directional touch linking with ranked categories.",
+            icon: Icons.smart_button_rounded,
+            title: "Universal Morphing Action Buttons",
+            desc: "Standardized floating action buttons that collapse into compact circular icons while scrolling for distraction-free reading.",
           ),
           _WhatsNewItem(
-            icon: Icons.view_carousel_rounded,
-            title: "3-Slide Visual Intelligence Deck",
-            desc: "Swipe seamlessly between Trajectory Spline with Est predictions, Category Donut Breakdown, and Monthly Budget Pacing.",
+            icon: Icons.repeat_rounded,
+            title: "Recurring Payment Conversion",
+            desc: "Convert any manual or SMS transaction into a recurring schedule directly from the transaction editor.",
           ),
           _WhatsNewItem(
-            icon: Icons.show_chart_rounded,
-            title: "Dynamic Home Widget Sparkline",
-            desc: "Android home screen widget upgraded with anti-aliased canvas sparkline curves, gradient underfill, and glowing forecast dots.",
+            icon: Icons.tips_and_updates_rounded,
+            title: "Rotating Pro-Tips System",
+            desc: "Helpful contextual tips on the Home feed and optional notifications to help you discover power features.",
           ),
         ],
       ),
@@ -59,14 +59,19 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.tertiaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.auto_awesome_rounded,
-            title: "Adaptive Month-End Run-Rate Forecast",
-            desc: "Accurately extrapolates ongoing month spend with days 1–3 early-month smoothing to prevent artificial bill spikes.",
+            icon: Icons.widgets_rounded,
+            title: "Real-Time Home Widget Updates",
+            desc: "Changes to budget limits or new transactions update the Android home screen widget instantly.",
+          ),
+          _WhatsNewItem(
+            icon: Icons.donut_large_rounded,
+            title: "Donut Chart Precision & Text Fitting",
+            desc: "Center totals dynamically scale down smoothly without touching chart rings, with guaranteed visibility for small slices.",
           ),
           _WhatsNewItem(
             icon: Icons.touch_app_rounded,
-            title: "Context-Aware Deep Linking",
-            desc: "Tapping 'Details >' on any chart deck slide routes straight to the exact corresponding sub-view with zero guesswork.",
+            title: "Forecast Chart Tooltip Visibility",
+            desc: "Tooltips now render above touch targets for clear, finger-friendly chart exploration.",
           ),
         ],
       ),
@@ -76,9 +81,14 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.secondaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.aspect_ratio_rounded,
-            title: "Resolved Title Clipping & Whitespace",
-            desc: "Fixed text truncation on small mobile screens and balanced budget pacing cards with dual-column layout.",
+            icon: Icons.vertical_align_bottom_rounded,
+            title: "Bottom Content Clearance Safeguards",
+            desc: "Standardized 96dp clearance so forms, segmented buttons, and lists are never obscured by floating action buttons.",
+          ),
+          _WhatsNewItem(
+            icon: Icons.rule_folder_rounded,
+            title: "Smart Recurring Deduplication",
+            desc: "Intelligent time and amount tolerance window avoids duplicate transactions when bank clearance dates shift.",
           ),
         ],
       ),

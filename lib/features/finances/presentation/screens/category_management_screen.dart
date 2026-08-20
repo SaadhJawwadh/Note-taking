@@ -1,5 +1,6 @@
 // ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:note_taking_app/data/category_constants.dart';
@@ -7,6 +8,7 @@ import 'package:note_taking_app/data/category_definition.dart';
 import 'package:note_taking_app/features/finances/data/transaction_repository.dart';
 import 'package:note_taking_app/data/transaction_category.dart';
 import 'package:note_taking_app/core/theme/app_layout.dart';
+import 'package:note_taking_app/core/ui/app_morphing_fab.dart';
 import 'package:note_taking_app/utils/app_route.dart';
 import 'package:note_taking_app/widgets/frosted_glass_sliver_app_bar.dart';
 import 'package:note_taking_app/features/finances/presentation/screens/sms_rules_screen.dart';
@@ -22,6 +24,16 @@ class CategoryManagementScreen extends StatefulWidget {
 class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
   List<CategoryDefinition> _categories = [];
   bool _loading = true;
+  bool _isFabExpanded = true;
+
+  bool _onScrollNotification(UserScrollNotification notification) {
+    if (notification.direction == ScrollDirection.reverse) {
+      if (_isFabExpanded) setState(() => _isFabExpanded = false);
+    } else if (notification.direction == ScrollDirection.forward) {
+      if (!_isFabExpanded) setState(() => _isFabExpanded = true);
+    }
+    return false;
+  }
 
   @override
   void initState() {
@@ -144,212 +156,181 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      body: AnimationLimiter(
-        child: CustomScrollView(
-          slivers: [
-            FrostedGlassSliverAppBar(
-              titleText: 'Manage Categories',
-              showBackButton: true,
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.settings_backup_restore),
-                  tooltip: 'Restore defaults',
-                  onPressed: _confirmRestoreDefaults,
-                ),
-              ],
-            ),
-            if (_loading)
-              const SliverFillRemaining(
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else
-              SliverPadding(
-                padding: const EdgeInsets.all(16),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final cat = _categories[index];
-                      final catColor = Color(cat.colorValue);
-                      final isLast = index == _categories.length - 1;
-                      return AnimationConfiguration.staggeredList(
-                        position: index,
-                        duration: const Duration(milliseconds: 375),
-                        child: SlideAnimation(
-                          verticalOffset: 50.0,
-                          child: FadeInAnimation(
-                            child: Card(
-                              elevation: 0,
-                              margin: EdgeInsets.only(bottom: isLast ? 80 : 12),
-                              color: colorScheme.surfaceContainerLow,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(AppLayout.radiusL),
-                                side: BorderSide(
-                                  color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-                                  width: 1.0,
+      body: NotificationListener<UserScrollNotification>(
+        onNotification: _onScrollNotification,
+        child: AnimationLimiter(
+          child: CustomScrollView(
+            slivers: [
+              FrostedGlassSliverAppBar(
+                titleText: 'Manage Categories',
+                showBackButton: true,
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.settings_backup_restore),
+                    tooltip: 'Restore defaults',
+                    onPressed: _confirmRestoreDefaults,
+                  ),
+                ],
+              ),
+              if (_loading)
+                const SliverFillRemaining(
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, AppLayout.fabBottomPadding),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final cat = _categories[index];
+                        final catColor = Color(cat.colorValue);
+                        final isLast = index == _categories.length - 1;
+                        return AnimationConfiguration.staggeredList(
+                          position: index,
+                          duration: const Duration(milliseconds: 375),
+                          child: SlideAnimation(
+                            verticalOffset: 50.0,
+                            child: FadeInAnimation(
+                              child: Card(
+                                margin: EdgeInsets.only(bottom: isLast ? 0 : 12),
+                                elevation: 0,
+                                color: colorScheme.surfaceContainerLow,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(AppLayout.radiusL),
+                                  side: BorderSide(
+                                    color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                                    width: 1.0,
+                                  ),
                                 ),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Container(
-                                          width: 40,
-                                          height: 40,
-                                          decoration: BoxDecoration(
-                                            color: catColor.withValues(alpha: 0.15),
-                                            shape: BoxShape.circle,
-                                            border: Border.all(
-                                              color: catColor.withValues(alpha: 0.3),
-                                              width: 1,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Container(
+                                            width: 40,
+                                            height: 40,
+                                            decoration: BoxDecoration(
+                                              color: catColor.withValues(alpha: 0.15),
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: catColor.withValues(alpha: 0.3),
+                                                width: 1,
+                                              ),
+                                            ),
+                                            child: Icon(
+                                              TransactionCategory.iconFor(cat.name),
+                                              color: catColor,
+                                              size: 20,
                                             ),
                                           ),
-                                          child: Icon(
-                                            TransactionCategory.iconFor(cat.name),
-                                            color: catColor,
-                                            size: 20,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Text(
-                                            cat.name,
-                                            style: textTheme.titleSmall?.copyWith(
-                                              fontWeight: FontWeight.bold,
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Text(
+                                              cat.name,
+                                              style: textTheme.titleSmall?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                        if (cat.name != CategoryConstants.other)
+                                          if (cat.name != CategoryConstants.other)
+                                            IconButton(
+                                              icon: const Icon(Icons.delete_outline),
+                                              iconSize: 20,
+                                              color: colorScheme.error,
+                                              tooltip: 'Delete category',
+                                              onPressed: () async {
+                                                await HapticFeedback.lightImpact();
+                                                await _deleteCategory(cat);
+                                              },
+                                            ),
                                           IconButton(
-                                            icon: const Icon(Icons.delete_outline),
+                                            icon: const Icon(Icons.edit_outlined),
                                             iconSize: 20,
-                                            color: colorScheme.error,
-                                            tooltip: 'Delete category',
+                                            color: colorScheme.onSurfaceVariant,
+                                            tooltip: 'Edit category',
                                             onPressed: () async {
                                               await HapticFeedback.lightImpact();
-                                              await _deleteCategory(cat);
+                                              await _showEditDialog(cat);
                                             },
                                           ),
-                                        IconButton(
-                                          icon: const Icon(Icons.edit_outlined),
-                                          iconSize: 20,
-                                          color: colorScheme.onSurfaceVariant,
-                                          tooltip: 'Edit category',
-                                          onPressed: () async {
-                                            await HapticFeedback.lightImpact();
-                                            await _showEditDialog(cat);
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                    if (cat.keywords.isNotEmpty) ...[
-                                      const SizedBox(height: 8),
-                                      SingleChildScrollView(
-                                        scrollDirection: Axis.horizontal,
-                                        child: Row(
-                                          children: cat.keywords.map((kw) {
-                                            return Padding(
-                                              padding: const EdgeInsets.only(right: 6),
-                                              child: Container(
-                                                padding: const EdgeInsets.symmetric(
-                                                    horizontal: 10, vertical: 4),
-                                                decoration: BoxDecoration(
-                                                  color: catColor.withValues(alpha: 0.1),
-                                                  borderRadius:
-                                                      BorderRadius.circular(AppLayout.radiusXL),
-                                                  border: Border.all(
-                                                    color: catColor.withValues(alpha: 0.3),
-                                                    width: 0.5,
+                                        ],
+                                      ),
+                                      if (cat.keywords.isNotEmpty) ...[
+                                        const SizedBox(height: 8),
+                                        SingleChildScrollView(
+                                          scrollDirection: Axis.horizontal,
+                                          child: Row(
+                                            children: cat.keywords.map((kw) {
+                                              return Padding(
+                                                padding: const EdgeInsets.only(right: 6),
+                                                child: Container(
+                                                  padding: const EdgeInsets.symmetric(
+                                                      horizontal: 10, vertical: 4),
+                                                  decoration: BoxDecoration(
+                                                    color: catColor.withValues(alpha: 0.1),
+                                                    borderRadius:
+                                                        BorderRadius.circular(AppLayout.radiusXL),
+                                                    border: Border.all(
+                                                      color: catColor.withValues(alpha: 0.3),
+                                                      width: 0.5,
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    kw,
+                                                    style: textTheme.labelSmall
+                                                        ?.copyWith(color: catColor),
                                                   ),
                                                 ),
-                                                child: Text(
-                                                  kw,
-                                                  style: textTheme.labelSmall
-                                                      ?.copyWith(color: catColor),
-                                                ),
-                                              ),
-                                            );
-                                          }).toList(),
-                                        ),
-                                      ),
-                                    ] else
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 6),
-                                        child: Text(
-                                          'No keywords',
-                                          style: textTheme.labelSmall?.copyWith(
-                                            color: colorScheme.onSurfaceVariant,
-                                            fontStyle: FontStyle.italic,
+                                              );
+                                            }).toList(),
                                           ),
                                         ),
-                                      ),
-                                  ],
+                                      ] else
+                                        Padding(
+                                          padding: const EdgeInsets.only(top: 6),
+                                          child: Text(
+                                            'No keywords',
+                                            style: textTheme.labelSmall?.copyWith(
+                                              color: colorScheme.onSurfaceVariant,
+                                              fontStyle: FontStyle.italic,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      );
-                    },
-                    childCount: _categories.length,
+                        );
+                      },
+                      childCount: _categories.length,
+                    ),
                   ),
                 ),
-              ),
-          ],
-        ),
-      ),
-      floatingActionButton: Material(
-        elevation: 6.0,
-        borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-        color: colorScheme.primaryContainer,
-        shadowColor: colorScheme.shadow.withValues(alpha: 0.2),
-        child: Container(
-          height: 56,
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-            border: Border.all(
-              color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-              width: 1,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextButton.icon(
-                style: TextButton.styleFrom(
-                  foregroundColor: colorScheme.onPrimaryContainer,
-                  shape: const StadiumBorder(),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-                icon: const Icon(Icons.add, size: 22),
-                label: const Text(
-                  'New Category',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                ),
-                onPressed: () async {
-                  await HapticFeedback.lightImpact();
-                  await _showAddDialog();
-                },
-              ),
-              Container(
-                height: 24,
-                width: 1,
-                color: colorScheme.onPrimaryContainer.withValues(alpha: 0.2),
-              ),
-              IconButton(
-                tooltip: 'SMS Rules',
-                icon: Icon(Icons.rule_outlined, color: colorScheme.onPrimaryContainer, size: 20),
-                onPressed: () async {
-                  await HapticFeedback.lightImpact();
-                  if (!context.mounted) return;
-                  await AppRoute.push(context, const SmsRulesScreen());
-                },
-              ),
             ],
           ),
+        ),
+      ),
+      floatingActionButton: AppMorphingFab(
+        isExpanded: _isFabExpanded,
+        icon: Icons.add,
+        label: 'New Category',
+        onPressed: () async {
+          await HapticFeedback.lightImpact();
+          await _showAddDialog();
+        },
+        secondaryAction: IconButton(
+          tooltip: 'SMS Rules',
+          icon: Icon(Icons.rule_outlined, color: colorScheme.onPrimaryContainer, size: 20),
+          onPressed: () async {
+            await HapticFeedback.lightImpact();
+            if (!context.mounted) return;
+            await AppRoute.push(context, const SmsRulesScreen());
+          },
         ),
       ),
     );

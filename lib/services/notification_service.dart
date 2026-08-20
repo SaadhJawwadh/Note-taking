@@ -277,4 +277,61 @@ class NotificationService {
       debugPrint('Error showing auto-backup notification: $e');
     }
   }
+
+  static const int kProTipNotificationId = 0x544950; // 'TIP'
+
+  static Future<void> schedulePeriodicTips() async {
+    if (!kIsWeb && Platform.environment.containsKey('FLUTTER_TEST')) {
+      return;
+    }
+    try {
+      await _notificationsPlugin.cancel(kProTipNotificationId);
+
+      final prefs = await SharedPreferences.getInstance();
+      final isEnabled = prefs.getBool('showProTips') ?? true;
+      if (!isEnabled) return;
+
+      final tipCatalog = [
+        'Zero-Cloud Sync: Pair phones & tablets over local Wi-Fi to sync your notes and finances.',
+        'SMS Bank Ledger: Enable auto-sync to turn incoming bank SMS alerts into financial transactions.',
+        'Split-Axis Steppers: Use directional toolbars in the note editor for rapid cursor navigation.',
+        'Recurring Payments: Turn any transaction into a recurring rule to automate bills.',
+        'Daily Safe-to-Spend: Assign category limits to unlock real-time monthly spending forecasts.',
+        'Biometric Privacy: Protect notes and financial records behind PIN and biometric App Lock.',
+        'Discreet Health Alerts: Offline period predictions with customizable discreet notifications.',
+      ];
+
+      final tipIndex = (prefs.getInt('currentTipIndex') ?? 0) % tipCatalog.length;
+      final tipBody = tipCatalog[tipIndex];
+
+      final targetDate = DateTime.now().add(const Duration(days: 3));
+      final scheduledTime = DateTime(targetDate.year, targetDate.month, targetDate.day, 10, 30);
+
+      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+        'pro_tips_channel',
+        'Notebook Pro-Tips',
+        channelDescription: 'Actionable tips and powerup suggestions',
+        importance: Importance.defaultImportance,
+        priority: Priority.defaultPriority,
+      );
+      const NotificationDetails platformDetails = NotificationDetails(android: androidDetails);
+
+      await _notificationsPlugin.zonedSchedule(
+        kProTipNotificationId,
+        '💡 Everything App Pro-Tip',
+        tipBody,
+        tz.TZDateTime.from(scheduledTime, tz.local),
+        platformDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
+    } catch (e) {
+      debugPrint('Error scheduling periodic tip notification: $e');
+    }
+  }
+
+  static Future<void> cancelPeriodicTips() async {
+    try {
+      await _notificationsPlugin.cancel(kProTipNotificationId);
+    } catch (_) {}
+  }
 }

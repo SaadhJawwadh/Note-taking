@@ -92,4 +92,12 @@ Never gate AI UI controls (refine buttons, sparkle icons, toolbar assist pills) 
 * **PII Number Sanitization**: Reference number stripping regexes MUST require digit lookahead assertions (`\b(?=[A-Za-z0-9]*\d)[A-Za-z0-9]{10,}\b`) to avoid truncating legitimate 10+ character English words.
 * **SMS Sandbox Whitelisting**: SMS parsing engines must recognize simulated test senders (`'BANK_SMS'`, `'CARD'`, `'ALERTS'`, `'BANK'`) as verified financial senders to support sandbox test execution.
 
+---
+
+## 🔘 Rule 11: Standard FAB Clearance & Universal Morphing Protocol
+* **No Obscured Content**: Bottom scrollable content must never be clipped or obscured by floating buttons or bottom navigation chrome. Always apply `AppLayout.fabBottomPadding = 96.0` to sliver lists or bottom padding containers.
+* **Universal Morphing FAB**: All floating action buttons must use `AppMorphingFab` (`lib/core/ui/app_morphing_fab.dart`), reacting to `UserScrollNotification` to dynamically collapse into a $56 \times 56\text{dp}$ circular button on downward scroll and expand back to the stadium button on upward scroll.
+* **Donut Chart Precision**: Donut chart center hole labels must be explicitly bounded inside a `SizedBox` with `FittedBox(fit: BoxFit.scaleDown)` to prevent text from touching chart rings, and slices must enforce a minimum 1.5% angle floor so micro-slivers remain visible.
+
+
 

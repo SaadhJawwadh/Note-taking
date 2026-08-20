@@ -1,26 +1,28 @@
 <en-US>
 🌟 What's New
-• Interactive Expense Breakdown donut with dynamic totals.
-• 3-slide visual intelligence deck for trends & budgets.
-• Home screen widget with dynamic sparkline curve plot.
+• Universal morphing action buttons for smooth reading.
+• Turn any transaction into a recurring schedule.
+• Helpful rotating pro-tips for power features.
 
 🚀 Improvements
-• Smart adaptive month-end run-rate forecast.
-• Context-aware deep linking to budget sub-views.
+• Real-time home widget sync for budget limits.
+• Clearer chart tooltips & scaled donut totals.
 
 🐛 Fixes
-• Balanced budget pacing cards & resolved text clipping.
+• Protected bottom content from button overlap.
+• Smart deduplication for recurring bills.
 </en-US>
 <ta-IN>
 🌟 புதிய அம்சங்கள்
-• ஊடாடும் செலவு டோனட் விளக்கப்படம்.
-• 3-பக்க நிதி போக்கு & வரவு-செலவு பார்வை.
-• முகப்புத்திரை விட்ஜெட்டில் வரைகலை வரைபடம்.
+• வாசிப்பை எளிதாக்கும் புதிய மிதக்கும் பொத்தான்கள்.
+• பரிவர்த்தனைகளை தொடர் கட்டணங்களாக மாற்றும் வசதி.
+• பயன்பாட்டு உதவிக்குறிப்புகள்.
 
 🚀 மேம்பாடுகள்
-• தகவமைப்பு நடப்பு மாத இறுதி கணிப்பு.
-• நேரடி விரிவான வழிசெலுத்தல்.
+• முகப்பு விட்ஜெட்டில் உடனடி பட்ஜெட் புதுப்பிப்பு.
+• தெளிவான விளக்கப்பட உரை மற்றும் கணிப்புகள்.
 
 🐛 பிழை திருத்தங்கள்
-• உரை கிளிப்பிங் சரி செய்யப்பட்டு மேம்படுத்தப்பட்டது.
+• பொத்தான் உரை மறைப்பு பிழை சரி செய்யப்பட்டது.
+• தொடர் கட்டண நகல் தவிர்ப்பு மேம்பாடு.
 </ta-IN>

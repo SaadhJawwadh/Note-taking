@@ -6,6 +6,7 @@ import '../../../services/local_ai_service.dart';
 import '../../../services/sms_service.dart';
 import '../../../services/backup_service.dart';
 import '../../../screens/app_lock_screen.dart';
+import '../../../utils/widget_helper.dart';
 import 'dart:convert';
 
 enum NoteViewMode { list, grid }
@@ -104,6 +105,24 @@ class SettingsProvider extends ChangeNotifier {
   int _trashAutoPurgeDays = 30;
   int get trashAutoPurgeDays => _trashAutoPurgeDays;
 
+  bool _showProTips = true;
+  bool get showProTips => _showProTips;
+
+  int _lastTipDismissedTimestamp = 0;
+  int get lastTipDismissedTimestamp => _lastTipDismissedTimestamp;
+
+  int _currentTipIndex = 0;
+  int get currentTipIndex => _currentTipIndex;
+
+  bool get isTipDue {
+    if (!_showProTips) return false;
+    if (_lastTipDismissedTimestamp == 0) return true;
+    final lastDate =
+        DateTime.fromMillisecondsSinceEpoch(_lastTipDismissedTimestamp);
+    final diff = DateTime.now().difference(lastDate);
+    return diff.inHours >= 72; // 3 days
+  }
+
   SettingsProvider() {
     loadSettings();
   }
@@ -150,6 +169,10 @@ class SettingsProvider extends ChangeNotifier {
     _lastSeenVersion = prefs.getString('lastSeenVersion') ?? '';
     _trashAutoPurgeDays = prefs.getInt('trashAutoPurgeDays') ?? 30;
 
+    _showProTips = prefs.getBool('showProTips') ?? true;
+    _lastTipDismissedTimestamp = prefs.getInt('lastTipDismissedTimestamp') ?? 0;
+    _currentTipIndex = prefs.getInt('currentTipIndex') ?? 0;
+
     final budgetsStr = prefs.getString('categoryBudgets');
     if (budgetsStr != null) {
       try {
@@ -174,6 +197,9 @@ class SettingsProvider extends ChangeNotifier {
     }
     if (_isPeriodTrackerEnabled && !kIsWeb) {
       await NotificationService.schedulePeriodNotifications();
+    }
+    if (_showProTips && !kIsWeb) {
+      await NotificationService.schedulePeriodicTips();
     }
   }
 
@@ -430,6 +456,7 @@ class SettingsProvider extends ChangeNotifier {
         'dailySyncEnabled': _dailySyncEnabled,
         'dailySyncTime': _dailySyncTime,
         'smsSyncFrequency': _smsSyncFrequency,
+        'showProTips': _showProTips,
       };
 
   Future<void> restoreFromBackupMap(Map<String, dynamic> map) async {
@@ -515,6 +542,10 @@ class SettingsProvider extends ChangeNotifier {
         final val = map['smsSyncFrequency'];
         if (val is String) await setSmsSyncFrequency(val);
       }
+      if (map.containsKey('showProTips')) {
+        final val = map['showProTips'];
+        if (val is bool) await setShowProTips(val);
+      }
       notifyListeners();
     } catch (_) {}
   }
@@ -540,6 +571,9 @@ class SettingsProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('categoryBudgets', jsonEncode(_categoryBudgets));
     notifyListeners();
+    if (!kIsWeb) {
+      await WidgetHelper.updateWidgetData();
+    }
   }
 
   Future<void> removeCategoryBudget(String category) async {
@@ -547,5 +581,34 @@ class SettingsProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('categoryBudgets', jsonEncode(_categoryBudgets));
     notifyListeners();
+    if (!kIsWeb) {
+      await WidgetHelper.updateWidgetData();
+    }
+  }
+
+  Future<void> setShowProTips(bool enabled) async {
+    _showProTips = enabled;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('showProTips', enabled);
+    notifyListeners();
+    if (!kIsWeb) {
+      if (enabled) {
+        await NotificationService.schedulePeriodicTips();
+      } else {
+        await NotificationService.cancelPeriodicTips();
+      }
+    }
+  }
+
+  Future<void> dismissCurrentTip() async {
+    _lastTipDismissedTimestamp = DateTime.now().millisecondsSinceEpoch;
+    _currentTipIndex = (_currentTipIndex + 1) % 7;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('lastTipDismissedTimestamp', _lastTipDismissedTimestamp);
+    await prefs.setInt('currentTipIndex', _currentTipIndex);
+    notifyListeners();
+    if (!kIsWeb && _showProTips) {
+      await NotificationService.schedulePeriodicTips();
+    }
   }
 }

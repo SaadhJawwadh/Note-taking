@@ -121,7 +121,7 @@ class _FinancialAnalyticsTabState extends State<FinancialAnalyticsTab> {
     final totalExpense = _calculateTotalExpense();
 
     return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, AppLayout.fabBottomPadding),
       sliver: SliverList(
         delegate: SliverChildListDelegate([
           // ── 1. Sub-Segmented Deep-Dive Toggle & Main Card ───────────
@@ -384,99 +384,116 @@ class _FinancialAnalyticsTabState extends State<FinancialAnalyticsTab> {
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: SizedBox(
             height: 145,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                PieChart(
-                  PieChartData(
-                    pieTouchData: PieTouchData(
-                      touchCallback: (FlTouchEvent event, pieTouchResponse) {
-                        setState(() {
-                          if (!event.isInterestedForInteractions ||
-                              pieTouchResponse == null ||
-                              pieTouchResponse.touchedSection == null) {
-                            _touchedPieIndex = null;
-                            return;
-                          }
-                          final idx = pieTouchResponse
-                              .touchedSection!.touchedSectionIndex;
-                          if (idx >= 0 && idx < sortedEntries.length) {
-                            if (_touchedPieIndex != idx) {
-                              HapticFeedback.selectionClick();
-                              _touchedPieIndex = idx;
+            child: Semantics(
+              label: 'Category spending breakdown donut chart. Total spent: ${widget.currency} ${NumberFormat('#,##0').format(totalExpense)}. Top category: ${sortedEntries.isNotEmpty ? sortedEntries.first.key : 'None'}',
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  PieChart(
+                    PieChartData(
+                      pieTouchData: PieTouchData(
+                        touchCallback: (FlTouchEvent event, pieTouchResponse) {
+                          setState(() {
+                            if (!event.isInterestedForInteractions ||
+                                pieTouchResponse == null ||
+                                pieTouchResponse.touchedSection == null) {
+                              _touchedPieIndex = null;
+                              return;
                             }
-                          } else {
-                            _touchedPieIndex = null;
-                          }
-                        });
-                      },
+                            final idx = pieTouchResponse
+                                .touchedSection!.touchedSectionIndex;
+                            if (idx >= 0 && idx < sortedEntries.length) {
+                              if (_touchedPieIndex != idx) {
+                                HapticFeedback.selectionClick();
+                                _touchedPieIndex = idx;
+                              }
+                            } else {
+                              _touchedPieIndex = null;
+                            }
+                          });
+                        },
+                      ),
+                      borderData: FlBorderData(show: false),
+                      sectionsSpace: 2.5,
+                      centerSpaceRadius: 42,
+                      sections: List.generate(sortedEntries.length, (i) {
+                        final isTouched = i == _touchedPieIndex;
+                        final entry = sortedEntries[i];
+                        final catColor = TransactionCategory.colorFor(entry.key);
+                        final radius = isTouched ? 22.0 : 16.0;
+
+                        // Enforce a minimum 1.5% visual angle floor so micro-slivers remain visible and crisp
+                        final safeVal = totalExpense > 0
+                            ? entry.value.clamp(totalExpense * 0.015, double.infinity)
+                            : entry.value;
+
+                        return PieChartSectionData(
+                          color: catColor,
+                          value: safeVal,
+                          title: '',
+                          radius: radius,
+                        );
+                      }),
                     ),
-                    borderData: FlBorderData(show: false),
-                    sectionsSpace: 2.5,
-                    centerSpaceRadius: 42,
-                    sections: List.generate(sortedEntries.length, (i) {
-                      final isTouched = i == _touchedPieIndex;
-                      final entry = sortedEntries[i];
-                      final catColor = TransactionCategory.colorFor(entry.key);
-                      final radius = isTouched ? 22.0 : 16.0;
-
-                      return PieChartSectionData(
-                        color: catColor,
-                        value: entry.value,
-                        title: '',
-                        radius: radius,
-                      );
-                    }),
                   ),
-                ),
 
-                // Center Hole Label (Total or Selected Category)
-                GestureDetector(
-                  onTap: () {
-                    if (_touchedPieIndex != null) {
-                      setState(() => _touchedPieIndex = null);
-                    }
-                  },
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        selectedCat ?? 'Total Spent',
-                        style: textTheme.labelSmall?.copyWith(
-                          color: selectedCat != null
-                              ? TransactionCategory.colorFor(selectedCat)
-                              : colorScheme.onSurfaceVariant,
-                          fontWeight: selectedCat != null
-                              ? FontWeight.bold
-                              : FontWeight.w500,
-                          fontSize: 10,
+                  // Center Hole Label (Total or Selected Category)
+                  GestureDetector(
+                    onTap: () {
+                      if (_touchedPieIndex != null) {
+                        setState(() => _touchedPieIndex = null);
+                      }
+                    },
+                    child: SizedBox(
+                      width: 72,
+                      height: 72,
+                      child: Center(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                selectedCat ?? 'Total Spent',
+                                style: textTheme.labelSmall?.copyWith(
+                                  color: selectedCat != null
+                                      ? TransactionCategory.colorFor(selectedCat)
+                                      : colorScheme.onSurfaceVariant,
+                                  fontWeight: selectedCat != null
+                                      ? FontWeight.bold
+                                      : FontWeight.w500,
+                                  fontSize: 10,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 1),
+                              Text(
+                                '${widget.currency} ${NumberFormat('#,##0').format(selectedAmount)}',
+                                style: textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  fontFeatures: const [FontFeature.tabularFigures()],
+                                  fontSize: 13,
+                                ),
+                              ),
+                              Text(
+                                selectedCat != null
+                                    ? '$selectedPct%'
+                                    : '${sortedEntries.length} categories',
+                                style: textTheme.labelSmall?.copyWith(
+                                  fontSize: 9,
+                                  color: colorScheme.onSurfaceVariant,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 1),
-                      Text(
-                        '${widget.currency} ${NumberFormat('#,##0').format(selectedAmount)}',
-                        style: textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                          fontSize: 13,
-                        ),
-                      ),
-                      Text(
-                        selectedCat != null
-                            ? '$selectedPct%'
-                            : '${sortedEntries.length} categories',
-                        style: textTheme.labelSmall?.copyWith(
-                          fontSize: 9,
-                          color: colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

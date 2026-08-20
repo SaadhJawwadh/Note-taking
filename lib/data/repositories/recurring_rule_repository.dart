@@ -46,16 +46,29 @@ class RecurringRuleRepository {
       var iterations = 0;
       var advanced = false;
       while (!rule.nextDue.isAfter(now) && iterations < 36) {
-        await TransactionRepository.instance.createTransaction(
-          TransactionModel(
-            amount: rule.amount,
-            description: rule.description,
-            date: rule.nextDue,
-            isExpense: rule.isExpense,
-            category: rule.category,
-          ),
+        // Smart cycle-aware deduplication: check if a transaction (manual or SMS)
+        // already exists within ±2 days of this due date matching amount & category/description.
+        final existingMatch =
+            await TransactionRepository.instance.findMatchingRecurringTransaction(
+          amount: rule.amount,
+          description: rule.description,
+          category: rule.category,
+          targetDate: rule.nextDue,
+          isExpense: rule.isExpense,
         );
-        created++;
+
+        if (existingMatch == null) {
+          await TransactionRepository.instance.createTransaction(
+            TransactionModel(
+              amount: rule.amount,
+              description: rule.description,
+              date: rule.nextDue,
+              isExpense: rule.isExpense,
+              category: rule.category,
+            ),
+          );
+          created++;
+        }
         iterations++;
         rule = rule.copyWith(nextDue: rule.advance(rule.nextDue));
         advanced = true;

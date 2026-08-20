@@ -29,6 +29,7 @@ Before bumping the version or running deployment, ensure all of the following ar
   * 🐛 **Fixes** (Bug fixes and stability improvements)
 * **Changelog Screen (MANDATORY for every release)**: Update `lib/screens/changelog_screen.dart` by adding a new `_buildVersionSection(context, version: 'vX.Y.Z', date: '...', isLatest: true, changes: [...])` entry at the top of the list.
 * **What's New Sheet (MANDATORY — must match pubspec version)**: Update `lib/widgets/whats_new_sheet.dart` cards for THIS release's features (3–5 cards max). The version string passed to `WhatsNewSheet(currentVersion: ...)` in `home_screen.dart` must match the version in `pubspec.yaml` exactly, otherwise the sheet will not show on first launch of the new version. Verify by grepping `WhatsNewSheet` in `home_screen.dart` and confirming the version string is updated. Both `changelog_screen.dart` and `whats_new_sheet.dart` must ALWAYS be updated together as a single atomic step.
+* **Onboarding Wizard Sync (`onboarding_screen.dart`) (MANDATORY)**: Update `lib/features/settings/presentation/screens/onboarding_screen.dart` feature summaries (e.g. Page 3 Modular Powerups) whenever new core features or UI dashboards are added so first-time users and replaying users see accurate descriptions.
 * **Play Console Listing Notes (`PLAY_STORE_NOTES.md`) (MANDATORY BEFORE DEPLOYMENT)**:
   * Update `PLAY_STORE_NOTES.md` at project root with current bilingual release notes in English (`<en-US>`) and Tamil (`<ta-IN>`).
   * Target everyday users with friendly emojis.

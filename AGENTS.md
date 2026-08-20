@@ -84,6 +84,11 @@ lib/
 * **Mandatory Analysis & Testing**: Run `flutter analyze` (0 errors/warnings) and `flutter test` (all tests passing) before committing or building.
 * **Bilingual Play Store Notes Parity**: Update `PLAY_STORE_NOTES.md` (`<en-US>` and `<ta-IN>`, < 450 characters each), `lib/screens/changelog_screen.dart`, `lib/widgets/whats_new_sheet.dart`, and `CHANGELOG.md` atomically before compiling release APKs or running `./deploy.sh`.
 
+### 🔘 Invariant 8: Standard FAB Bottom Clearance & Universal Morphing Protocol
+* **No Obscured Content**: Bottom scrollable content must never be clipped or obscured by floating buttons or bottom navigation chrome. Always apply `AppLayout.fabBottomPadding = 96.0` to sliver lists or bottom padding containers.
+* **Universal Morphing FAB**: All floating action buttons must use `AppMorphingFab` (`lib/core/ui/app_morphing_fab.dart`), reacting to `UserScrollNotification` to dynamically collapse into a $56 \times 56\text{dp}$ circular button on downward scroll and expand back to the stadium button on upward scroll.
+* **Donut Chart Precision**: Donut chart center hole labels must be explicitly bounded inside a `SizedBox` with `FittedBox(fit: BoxFit.scaleDown)` to prevent text from touching chart rings, and slices must enforce a minimum 1.5% angle floor so micro-slivers remain visible.
+
 ---
 
 ## 4. Token & Command Economy (LLM OS Principles)

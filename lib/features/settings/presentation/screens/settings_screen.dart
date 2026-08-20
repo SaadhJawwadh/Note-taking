@@ -1225,6 +1225,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
       'Text Size',
       settings.textSizeLabel,
     );
+    addTile(
+      SettingsSwitchTile(
+        icon: Icons.lightbulb_outline_rounded,
+        title: 'Show Pro-Tips',
+        subtitle: 'Rotate actionable powerup tips every 3 days',
+        value: settings.showProTips,
+        onChanged: settings.setShowProTips,
+      ),
+      'Appearance',
+      'Show Pro-Tips',
+      'Rotate actionable powerup tips every 3 days',
+    );
 
     // 6. Organization & Folders
     addTile(
