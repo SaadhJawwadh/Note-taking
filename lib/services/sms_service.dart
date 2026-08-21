@@ -38,6 +38,17 @@ class SmsService {
 
   static bool _isSyncingLock = false;
   static bool get isSyncing => _isSyncingLock;
+  static bool _cancelRequested = false;
+
+  static void cancelSync() {
+    if (_isSyncingLock) {
+      _cancelRequested = true;
+      _syncProgressController.add(const SmsSyncProgress(
+        isSyncing: false,
+        message: 'Sync cancelled by user',
+      ));
+    }
+  }
 
   static final StreamController<SmsSyncProgress> _syncProgressController =
       StreamController<SmsSyncProgress>.broadcast();
@@ -125,12 +136,8 @@ class SmsService {
 
   static Future<bool> requestPermissions() async {
     try {
-      final statuses = await [
-        Permission.sms,
-        Permission.phone,
-      ].request();
-      final granted = (statuses[Permission.sms]?.isGranted ?? false) &&
-                      (statuses[Permission.phone]?.isGranted ?? false);
+      final status = await Permission.sms.request();
+      final granted = status.isGranted;
       if (granted) {
         await _startTelephonyListening();
         await syncDailySyncSchedule();
@@ -145,8 +152,7 @@ class SmsService {
   static Future<bool> hasPermission() async {
     try {
       final smsStatus = await Permission.sms.status;
-      final phoneStatus = await Permission.phone.status;
-      return smsStatus.isGranted && phoneStatus.isGranted;
+      return smsStatus.isGranted;
     } catch (e) {
       debugPrint('SmsService.hasPermission isolate warning: $e');
       return true; // Fallback in background isolate so getInboxSms can attempt scanning
@@ -155,6 +161,7 @@ class SmsService {
 
   static Future<int> syncInboxFrom(
     DateTime from, {
+    bool bypassTombstones = false,
     void Function(int scanned, int total, int found)? onProgress,
   }) async {
     if (!await hasPermission()) {
@@ -176,8 +183,13 @@ class SmsService {
     onProgress?.call(0, total, 0);
 
     for (var m in messages) {
+      if (_cancelRequested) {
+        debugPrint('[SmsService] Sync cancelled during processing');
+        break;
+      }
+
       processed++;
-      if (processed % 5 == 0) {
+      if (processed % 25 == 0) {
         await Future.delayed(Duration.zero);
       }
 
@@ -201,7 +213,10 @@ class SmsService {
         continue;
       }
 
-      final inserted = await TransactionRepository.instance.createSmsTransaction(t);
+      final inserted = await TransactionRepository.instance.createSmsTransaction(
+        t,
+        bypassTombstones: bypassTombstones,
+      );
       if (inserted == null) {
         onProgress?.call(processed, total, count);
         continue;
@@ -441,6 +456,7 @@ class SmsService {
       return 0;
     }
     _isSyncingLock = true;
+    _cancelRequested = false;
     _syncProgressController.add(const SmsSyncProgress(isSyncing: true, message: 'Initializing SMS scanner...'));
 
     try {
@@ -466,6 +482,7 @@ class SmsService {
 
       final count = await syncInboxFrom(
         startCutoff,
+        bypassTombstones: bypassTombstones,
         onProgress: (scanned, total, found) {
           onProgress?.call(scanned, total, found);
           _syncProgressController.add(SmsSyncProgress(

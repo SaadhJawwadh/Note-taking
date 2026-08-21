@@ -191,53 +191,57 @@ class FinancialLedgerTab extends StatelessWidget {
                         child: AppCard(
                           margin: const EdgeInsets.only(bottom: AppLayout.spaceS),
                           padding: const EdgeInsets.symmetric(horizontal: AppLayout.spaceM, vertical: AppLayout.spaceXS),
-                          child: ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: Builder(
-                              builder: (context) {
-                                final catColor = TransactionCategory.colorFor(transaction.category);
-                                return Container(
-                                  padding: const EdgeInsets.all(AppLayout.spaceS),
-                                  decoration: BoxDecoration(
-                                    color: catColor.withValues(alpha: 0.15),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: catColor.withValues(alpha: 0.3),
-                                      width: 1,
+                          child: Semantics(
+                            label:
+                                '${transaction.description}, ${transaction.category}, ${transaction.isExpense ? 'Expense' : 'Income'} of $currency ${NumberFormat('#,##0.00').format(transaction.amount)}, at ${DateFormat('hh:mm a').format(transaction.date)}. Tap to edit.',
+                            child: ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: Builder(
+                                builder: (context) {
+                                  final catColor = TransactionCategory.colorFor(transaction.category);
+                                  return Container(
+                                    padding: const EdgeInsets.all(AppLayout.spaceS),
+                                    decoration: BoxDecoration(
+                                      color: catColor.withValues(alpha: 0.15),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: catColor.withValues(alpha: 0.3),
+                                        width: 1,
+                                      ),
                                     ),
-                                  ),
-                                  child: Icon(
-                                    TransactionCategory.iconFor(transaction.category),
-                                    color: catColor,
-                                    size: 20,
-                                  ),
-                                );
+                                    child: Icon(
+                                      TransactionCategory.iconFor(transaction.category),
+                                      color: catColor,
+                                      size: 20,
+                                    ),
+                                  );
+                                },
+                              ),
+                              title: Text(
+                                transaction.description,
+                                style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Text(
+                                '${transaction.category} • ${DateFormat('hh:mm a').format(transaction.date)}',
+                                style: textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                              ),
+                              trailing: Text(
+                                '${transaction.isExpense ? '-' : '+'}$currency ${NumberFormat('#,##0.00').format(transaction.amount)}',
+                                style: textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  fontFeatures: const [FontFeature.tabularFigures()],
+                                  color: transaction.isExpense
+                                      ? colorScheme.error
+                                      : colorScheme.primary,
+                                ),
+                              ),
+                              onTap: () async {
+                                await HapticFeedback.lightImpact();
+                                openContainer();
                               },
                             ),
-                            title: Text(
-                              transaction.description,
-                              style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            subtitle: Text(
-                              '${transaction.category} • ${DateFormat('hh:mm a').format(transaction.date)}',
-                              style: textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
-                            ),
-                            trailing: Text(
-                              '${transaction.isExpense ? '-' : '+'}$currency ${NumberFormat('#,##0.00').format(transaction.amount)}',
-                              style: textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                fontFeatures: const [FontFeature.tabularFigures()],
-                                color: transaction.isExpense
-                                    ? colorScheme.error
-                                    : colorScheme.primary,
-                              ),
-                            ),
-                            onTap: () async {
-                              await HapticFeedback.lightImpact();
-                              openContainer();
-                            },
                           ),
                         ),
                       );

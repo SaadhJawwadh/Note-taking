@@ -81,6 +81,11 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.secondaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
+            icon: Icons.sms_rounded,
+            title: "SMS Sync & Tombstone Protection",
+            desc: "Fixed SMS permission detection and prevented deleted transactions from being re-imported during scans, with an instant sync Cancel button.",
+          ),
+          _WhatsNewItem(
             icon: Icons.vertical_align_bottom_rounded,
             title: "Bottom Content Clearance Safeguards",
             desc: "Standardized 96dp clearance so forms, segmented buttons, and lists are never obscured by floating action buttons.",

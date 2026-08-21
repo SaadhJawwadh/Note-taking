@@ -273,12 +273,14 @@ erDiagram
         integer isExpense
         text category
         text smsId UK
+        text deletedAt
     }
     category_definitions {
         text name PK
         integer color
         text keywords
         integer isBuiltIn
+        integer iconCodePoint
     }
     sms_contacts {
         text id PK
@@ -293,6 +295,24 @@ erDiagram
         text endDate
         text intensity
         text notes
+        text symptoms
+    }
+    recurring_rules {
+        text id PK
+        text description
+        real amount
+        text category
+        integer isExpense
+        text frequency
+        text nextDue
+    }
+    deleted_notes {
+        text id PK
+        text deletedAt
+    }
+    deleted_transaction_sms_ids {
+        text smsId PK
+        text deletedAt
     }
 
     notes ||--o{ note_tags : "has"

@@ -40,7 +40,7 @@ Use this skill to execute QA verifications, unit/widget tests, security audits, 
 ## 3. Data Integrity & Backups Audit
 * **Backup Completeness**: Ensure `BackupService.generateBackupJson` uses `SettingsProvider.toBackupMap()` to export settings. Never hardcode individual SharedPreferences keys, which go stale as new options are added.
 * **Restore Operations**: Ensure `SettingsProvider.restoreFromBackupMap` calls **setter methods** (e.g., `await setShowFinancialManager(value)`) instead of assigning directly to private fields. Direct assignments skip saving to SharedPreferences, causing settings to revert on app restart.
-* **Database Upgrades**: Verify `onUpgrade` database migrations (especially schema/junction table changes) preserve existing user data.
+* **Multi-Version Database Upgrades**: Verify `onUpgrade` database migrations preserve existing user data from ALL historical versions (e.g., v1 -> v19 in `test/upgrade_backward_compatibility_test.dart`). Ensure all migration SQL statements use standard single quotes (`''`) for string literals and default values (`DEFAULT ''`, `NULLIF(col, '')`) to avoid SQLite identifier syntax errors.
 
 ## 4. Security Auditing
 * **SQLCipher**: Confirm that database connections are always opened securely with the key from KeyStore.
@@ -55,17 +55,19 @@ Use this skill to execute QA verifications, unit/widget tests, security audits, 
 * **Diagnosing a stuck launch**: `adb logcat -s flutter` (engine + Dart prints), `adb shell dumpsys window | grep mCurrentFocus`, `adb shell pidof <package>`. Two "Impeller" engine lines = a background FlutterEngine (WorkManager) is also running.
 * **Background isolate channels**: MethodChannels registered in `MainActivity.configureFlutterEngine` do NOT exist in WorkManager isolates — `MissingPluginException` from there is expected; code must catch it and prefs-only paths must still complete.
 * **Drive the UI, don't assume**: a FAB `tooltip` swallowed the long-press that opened the template sheet — only caught by actually long-pressing on the emulator. Screenshot each new surface and LOOK at it.
-* **Test-data parity**: `createTestDatabase` pins the CURRENT schema version — bump it together with `_initDB`'s `version:` and add the `onUpgrade` branch, or tests diverge from production schema.
+* **Test-data parity**: `createTestDatabase` pins the CURRENT schema version (v19) — bump it together with `_initDB`'s `version:` and add the `onUpgrade` branch, or tests diverge from production schema.
 * **Flutter↔Kotlin prefs types**: Dart `prefs.setInt` stores a Long — Kotlin must read `getLong(...)`, not `getInt(...)`, or widget code silently falls back to defaults.
 
 ## 6. R8 Optimization & ProGuard Verification
+* **R8 Full Mode Enforced**: Verify `android.enableR8.fullMode=true` is set in `android/gradle.properties`. Avoid broad wildcards like `-keep class io.flutter.** { *; }` in `proguard-rules.pro` that disable dead code elimination and method inlining.
 * **Release Build Compilation**: Run `flutter build apk --release` to verify that R8 shrinking completes cleanly without `ClassNotFoundException` or missing symbol warnings.
-* **Plugin Stripping Check**: When adding a new Flutter plugin with Android native components, verify that `android/app/proguard-rules.pro` has a corresponding `-keep class` declaration.
+* **Plugin Stripping Check**: When adding a new Flutter plugin with Android native components, verify that `android/app/proguard-rules.pro` has a corresponding explicit `-keep class <package_name>.** { *; }` declaration.
 * **On-Device ProGuard Audit**: Test key native features (SQLCipher DB decryption, Biometric auth, Share sheet, Camera/Gallery picking, Background WorkManager) on a release build (`app-release.apk`) to verify R8 has not stripped runtime reflection entry points.
 
-## 7. Image Fallbacks & Database Version Alignment
-* **Rich Text Image Fallbacks**: Verify `Image.file` and `Image.network` in custom embed builders implement `errorBuilder` to render a clean fallback icon (`broken_image_outlined`) when local image files are deleted from disk or URLs fail to resolve.
-* **Database Test Version Alignment**: Verify `DatabaseHelper.createTestDatabase()` pins the exact schema version specified in `_initDB()` (version 17) so test database instances match production database schemas 100%.
+## 7. Bitmap Downsampling & Image Fallbacks
+* **Mandatory Bitmap Downsampling**: Verify that all `Image.file`, `Image.network`, and `Image.asset` preview widgets supply `cacheWidth` (e.g. `cacheWidth: 1080` for note body embeds, `cacheWidth: 400` for grid/list cards) to prevent full-resolution 12–48MP camera images from allocating 24–48MB RAM buffers per image.
+* **Rich Text Image Fallbacks**: Verify `Image.file` and `Image.network` in custom embed builders implement `errorBuilder` to render a clean fallback container with `Icons.broken_image_outlined` when local image files are deleted from disk or URLs fail to resolve.
+* **Database Test Version Alignment**: Verify `DatabaseHelper.createTestDatabase()` pins the exact schema version specified in `_initDB()` (version 19) so test database instances match production database schemas 100%.
 
 ## 8. Background Isolate & Schedule QA
 * **Isolate Binding Initialization**: Verify all `@pragma('vm:entry-point')` functions and Workmanager task callbacks (`callbackDispatcher`, `backgroundMessageHandler`, `performDailyTransactionSync`) call `WidgetsFlutterBinding.ensureInitialized()` at entry before invoking `SharedPreferences`, `DatabaseHelper`, or platform channels.

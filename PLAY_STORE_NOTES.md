@@ -10,6 +10,7 @@
 • Real-time home widget budget syncing.
 
 🐛 Fixes
+• Fixed SMS permission sync & tombstone protection.
 • Protected bottom content from button overlap.
 </en-US>
 <ta-IN>
@@ -24,5 +25,6 @@
 • முகப்பு விட்ஜெட்டில் உடனடி பட்ஜெட் புதுப்பிப்பு.
 
 🐛 பிழை திருத்தங்கள்
+• SMS ஒத்திசைவு பிழை சரி செய்யப்பட்டது.
 • பொத்தான் உரை மறைப்பு பிழை சரி செய்யப்பட்டது.
 </ta-IN>

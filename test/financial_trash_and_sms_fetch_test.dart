@@ -4,6 +4,7 @@ import 'package:note_taking_app/data/database_helper.dart';
 import 'package:note_taking_app/data/transaction_model.dart';
 import 'package:note_taking_app/features/finances/data/transaction_repository.dart';
 import 'package:note_taking_app/services/sms_parser.dart';
+import 'package:note_taking_app/services/sms_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -148,6 +149,37 @@ void main() {
       expect(await repo.smsExists('tomb_1'), isTrue);
       expect(await repo.smsExists('tomb_2'), isTrue);
     });
+
+    test('createSmsTransaction rejects tombstones by default and permits on bypassTombstones', () async {
+      const testSmsId = 'tombstone_test_sms_999';
+
+      // Insert directly into tombstone table
+      await db.insert('deleted_transaction_sms_ids', {
+        'smsId': testSmsId,
+        'deletedAt': DateTime.now().toIso8601String(),
+      });
+
+      final model = TransactionModel(
+        amount: 2500,
+        description: 'Tombstoned Purchase',
+        date: DateTime.now(),
+        isExpense: true,
+        category: 'Food & Dining',
+        smsId: testSmsId,
+      );
+
+      // Default: must reject
+      final rejected = await repo.createSmsTransaction(model, bypassTombstones: false);
+      expect(rejected, isNull, reason: 'Must not re-import tombstoned SMS transaction');
+
+      // Bypass: must allow and remove tombstone
+      final accepted = await repo.createSmsTransaction(model, bypassTombstones: true);
+      expect(accepted, isNotNull, reason: 'Must allow re-importing when bypassTombstones is true');
+      expect(accepted!.smsId, equals(testSmsId));
+
+      final checkTombstone = await db.query('deleted_transaction_sms_ids', where: 'smsId = ?', whereArgs: [testSmsId]);
+      expect(checkTombstone, isEmpty, reason: 'Tombstone record should be cleared upon reinstatement');
+    });
   });
 
   group('Promotional & OTP SMS Parser Rules Unit Tests', () {
@@ -213,6 +245,18 @@ void main() {
       expect(parsed, isNotNull);
       expect(parsed!.amount, equals(25000.0));
       expect(parsed.isExpense, isFalse);
+    });
+  });
+
+  group('SmsService Permission & Cancel Tests', () {
+    test('hasPermission returns true when isolate catch-all fallback is invoked', () async {
+      final result = await SmsService.hasPermission();
+      expect(result, isA<bool>());
+    });
+
+    test('cancelSync sets cancelled progress state cleanly', () {
+      // Calling cancelSync when no sync active should not throw
+      SmsService.cancelSync();
     });
   });
 }

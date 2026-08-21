@@ -26,9 +26,32 @@ class TransactionRepository {
     return result;
   }
 
-  Future<TransactionModel?> createSmsTransaction(TransactionModel transaction) async {
+  Future<TransactionModel?> createSmsTransaction(
+    TransactionModel transaction, {
+    bool bypassTombstones = false,
+  }) async {
     final db = await _db;
-    final id = await db.insert(TableNames.transactions, transaction.toJson(), conflictAlgorithm: ConflictAlgorithm.ignore);
+    final smsId = transaction.smsId;
+
+    if (smsId != null && smsId.isNotEmpty) {
+      if (!bypassTombstones) {
+        if (await smsExists(smsId)) {
+          return null;
+        }
+      } else {
+        await db.delete(
+          TableNames.deletedTransactionSmsIds,
+          where: 'smsId = ?',
+          whereArgs: [smsId],
+        );
+      }
+    }
+
+    final id = await db.insert(
+      TableNames.transactions,
+      transaction.toJson(),
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
     if (id > 0) {
       final result = transaction.copy(id: id);
       await WidgetHelper.updateWidgetData();

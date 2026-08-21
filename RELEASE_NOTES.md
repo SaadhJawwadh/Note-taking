@@ -1,6 +1,6 @@
 
-### 🚀 Improvements
-- **Bitmap Memory Downsampling**: Added image downsampling and fallback error handling to note previews, cutting image memory usage by up to 85% and preventing Out-Of-Memory pauses on large camera photos.
-- **R8 Full-Mode Optimization**: Enabled aggressive dead-code elimination, method inlining, and bytecode optimization for faster app launch and reduced download size.
-- **Backward-Compatible Schema Upgrades**: Enhanced SQLite database migration routines with rigorous single-quote SQL syntax and multi-version upgrade validation.
+### 🐛 Fixes & Improvements
+- **SMS Permission & Sync Detection**: Fixed SMS permission evaluation by removing undeclared phone permission requirements, restoring instant 1-tap quick sync and real-time bank SMS interception.
+- **Tombstone Re-Import Safeguards**: Enhanced transaction ingestion to check the tombstone table, preventing permanently deleted transactions from being re-imported during historical scans unless explicitly enabled.
+- **Sync Cancellation & Progress Controls**: Added an instant "Cancel" button to the SMS sync banner and batch processing chunks for seamless navigation across large inboxes.
 

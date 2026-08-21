@@ -150,28 +150,32 @@ class _MinimalChartDeckState extends State<MinimalChartDeck> {
                 ),
               ),
               const SizedBox(width: 8),
-              InkWell(
-                onTap: _handleDetailsTap,
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Details',
-                        style: textTheme.labelSmall?.copyWith(
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.bold,
+              Semantics(
+                button: true,
+                label: 'View detailed financial analytics and charts',
+                child: InkWell(
+                  onTap: _handleDetailsTap,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Details',
+                          style: textTheme.labelSmall?.copyWith(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 2),
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        size: 16,
-                        color: colorScheme.primary,
-                      ),
-                    ],
+                        const SizedBox(width: 2),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          size: 16,
+                          color: colorScheme.primary,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -212,30 +216,39 @@ class _MinimalChartDeckState extends State<MinimalChartDeck> {
               mainAxisSize: MainAxisSize.min,
               children: List.generate(_pageCount, (index) {
                 final isSelected = _currentPage == index;
-                return GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    _pauseAutoCycle(userAction: true);
-                    _pageController.animateToPage(
-                      index,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeOutCubic,
-                    );
-                    setState(() => _currentPage = index);
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 4),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 250),
-                      curve: Curves.easeOutCubic,
-                      width: isSelected ? 16 : 6,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? colorScheme.primary
-                            : colorScheme.outlineVariant.withValues(alpha: 0.4),
-                        borderRadius: BorderRadius.circular(2),
+                final slideTitle = index == 0
+                    ? 'Spending Trajectory'
+                    : index == 1
+                        ? 'Expense Breakdown'
+                        : 'Budget Pacing';
+                return Semantics(
+                  button: true,
+                  label: 'Switch to $slideTitle chart',
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      _pauseAutoCycle(userAction: true);
+                      _pageController.animateToPage(
+                        index,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOutCubic,
+                      );
+                      setState(() => _currentPage = index);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        curve: Curves.easeOutCubic,
+                        width: isSelected ? 16 : 6,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? colorScheme.primary
+                              : colorScheme.outlineVariant.withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
                     ),
                   ),
@@ -279,20 +292,42 @@ class _MinimalChartDeckState extends State<MinimalChartDeck> {
             : projectedSpend.toStringAsFixed(0))
         : null;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: colorScheme.secondaryContainer.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        formattedForecast != null
-            ? 'Est ~$formattedForecast 🔮'
-            : 'Avg ~$formattedAvg/mo',
-        style: textTheme.labelSmall?.copyWith(
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-          color: colorScheme.onSecondaryContainer,
+    return Semantics(
+      label: formattedForecast != null
+          ? 'Estimated month end spending: $formattedForecast'
+          : 'Average spending: $formattedAvg per month',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        decoration: BoxDecoration(
+          color: colorScheme.secondaryContainer.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              formattedForecast != null
+                  ? 'Est ~$formattedForecast'
+                  : 'Avg ~$formattedAvg/mo',
+              style: textTheme.labelSmall?.copyWith(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: colorScheme.onSecondaryContainer,
+              ),
+            ),
+            if (formattedForecast != null) ...[
+              const SizedBox(width: 3),
+              Icon(
+                Icons.auto_awesome_rounded,
+                size: 11,
+                color: colorScheme.primary,
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -435,132 +470,139 @@ class _MinimalChartDeckState extends State<MinimalChartDeck> {
         ),
     ];
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: LineChart(
-        LineChartData(
-          lineTouchData: LineTouchData(
-            enabled: true,
-            touchTooltipData: LineTouchTooltipData(
-              showOnTopOfTheChartBoxArea: true,
-              getTooltipColor: (_) => colorScheme.surfaceContainerHighest,
-              tooltipRoundedRadius: 10,
-              tooltipPadding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              fitInsideHorizontally: true,
-              fitInsideVertically: true,
-              getTooltipItems: (touchedSpots) {
-                return touchedSpots.map((spot) {
-                  final xIndex = spot.x.toInt();
-                  if (hasForecast && xIndex == n) {
-                    final paceLabel = widget.forecast != null
-                        ? (widget.forecast!.status == SpendingPaceStatus.overPace
-                            ? 'Pacing Fast 🟠'
-                            : widget.forecast!.status == SpendingPaceStatus.exhausted
-                                ? 'Exhausted 🔴'
-                                : 'On Track 🟢')
-                        : (regressionForecast?.isTrendingUp == true
-                            ? 'Trending Up ⚠️'
-                            : 'On Track 🟢');
+    return Semantics(
+      label:
+          'Spending trajectory line chart showing monthly spending trends and projected month-end total of ~${widget.currency} ${NumberFormat('#,##0').format(projectedSpend ?? 0)}',
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        child: LineChart(
+          LineChartData(
+            lineTouchData: LineTouchData(
+              enabled: true,
+              touchTooltipData: LineTouchTooltipData(
+                showOnTopOfTheChartBoxArea: true,
+                getTooltipColor: (_) => colorScheme.surfaceContainerHighest,
+                tooltipRoundedRadius: 10,
+                tooltipBorder: BorderSide(
+                  color: colorScheme.primary.withValues(alpha: 0.3),
+                  width: 1.0,
+                ),
+                tooltipPadding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                fitInsideHorizontally: true,
+                fitInsideVertically: true,
+                getTooltipItems: (touchedSpots) {
+                  return touchedSpots.map((spot) {
+                    final xIndex = spot.x.toInt();
+                    if (hasForecast && xIndex == n) {
+                      final paceLabel = widget.forecast != null
+                          ? (widget.forecast!.status == SpendingPaceStatus.overPace
+                              ? 'Pacing Fast'
+                              : widget.forecast!.status == SpendingPaceStatus.exhausted
+                                  ? 'Exhausted'
+                                  : 'On Track')
+                          : (regressionForecast?.isTrendingUp == true
+                              ? 'Trending Up'
+                              : 'On Track');
 
-                    return LineTooltipItem(
-                      'This Month (Est.)\n',
-                      textTheme.labelSmall?.copyWith(
-                            color: colorScheme.tertiary,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ) ??
-                          const TextStyle(),
-                      children: [
-                        TextSpan(
-                          text:
-                              '~${widget.currency} ${NumberFormat('#,##0').format(spot.y)}\n',
-                          style: textTheme.labelMedium?.copyWith(
-                            color: colorScheme.onSurface,
-                            fontWeight: FontWeight.bold,
+                      return LineTooltipItem(
+                        'This Month (Est.)\n',
+                        textTheme.labelSmall?.copyWith(
+                              color: colorScheme.tertiary,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ) ??
+                            const TextStyle(),
+                        children: [
+                          TextSpan(
+                            text:
+                                '~${widget.currency} ${NumberFormat('#,##0').format(spot.y)}\n',
+                            style: textTheme.labelMedium?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        TextSpan(
-                          text: paceLabel,
-                          style: textTheme.labelSmall?.copyWith(
-                            color: colorScheme.primary,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w600,
+                          TextSpan(
+                            text: paceLabel,
+                            style: textTheme.labelSmall?.copyWith(
+                              color: colorScheme.primary,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
-                      ],
-                    );
-                  }
-
-                  if (xIndex >= 0 && xIndex < n) {
-                    final m = widget.monthlyData[xIndex]['month'];
-                    String monthName = '';
-                    if (m is DateTime) {
-                      monthName = DateFormat.MMMM().format(m);
-                    } else if (m is String) {
-                      monthName = m;
+                        ],
+                      );
                     }
-                    return LineTooltipItem(
-                      '$monthName\n',
-                      textTheme.labelSmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
+
+                    if (xIndex >= 0 && xIndex < n) {
+                      final m = widget.monthlyData[xIndex]['month'];
+                      String monthName = '';
+                      if (m is DateTime) {
+                        monthName = DateFormat.MMMM().format(m);
+                      } else if (m is String) {
+                        monthName = m;
+                      }
+                      return LineTooltipItem(
+                        '$monthName\n',
+                        textTheme.labelSmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                              fontSize: 10,
+                            ) ??
+                            const TextStyle(),
+                        children: [
+                          TextSpan(
+                            text:
+                                '${widget.currency} ${NumberFormat('#,##0').format(spot.y)}',
+                            style: textTheme.labelMedium?.copyWith(
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+                    return null;
+                  }).whereType<LineTooltipItem>().toList();
+                },
+              ),
+            ),
+            gridData: const FlGridData(show: false),
+            titlesData: FlTitlesData(
+              leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 22,
+                  interval: 1,
+                  getTitlesWidget: (val, meta) {
+                    final index = val.toInt();
+                    if (hasForecast && index == n) {
+                      final currentMonthName = widget.monthlyData.isNotEmpty
+                          ? () {
+                              final lastM = widget.monthlyData.last['month'];
+                              if (lastM is DateTime) return DateFormat.MMM().format(lastM);
+                              if (lastM is String) {
+                                final parts = lastM.split('-');
+                                return parts.length == 2 ? parts[1] : lastM;
+                              }
+                              return 'Est';
+                            }()
+                          : 'Est';
+
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 4.0),
+                        child: Text(
+                          '$currentMonthName Est',
+                          style: textTheme.labelSmall?.copyWith(
                             fontSize: 10,
-                          ) ??
-                          const TextStyle(),
-                      children: [
-                        TextSpan(
-                          text:
-                              '${widget.currency} ${NumberFormat('#,##0').format(spot.y)}',
-                          style: textTheme.labelMedium?.copyWith(
-                            color: colorScheme.primary,
+                            color: colorScheme.tertiary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ],
-                    );
-                  }
-                  return null;
-                }).whereType<LineTooltipItem>().toList();
-              },
-            ),
-          ),
-          gridData: const FlGridData(show: false),
-          titlesData: FlTitlesData(
-            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 22,
-                interval: 1,
-                getTitlesWidget: (val, meta) {
-                  final index = val.toInt();
-                  if (hasForecast && index == n) {
-                    final currentMonthName = widget.monthlyData.isNotEmpty
-                        ? () {
-                            final lastM = widget.monthlyData.last['month'];
-                            if (lastM is DateTime) return DateFormat.MMM().format(lastM);
-                            if (lastM is String) {
-                              final parts = lastM.split('-');
-                              return parts.length == 2 ? parts[1] : lastM;
-                            }
-                            return 'Est';
-                          }()
-                        : 'Est';
-
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 4.0),
-                      child: Text(
-                        '$currentMonthName Est 🔮',
-                        style: textTheme.labelSmall?.copyWith(
-                          fontSize: 10,
-                          color: colorScheme.tertiary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    );
-                  }
+                      );
+                    }
 
                   if (index >= 0 && index < n) {
                     final m = widget.monthlyData[index]['month'];
@@ -596,8 +638,9 @@ class _MinimalChartDeckState extends State<MinimalChartDeck> {
           lineBarsData: lineBars,
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   // ── Slide 2: Minimal Category Donut Chart ──────────────────────────────────
   Widget _buildDonutSlide(ColorScheme colorScheme, TextTheme textTheme) {
@@ -740,156 +783,162 @@ class _MinimalChartDeckState extends State<MinimalChartDeck> {
 
     final ringColor = isOverBudget ? colorScheme.error : colorScheme.primary;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
-      child: Row(
-        children: [
-          // Left: Circular Pace Gauge
-          SizedBox(
-            width: 78,
-            height: 78,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 72,
-                  height: 72,
-                  child: CircularProgressIndicator(
-                    value: spentFraction,
-                    strokeWidth: 6.5,
-                    strokeCap: StrokeCap.round,
-                    backgroundColor: colorScheme.surfaceContainerHighest,
-                    valueColor: AlwaysStoppedAnimation<Color>(ringColor),
-                  ),
-                ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '$spentPct%',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: ringColor,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                        fontSize: 15,
-                      ),
+    final statusText = forecast.status == SpendingPaceStatus.exhausted
+        ? 'Exhausted'
+        : forecast.status == SpendingPaceStatus.overPace
+            ? 'Pacing Fast'
+            : 'On Track';
+
+    return Semantics(
+      label:
+          'Budget pacing gauge. $spentPct percent spent. Daily safe to spend: ${widget.currency} ${NumberFormat('#,##0').format(forecast.dailySafeToSpend)}. Status: $statusText.',
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+        child: Row(
+          children: [
+            // Left: Circular Pace Gauge
+            SizedBox(
+              width: 78,
+              height: 78,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    width: 72,
+                    height: 72,
+                    child: CircularProgressIndicator(
+                      value: spentFraction,
+                      strokeWidth: 6.5,
+                      strokeCap: StrokeCap.round,
+                      backgroundColor: colorScheme.surfaceContainerHighest,
+                      valueColor: AlwaysStoppedAnimation<Color>(ringColor),
                     ),
-                    Text(
-                      'Spent',
-                      style: textTheme.labelSmall?.copyWith(
-                        fontSize: 9,
-                        color: colorScheme.onSurfaceVariant,
+                  ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '$spentPct%',
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: ringColor,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                          fontSize: 15,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                      Text(
+                        'Spent',
+                        style: textTheme.labelSmall?.copyWith(
+                          fontSize: 9,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
+            const SizedBox(width: 12),
 
-          // Center Column: Daily Safe-to-Spend & Days Left
-          Expanded(
-            flex: 5,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Daily Safe-to-Spend',
-                  style: textTheme.labelSmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    fontSize: 10,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  '~${widget.currency} ${NumberFormat('#,##0').format(forecast.dailySafeToSpend)}',
-                  style: textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: isOverBudget ? colorScheme.error : colorScheme.onSurface,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                    fontSize: 14,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${forecast.remainingDays} days left',
-                  style: textTheme.labelSmall?.copyWith(
-                    fontSize: 10,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Vertical Subtle Divider
-          Container(
-            height: 52,
-            width: 1,
-            margin: const EdgeInsets.symmetric(horizontal: 8),
-            color: colorScheme.outlineVariant.withValues(alpha: 0.35),
-          ),
-
-          // Right Column: Projected Month-End & Status Pill
-          Expanded(
-            flex: 5,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Projected Month-End',
-                  style: textTheme.labelSmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    fontSize: 10,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  '~${widget.currency} ${NumberFormat('#,##0').format(forecast.projectedMonthEndSpend)}',
-                  style: textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: isOverBudget ? colorScheme.error : colorScheme.onSurface,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                    fontSize: 14,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 3),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                  decoration: BoxDecoration(
-                    color: isOverBudget
-                        ? colorScheme.errorContainer
-                        : colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    forecast.status == SpendingPaceStatus.exhausted
-                        ? 'Exhausted 🔴'
-                        : forecast.status == SpendingPaceStatus.overPace
-                            ? 'Pacing Fast 🟠'
-                            : 'On Track 🟢',
+            // Center Column: Daily Safe-to-Spend & Days Left
+            Expanded(
+              flex: 5,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Daily Safe-to-Spend',
                     style: textTheme.labelSmall?.copyWith(
-                      fontSize: 8.5,
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: 10,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    '~${widget.currency} ${NumberFormat('#,##0').format(forecast.dailySafeToSpend)}',
+                    style: textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: isOverBudget
-                          ? colorScheme.onErrorContainer
-                          : colorScheme.onPrimaryContainer,
+                      color: isOverBudget ? colorScheme.error : colorScheme.onSurface,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                      fontSize: 14,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${forecast.remainingDays} days left',
+                    style: textTheme.labelSmall?.copyWith(
+                      fontSize: 10,
+                      color: colorScheme.onSurfaceVariant,
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+
+            // Vertical Subtle Divider
+            Container(
+              height: 52,
+              width: 1,
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+            ),
+
+            // Right Column: Projected Month-End & Status Pill
+            Expanded(
+              flex: 5,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Projected Month-End',
+                    style: textTheme.labelSmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: 10,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    '~${widget.currency} ${NumberFormat('#,##0').format(forecast.projectedMonthEndSpend)}',
+                    style: textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: isOverBudget ? colorScheme.error : colorScheme.onSurface,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                      fontSize: 14,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                    decoration: BoxDecoration(
+                      color: isOverBudget
+                          ? colorScheme.errorContainer
+                          : colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      statusText,
+                      style: textTheme.labelSmall?.copyWith(
+                        fontSize: 8.5,
+                        fontWeight: FontWeight.bold,
+                        color: isOverBudget
+                            ? colorScheme.onErrorContainer
+                            : colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

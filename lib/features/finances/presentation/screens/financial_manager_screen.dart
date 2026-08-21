@@ -723,28 +723,37 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                 Row(
                   children: List.generate(3, (idx) {
                     final isActive = idx == _heroCardMode;
-                    return GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        _pauseHeroAutoCycle(userAction: true);
-                        _heroPageController.animateToPage(
-                          idx,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeOutCubic,
-                        );
-                        setState(() => _heroCardMode = idx);
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 250),
-                          curve: Curves.easeOutCubic,
-                          width: isActive ? 14 : 5,
-                          height: 5,
-                          decoration: BoxDecoration(
-                            color: isActive ? onColor : onColor.withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(3),
+                    final modeName = idx == 0
+                        ? 'Net Cash Flow'
+                        : idx == 1
+                            ? 'Daily Burn Rate'
+                            : 'Month End Projection';
+                    return Semantics(
+                      button: true,
+                      label: 'Switch to $modeName metric',
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          _pauseHeroAutoCycle(userAction: true);
+                          _heroPageController.animateToPage(
+                            idx,
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeOutCubic,
+                          );
+                          setState(() => _heroCardMode = idx);
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 6),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            curve: Curves.easeOutCubic,
+                            width: isActive ? 14 : 5,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              color: isActive ? onColor : onColor.withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
                           ),
                         ),
                       ),
@@ -821,23 +830,27 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                   ),
 
                   // Slide 2: Ongoing Month-End Projection
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        '~$currency ${numberFormat.format(spendingForecast.projectedMonthEndSpend)}',
-                        style: tt.headlineMedium?.copyWith(
-                          color: onColor,
-                          fontWeight: FontWeight.bold,
-                          fontFeatures: const [FontFeature.tabularFigures()],
+                  Semantics(
+                    label:
+                        'This month projected spending ${numberFormat.format(spendingForecast.projectedMonthEndSpend)} $currency, day ${spendingForecast.currentDay} of ${spendingForecast.totalDaysInMonth}, status: ${spendingForecast.status == SpendingPaceStatus.overPace ? 'Pacing Fast' : spendingForecast.status == SpendingPaceStatus.exhausted ? 'Exhausted' : 'On Track'}',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '~$currency ${numberFormat.format(spendingForecast.projectedMonthEndSpend)}',
+                          style: tt.headlineMedium?.copyWith(
+                            color: onColor,
+                            fontWeight: FontWeight.bold,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
                         ),
-                      ),
-                      Text(
-                        'This Month Projected • Day ${spendingForecast.currentDay}/${spendingForecast.totalDaysInMonth} (${spendingForecast.status == SpendingPaceStatus.overPace ? 'Pacing Fast 🟠' : spendingForecast.status == SpendingPaceStatus.exhausted ? 'Exhausted 🔴' : 'On Track 🟢'})',
-                        style: tt.labelSmall?.copyWith(color: onColor.withValues(alpha: 0.85)),
-                      ),
-                    ],
+                        Text(
+                          'This Month Projected • Day ${spendingForecast.currentDay}/${spendingForecast.totalDaysInMonth} (${spendingForecast.status == SpendingPaceStatus.overPace ? 'Pacing Fast' : spendingForecast.status == SpendingPaceStatus.exhausted ? 'Exhausted' : 'On Track'})',
+                          style: tt.labelSmall?.copyWith(color: onColor.withValues(alpha: 0.85)),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -970,6 +983,29 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
               overflow: TextOverflow.ellipsis,
             ),
           ),
+          if (progress.isSyncing) ...[
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                SmsService.cancelSync();
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+                ),
+                child: Text(
+                  'Cancel',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onPrimaryContainer,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1016,6 +1052,10 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                           children: [
                             const SizedBox(width: 4),
                             Expanded(
+                              child: Semantics(
+                              button: true,
+                              label:
+                                  'Selected date range: ${_selectedRange.duration.inDays == 0 ? DateFormat.MMMd().format(_selectedRange.start) : '${DateFormat.MMMd().format(_selectedRange.start)} to ${DateFormat.MMMd().format(_selectedRange.end)}'}. Tap to change filter',
                               child: InkWell(
                                 onTap: () {
                                   HapticFeedback.lightImpact();
@@ -1023,7 +1063,8 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                 },
                                 borderRadius: BorderRadius.circular(12),
                                 child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 6),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     mainAxisSize: MainAxisSize.min,
@@ -1043,11 +1084,13 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                           Flexible(
                                             child: Text(
                                               _selectedRange.duration.inDays == 0
-                                                  ? DateFormat.MMMd().format(_selectedRange.start)
+                                                  ? DateFormat.MMMd()
+                                                      .format(_selectedRange.start)
                                                   : '${DateFormat.MMMd().format(_selectedRange.start)} – ${DateFormat.MMMd().format(_selectedRange.end)}',
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
-                                              style: textTheme.bodySmall?.copyWith(
+                                              style:
+                                                  textTheme.bodySmall?.copyWith(
                                                 color: colorScheme.primary,
                                                 fontSize: 12,
                                                 fontWeight: FontWeight.w500,
@@ -1067,36 +1110,52 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                 ),
                               ),
                             ),
-                            Tooltip(
-                              message: 'Quick Sync (Tap) | Advanced Import (Hold)',
-                              child: BouncingWidget(
-                                onTap: () {
-                                  HapticFeedback.lightImpact();
-                                  _quickImportRecentSms();
-                                },
-                                onLongPress: () {
-                                  HapticFeedback.mediumImpact();
-                                  showModalBottomSheet(
-                                    context: context,
-                                    isScrollControlled: true,
-                                    showDragHandle: true,
-                                    builder: (_) => const SmsImportSheet(),
-                                  );
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: _isSmsSyncing
-                                      ? SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            valueColor: AlwaysStoppedAnimation<Color>(
-                                              Theme.of(context).colorScheme.primary,
-                                            ),
-                                          ),
-                                        )
-                                      : const Icon(Icons.sync_rounded),
+                            ),
+                            Semantics(
+                              button: true,
+                              label:
+                                  'Sync SMS transactions. Tap for quick sync, hold for advanced import options',
+                              child: Tooltip(
+                                message:
+                                    'Quick Sync (Tap) | Advanced Import (Hold)',
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                      minWidth: 48, minHeight: 48),
+                                  child: BouncingWidget(
+                                    onTap: () {
+                                      HapticFeedback.lightImpact();
+                                      _quickImportRecentSms();
+                                    },
+                                    onLongPress: () {
+                                      HapticFeedback.mediumImpact();
+                                      showModalBottomSheet(
+                                        context: context,
+                                        isScrollControlled: true,
+                                        showDragHandle: true,
+                                        builder: (_) => const SmsImportSheet(),
+                                      );
+                                    },
+                                    child: Center(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: _isSmsSyncing
+                                            ? SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  valueColor:
+                                                      AlwaysStoppedAnimation<Color>(
+                                                    Theme.of(context)
+                                                        .colorScheme
+                                                        .primary,
+                                                  ),
+                                                ),
+                                              )
+                                            : const Icon(Icons.sync_rounded),
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
