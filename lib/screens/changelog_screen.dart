@@ -28,9 +28,25 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
-                  version: 'v2.21.0',
+                  version: 'v2.21.1',
                   date: 'August 21, 2026',
                   isLatest: true,
+                  changes: [
+                    _ChangelogGroup(
+                      title: '🚀 Improvements',
+                      items: [
+                        'Bitmap Memory Downsampling: Added image downsampling and fallback error handling to note previews, cutting image memory usage by up to 85% and preventing Out-Of-Memory pauses on large camera photos.',
+                        'R8 Full-Mode Optimization: Enabled aggressive dead-code elimination, method inlining, and bytecode optimization for faster app launch and reduced download size.',
+                        'Backward-Compatible Schema Upgrades: Enhanced SQLite database migration routines with rigorous single-quote SQL syntax and multi-version upgrade validation.',
+                      ],
+                    ),
+                  ],
+                ),
+                _buildVersionSection(
+                  context,
+                  version: 'v2.21.0',
+                  date: 'August 21, 2026',
+                  isLatest: false,
                   changes: [
                     _ChangelogGroup(
                       title: '🌟 What\'s New',

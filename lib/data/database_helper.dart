@@ -33,6 +33,11 @@ class DatabaseHelper {
     await _createDB(db, 19);
   }
 
+  @visibleForTesting
+  Future<void> upgradeTestDatabase(Database db, int oldVersion, int newVersion) async {
+    await _upgradeDB(db, oldVersion, newVersion);
+  }
+
   Future<Database> get database {
     if (_database != null) return Future.value(_database!);
     
@@ -335,11 +340,11 @@ class DatabaseHelper {
         await db.execute('DROP TABLE sms_whitelist');
       }
     }
-    if (oldVersion < 11) await db.execute('CREATE TABLE IF NOT EXISTS ${TableNames.periodLogs} (${PeriodLogFields.id} TEXT PRIMARY KEY, ${PeriodLogFields.startDate} TEXT NOT NULL, ${PeriodLogFields.endDate} TEXT, ${PeriodLogFields.intensity} TEXT NOT NULL, ${PeriodLogFields.notes} TEXT NOT NULL DEFAULT "")');
+    if (oldVersion < 11) await db.execute("CREATE TABLE IF NOT EXISTS ${TableNames.periodLogs} (${PeriodLogFields.id} TEXT PRIMARY KEY, ${PeriodLogFields.startDate} TEXT NOT NULL, ${PeriodLogFields.endDate} TEXT, ${PeriodLogFields.intensity} TEXT NOT NULL, ${PeriodLogFields.notes} TEXT NOT NULL DEFAULT '')");
     if (oldVersion < 12) {
       await db.execute('ALTER TABLE ${TableNames.periodLogs} RENAME TO period_logs_old');
-      await db.execute('CREATE TABLE ${TableNames.periodLogs} (${PeriodLogFields.id} TEXT PRIMARY KEY, ${PeriodLogFields.startDate} TEXT NOT NULL, ${PeriodLogFields.endDate} TEXT, ${PeriodLogFields.intensity} TEXT NOT NULL, ${PeriodLogFields.notes} TEXT NOT NULL DEFAULT "")');
-      await db.execute('INSERT INTO ${TableNames.periodLogs} (${PeriodLogFields.id}, ${PeriodLogFields.startDate}, ${PeriodLogFields.endDate}, ${PeriodLogFields.intensity}, ${PeriodLogFields.notes}) SELECT ${PeriodLogFields.id}, ${PeriodLogFields.startDate}, NULLIF(${PeriodLogFields.endDate}, ""), ${PeriodLogFields.intensity}, ${PeriodLogFields.notes} FROM period_logs_old');
+      await db.execute("CREATE TABLE ${TableNames.periodLogs} (${PeriodLogFields.id} TEXT PRIMARY KEY, ${PeriodLogFields.startDate} TEXT NOT NULL, ${PeriodLogFields.endDate} TEXT, ${PeriodLogFields.intensity} TEXT NOT NULL, ${PeriodLogFields.notes} TEXT NOT NULL DEFAULT '')");
+      await db.execute("INSERT INTO ${TableNames.periodLogs} (${PeriodLogFields.id}, ${PeriodLogFields.startDate}, ${PeriodLogFields.endDate}, ${PeriodLogFields.intensity}, ${PeriodLogFields.notes}) SELECT ${PeriodLogFields.id}, ${PeriodLogFields.startDate}, NULLIF(${PeriodLogFields.endDate}, ''), ${PeriodLogFields.intensity}, ${PeriodLogFields.notes} FROM period_logs_old");
       await db.execute('DROP TABLE period_logs_old');
     }
     if (oldVersion < 13) {

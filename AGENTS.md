@@ -79,15 +79,23 @@ lib/
 * **LWW 2-Way Delta Merges**: Execute non-destructive merges over local Wi-Fi. Soft-deletes check `deletedAt` with 5-second clock skew tolerance.
 * **Stable Identity & Multi-Network Endpoints**: Each peer retains an immutable `deviceId` UUID with multiple saved `DeviceEndpoint`s (e.g., home and office Wi-Fi). Never deduplicate peers by IP or pair code.
 
-### 🛡️ Invariant 7: Absolute Permission Rule & Release Gate
+### 🛡️ Invariant 7: Absolute Permission Rule & Major/Minor Release Gates
 * **No Unprompted Git Actions**: NEVER run `git commit`, `git tag`, or `git push` without explicit, real-time user confirmation.
 * **Mandatory Analysis & Testing**: Run `flutter analyze` (0 errors/warnings) and `flutter test` (all tests passing) before committing or building.
-* **Bilingual Play Store Notes Parity**: Update `PLAY_STORE_NOTES.md` (`<en-US>` and `<ta-IN>`, < 450 characters each), `lib/screens/changelog_screen.dart`, `lib/widgets/whats_new_sheet.dart`, and `CHANGELOG.md` atomically before compiling release APKs or running `./deploy.sh`.
+* **Major vs. Minor Documentation Strategy**:
+  - **Major Releases (`X.0.0`)**: Review `OnboardingScreen` slides; optionally bump onboarding key (`hasSeenOnboarding_v2`) if core workflows changed.
+  - **Minor/Patch Releases (`X.Y.Z`)**: Existing users bypass onboarding. `PLAY_STORE_NOTES.md` and `WhatsNewSheet` present the **cumulative headline features from the current minor cycle (`X.Y.x`)** alongside the latest patch fixes.
+* **4-File Parity**: Update `PLAY_STORE_NOTES.md` (`<en-US>` and `<ta-IN>`, < 450 characters each), `lib/screens/changelog_screen.dart`, `lib/widgets/whats_new_sheet.dart`, and `CHANGELOG.md` atomically before compiling release APKs or running `./deploy.sh`.
 
 ### 🔘 Invariant 8: Standard FAB Bottom Clearance & Universal Morphing Protocol
 * **No Obscured Content**: Bottom scrollable content must never be clipped or obscured by floating buttons or bottom navigation chrome. Always apply `AppLayout.fabBottomPadding = 96.0` to sliver lists or bottom padding containers.
 * **Universal Morphing FAB**: All floating action buttons must use `AppMorphingFab` (`lib/core/ui/app_morphing_fab.dart`), reacting to `UserScrollNotification` to dynamically collapse into a $56 \times 56\text{dp}$ circular button on downward scroll and expand back to the stadium button on upward scroll.
 * **Donut Chart Precision**: Donut chart center hole labels must be explicitly bounded inside a `SizedBox` with `FittedBox(fit: BoxFit.scaleDown)` to prevent text from touching chart rings, and slices must enforce a minimum 1.5% angle floor so micro-slivers remain visible.
+
+### 🖼️ Invariant 9: R8 Full-Mode Optimization & Bitmap Memory Downsampling
+* **R8 Full-Mode Hygiene**: Maintain `android.enableR8.fullMode=true` in `android/gradle.properties`. Avoid broad wildcards like `-keep class io.flutter.** { *; }` in `proguard-rules.pro` that disable dead code elimination and method inlining passes.
+* **Bitmap Downsampling Bounds**: Never decode raw 12–48MP images without bounding parameters. All `Image.file`, `Image.network`, and `Image.asset` preview widgets MUST supply `cacheWidth` (e.g. `cacheWidth: 1080` for note embeds, `cacheWidth: 400` for grid/list cards) and provide `errorBuilder` fallbacks to prevent OOM memory pressure.
+* **Global Image Cache Bounds**: `main.dart` must maintain `imageCache.maximumSizeBytes = 100 * 1024 * 1024` (100MB) and `maximumSize = 100`.
 
 ---
 

@@ -59,6 +59,11 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.tertiaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
+            icon: Icons.speed_rounded,
+            title: "85% Less Memory & R8 Speed Boost",
+            desc: "Smart bitmap downsampling and R8 Full Mode optimization deliver lightning-fast launch and smooth 120 FPS scrolling.",
+          ),
+          _WhatsNewItem(
             icon: Icons.widgets_rounded,
             title: "Real-Time Home Widget Updates",
             desc: "Changes to budget limits or new transactions update the Android home screen widget instantly.",
@@ -67,11 +72,6 @@ class WhatsNewSheet extends StatelessWidget {
             icon: Icons.donut_large_rounded,
             title: "Donut Chart Precision & Text Fitting",
             desc: "Center totals dynamically scale down smoothly without touching chart rings, with guaranteed visibility for small slices.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.touch_app_rounded,
-            title: "Forecast Chart Tooltip Visibility",
-            desc: "Tooltips now render above touch targets for clear, finger-friendly chart exploration.",
           ),
         ],
       ),

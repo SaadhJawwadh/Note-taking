@@ -1,10 +1,10 @@
-# General Flutter & Plugin Infrastructure
+# General Flutter Embedding Infrastructure
+-keep class io.flutter.embedding.engine.FlutterJNI { *; }
+-keep class io.flutter.embedding.engine.plugins.** { *; }
 -keep class io.flutter.app.** { *; }
 -keep class io.flutter.plugin.** { *; }
 -keep class io.flutter.util.** { *; }
 -keep class io.flutter.view.** { *; }
--keep class io.flutter.** { *; }
--keep class io.flutter.plugins.** { *; }
 -dontwarn io.flutter.embedding.**
 
 # Keep all implementations of Flutter interfaces to ensure they are found via reflection

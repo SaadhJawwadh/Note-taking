@@ -1,16 +1,16 @@
 <en-US>
 🌟 What's New
-• Universal morphing action buttons for smooth reading.
+• Universal morphing action buttons for distraction-free reading.
 • Turn any transaction into a recurring schedule.
 • Helpful rotating pro-tips for power features.
 
 🚀 Improvements
-• Real-time home widget sync for budget limits.
-• Clearer chart tooltips & scaled donut totals.
+• 85% reduced image memory usage with bitmap downsampling.
+• Faster launch & smaller app size via R8 Full Mode.
+• Real-time home widget budget syncing.
 
 🐛 Fixes
 • Protected bottom content from button overlap.
-• Smart deduplication for recurring bills.
 </en-US>
 <ta-IN>
 🌟 புதிய அம்சங்கள்
@@ -19,10 +19,10 @@
 • பயன்பாட்டு உதவிக்குறிப்புகள்.
 
 🚀 மேம்பாடுகள்
+• குறைவான நினைவக பயன்பாட்டுடன் கூடிய பட வடிவமைப்பு.
+• R8 மேம்படுத்தல் மூலம் அதிவேக செயல்பாடு.
 • முகப்பு விட்ஜெட்டில் உடனடி பட்ஜெட் புதுப்பிப்பு.
-• தெளிவான விளக்கப்பட உரை மற்றும் கணிப்புகள்.
 
 🐛 பிழை திருத்தங்கள்
 • பொத்தான் உரை மறைப்பு பிழை சரி செய்யப்பட்டது.
-• தொடர் கட்டண நகல் தவிர்ப்பு மேம்பாடு.
 </ta-IN>

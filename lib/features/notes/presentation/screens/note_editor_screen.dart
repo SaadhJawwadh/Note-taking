@@ -4325,9 +4325,30 @@ class RoundedImageEmbedBuilder extends EmbedBuilder {
     final file = isUrl ? null : File(imageUrl);
 
     Widget imageWidget = isUrl
-        ? Image.network(imageUrl,
-            fit: BoxFit.cover, alignment: Alignment.topCenter)
-        : Image.file(file!, fit: BoxFit.cover, alignment: Alignment.topCenter);
+        ? Image.network(
+            imageUrl,
+            cacheWidth: 1080,
+            fit: BoxFit.cover,
+            alignment: Alignment.topCenter,
+            errorBuilder: (context, error, stackTrace) => Container(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              child: const Center(
+                child: Icon(Icons.broken_image_outlined, size: 36),
+              ),
+            ),
+          )
+        : Image.file(
+            file!,
+            cacheWidth: 1080,
+            fit: BoxFit.cover,
+            alignment: Alignment.topCenter,
+            errorBuilder: (context, error, stackTrace) => Container(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              child: const Center(
+                child: Icon(Icons.broken_image_outlined, size: 36),
+              ),
+            ),
+          );
 
     return GestureDetector(
       onTap: () {

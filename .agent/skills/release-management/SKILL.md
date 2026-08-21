@@ -35,15 +35,19 @@ Before bumping the version or running deployment, ensure all of the following ar
   * Target everyday users with friendly emojis.
   * **500 Character Maximum Limit**: Keep total character count under **450 characters** per language block to prevent Google Play API publication failures.
 * **Codebase Knowledge Graph (`map.md`)**: Ensure [.agent/map.md](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/.agent/map.md) is updated with any new files or feature architecture.
-* **Stable Release & Cumulative Sub-Version Release Notes Mandate**:
-  - Whenever the user specifies *"this is a stable release"* or *"minor/patch version release"*, the agent MUST automatically inspect git tags (`git tag -l`) for the last base minor release (e.g. `v2.17.0`) and aggregate all cumulative user-facing features, UI polish, performance improvements (database WAL, GPU chart isolation), and stability fixes up to the target version.
-  - Release notes in `PLAY_STORE_NOTES.md`, `lib/widgets/whats_new_sheet.dart`, `lib/screens/changelog_screen.dart`, and `CHANGELOG.md` MUST be updated **atomically in a single step BEFORE** compiling the local release APK (`flutter build apk --release`) so the test build matches production 100%.
-* **CI/CD Gradle Wrapper & Caching Invariant**:
-  - `android/gradle/wrapper/gradle-wrapper.properties` MUST specify the binary distribution URL (`gradle-X.X-bin.zip`) rather than the heavy `-all.zip` payload to optimize network payload size (~120MB vs ~200MB) and prevent download socket timeouts on CI runners.
-  - `.github/workflows/release.yml` MUST include `gradle/actions/setup-gradle@v3` before building Flutter release targets, and enable `cache: true` under `subosito/flutter-action@v2` to persist Gradle wrapper distributions across workflow runs.
+* **Major vs. Minor / Patch Release Strategy (MANDATORY)**:
+  - **🌟 Major Releases (`X.0.0`)**:
+    - **Scope**: Major architectural milestones, new module additions, or fundamental redesigns.
+    - **Onboarding Wizard (`onboarding_screen.dart`)**: Comprehensive review and update of all onboarding slides. If foundational paradigms change, bump the onboarding version key (e.g., `hasSeenOnboarding_v2`) to re-introduce the experience to all users.
+    - **Play Store Notes & What's New**: Focus on marquee pillar capabilities and headline visual transformations.
+  - **🚀 Minor & Patch Releases (`X.Y.Z` where `Y > 0` or `Z > 0`)**:
+    - **Onboarding Continuity**: Existing users MUST NEVER be forced through the onboarding wizard again (`hasSeenOnboarding_v1` stays intact). First-time users continue to receive the updated onboarding flow on fresh install.
+    - **Cumulative What's New & Play Store Notes**: `PLAY_STORE_NOTES.md` and `lib/widgets/whats_new_sheet.dart` MUST preserve and present the **cumulative headline features and improvements from the entire current minor cycle (`X.Y.x`)**, updating on top of them with the latest optimizations/fixes. This ensures users skipping intermediate versions get the complete feature showcase.
+    - **Granular Changelogs**: `CHANGELOG.md` and `lib/screens/changelog_screen.dart` maintain granular, distinct sections for each version delta (`X.Y.1`, `X.Y.0`) to keep the historical engineering record precise.
 * Version number in `pubspec.yaml` is bumped using the project convention:
-  * **Minor bump** (new features): `1.X.0+Y` where `Y = X * 10000` (e.g. `1.34.0+13400`)
-  * **Patch bump** (bug fixes): `1.X.Y+Z` (e.g. `1.33.1+13301`)
+  * **Major bump**: `X.0.0+Y` where `Y = X * 10000` (e.g. `3.0.0+30000`)
+  * **Minor bump**: `X.Y.0+Z` where `Z = X * 10000 + Y * 100` (e.g. `2.21.0+22100`)
+  * **Patch bump**: `X.Y.Z+W` where `W = X * 10000 + Y * 100 + Z` (e.g. `2.21.1+22101`)
   * Keep `minor` and `patch` numbers strictly under `100` to prevent version code overlaps.
 
 ### Step 2: Build Local Release APK & On-Device Smoke Test

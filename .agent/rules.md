@@ -51,12 +51,14 @@ After implementing any feature or fix, the agent **MUST** verify code correctnes
 
 ---
 
-## 🛡️ Rule 5: R8 ProGuard Rules for Native Dependencies
-When adding native Android plugins to `pubspec.yaml`, the agent **MUST** ensure R8 release builds will not strip required native classes or reflection entry points.
-
-**Process**:
-1. Inspect `android/app/proguard-rules.pro` and add explicit `-keep class <package_name>.** { *; }` rules for new native plugins.
-2. Verify release build compilation via `flutter build apk --release` when requested.
+## 🛡️ Rule 5: R8 Full Mode & Bitmap Downsampling Standards
+1. **R8 Full Mode & ProGuard Hygiene**:
+   - `android/gradle.properties` enforces `android.enableR8.fullMode=true` for maximum dead code elimination, constant folding, and method inlining.
+   - When adding native Android plugins, inspect `android/app/proguard-rules.pro` and add explicit `-keep class <package_name>.** { *; }` rules. Avoid blanket wildcards like `-keep class io.flutter.** { *; }` that disable R8 optimization passes.
+2. **Bitmap Memory Downsampling**:
+   - Never decode raw high-resolution images ($12\text{–}48\text{MP}$) into memory without downsampling bounds.
+   - All `Image.file`, `Image.network`, and `Image.asset` preview widgets MUST supply `cacheWidth` (e.g. `cacheWidth: 1080` for note body embeds, `cacheWidth: 400` for cards) and implement `errorBuilder` fallbacks.
+   - Global image cache limits in `main.dart` must maintain `imageCache.maximumSizeBytes = 100 * 1024 * 1024` (100MB) to protect against OOM memory pressure.
 
 ---
 
@@ -66,10 +68,16 @@ When adding native Android plugins to `pubspec.yaml`, the agent **MUST** ensure 
 
 ---
 
-## 🏷️ Rule 7: Mandatory Play Store Listing & Release Notes Sync
+## 🏷️ Rule 7: Major vs. Minor Release Protocols & Documentation Parity
 Before running deployment scripts (`./deploy.sh`) or tagging a release:
-1. **`PLAY_STORE_NOTES.md` (Mandatory)**: Always write updated, bilingual release notes (`<en-US>` and `<ta-IN>`) under 450 characters per section to `PLAY_STORE_NOTES.md` BEFORE triggering `./deploy.sh`.
-2. **App Changelog Parity**: Ensure `CHANGELOG.md`, `lib/screens/changelog_screen.dart`, `lib/widgets/whats_new_sheet.dart`, and `PLAY_STORE_NOTES.md` all feature identical, user-friendly benefit highlights for the new version.
+1. **🌟 Major Releases (`X.0.0`)**:
+   - Comprehensive review of `OnboardingScreen` slides. If foundational paradigms changed, bump onboarding key (e.g. `hasSeenOnboarding_v2`) to re-introduce the experience to all users.
+   - Highlight headline pillar capabilities in `PLAY_STORE_NOTES.md` and `WhatsNewSheet`.
+2. **🚀 Minor & Patch Releases (`X.Y.Z`)**:
+   - **Onboarding Continuity**: Existing users are never re-prompted through onboarding (`hasSeenOnboarding_v1` remains `true`).
+   - **Cumulative Marquee Notes**: `PLAY_STORE_NOTES.md` and `lib/widgets/whats_new_sheet.dart` MUST aggregate and present the **cumulative headline features from the current minor cycle (`X.Y.x`)**, updating on top of them with the latest patch optimizations/fixes.
+3. **`PLAY_STORE_NOTES.md` (Mandatory)**: Always write updated, bilingual release notes (`<en-US>` and `<ta-IN>`) under 450 characters per section to `PLAY_STORE_NOTES.md` BEFORE triggering `./deploy.sh`.
+4. **App Changelog Parity**: Ensure `CHANGELOG.md` and `lib/screens/changelog_screen.dart` maintain granular, chronological version sections.
 
 ---
 
