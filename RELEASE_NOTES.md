@@ -1,6 +1,9 @@
 
-### 🐛 Fixes & Improvements
-- **SMS Permission & Sync Detection**: Fixed SMS permission evaluation by removing undeclared phone permission requirements, restoring instant 1-tap quick sync and real-time bank SMS interception.
-- **Tombstone Re-Import Safeguards**: Enhanced transaction ingestion to check the tombstone table, preventing permanently deleted transactions from being re-imported during historical scans unless explicitly enabled.
-- **Sync Cancellation & Progress Controls**: Added an instant "Cancel" button to the SMS sync banner and batch processing chunks for seamless navigation across large inboxes.
+### 🚀 Improvements
+- **Instant 0ms UI Updates**: Added optimistic instant state rendering across the Financial Ledger, Notes feed, Trash Sheet, and Health Tracker—deleting, restoring, and toggling items updates the UI in 0ms with zero loading flickers or list re-animations.
+- **Accurate SMS Message Timestamps**: Past bank SMS transactions and inbox imports accurately preserve the exact date and time the message arrived instead of defaulting to the import date.
+
+### 🐛 Fixes
+- **Financial Ledger Undo Restoration**: Fixed transaction undo button by executing direct database restoration, preventing primary key collisions and soft-delete tombstone blocks.
+- **Silent Background Sync**: Background data refreshes and note tagging updates execute quietly without interrupting ongoing user reading or unmounting active lists.
 

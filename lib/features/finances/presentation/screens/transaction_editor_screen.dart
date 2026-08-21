@@ -18,6 +18,8 @@ import 'package:uuid/uuid.dart';
 import 'package:note_taking_app/core/theme/app_layout.dart';
 import 'package:note_taking_app/core/ui/app_morphing_fab.dart';
 import 'package:note_taking_app/widgets/frosted_glass_sliver_app_bar.dart';
+import 'package:note_taking_app/utils/app_globals.dart';
+import 'package:note_taking_app/features/finances/providers/financial_manager_provider.dart';
 
 class TransactionEditorScreen extends StatefulWidget {
   final TransactionModel? transaction;
@@ -212,13 +214,34 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
     );
 
     if (confirm == true) {
+      final txn = widget.transaction!;
+      final txnId = txn.id!;
+      final desc = txn.description;
       setState(() => _isLoading = true);
-      await TransactionRepository.instance.deleteTransaction(widget.transaction!.id!);
+      await TransactionRepository.instance.deleteTransaction(txnId);
       setState(() => _isLoading = false);
       if (mounted) {
         final navigator = Navigator.of(context);
         await HapticFeedback.mediumImpact();
         navigator.pop(true);
+        appScaffoldMessengerKey.currentState?.clearSnackBars();
+        appScaffoldMessengerKey.currentState?.showSnackBar(
+          SnackBar(
+            content: Text('Deleted "$desc"'),
+            behavior: SnackBarBehavior.floating,
+            action: SnackBarAction(
+              label: 'UNDO',
+              onPressed: () async {
+                await TransactionRepository.instance.restoreTransaction(txnId);
+                final ctx = appScaffoldMessengerKey.currentContext;
+                if (ctx != null && ctx.mounted) {
+                  await Provider.of<FinancialManagerProvider>(ctx, listen: false)
+                      .loadTransactions();
+                }
+              },
+            ),
+          ),
+        );
       }
     }
   }

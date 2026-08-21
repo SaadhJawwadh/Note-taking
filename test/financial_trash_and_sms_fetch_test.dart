@@ -180,6 +180,69 @@ void main() {
       final checkTombstone = await db.query('deleted_transaction_sms_ids', where: 'smsId = ?', whereArgs: [testSmsId]);
       expect(checkTombstone, isEmpty, reason: 'Tombstone record should be cleared upon reinstatement');
     });
+
+    test('Soft delete and UNDO restore preserves SMS transaction idempotency and does not crash', () async {
+      final txn = await repo.createTransaction(
+        TransactionModel(
+          amount: 4200,
+          description: 'Electronic Store',
+          date: DateTime(2026, 7, 20, 11, 45),
+          isExpense: true,
+          category: 'Shopping',
+          smsId: 'sms_undo_99',
+        ),
+      );
+
+      expect(txn.id, isNotNull);
+
+      // 1. Soft delete
+      await repo.deleteTransaction(txn.id!);
+      expect((await repo.readAllTransactions()).any((t) => t.id == txn.id), isFalse);
+      expect(await repo.smsExists('sms_undo_99'), isTrue);
+
+      // 2. Perform Undo via restoreTransaction
+      final restoredRows = await repo.restoreTransaction(txn.id!);
+      expect(restoredRows, equals(1));
+
+      // 3. Verify state after UNDO
+      final active = await repo.readAllTransactions();
+      final restored = active.firstWhere((t) => t.id == txn.id);
+      expect(restored.amount, equals(4200.0));
+      expect(restored.description, equals('Electronic Store'));
+      expect(restored.smsId, equals('sms_undo_99'));
+      expect(restored.deletedAt, isNull);
+      expect(restored.date.month, equals(7));
+      expect(restored.date.day, equals(20));
+
+      final trashed = await repo.readTrashedTransactions();
+      expect(trashed.any((t) => t.id == txn.id), isFalse);
+    });
+
+    test('Multiple soft deletes and partial UNDOs work cleanly', () async {
+      final t1 = await repo.createTransaction(TransactionModel(amount: 10, description: 'Item 1', date: DateTime.now()));
+      final t2 = await repo.createTransaction(TransactionModel(amount: 20, description: 'Item 2', date: DateTime.now()));
+      final t3 = await repo.createTransaction(TransactionModel(amount: 30, description: 'Item 3', date: DateTime.now()));
+
+      // Delete all 3
+      await repo.deleteTransaction(t1.id!);
+      await repo.deleteTransaction(t2.id!);
+      await repo.deleteTransaction(t3.id!);
+
+      expect((await repo.readAllTransactions()).isEmpty, isTrue);
+      expect((await repo.readTrashedTransactions()).length, equals(3));
+
+      // Undo only t2
+      await repo.restoreTransaction(t2.id!);
+
+      final active = await repo.readAllTransactions();
+      expect(active.length, equals(1));
+      expect(active.first.id, equals(t2.id));
+
+      final trashed = await repo.readTrashedTransactions();
+      expect(trashed.length, equals(2));
+      expect(trashed.any((t) => t.id == t1.id), isTrue);
+      expect(trashed.any((t) => t.id == t3.id), isTrue);
+    });
   });
 
   group('Promotional & OTP SMS Parser Rules Unit Tests', () {
@@ -257,6 +320,74 @@ void main() {
     test('cancelSync sets cancelled progress state cleanly', () {
       // Calling cancelSync when no sync active should not throw
       SmsService.cancelSync();
+    });
+
+    test('SmsParser.resolveMessageDate accurately preserves past millisecond and second epochs', () {
+      final pastDate = DateTime(2026, 8, 15, 14, 30);
+      final millis = pastDate.millisecondsSinceEpoch;
+      final seconds = millis ~/ 1000;
+
+      final fromMillis = SmsParser.resolveMessageDate(millis);
+      expect(fromMillis.year, equals(2026));
+      expect(fromMillis.month, equals(8));
+      expect(fromMillis.day, equals(15));
+      expect(fromMillis.hour, equals(14));
+      expect(fromMillis.minute, equals(30));
+
+      final fromSeconds = SmsParser.resolveMessageDate(seconds);
+      expect(fromSeconds.year, equals(2026));
+      expect(fromSeconds.month, equals(8));
+      expect(fromSeconds.day, equals(15));
+      expect(fromSeconds.hour, equals(14));
+      expect(fromSeconds.minute, equals(30));
+
+      // Null or 0 fallback
+      final fromNull = SmsParser.resolveMessageDate(null);
+      expect(DateTime.now().difference(fromNull).inSeconds < 5, isTrue);
+    });
+
+    test('SmsParser stamps parsed transaction with genuine message epoch date', () {
+      final pastDate = DateTime(2026, 8, 10, 9, 15);
+      const testBody = 'Paid LKR 1,500.00 at CAFE on 10-Aug-2026.';
+      final parsed = SmsParser.parseMessage(
+        body: testBody,
+        address: 'COMBANK',
+        messageId: 505,
+        messageDate: pastDate.millisecondsSinceEpoch,
+        allowedSenderIds: {},
+        blockedSenderIds: {},
+        customExpenseRules: [],
+        customIncomeRules: [],
+      );
+
+      expect(parsed, isNotNull);
+      expect(parsed!.date.year, equals(2026));
+      expect(parsed.date.month, equals(8));
+      expect(parsed.date.day, equals(10));
+      expect(parsed.date.hour, equals(9));
+      expect(parsed.date.minute, equals(15));
+    });
+
+    test('resolveMessageDate handles boundary timestamps and negative/zero values gracefully', () {
+      // 0 or negative
+      final fromZero = SmsParser.resolveMessageDate(0);
+      final fromNegative = SmsParser.resolveMessageDate(-1000);
+      expect(DateTime.now().difference(fromZero).inSeconds < 5, isTrue);
+      expect(DateTime.now().difference(fromNegative).inSeconds < 5, isTrue);
+
+      // Exact 10-digit epoch timestamp (year 2025: 1735689600 -> Jan 1, 2025 00:00:00 UTC)
+      const epochSec2025 = 1735689600;
+      final date2025 = SmsParser.resolveMessageDate(epochSec2025);
+      expect(date2025.toUtc().year, equals(2025));
+      expect(date2025.toUtc().month, equals(1));
+      expect(date2025.toUtc().day, equals(1));
+
+      // Exact 13-digit epoch timestamp (year 2026: 1767225600000 -> Jan 1, 2026 00:00:00 UTC)
+      const epochMillis2026 = 1767225600000;
+      final date2026 = SmsParser.resolveMessageDate(epochMillis2026);
+      expect(date2026.toUtc().year, equals(2026));
+      expect(date2026.toUtc().month, equals(1));
+      expect(date2026.toUtc().day, equals(1));
     });
   });
 }

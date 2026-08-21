@@ -109,11 +109,13 @@ class NoteProvider extends ChangeNotifier {
     await refreshNotes();
   }
 
-  Future<void> refreshNotes() async {
-    _isLoading = true;
+  Future<void> refreshNotes({bool showLoading = false}) async {
+    if (showLoading || _notes.isEmpty) {
+      _isLoading = true;
+      notifyListeners();
+    }
     _currentPage = 0;
     _hasMoreNotes = true;
-    notifyListeners();
 
     try {
       final prefs = await SharedPreferences.getInstance();

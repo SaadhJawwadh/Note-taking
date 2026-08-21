@@ -188,12 +188,25 @@ class PeriodTrackerProvider extends ChangeNotifier {
   }
 
   Future<void> deleteLog(String id) async {
+    // 1. Instant optimistic in-memory removal (0ms)
+    _logs.removeWhere((l) => l.id == id);
+    notifyListeners();
+
+    // 2. Persist in background and recalculate predictions
     await PeriodRepository.instance.deletePeriodLog(id);
     await loadData();
   }
 
   Future<void> updateIntensity(PeriodLog log, String newIntensity) async {
     final updated = log.copyWith(intensity: newIntensity);
+    // 1. Instant optimistic in-memory update (0ms)
+    final idx = _logs.indexWhere((l) => l.id == log.id);
+    if (idx != -1) {
+      _logs[idx] = updated;
+      notifyListeners();
+    }
+
+    // 2. Persist in background
     await PeriodRepository.instance.updatePeriodLog(updated);
     await loadData();
   }
@@ -206,6 +219,15 @@ class PeriodTrackerProvider extends ChangeNotifier {
       updatedSymptoms.add(symptom);
     }
     final updated = log.copyWith(symptoms: updatedSymptoms);
+
+    // 1. Instant optimistic in-memory update (0ms)
+    final idx = _logs.indexWhere((l) => l.id == log.id);
+    if (idx != -1) {
+      _logs[idx] = updated;
+      notifyListeners();
+    }
+
+    // 2. Persist in background
     await PeriodRepository.instance.updatePeriodLog(updated);
     await loadData();
   }

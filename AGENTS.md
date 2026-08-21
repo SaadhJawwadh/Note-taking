@@ -65,11 +65,13 @@ lib/
 * Never gate AI UI triggers on `useOnDeviceAi` alone.
 * AI sparkle icons, toolbar assist buttons, and refine menu actions MUST query `settings.isAiActive` (`_useOnDeviceAi && _isDeviceAiSupported`) so emulators and devices lacking on-device Gemini Nano/AICore hardware cleanly hide non-functional controls.
 
-### 💳 Invariant 4: Authentic Currencies, SMS Deduplication & PII Safety
+### 💳 Invariant 4: Authentic Currencies, SMS Deduplication, Tombstone Safety & Manifest Parity
 * **Authentic Symbol Badges**: Render authentic tonal circular avatars displaying the genuine currency symbol (e.g. `Rs.`, `₹`, `$`, `€`, `£`, `¥`, `د.إ`, `﷼`, `C$`, `A$`, `S$`, `RM`, `NZ$`, `CHF`), bold code, and full name instead of generic dollar icons.
 * **PII Lookahead Assertions**: Reference number stripping regexes MUST require digit lookaheads (`\b(?=[A-Za-z0-9]*\d)[A-Za-z0-9]{10,}\b`) to avoid truncating legitimate 10+ character English words.
 * **SMS Sandbox Whitelisting**: SMS parsing engines must recognize simulated test senders (`'BANK_SMS'`, `'CARD'`, `'ALERTS'`, `'BANK'`) as verified financial senders.
-* **Tombstone Table Retention**: Permanently purged transactions persist their `smsId` to `deleted_transaction_sms_ids` to permanently prevent deleted SMS transactions from being re-imported.
+* **SMS Permission Manifest Parity**: Permission services must strictly query declared permissions (`Permission.sms`). Never query undeclared permissions (e.g. `Permission.phone`), as `permission_handler` permanently returns `denied` for undeclared permissions.
+* **Tombstone Ingestion Guardrail**: `TransactionRepository.createSmsTransaction` must query `smsExists(smsId)` against active `transactions` and `deleted_transaction_sms_ids` by default, rejecting re-imports unless `bypassTombstones: true` is explicitly requested.
+* **Non-Blocking Chunked Sync & Cancellation**: SMS inbox syncing must process messages in non-blocking chunks (yielding every 25 messages), check `_cancelRequested`, and display an instant `Cancel` button on sync progress banners.
 
 ### 🔒 Invariant 5: Local-First Security & SQLite WAL Mode
 * **SQLCipher Password Contract**: Pass explicit encryption keys to `openDatabase()`. In `DatabaseHelper.onOpen`, execute `PRAGMA journal_mode = WAL;` via `db.rawQuery(...)` for non-blocking concurrent writes.
@@ -96,6 +98,11 @@ lib/
 * **R8 Full-Mode Hygiene**: Maintain `android.enableR8.fullMode=true` in `android/gradle.properties`. Avoid broad wildcards like `-keep class io.flutter.** { *; }` in `proguard-rules.pro` that disable dead code elimination and method inlining passes.
 * **Bitmap Downsampling Bounds**: Never decode raw 12–48MP images without bounding parameters. All `Image.file`, `Image.network`, and `Image.asset` preview widgets MUST supply `cacheWidth` (e.g. `cacheWidth: 1080` for note embeds, `cacheWidth: 400` for grid/list cards) and provide `errorBuilder` fallbacks to prevent OOM memory pressure.
 * **Global Image Cache Bounds**: `main.dart` must maintain `imageCache.maximumSizeBytes = 100 * 1024 * 1024` (100MB) and `maximumSize = 100`.
+
+### 🎯 Invariant 10: Touch Target Bounds, Chart Outlines & Semantic Labels
+* **$\ge 48\times 48\text{dp}$ Touch Targets**: All interactive micro-elements (sync buttons, date filter pills, "Details >" links, pagination indicator dots) must enforce minimum $48 \times 48\text{dp}$ hit bounds (`BoxConstraints(minWidth: 48, minHeight: 48)` or padded gesture wrappers) and supply `Semantics(button: true)`.
+* **Chart Tooltip 1px Accent Outline**: Floating Canvas chart tooltips (`LineTouchTooltipData`) must specify a 1px primary accent border (`BorderSide(color: colorScheme.primary.withValues(alpha: 0.3), width: 1.0)`) and rounded radius (`AppLayout.radiusM`) to prevent light-mode blending against surface cards.
+* **Prohibition of Raw Text Emojis (Rule 41)**: Strictly replace raw Unicode emoji glyphs (`🔮`, `🔴`, `🟢`) in UI labels and badges with authentic Material Symbols (`Icons.auto_awesome_rounded`) and plain-language semantic labels.
 
 ---
 

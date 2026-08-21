@@ -341,9 +341,7 @@ class SmsService {
         if (await aiService.isSupported()) {
           final aiParsed = await aiService.parseSmsTransaction(body, activeCategories);
           if (aiParsed != null && aiParsed['amount'] != null && (aiParsed['amount'] as num) > 0) {
-            final date = messageDate != null
-                ? DateTime.fromMillisecondsSinceEpoch(messageDate)
-                : DateTime.now();
+            final date = SmsParser.resolveMessageDate(messageDate);
             final normalizedBody = body.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
             final smsId = messageId != null
                 ? '${messageId}_$messageDate'
@@ -416,9 +414,7 @@ class SmsService {
       final aiParsed = OfflineAiFallbackService.parseSmsTransaction(body, activeCategories);
 
       if (aiParsed != null && aiParsed['amount'] != null && (aiParsed['amount'] as num) > 0) {
-        final date = messageDate != null
-            ? DateTime.fromMillisecondsSinceEpoch(messageDate)
-            : DateTime.now();
+        final date = SmsParser.resolveMessageDate(messageDate);
         final normalizedBody = body.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
         final smsId = messageId != null
             ? '${messageId}_$messageDate'

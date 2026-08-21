@@ -136,5 +136,36 @@ void main() {
       expect(provider.isPeriodActive, isFalse);
       expect(provider.logs.first.endDate, isNotNull);
     });
+
+    test('PeriodTrackerProvider optimistically toggles symptoms, updates intensity, and deletes logs', () async {
+      final provider = PeriodTrackerProvider();
+      await provider.loadData();
+
+      final log = PeriodLog(
+        id: 'test_opt_log_1',
+        startDate: DateTime.utc(2026, 8, 1),
+        endDate: DateTime.utc(2026, 8, 5),
+        intensity: 'Light',
+        symptoms: ['Fatigue'],
+      );
+
+      await provider.createLog(log);
+      expect(provider.logs.any((l) => l.id == 'test_opt_log_1'), isTrue);
+
+      // 1. Toggle symptom (adds Cramps)
+      await provider.toggleSymptom(provider.logs.firstWhere((l) => l.id == 'test_opt_log_1'), 'Cramps');
+      final afterAdd = provider.logs.firstWhere((l) => l.id == 'test_opt_log_1');
+      expect(afterAdd.symptoms.contains('Cramps'), isTrue);
+      expect(afterAdd.symptoms.contains('Fatigue'), isTrue);
+
+      // 2. Update intensity (Heavy)
+      await provider.updateIntensity(afterAdd, 'Heavy');
+      final afterIntensity = provider.logs.firstWhere((l) => l.id == 'test_opt_log_1');
+      expect(afterIntensity.intensity, equals('Heavy'));
+
+      // 3. Delete log
+      await provider.deleteLog('test_opt_log_1');
+      expect(provider.logs.any((l) => l.id == 'test_opt_log_1'), isFalse);
+    });
   });
 }

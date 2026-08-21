@@ -143,7 +143,7 @@ class SmsParser {
         ? SmsConstants.reversalSentinel
         : TransactionCategory.fromDescriptionCached('$description $body');
 
-    final date = messageDate != null ? DateTime.fromMillisecondsSinceEpoch(messageDate) : DateTime.now();
+    final date = resolveMessageDate(messageDate);
     final normalizedBody = body.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
     final smsId = messageId != null
         ? '${messageId}_$messageDate'
@@ -290,4 +290,14 @@ class SmsParser {
   static String cleanTitle(String s) => s.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).map((w) => (w.length <= 3 && w == w.toUpperCase() && RegExp(r'^[A-Z]+$').hasMatch(w)) ? w : '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}').join(' ');
 
   static String appendBankSuffix(String desc, String? bankName) => (bankName == null || desc.contains(bankName)) ? desc : '$desc – $bankName';
+
+  /// Resolves the authentic transaction timestamp from the SMS epoch timestamp.
+  /// Handles both 13-digit millisecond and 10-digit second epoch values safely.
+  static DateTime resolveMessageDate(int? messageDate) {
+    if (messageDate == null || messageDate <= 0) return DateTime.now();
+    if (messageDate < 10000000000) {
+      return DateTime.fromMillisecondsSinceEpoch(messageDate * 1000);
+    }
+    return DateTime.fromMillisecondsSinceEpoch(messageDate);
+  }
 }

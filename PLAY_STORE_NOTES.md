@@ -5,26 +5,24 @@
 • Helpful rotating pro-tips for power features.
 
 🚀 Improvements
-• 85% reduced image memory usage with bitmap downsampling.
-• Faster launch & smaller app size via R8 Full Mode.
-• Real-time home widget budget syncing.
+• Instant 0ms updates for note & transaction actions.
+• Accurate original SMS arrival timestamps.
+• 85% reduced memory usage & faster launch via R8.
 
 🐛 Fixes
-• Fixed SMS permission sync & tombstone protection.
-• Protected bottom content from button overlap.
+• Fixed transaction Undo & SMS sync permissions.
 </en-US>
 <ta-IN>
 🌟 புதிய அம்சங்கள்
-• வாசிப்பை எளிதாக்கும் புதிய மிதக்கும் பொத்தான்கள்.
-• பரிவர்த்தனைகளை தொடர் கட்டணங்களாக மாற்றும் வசதி.
+• வாசிப்பை எளிதாக்கும் மிதக்கும் பொத்தான்கள்.
+• தொடர் கட்டணங்களாக மாற்றும் வசதி.
 • பயன்பாட்டு உதவிக்குறிப்புகள்.
 
 🚀 மேம்பாடுகள்
-• குறைவான நினைவக பயன்பாட்டுடன் கூடிய பட வடிவமைப்பு.
-• R8 மேம்படுத்தல் மூலம் அதிவேக செயல்பாடு.
-• முகப்பு விட்ஜெட்டில் உடனடி பட்ஜெட் புதுப்பிப்பு.
+• குறிப்புகள் மற்றும் பரிவர்த்தனைகளில் உடனடி செயல்பாடு.
+• துல்லியமான SMS நேரப் பதிவு.
+• அதிவேக செயல்திறன் மற்றும் குறைந்த நினைவகம்.
 
 🐛 பிழை திருத்தங்கள்
-• SMS ஒத்திசைவு பிழை சரி செய்யப்பட்டது.
-• பொத்தான் உரை மறைப்பு பிழை சரி செய்யப்பட்டது.
+• பரிவர்த்தனை மீட்டெடுப்பு பிழை சரி செய்யப்பட்டது.
 </ta-IN>

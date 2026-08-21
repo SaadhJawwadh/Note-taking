@@ -59,14 +59,14 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.tertiaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
+            icon: Icons.bolt_rounded,
+            title: "0ms Instant Optimistic Updates",
+            desc: "Deleting, restoring, and toggling items across notes, finances, and health updates the screen in 0ms with zero loading flickers.",
+          ),
+          _WhatsNewItem(
             icon: Icons.speed_rounded,
             title: "85% Less Memory & R8 Speed Boost",
             desc: "Smart bitmap downsampling and R8 Full Mode optimization deliver lightning-fast launch and smooth 120 FPS scrolling.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.widgets_rounded,
-            title: "Real-Time Home Widget Updates",
-            desc: "Changes to budget limits or new transactions update the Android home screen widget instantly.",
           ),
           _WhatsNewItem(
             icon: Icons.donut_large_rounded,
@@ -81,6 +81,11 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.secondaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
+            icon: Icons.undo_rounded,
+            title: "Financial Ledger Undo & Epoch Dates",
+            desc: "Fixed transaction undo restoration and preserved genuine original arrival timestamps for imported bank SMS alerts.",
+          ),
+          _WhatsNewItem(
             icon: Icons.sms_rounded,
             title: "SMS Sync & Tombstone Protection",
             desc: "Fixed SMS permission detection and prevented deleted transactions from being re-imported during scans, with an instant sync Cancel button.",
@@ -89,11 +94,6 @@ class WhatsNewSheet extends StatelessWidget {
             icon: Icons.vertical_align_bottom_rounded,
             title: "Bottom Content Clearance Safeguards",
             desc: "Standardized 96dp clearance so forms, segmented buttons, and lists are never obscured by floating action buttons.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.rule_folder_rounded,
-            title: "Smart Recurring Deduplication",
-            desc: "Intelligent time and amount tolerance window avoids duplicate transactions when bank clearance dates shift.",
           ),
         ],
       ),

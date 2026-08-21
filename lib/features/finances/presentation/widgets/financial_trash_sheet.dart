@@ -32,8 +32,10 @@ class _FinancialTrashSheetState extends State<FinancialTrashSheet> {
     _loadTrashed();
   }
 
-  Future<void> _loadTrashed() async {
-    setState(() => _isLoading = true);
+  Future<void> _loadTrashed({bool showLoading = false}) async {
+    if (showLoading || _trashed.isEmpty) {
+      setState(() => _isLoading = true);
+    }
     final list = await TransactionRepository.instance.readTrashedTransactions();
     if (!mounted) return;
     setState(() {
@@ -198,8 +200,13 @@ class _FinancialTrashSheetState extends State<FinancialTrashSheet> {
                               borderRadius: BorderRadius.circular(20),
                               onTap: () async {
                                 if (txn.id != null) {
+                                  // 1. Instant optimistic UI removal (0ms)
+                                  setState(() {
+                                    _trashed.removeWhere((t) => t.id == txn.id);
+                                  });
+                                  // 2. Persist in background
                                   await TransactionRepository.instance.restoreTransaction(txn.id!);
-                                  await _loadTrashed();
+                                  await _loadTrashed(showLoading: false);
                                 }
                               },
                               child: Padding(
@@ -226,8 +233,13 @@ class _FinancialTrashSheetState extends State<FinancialTrashSheet> {
                               borderRadius: BorderRadius.circular(20),
                               onTap: () async {
                                 if (txn.id != null) {
+                                  // 1. Instant optimistic UI removal (0ms)
+                                  setState(() {
+                                    _trashed.removeWhere((t) => t.id == txn.id);
+                                  });
+                                  // 2. Persist in background
                                   await TransactionRepository.instance.permanentlyDeleteTransaction(txn.id!);
-                                  await _loadTrashed();
+                                  await _loadTrashed(showLoading: false);
                                 }
                               },
                               child: Padding(

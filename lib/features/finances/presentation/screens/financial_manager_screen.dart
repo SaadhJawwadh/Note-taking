@@ -81,7 +81,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
       _selectedTab = 'Ledger';
     }
     FinancialManagerScreen.tabRedirectNotifier.addListener(_handleTabRedirect);
-    _refreshTransactions();
+    _refreshTransactions(showLoading: true);
     _startHeroAutoCycleTimer();
     _smsSubscription = SmsService.incomingTransactions.listen((t) async {
       if (!mounted) return;
@@ -155,10 +155,12 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
-  Future<void> _refreshTransactions() async {
-    setState(() {
-      _isLoading = true;
-    });
+  Future<void> _refreshTransactions({bool showLoading = false}) async {
+    if (showLoading && _transactions.isEmpty) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
     // Materialize any recurring transactions that came due since last visit.
     try {
       await RecurringRuleRepository.instance.materializeDueRules();
@@ -185,9 +187,11 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     final trashed = await TransactionRepository.instance.readTrashedTransactions();
 
     _applyFilters();
-    setState(() {
-      _trashedCount = trashed.length;
-    });
+    if (mounted) {
+      setState(() {
+        _trashedCount = trashed.length;
+      });
+    }
   }
 
   /// Applies category and search filters from the cached [_allDateFiltered]
@@ -1528,8 +1532,23 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                   }
                 },
                 onDelete: (transaction) async {
-                  await TransactionRepository.instance.deleteTransaction(transaction.id!);
-                  await _refreshTransactions();
+                  // 1. Instant optimistic local list update (0ms latency)
+                  if (transaction.id != null) {
+                    _allDateFiltered.removeWhere((t) => t.id == transaction.id);
+                    _applyFilters();
+                    if (mounted) {
+                      setState(() {
+                        _trashedCount += 1;
+                      });
+                    }
+                  }
+
+                  // 2. Persist in background
+                  if (transaction.id != null) {
+                    await TransactionRepository.instance.deleteTransaction(transaction.id!);
+                    await _refreshTransactions(showLoading: false);
+                  }
+
                   if (mounted) {
                     ScaffoldMessenger.of(context).clearSnackBars();
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -1539,8 +1558,23 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                         action: SnackBarAction(
                           label: 'UNDO',
                           onPressed: () async {
-                            await TransactionRepository.instance.createTransaction(transaction);
-                            await _refreshTransactions();
+                            if (transaction.id != null) {
+                              // 1. Instant optimistic restore (0ms latency)
+                              final restored = transaction.copy(deletedAt: null);
+                              _allDateFiltered.removeWhere((t) => t.id == transaction.id);
+                              _allDateFiltered.add(restored);
+                              _allDateFiltered.sort((a, b) => b.date.compareTo(a.date));
+                              _applyFilters();
+                              if (mounted) {
+                                setState(() {
+                                  _trashedCount = (_trashedCount - 1).clamp(0, 999999);
+                                });
+                              }
+
+                              // 2. Persist in background
+                              await TransactionRepository.instance.restoreTransaction(transaction.id!);
+                              await _refreshTransactions(showLoading: false);
+                            }
                           },
                         ),
                       ),
@@ -1548,8 +1582,21 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                   }
                 },
                 onUndoDelete: (transaction) async {
-                  await TransactionRepository.instance.createTransaction(transaction);
-                  await _refreshTransactions();
+                  if (transaction.id != null) {
+                    // Instant optimistic restore
+                    final restored = transaction.copy(deletedAt: null);
+                    _allDateFiltered.removeWhere((t) => t.id == transaction.id);
+                    _allDateFiltered.add(restored);
+                    _allDateFiltered.sort((a, b) => b.date.compareTo(a.date));
+                    _applyFilters();
+                    if (mounted) {
+                      setState(() {
+                        _trashedCount = (_trashedCount - 1).clamp(0, 999999);
+                      });
+                    }
+                    await TransactionRepository.instance.restoreTransaction(transaction.id!);
+                    await _refreshTransactions(showLoading: false);
+                  }
                 },
                 onAddFirstTransaction: () async {
                   if (!mounted) return;

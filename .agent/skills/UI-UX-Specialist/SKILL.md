@@ -76,5 +76,6 @@ When styling UI screens and custom widgets, strictly enforce the M3 Style system
 
 ## 5. Balanced Metric Cards & Bi-Directional Visual Invariants
 * **No-Whitespace Dual-Column Layout**: Never leave wide horizontal empty space on status cards. Split metrics into balanced columns separated by a subtle 1px translucent vertical divider (`colorScheme.outlineVariant.withValues(alpha: 0.35)`).
-* **Bi-Directional Touch Highlighting**: Interactive charts must support dynamic center-hole labels on touch (`_touchedPieIndex`) and bi-directional linking between ranked list items and chart slices with tactile haptics.
-* **Badge Width Guardrail**: Keep floating header badges under 15 characters (e.g. `Est ~395.8k 🔮`) to guarantee that screen titles never get truncated into ellipsis (`TextOverflow.ellipsis`) on narrow mobile screens.
+* **Badge Width Guardrail**: Keep floating header badges under 15 characters (e.g. `Est ~395.8k`) so deck titles never truncate into ellipsis (`TextOverflow.ellipsis`) on narrow mobile screens.
+* **Chart Tooltip 1px Outline & Depth**: Floating Canvas chart tooltips (`LineTouchTooltipData`) must specify a 1px primary accent border (`BorderSide(color: colorScheme.primary.withValues(alpha: 0.3), width: 1.0)`) and rounded radius (`AppLayout.radiusM`) to prevent light-mode blending against surface cards.
+* **$48dp Custom Hit Target Wrappers**: Micro-elements (pagination dots, header dropdowns, "Details >" links) must enforce minimum $48 \times 48\text{dp}$ hit bounds (`BoxConstraints(minWidth: 48, minHeight: 48)` or padded gesture wrappers) and supply `Semantics(button: true)`.
