@@ -1,5 +1,5 @@
 
 ### 🚀 Improvements
-- **Android 15 Native Edge-to-Edge**: Integrated native `enableEdgeToEdge()` activity orchestration and transparent system insets for fluid display across Android 15 & 16 devices.
-- **R8 Code Shrinking & Inlining**: Hardened ProGuard keep rules and release build optimizations for reduced memory and zero-delay startup.
+- **Play Store Release Pipeline Resiliency**: Synchronized bilingual release notes with strict character limits and automated version code pacing for Google Play releases.
+- **Android 15 Edge-to-Edge & Performance**: Native system bar edge-to-edge rendering and optimized R8 bytecode shrinking for faster cold launch.
 
