@@ -85,3 +85,8 @@ Use this skill to execute QA verifications, unit/widget tests, security audits, 
 * **Handshake Integrity**: Verify that a failed handshake does not create a paired record and that both QR and manual pairing use the acknowledged peer identity. Cover malformed/legacy QR payload handling without crashing the onboarding or pairing dialog.
 * **Physical Two-Device Matrix**: Before release, pair two real devices via QR on the same Wi-Fi, rename both peers, restart each app, then pair a third device. Re-scan after changing one device's Wi-Fi and confirm the original and new endpoints remain stored, with sync falling back when the newest endpoint is unreachable.
 * **QR Permissions and Layout**: Confirm Android camera permission and iOS camera usage text are present; exercise the scanner on-device. Verify P2P cards and actions at Large text scale, ensuring all actions retain a $48 \times 48\text{ dp}$ touch target and peer names/IPs use ellipsis instead of overflowing.
+
+## 11. Optimistic UI & Soft-Delete Undo QA
+* **0ms In-Memory State Consistency**: When testing deletion, undo, and toggle interactions, verify that in-memory models update synchronously and notify listeners immediately before background database futures resolve.
+* **Soft-Delete Undo Contract**: Verify that undoing a soft-deleted item invokes `restoreTransaction(id)` / `restoreNote(id)`, keeping the primary key intact without triggering unique constraint violations or colliding with tombstone safety checks.
+* **SMS Timestamp Normalization**: Verify that unit tests for `SmsParser.resolveMessageDate` validate 10-digit second epochs, 13-digit millisecond epochs, boundary years, and null fallbacks without date drift.

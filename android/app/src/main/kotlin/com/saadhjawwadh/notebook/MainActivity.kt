@@ -1,5 +1,6 @@
 package com.saadhjawwadh.notebook
 
+import androidx.activity.enableEdgeToEdge
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -23,6 +24,7 @@ class MainActivity: FlutterFragmentActivity() {
     private var pendingSharedText: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         handleIntent(intent)
         val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)

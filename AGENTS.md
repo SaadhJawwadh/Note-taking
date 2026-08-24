@@ -71,6 +71,8 @@ lib/
 * **SMS Sandbox Whitelisting**: SMS parsing engines must recognize simulated test senders (`'BANK_SMS'`, `'CARD'`, `'ALERTS'`, `'BANK'`) as verified financial senders.
 * **SMS Permission Manifest Parity**: Permission services must strictly query declared permissions (`Permission.sms`). Never query undeclared permissions (e.g. `Permission.phone`), as `permission_handler` permanently returns `denied` for undeclared permissions.
 * **Tombstone Ingestion Guardrail**: `TransactionRepository.createSmsTransaction` must query `smsExists(smsId)` against active `transactions` and `deleted_transaction_sms_ids` by default, rejecting re-imports unless `bypassTombstones: true` is explicitly requested.
+* **SMS Timestamp Normalization**: All SMS ingestion engines must pass message dates through `SmsParser.resolveMessageDate(messageDate)` to normalize 10-digit second and 13-digit millisecond epoch timestamps, strictly preserving genuine historical arrival dates.
+* **Soft-Delete Undo Parity**: All deletion undo handlers must invoke `restoreTransaction(id)` (`UPDATE transactions SET deletedAt = NULL WHERE id = ?`) or `restoreNote(id)` rather than attempting record re-insertion (`createTransaction`/`insertNote`), preventing primary key collisions and tombstone re-import blocks.
 * **Non-Blocking Chunked Sync & Cancellation**: SMS inbox syncing must process messages in non-blocking chunks (yielding every 25 messages), check `_cancelRequested`, and display an instant `Cancel` button on sync progress banners.
 
 ### 🔒 Invariant 5: Local-First Security & SQLite WAL Mode
@@ -103,6 +105,11 @@ lib/
 * **$\ge 48\times 48\text{dp}$ Touch Targets**: All interactive micro-elements (sync buttons, date filter pills, "Details >" links, pagination indicator dots) must enforce minimum $48 \times 48\text{dp}$ hit bounds (`BoxConstraints(minWidth: 48, minHeight: 48)` or padded gesture wrappers) and supply `Semantics(button: true)`.
 * **Chart Tooltip 1px Accent Outline**: Floating Canvas chart tooltips (`LineTouchTooltipData`) must specify a 1px primary accent border (`BorderSide(color: colorScheme.primary.withValues(alpha: 0.3), width: 1.0)`) and rounded radius (`AppLayout.radiusM`) to prevent light-mode blending against surface cards.
 * **Prohibition of Raw Text Emojis (Rule 41)**: Strictly replace raw Unicode emoji glyphs (`🔮`, `🔴`, `🟢`) in UI labels and badges with authentic Material Symbols (`Icons.auto_awesome_rounded`) and plain-language semantic labels.
+
+### ⚡ Invariant 11: 0ms Optimistic UI & Silent Background Refresh Protocol
+* **0ms Interactive Latency**: All user-initiated state mutations (Delete, Undo, Pin, Archive, Symptom/Flow toggles) MUST immediately mutate active in-memory lists and notify listeners/trigger `setState` synchronously (0ms UI latency). Database writes persist asynchronously in the background.
+* **No Spinner Jitter on User Actions**: Refresh routines (`_refreshTransactions`, `refreshNotes`, `_loadTrashed`) MUST support `{bool showLoading = false}` and ONLY show full-page loading indicators on cold launch when the dataset is empty. Never unmount active lists during background sync or user mutations.
+* **Soft-Delete Undo Contract**: Undo handlers MUST invoke `restoreTransaction(id)` or `restoreNote(id)`. Never invoke `createTransaction` or `insertNote` to undo a soft-deletion.
 
 ---
 

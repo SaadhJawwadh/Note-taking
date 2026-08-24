@@ -28,9 +28,24 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
+                  version: 'v2.21.4',
+                  date: 'August 24, 2026',
+                  isLatest: true,
+                  changes: [
+                    _ChangelogGroup(
+                      title: '🚀 Improvements',
+                      items: [
+                        'Android 15 Native Edge-to-Edge: Integrated native enableEdgeToEdge() activity orchestration and transparent system insets for fluid display across Android 15 & 16 devices.',
+                        'R8 Code Shrinking & Inlining: Hardened ProGuard keep rules and release build optimizations for reduced memory and zero-delay startup.',
+                      ],
+                    ),
+                  ],
+                ),
+                _buildVersionSection(
+                  context,
                   version: 'v2.21.3',
                   date: 'August 21, 2026',
-                  isLatest: true,
+                  isLatest: false,
                   changes: [
                     _ChangelogGroup(
                       title: '🚀 Improvements',

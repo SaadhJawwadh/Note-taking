@@ -79,3 +79,7 @@ When styling UI screens and custom widgets, strictly enforce the M3 Style system
 * **Badge Width Guardrail**: Keep floating header badges under 15 characters (e.g. `Est ~395.8k`) so deck titles never truncate into ellipsis (`TextOverflow.ellipsis`) on narrow mobile screens.
 * **Chart Tooltip 1px Outline & Depth**: Floating Canvas chart tooltips (`LineTouchTooltipData`) must specify a 1px primary accent border (`BorderSide(color: colorScheme.primary.withValues(alpha: 0.3), width: 1.0)`) and rounded radius (`AppLayout.radiusM`) to prevent light-mode blending against surface cards.
 * **$48dp Custom Hit Target Wrappers**: Micro-elements (pagination dots, header dropdowns, "Details >" links) must enforce minimum $48 \times 48\text{dp}$ hit bounds (`BoxConstraints(minWidth: 48, minHeight: 48)` or padded gesture wrappers) and supply `Semantics(button: true)`.
+
+## 6. 0ms Optimistic UI & Zero-Flicker State Transitions
+* **Zero Jitter on User Actions**: Interactive operations (Delete, Undo, Pin, Archive, Symptom/Flow toggling) MUST update in-memory UI models immediately in 0ms. Never unmount active lists or display modal loading spinners while writing local SQLite updates in the background.
+* **Preserve Mounted State**: When deleting or restoring items, mutate local data structures synchronously (`removeWhere`, `add`, `sort`) and trigger targeted re-renders without triggering full-screen or list-level loading indicators.

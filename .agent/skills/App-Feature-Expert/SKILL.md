@@ -169,3 +169,13 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 - **Global TextScaler Invariant**: `MaterialApp.builder` in `main.dart` wraps top-level app containers in `MediaQuery` with `textScaler: TextScaler.linear(settings.textSize / 16.0)` to enforce user-configured typography scaling globally across all features.
 - **No Static Height Clippings**: Component layouts MUST honor dynamic text scaling without hardcoding static container heights that cause text clipping or overflow when scaled up to Large (20dp).
 
+---
+
+## 11. 0ms Optimistic UI & Silent Background Refresh Invariant
+
+- **0ms Immediate In-Memory Mutation**: All interactive state mutations (Delete, Undo, Pin, Archive, Symptom/Flow toggles) MUST immediately mutate active in-memory lists and notify listeners/trigger `setState` synchronously (0ms UI latency). Database writes persist asynchronously in the background.
+- **No Spinner Jitter on User Actions**: Refresh routines (`_refreshTransactions`, `refreshNotes`, `_loadTrashed`) MUST support `{bool showLoading = false}` and ONLY show full-page loading indicators on cold launch when the dataset is empty. Never unmount active lists during background sync or user mutations.
+- **Soft-Delete Undo Contract**: All deletion undo handlers must invoke `restoreTransaction(id)` (`UPDATE transactions SET deletedAt = NULL WHERE id = ?`) or `restoreNote(id)` rather than attempting record re-insertion (`createTransaction`/`insertNote`), preventing primary key collisions and tombstone re-import blocks.
+- **SMS Epoch Normalization**: All SMS ingestion engines must pass message dates through `SmsParser.resolveMessageDate(messageDate)` to normalize 10-digit second and 13-digit millisecond epoch timestamps, strictly preserving genuine historical arrival dates.
+
+
