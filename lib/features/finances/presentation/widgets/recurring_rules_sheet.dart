@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../../../data/recurring_rule_model.dart';
 import '../../../../data/repositories/recurring_rule_repository.dart';
 import '../../../../data/transaction_category.dart';
+import '../../../../data/category_constants.dart';
 import '../../../../core/theme/app_layout.dart';
 import '../../../../core/ui/app_bottom_sheet.dart';
 import '../../../../core/ui/app_dialog.dart';
@@ -99,7 +100,7 @@ class _RecurringRulesSheetState extends State<RecurringRulesSheet> {
     final descController = TextEditingController();
     final amountController = TextEditingController();
     var isExpense = true;
-    var selectedCategory = TransactionCategory.all.first;
+    var selectedCategory = CategoryConstants.subscriptions;
     var selectedFreq = RecurringFrequency.monthly;
     var selectedDate = DateTime.now();
 
@@ -121,7 +122,10 @@ class _RecurringRulesSheetState extends State<RecurringRulesSheet> {
                       ButtonSegment(value: false, label: Text('Income'), icon: Icon(Icons.arrow_downward)),
                     ],
                     selected: {isExpense},
-                    onSelectionChanged: (set) => setDialogState(() => isExpense = set.first),
+                    onSelectionChanged: (set) => setDialogState(() {
+                      isExpense = set.first;
+                      selectedCategory = isExpense ? CategoryConstants.subscriptions : CategoryConstants.deposit;
+                    }),
                   ),
                   const SizedBox(height: 16),
                   TextField(
@@ -130,6 +134,14 @@ class _RecurringRulesSheetState extends State<RecurringRulesSheet> {
                       labelText: 'Description (e.g. Netflix, Rent)',
                       border: OutlineInputBorder(),
                     ),
+                    onChanged: (text) {
+                      if (text.trim().length >= 3) {
+                        final autoCat = TransactionCategory.fromDescriptionCached(text);
+                        if (autoCat != CategoryConstants.other && autoCat != selectedCategory) {
+                          setDialogState(() => selectedCategory = autoCat);
+                        }
+                      }
+                    },
                   ),
                   const SizedBox(height: 12),
                   TextField(
@@ -142,6 +154,7 @@ class _RecurringRulesSheetState extends State<RecurringRulesSheet> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
+                    key: ValueKey('cat_$selectedCategory'),
                     initialValue: selectedCategory,
                     decoration: const InputDecoration(
                       labelText: 'Category',
@@ -222,6 +235,136 @@ class _RecurringRulesSheetState extends State<RecurringRulesSheet> {
     );
 
     if (created == true) {
+      widget.onRulesUpdated();
+      await _loadRules();
+    }
+  }
+
+  Future<void> _showEditRuleDialog(RecurringRule rule) async {
+    final descController = TextEditingController(text: rule.description);
+    final amountController = TextEditingController(text: rule.amount.toStringAsFixed(2).replaceAll('.00', ''));
+    var isExpense = rule.isExpense;
+    var selectedCategory = rule.category;
+    var selectedFreq = rule.frequency;
+    var selectedDate = rule.nextDue;
+
+    final updated = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text('Edit Recurring Rule'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SegmentedButton<bool>(
+                    segments: const [
+                      ButtonSegment(value: true, label: Text('Expense'), icon: Icon(Icons.arrow_upward)),
+                      ButtonSegment(value: false, label: Text('Income'), icon: Icon(Icons.arrow_downward)),
+                    ],
+                    selected: {isExpense},
+                    onSelectionChanged: (set) => setDialogState(() => isExpense = set.first),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: descController,
+                    decoration: const InputDecoration(
+                      labelText: 'Description (e.g. Netflix, Rent)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: amountController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: 'Amount (${widget.currency})',
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: TransactionCategory.all.contains(selectedCategory) ? selectedCategory : TransactionCategory.all.first,
+                    decoration: const InputDecoration(
+                      labelText: 'Category',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: TransactionCategory.all.map((c) {
+                      return DropdownMenuItem(value: c, child: Text(c));
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) setDialogState(() => selectedCategory = val);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<RecurringFrequency>(
+                    initialValue: selectedFreq,
+                    decoration: const InputDecoration(
+                      labelText: 'Frequency',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: RecurringFrequency.values.map((f) {
+                      return DropdownMenuItem(value: f, child: Text(f.label));
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) setDialogState(() => selectedFreq = val);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Next Due Date'),
+                    subtitle: Text(DateFormat.yMMMd().format(selectedDate)),
+                    trailing: const Icon(Icons.calendar_today_outlined),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (picked != null) {
+                        setDialogState(() => selectedDate = picked);
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogCtx, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () async {
+                  final amount = double.tryParse(amountController.text.trim());
+                  final desc = descController.text.trim();
+                  if (desc.isEmpty || amount == null || amount <= 0) return;
+
+                  final updatedRule = rule.copyWith(
+                    description: desc,
+                    amount: amount,
+                    category: selectedCategory,
+                    isExpense: isExpense,
+                    frequency: selectedFreq,
+                    nextDue: selectedDate,
+                  );
+
+                  await RecurringRuleRepository.instance.updateRule(updatedRule);
+                  if (dialogCtx.mounted) Navigator.pop(dialogCtx, true);
+                },
+                child: const Text('Save Changes'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    if (updated == true) {
       widget.onRulesUpdated();
       await _loadRules();
     }
@@ -308,6 +451,7 @@ class _RecurringRulesSheetState extends State<RecurringRulesSheet> {
                       ),
                     ),
                     child: ListTile(
+                      onTap: () => _showEditRuleDialog(rule),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       leading: CircleAvatar(
                         backgroundColor: rule.isExpense

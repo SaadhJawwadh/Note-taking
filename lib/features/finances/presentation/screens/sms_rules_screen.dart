@@ -7,10 +7,13 @@ import 'package:note_taking_app/features/finances/data/transaction_repository.da
 import 'package:note_taking_app/data/transaction_category.dart';
 import 'package:note_taking_app/services/sms_service.dart';
 import 'package:note_taking_app/services/sms_parser.dart';
+import 'package:note_taking_app/services/sms_constants.dart';
 import 'package:note_taking_app/core/theme/app_layout.dart';
 import 'package:note_taking_app/utils/app_route.dart';
 import 'package:note_taking_app/widgets/frosted_glass_sliver_app_bar.dart';
 import 'package:note_taking_app/features/finances/presentation/screens/category_management_screen.dart';
+import 'package:note_taking_app/features/finances/presentation/screens/sms_contacts_screen.dart';
+import 'package:note_taking_app/widgets/sms_import_sheet.dart';
 
 class SmsRulesScreen extends StatefulWidget {
   const SmsRulesScreen({super.key});
@@ -84,7 +87,7 @@ class _SmsRulesScreenState extends State<SmsRulesScreen> {
       body: CustomScrollView(
         slivers: [
           FrostedGlassSliverAppBar(
-            titleText: 'SMS Import Rules',
+            titleText: 'SMS Bank Automation',
             showBackButton: true,
             actions: [
               IconButton(
@@ -101,6 +104,43 @@ class _SmsRulesScreenState extends State<SmsRulesScreen> {
           final incomeRules = settings.customIncomeRules;
 
           final items = <Widget>[
+            // Quick Shortcuts Row
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => AppRoute.push(context, const SmsContactsScreen()),
+                      icon: const Icon(Icons.contacts_outlined, size: 18),
+                      label: const Text('Senders & Blocklist'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusM)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FilledButton.tonalIcon(
+                      onPressed: () => showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        showDragHandle: true,
+                        builder: (_) => const SmsImportSheet(),
+                      ),
+                      icon: const Icon(Icons.history_outlined, size: 18),
+                      label: const Text('Scan Past SMS'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusM)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
             // Info Card
             Padding(
               padding: const EdgeInsets.all(16),
@@ -208,20 +248,38 @@ class _SmsRulesScreenState extends State<SmsRulesScreen> {
                           );
 
                           if (parsed == null) {
+                            final isPromo = SmsConstants.promotionalRegex.hasMatch(testText);
+                            final errorMessage = isPromo
+                                ? 'Ignored: Detected as a promotional broadcast or conditional marketing offer (no money was moved).'
+                                : 'Not recognized as an executed financial transaction. Verify transaction keywords or currency amount format.';
                             return Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: cs.errorContainer.withValues(alpha: 0.5),
+                                color: isPromo
+                                    ? cs.surfaceContainerHighest.withValues(alpha: 0.8)
+                                    : cs.errorContainer.withValues(alpha: 0.5),
                                 borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                                border: Border.all(
+                                  color: isPromo
+                                      ? cs.outlineVariant.withValues(alpha: 0.5)
+                                      : cs.error.withValues(alpha: 0.3),
+                                ),
                               ),
                               child: Row(
                                 children: [
-                                  Icon(Icons.warning_amber_rounded, size: 20, color: cs.error),
+                                  Icon(
+                                    isPromo ? Icons.campaign_outlined : Icons.warning_amber_rounded,
+                                    size: 20,
+                                    color: isPromo ? cs.primary : cs.error,
+                                  ),
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
-                                      'Not recognized as a financial transaction. Try adding custom keywords below or verify currency/amount format.',
-                                      style: tt.bodySmall?.copyWith(color: cs.onErrorContainer),
+                                      errorMessage,
+                                      style: tt.bodySmall?.copyWith(
+                                        color: isPromo ? cs.onSurface : cs.onErrorContainer,
+                                        fontWeight: isPromo ? FontWeight.w500 : FontWeight.normal,
+                                      ),
                                     ),
                                   ),
                                 ],

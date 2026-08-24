@@ -68,24 +68,26 @@ class SmsConstants {
       r'(?:at|to|for|from|merchant)\s*["\u201C\u2018\u0027]([A-Za-z0-9\s&\u0027\-\.]{2,60}?)["\u201D\u2019\u0027]',
       caseSensitive: false);
 
-  static final depositRegex = RegExp(r'\b(deposit(?:ed)?|crm\s+deposit|cash\s+deposit)\b', caseSensitive: false);
+  static final depositRegex = RegExp(r'\b(deposit(?:ed)?|crm\s+deposit|cash\s+deposit|deposit\s+from|digital\s+banking\s+credit)\b', caseSensitive: false);
   static final purchaseRegex = RegExp(r'\b(purchase(?:d)?|authorised|authorized)\b', caseSensitive: false);
   static final instalmentRegex = RegExp(r'\b(instalment|installment|emi|monthly\s+payment)\b', caseSensitive: false);
-  static final dueReminderRegex = RegExp(r'\b(due\s+tomorrow|due\s+today|due\s+in\s+\d+|payment\s+is\s+due|is\s+due\s+on)\b', caseSensitive: false);
+  static final dueReminderRegex = RegExp(r'\b(due\s+tomorrow|due\s+today|due\s+in\s+\d+|payment\s+is\s+due|is\s+due\s+on|total\s+due|minimum\s+due|min\s+due)\b', caseSensitive: false);
   static final withdrawalRegex = RegExp(r'\b(withdrawn|withdrawal|atm\s+withdrawal|atm\s+debit)\b', caseSensitive: false);
-  static final transferRegex = RegExp(r'\b(transfer|digital-transfer|digital\s*transfer|fund\s*transfer|wire\s*transfer|inter\s*bank\s*transfer|transferred(?:\s+to)?|tfr)\b', caseSensitive: false);
-  static final debitRegex = RegExp(r'\b(debit(?:ed)?|withdrawn|withdrawal|spent|charged|purchase(?:d)?|authorised|authorized|payment(?:\s+of)?|deduct(?:ed)?|paid|digital-transfer|transfer|attempted)\b', caseSensitive: false);
-  static final creditRegex = RegExp(r'\b(credit(?:ed)?(?!\s+card)|received|deposited|deposit|transferred\s+to\s+you|credited\s+to|salary|payment\s+received|incoming\s+transfer|cash\s+deposit)\b', caseSensitive: false);
+  static final transferRegex = RegExp(r'\b(transfer|digital-transfer|digital\s*transfer|fund\s*transfer|wire\s*transfer|inter\s*bank\s*transfer|transferred(?:\s+to)?|transferred(?:\s+from)?|tfr|trf|cefts|ib\s*cefts)\b', caseSensitive: false);
+  static final debitRegex = RegExp(r'\b(debit(?:ed)?|withdrawn|withdrawal|spent|charged|purchase(?:d)?|authorised|authorized|approved|payment(?:\s+of)?|deduct(?:ed)?|paid|digital-transfer|transfer\s+to|attempted|txn\s+of|trf\s+of)\b', caseSensitive: false);
+  static final creditRegex = RegExp(r'\b(credit(?:ed)?|credit\s+for|credit\s+of|received|received\s+from|deposited|deposit|deposit\s+from|transfer\s+from|transferred\s+from|transferred\s+to\s+you|credited\s+to|salary|salary\s+credited|payment\s+received|incoming\s+transfer|cash\s+deposit|profit\s+credited)\b', caseSensitive: false);
+  static final inwardTransferRegex = RegExp(r'\b(transfer\s+from|transferred\s+from|received\s+from|deposit\s+from|credited\s+from|sent\s+you)\b', caseSensitive: false);
+  static final selfTransferRegex = RegExp(r'\b(transfer\s+to\s+saadh|to:\s*saadh|to\s+saadh|saadh\s+com|saadh\s+tab|transfer\s+to\s+own|transfer\s+to\s+savings|transfer\s+from\s+savings|transfer\s+to\s+combank|transfer\s+to\s+self|internal\s+transfer|credit\s+card\s+payment|card\s+settlement|payment\s+towards\s+card)\b', caseSensitive: false);
   static final reversalRegex = RegExp(r'\b(reversal|reversed|refund(?:ed)?|chargeback|credit\s+back|amount\s+refunded|money\s+returned|returned\s+to\s+your\s+card|reversed\s+back)\b', caseSensitive: false);
   static final cancellationRegex = RegExp(r'\b(cancelled|cancellation|transaction\s+failed|declined|not\s+processed|unsuccessful)\b', caseSensitive: false);
   static final promotionalRegex = RegExp(
-      r'\b(offer|win|congratulations|promo|discount|exclusive|earn\s+\d+\s+points|cashback|get\s+\d+%|voucher|reward\s+point|apply\s+now|eligible|loan\s+up\s+to|credit\s+limit\s+increase|special\s+deal|enjoy|subscribe|deal)\b',
+      r'\b(offer|offers|dining\s+offer|discount|discounts|promo|exclusive|earn\s+\d+\s+points|cashback|cash\s*back|get\s+\d+%|voucher|reward\s+point|apply\s+now|eligible|eligible\s+for|loan\s+up\s+to|credit\s+limit\s+(?:increase|enhancement)|special\s+deal|enjoy\s+(?:up\s+to|\d+%)|subscribe|deal\s+at|deals\s+at|save\s+up\s+to|valid\s+(?:till|until|on)|when\s+you\s+spend|on\s+spend\s+of|on\s+minimum\s+spend|purchases?\s+(?:above|over|exceeding)|buy\s+1\s+get\s+1|bogo|pre-approved|use\s+coupon|use\s+code\s+[A-Za-z0-9]+)\b',
       caseSensitive: false);
   static final otpRegex = RegExp(
-      r'\b(otp|verification\s+code|v-code|one\s+time\s+password|secret\s+code|do\s+not\s+share|use\s+code|pin\s+code)\b',
+      r'\b(otp|verification\s+code|v-code|one\s+time\s+password|secret\s+code|do\s+not\s+share|use\s+code\s+\d+|pin\s+code)\b',
       caseSensitive: false);
   static final executedTransactionRegex = RegExp(
-      r'\b(debit(?:ed)?|credit(?:ed)?|withdrawn|withdrawal|spent|charged|purchase(?:d)?|paid|deposited|received|transferred)\b',
+      r'\b(has\s+been\s+debited|has\s+been\s+authori[sz]ed|debited\s+(?:for|with|by|from)|was\s+charged|charged\s+for|txn\s+of\s+.*approved|paid\s+to|withdrawn\s+from|purchase\s+of\s+.*successful|payment\s+to\s+.*successful|debited\s+to|credited\s+with|deposited\s+to|received\s+from|transfer\s+successful)\b',
       caseSensitive: false);
   
   static final piiCardRegex = RegExp(r'\*\d{4,}|ending\s+[#\*]?\d{4,}|\bno\.?\s*\d{4,}|\ba\/c\s*[\d*x]+|\bxxxx\d{4,}|\b\d{16}\b|\b\d{4,}\*+\d{4,}\b', caseSensitive: false);

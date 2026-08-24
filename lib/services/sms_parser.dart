@@ -1,5 +1,6 @@
 import '../data/transaction_model.dart';
 import '../data/transaction_category.dart';
+import '../data/category_constants.dart';
 import 'sms_constants.dart';
 
 class SmsParser {
@@ -30,12 +31,13 @@ class SmsParser {
     if (isPromotional && !hasExecuted) return false;
 
     // Check if it has a valid amount match (checking preferred currency, general currencies, or bare amount)
+    var cleanBody = body.replaceAll(SmsConstants.piiBalanceRegex, '');
     final hasPreferred = preferredCurrency != null &&
         preferredCurrency.trim().isNotEmpty &&
-        SmsConstants.buildPreferredAmountRegex(preferredCurrency).hasMatch(body);
+        SmsConstants.buildPreferredAmountRegex(preferredCurrency).hasMatch(cleanBody);
     final hasAmount = hasPreferred ||
-        SmsConstants.amountRegex.hasMatch(body) ||
-        SmsConstants.bareAmountRegex.hasMatch(body);
+        SmsConstants.amountRegex.hasMatch(cleanBody) ||
+        SmsConstants.bareAmountRegex.hasMatch(cleanBody);
     if (!hasAmount) return false;
 
     // Check if known sender, or matches transaction action terms
@@ -97,21 +99,27 @@ class SmsParser {
     final isKnownSender = isBank ||
         allowedSenderIds.any((s) => senderLower.contains(s));
     
-    final isDebit = matchesExpenseRule || (isBank && SmsConstants.debitRegex.hasMatch(body));
-    final isCredit = matchesIncomeRule || (isBank && !matchesExpenseRule && SmsConstants.creditRegex.hasMatch(body));
+    final isInwardTransfer = SmsConstants.inwardTransferRegex.hasMatch(body);
+    final isExplicitCredit = SmsConstants.creditRegex.hasMatch(body) || SmsConstants.depositRegex.hasMatch(body);
+    final isSelfTransfer = SmsConstants.selfTransferRegex.hasMatch(body);
+
+    final isCredit = matchesIncomeRule || (!matchesExpenseRule && (isInwardTransfer || isExplicitCredit));
+    final isDebit = matchesExpenseRule || (!isCredit && isBank && SmsConstants.debitRegex.hasMatch(body));
     final hasInstalment = isBank && SmsConstants.instalmentRegex.hasMatch(body);
     final isTransfer = isBank && SmsConstants.transferRegex.hasMatch(body);
 
     if (!isKnownSender && !isDebit && !isCredit && !hasInstalment && !isTransfer) return null;
 
-    if (SmsConstants.dueReminderRegex.hasMatch(body) && !isDebit) return null;
+    if (SmsConstants.dueReminderRegex.hasMatch(body) && !isDebit && !isCredit) return null;
 
     double? amount;
+    // Strip balance strings to prevent balance amount from being captured instead of transaction amount
+    final amountSearchBody = body.replaceAll(SmsConstants.piiBalanceRegex, '');
 
     // 1. Try preferred currency specific pattern first if available
     if (preferredCurrency != null && preferredCurrency.trim().isNotEmpty) {
       final preferredRegex = SmsConstants.buildPreferredAmountRegex(preferredCurrency);
-      final preferredMatch = preferredRegex.firstMatch(body);
+      final preferredMatch = preferredRegex.firstMatch(amountSearchBody) ?? preferredRegex.firstMatch(body);
       if (preferredMatch != null) {
         amount = double.tryParse(preferredMatch.group(1)!.replaceAll(',', ''));
       }
@@ -119,7 +127,7 @@ class SmsParser {
 
     // 2. Try general multi-currency amount regex
     if (amount == null) {
-      final amountMatch = SmsConstants.amountRegex.firstMatch(body);
+      final amountMatch = SmsConstants.amountRegex.firstMatch(amountSearchBody) ?? SmsConstants.amountRegex.firstMatch(body);
       if (amountMatch != null) {
         amount = double.tryParse(amountMatch.group(1)!.replaceAll(',', ''));
       }
@@ -127,7 +135,7 @@ class SmsParser {
 
     // 3. Fallback to bare amount regex ("of 1,500.00")
     if (amount == null) {
-      final bareMatch = SmsConstants.bareAmountRegex.firstMatch(body);
+      final bareMatch = SmsConstants.bareAmountRegex.firstMatch(amountSearchBody) ?? SmsConstants.bareAmountRegex.firstMatch(body);
       if (bareMatch != null) {
         amount = double.tryParse(bareMatch.group(1)!.replaceAll(',', ''));
       }
@@ -139,9 +147,14 @@ class SmsParser {
     final isExpense = !isCredit && !isReversal;
 
     final description = buildDescription(body, address, amount, isExpense: isExpense);
-    final category = isReversal
-        ? SmsConstants.reversalSentinel
-        : TransactionCategory.fromDescriptionCached('$description $body');
+    final String category;
+    if (isReversal) {
+      category = SmsConstants.reversalSentinel;
+    } else if (isSelfTransfer) {
+      category = CategoryConstants.transfer;
+    } else {
+      category = TransactionCategory.fromDescriptionCached('$description $body');
+    }
 
     final date = resolveMessageDate(messageDate);
     final normalizedBody = body.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
@@ -171,6 +184,15 @@ class SmsParser {
     text = text.replaceAll(SmsConstants.piiDateTimePhoneRegex, '');
     text = text.replaceAll(SmsConstants.amountRegex, '');
     text = text.replaceAll(SmsConstants.bareAmountRegex, '');
+
+    // Inward transfer / deposit from sender
+    if (SmsConstants.inwardTransferRegex.hasMatch(body)) {
+      final senderEntity = _extractEntity(body, r"\b(?:from|received\s+from|sent\s+by)\s+(?!(?:your|the|our|my|lkr|rs)\b)([A-Za-z][A-Za-z0-9\s&'\-\.]{1,30}?)(?=\s*(?:[,.\n]|$|\baccount\b|\ba\/c\b))");
+      if (senderEntity != null) {
+        return appendBankSuffix('Received from $senderEntity $amountLabel', bankName);
+      }
+      return appendBankSuffix('Transfer from Sender $amountLabel', bankName);
+    }
 
     if (SmsConstants.depositRegex.hasMatch(body) || SmsConstants.creditRegex.hasMatch(body)) {
       if (bankName != null && !SmsConstants.creditRegex.hasMatch(body)) return 'Deposit of $amountLabel in $bankName';
@@ -251,7 +273,11 @@ class SmsParser {
     for (final prefix in ['at', 'for', 'from']) {
       final m = RegExp(r"\b" + prefix + r"\s+(?!(?:your|the|our|my|lkr|rs|inr|usd|eur|gbp|aed|sar)\b)([A-Za-z][A-Za-z0-9\s&'\-\.]{1,60}?)" + terminators, caseSensitive: false).firstMatch(text);
       if (m != null) {
-        final candidate = m.group(1)!.trim().replaceAll(RegExp(r'\s{2,}'), ' ');
+        var candidate = m.group(1)!.trim()
+            .replaceAll(RegExp(r'\b0\d{9}\b|\b\d{10,11}\b'), '')
+            .replaceAll(RegExp(r'\b(?:COLOMBO\s*\d*|LK|SRI\s*LANKA)\b', caseSensitive: false), '')
+            .replaceAll(RegExp(r'\s{2,}'), ' ')
+            .trim();
         if (candidate.length >= 2) return cleanTitle(candidate);
       }
     }

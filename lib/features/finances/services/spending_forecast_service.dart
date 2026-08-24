@@ -95,7 +95,7 @@ class SpendingForecastService {
     final categorySpent = <String, double>{};
 
     for (final tx in transactions) {
-      if (tx.isExpense && tx.date.year == year && tx.date.month == month) {
+      if (tx.isExpense && tx.category.toLowerCase() != 'transfer' && tx.date.year == year && tx.date.month == month) {
         currentMonthSpent += tx.amount;
         categorySpent[tx.category] = (categorySpent[tx.category] ?? 0.0) + tx.amount;
       }
@@ -104,7 +104,7 @@ class SpendingForecastService {
     // Calculate historical daily burn rate from prior months for early-month smoothing
     final priorMonthTotals = <String, double>{};
     for (final tx in transactions) {
-      if (tx.isExpense && (tx.date.year != year || tx.date.month != month)) {
+      if (tx.isExpense && tx.category.toLowerCase() != 'transfer' && (tx.date.year != year || tx.date.month != month)) {
         final k = '${tx.date.year}-${tx.date.month}';
         priorMonthTotals[k] = (priorMonthTotals[k] ?? 0.0) + tx.amount;
       }

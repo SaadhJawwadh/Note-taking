@@ -121,6 +121,9 @@ class FinancialManagerProvider extends ChangeNotifier {
     _totalExpense = 0;
 
     for (final tx in _filteredTransactions) {
+      if (tx.category.toLowerCase() == 'transfer') {
+        continue;
+      }
       if (tx.isExpense) {
         _totalExpense += tx.amount;
       } else {

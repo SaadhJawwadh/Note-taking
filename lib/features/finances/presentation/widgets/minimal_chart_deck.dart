@@ -100,7 +100,7 @@ class _MinimalChartDeckState extends State<MinimalChartDeck> {
     final textTheme = theme.textTheme;
 
     final title = _currentPage == 0
-        ? 'Spending Trajectory'
+        ? 'Spending Trend'
         : _currentPage == 1
             ? 'Expense Breakdown'
             : 'Budget Pacing';

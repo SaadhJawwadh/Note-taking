@@ -37,19 +37,19 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.primaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.smart_button_rounded,
-            title: "Universal Morphing Action Buttons",
-            desc: "Standardized floating action buttons that collapse into compact circular icons while scrolling for distraction-free reading.",
+            icon: Icons.mark_chat_unread_rounded,
+            title: "Smart SMS & Bank Automation Hub",
+            desc: "100% offline bank SMS parsing, custom keyword rules, and live sandbox testing with zero cloud transmission.",
           ),
           _WhatsNewItem(
             icon: Icons.repeat_rounded,
-            title: "Recurring Payment Conversion",
-            desc: "Convert any manual or SMS transaction into a recurring schedule directly from the transaction editor.",
+            title: "Smart Recurring Subscriptions",
+            desc: "Automate repeating bills and salaries with intelligent live keyword category detection and duplicate prevention.",
           ),
           _WhatsNewItem(
-            icon: Icons.tips_and_updates_rounded,
-            title: "Rotating Pro-Tips System",
-            desc: "Helpful contextual tips on the Home feed and optional notifications to help you discover power features.",
+            icon: Icons.block_rounded,
+            title: "Sender Controls & Diagnostics",
+            desc: "Easily block unwanted contacts and view granular diagnostic feedback for promotional broadcasts.",
           ),
         ],
       ),
@@ -59,19 +59,19 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.tertiaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
+            icon: Icons.trending_up_rounded,
+            title: "Spending Trend & Donut Analytics",
+            desc: "Visual cash flow trajectory spline, interactive category breakdown donut, and budget pacing analytics.",
+          ),
+          _WhatsNewItem(
+            icon: Icons.auto_fix_high_rounded,
+            title: "Hardware-Aware AI Controls",
+            desc: "Dynamic on-device AI capability detection seamlessly adapts interface menus and settings to device hardware.",
+          ),
+          _WhatsNewItem(
             icon: Icons.bolt_rounded,
-            title: "0ms Instant Optimistic Updates",
+            title: "0ms Instant Optimistic UI",
             desc: "Deleting, restoring, and toggling items across notes, finances, and health updates the screen in 0ms with zero loading flickers.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.speed_rounded,
-            title: "85% Less Memory & R8 Speed Boost",
-            desc: "Smart bitmap downsampling and R8 Full Mode optimization deliver lightning-fast launch and smooth 120 FPS scrolling.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.donut_large_rounded,
-            title: "Donut Chart Precision & Text Fitting",
-            desc: "Center totals dynamically scale down smoothly without touching chart rings, with guaranteed visibility for small slices.",
           ),
         ],
       ),
@@ -81,19 +81,19 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.secondaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.undo_rounded,
-            title: "Financial Ledger Undo & Epoch Dates",
-            desc: "Fixed transaction undo restoration and preserved genuine original arrival timestamps for imported bank SMS alerts.",
+            icon: Icons.swap_horiz_rounded,
+            title: "CEFTS & Self-Transfer Recognition",
+            desc: "Accurately categorizes bank transfers between personal accounts as transfers, preventing inflated expense totals.",
           ),
           _WhatsNewItem(
-            icon: Icons.sms_rounded,
-            title: "SMS Sync & Tombstone Protection",
-            desc: "Fixed SMS permission detection and prevented deleted transactions from being re-imported during scans, with an instant sync Cancel button.",
+            icon: Icons.history_rounded,
+            title: "Genuine SMS Arrival Timestamps",
+            desc: "Past bank SMS transactions and imports accurately preserve the exact date and time the message arrived.",
           ),
           _WhatsNewItem(
-            icon: Icons.vertical_align_bottom_rounded,
-            title: "Bottom Content Clearance Safeguards",
-            desc: "Standardized 96dp clearance so forms, segmented buttons, and lists are never obscured by floating action buttons.",
+            icon: Icons.cleaning_services_rounded,
+            title: "Merchant Title Cleansing",
+            desc: "Phone numbers, country codes, and payment gateway noise are automatically stripped from merchant names.",
           ),
         ],
       ),

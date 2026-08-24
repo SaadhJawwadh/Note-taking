@@ -10,6 +10,7 @@ class CategoryConstants {
   static const String entertainment = 'Entertainment';
   static const String payments = 'Payments';
   static const String deposit = 'Deposit';
+  static const String transfer = 'Transfer';
   static const String other = 'Other';
 
   static const List<String> all = [
@@ -22,6 +23,7 @@ class CategoryConstants {
     entertainment,
     payments,
     deposit,
+    transfer,
     other,
   ];
 
@@ -35,16 +37,18 @@ class CategoryConstants {
       'mcd', 'mcdonalds', 'pizza', 'dominos', 'domino', 'café', 'cafe',
       'coffee', 'restaurant', 'groceries', 'grocery', 'food', 'keells',
       'arpico', 'cargills', 'foodcity', 'burger', 'noodles', 'rice', 'bakery', 'pastry',
-      'icecream', 'sushi', 'biryani', 'kottu', 'supermarket', 'laughfs', 'glomark', 'spar'
+      'icecream', 'sushi', 'biryani', 'kottu', 'supermarket', 'laughfs', 'glomark', 'spar',
+      'dining', 'hotel', 'bites', 'sweet'
     ],
     subscriptions: [
       'amazon prime', 'netflix', 'spotify', 'youtube', 'apple', 'adobe',
       'canva', 'hulu', 'disney', 'microsoft', 'office365', 'chatgpt',
-      'openai', 'icloud', 'subscription', 'patreon', 'github'
+      'openai', 'icloud', 'subscription', 'patreon', 'github', 'starlink'
     ],
     shopping: [
       'online shopping', 'amazon', 'daraz', 'kapruka', 'ebay', 'aliexpress',
-      'fabric', 'clothing', 'fashion', 'shoes', 'apparel', 'mall', 'store'
+      'fabric', 'clothing', 'fashion', 'shoes', 'apparel', 'mall', 'store',
+      'hardware', 'united hardware', 'sns united', 'tools', 'earbuds', 'watch'
     ],
     utilities: [
       'mobile bill', 'phone bill', 'electricity', 'ceb', 'leco', 'water', 'nwsdb',
@@ -63,7 +67,12 @@ class CategoryConstants {
       'hire purchase', 'mintpay'
     ],
     deposit: [
-      'crm deposit', 'cash deposit', 'deposit', 'credited', 'salary', 'income', 'inward remittance', 'interest'
+      'crm deposit', 'cash deposit', 'deposit', 'credited', 'salary', 'income', 'inward remittance', 'interest', 'allowance'
+    ],
+    transfer: [
+      'transfer to saadh', 'transfer to own', 'self transfer', 'internal transfer',
+      'to savings', 'from savings', 'transfer to combank', 'credit card payment',
+      'card payment settlement', 'settlement of card', 'transfer to self'
     ],
   };
 
@@ -77,6 +86,7 @@ class CategoryConstants {
     entertainment: Color(0xFFE06D53),
     payments: Color(0xFF917265),
     deposit: Color(0xFF4E9F90),
+    transfer: Color(0xFF6B7280),
     other: Color(0xFF8E8E93),
   };
 }

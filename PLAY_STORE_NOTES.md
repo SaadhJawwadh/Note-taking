@@ -1,20 +1,20 @@
 <en-US>
 🌟 What's New
-• Universal morphing buttons for distraction-free reading.
-• Recurring payments & rotating power pro-tips.
+• Smart SMS Ledger: 100% offline auto-import for bank receipts & transfers.
+• Recurring Subscriptions: Manage repeating bills, salaries & deduplication.
+• SMS Automation Hub: Custom rules, sender blocklist & live test sandbox.
 
 🚀 Improvements
-• Android 15 & 16 full edge-to-edge transparent system bars.
-• 0ms instant optimistic updates across Notes & Ledger.
-• 85% reduced memory footprint & instant launch via R8.
+• Refined Material 3 Expressive design & spending trend analytics.
+• 0ms instant optimistic updates with zero flicker.
 </en-US>
 <ta-IN>
 🌟 புதிய அம்சங்கள்
-• வாசிப்பை எளிதாக்கும் மிதக்கும் பொத்தான்கள்.
-• தொடர் கட்டணங்களாக மாற்றும் வசதி.
+• ஆஃப்லைன் வங்கி SMS தானியங்கி வரவு-செலவு கணக்கு.
+• தொடர் கட்டணங்கள் மற்றும் சந்தா மேலாண்மை.
+• தனிப்பயன் SMS விதிகள் மற்றும் சோதனை தளம்.
 
 🚀 மேம்பாடுகள்
-• Android 15 & 16 முழுத்திரை காட்சி மற்றும் வெளிப்படையான கணினி பட்டிகள்.
-• குறிப்புகள் மற்றும் பரிவர்த்தனைகளில் 0ms உடனடி செயல்பாடு.
-• குறைந்த நினைவகம் மற்றும் அதிவேக செயல்திறன்.
+• மேம்படுத்தப்பட்ட Material 3 வடிவமைப்பு மற்றும் செலவு போக்கு வரைபடம்.
+• 0ms உடனடி செயல்பாடு.
 </ta-IN>

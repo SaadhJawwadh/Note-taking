@@ -13,10 +13,50 @@ class RecurringRuleRepository {
 
   Future<Database> get _db async => await _dbHelper.database;
 
-  Future<void> createRule(RecurringRule rule) async {
+  Future<RecurringRule> createRule(RecurringRule rule) async {
     final db = await _db;
-    await db.insert(TableNames.recurringRules, rule.toJson(),
-        conflictAlgorithm: ConflictAlgorithm.replace);
+    final allRules = await readAllRules();
+    final descLower = rule.description.trim().toLowerCase();
+    RecurringRule? existing;
+    for (final r in allRules) {
+      if (r.description.trim().toLowerCase() == descLower && r.frequency == rule.frequency) {
+        existing = r;
+        break;
+      }
+    }
+
+    if (existing != null) {
+      final updated = existing.copyWith(
+        amount: rule.amount,
+        category: rule.category,
+        isExpense: rule.isExpense,
+        nextDue: rule.nextDue,
+      );
+      await db.update(
+        TableNames.recurringRules,
+        updated.toJson(),
+        where: '${RecurringRuleFields.id} = ?',
+        whereArgs: [updated.id],
+      );
+      return updated;
+    } else {
+      await db.insert(
+        TableNames.recurringRules,
+        rule.toJson(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      return rule;
+    }
+  }
+
+  Future<void> updateRule(RecurringRule rule) async {
+    final db = await _db;
+    await db.update(
+      TableNames.recurringRules,
+      rule.toJson(),
+      where: '${RecurringRuleFields.id} = ?',
+      whereArgs: [rule.id],
+    );
   }
 
   Future<List<RecurringRule>> readAllRules() async {
@@ -47,7 +87,7 @@ class RecurringRuleRepository {
       var advanced = false;
       while (!rule.nextDue.isAfter(now) && iterations < 36) {
         // Smart cycle-aware deduplication: check if a transaction (manual or SMS)
-        // already exists within ±2 days of this due date matching amount & category/description.
+        // already exists within ±3 days of this due date matching amount & category/description.
         final existingMatch =
             await TransactionRepository.instance.findMatchingRecurringTransaction(
           amount: rule.amount,
@@ -55,6 +95,7 @@ class RecurringRuleRepository {
           category: rule.category,
           targetDate: rule.nextDue,
           isExpense: rule.isExpense,
+          window: const Duration(days: 3),
         );
 
         if (existingMatch == null) {

@@ -154,8 +154,9 @@ class TransactionCategory {
         return Icons.fitness_center_outlined;
       case 'groceries':
         return Icons.local_grocery_store_outlined;
-      case 'gifts':
-        return Icons.card_giftcard_outlined;
+      case 'transfer':
+      case 'saving':
+        return Icons.swap_horiz_outlined;
       default:
         return Icons.category_outlined;
     }

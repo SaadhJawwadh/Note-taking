@@ -1220,9 +1220,9 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                        height: 48,
                                        child: Row(
                                          children: [
-                                           Icon(Icons.auto_awesome_rounded, size: 20, color: colorScheme.primary),
+                                           Icon(Icons.auto_fix_high_rounded, size: 20, color: colorScheme.primary),
                                            const SizedBox(width: 12),
-                                           Text('Refine Titles with AI (48h)', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                           Text('Refine Titles with AI', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
                                          ],
                                        ),
                                      ),

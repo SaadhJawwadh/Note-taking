@@ -203,7 +203,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Spending Trajectory'), findsOneWidget);
+      expect(find.text('Spending Trend'), findsOneWidget);
       expect(find.text('Details'), findsOneWidget);
 
       await tester.tap(find.text('Details'));

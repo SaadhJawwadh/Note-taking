@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import '../features/finances/data/transaction_repository.dart';
 import '../data/transaction_model.dart';
 import '../data/transaction_category.dart';
+import '../data/sms_contact.dart';
 import 'sms_parser.dart';
 import 'sms_constants.dart';
 import 'gemini_nano_service.dart';
@@ -78,6 +79,10 @@ class SmsService {
       return null;
     }
 
+    if (sms.address != null && sms.address!.isNotEmpty) {
+      await _autoRegisterSender(sms.address!);
+    }
+
     if (transaction.category == SmsConstants.reversalSentinel) {
       final target = await TransactionRepository.instance.findReversalTarget(transaction.amount, transaction.date);
       if (target != null) {
@@ -93,6 +98,28 @@ class SmsService {
         body: '${inserted.isExpense ? "Spent" : "Received"} ${inserted.amount.toStringAsFixed(0)} • ${inserted.description}',
       );
       return inserted;
+    }
+  }
+
+  static Future<void> _autoRegisterSender(String address) async {
+    final cleanAddr = address.trim();
+    if (cleanAddr.isEmpty || cleanAddr.length < 2) return;
+    final lower = cleanAddr.toLowerCase();
+    if (_allowedSenderIds.contains(lower) || _blockedSenderIds.contains(lower)) {
+      return;
+    }
+    try {
+      final id = 'sender_${lower.replaceAll(RegExp(r'[^a-z0-9_]'), '_')}';
+      await TransactionRepository.instance.upsertSmsContact(SmsContact(
+        id: id,
+        senderIds: [cleanAddr],
+        label: cleanAddr,
+        isBuiltIn: false,
+        isBlocked: false,
+      ));
+      _allowedSenderIds.add(lower);
+    } catch (e) {
+      debugPrint('Error auto-registering sender $cleanAddr: $e');
     }
   }
 
@@ -220,6 +247,9 @@ class SmsService {
       if (inserted == null) {
         onProgress?.call(processed, total, count);
         continue;
+      }
+      if (m.address != null && m.address!.isNotEmpty) {
+        await _autoRegisterSender(m.address!);
       }
       count++;
       onProgress?.call(processed, total, count);

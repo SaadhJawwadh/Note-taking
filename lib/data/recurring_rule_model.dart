@@ -37,13 +37,22 @@ class RecurringRule {
     required this.nextDue,
   });
 
-  RecurringRule copyWith({DateTime? nextDue}) => RecurringRule(
-        id: id,
-        description: description,
-        amount: amount,
-        category: category,
-        isExpense: isExpense,
-        frequency: frequency,
+  RecurringRule copyWith({
+    String? id,
+    String? description,
+    double? amount,
+    String? category,
+    bool? isExpense,
+    RecurringFrequency? frequency,
+    DateTime? nextDue,
+  }) =>
+      RecurringRule(
+        id: id ?? this.id,
+        description: description ?? this.description,
+        amount: amount ?? this.amount,
+        category: category ?? this.category,
+        isExpense: isExpense ?? this.isExpense,
+        frequency: frequency ?? this.frequency,
         nextDue: nextDue ?? this.nextDue,
       );
 

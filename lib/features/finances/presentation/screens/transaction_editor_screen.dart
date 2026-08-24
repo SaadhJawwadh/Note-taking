@@ -189,36 +189,92 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
 
   Future<void> _deleteTransaction() async {
     if (widget.transaction == null) return;
+    final txn = widget.transaction!;
+    final isSmsTxn = txn.smsId != null && txn.smsId!.isNotEmpty;
+    var blockSender = false;
 
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Transaction?'),
-        content: const Text(
-            'Are you sure you want to delete this transaction? This cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-              foregroundColor: Theme.of(context).colorScheme.onError,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final cs = Theme.of(context).colorScheme;
+          final tt = Theme.of(context).textTheme;
+
+          return AlertDialog(
+            title: const Text('Delete Transaction?'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Move this transaction to Trash? You can restore it anytime within 30 days.',
+                ),
+                if (isSmsTxn) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                      border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.4)),
+                    ),
+                    child: CheckboxListTile(
+                      value: blockSender,
+                      onChanged: (val) => setDialogState(() => blockSender = val ?? false),
+                      title: Text(
+                        'Block future SMS imports for this source',
+                        style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: Text(
+                        'Prevent incoming SMS from this sender from being added to your ledger.',
+                        style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      dense: true,
+                      controlAffinity: ListTileControlAffinity.leading,
+                    ),
+                  ),
+                ],
+              ],
             ),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
-          ),
-        ],
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: cs.error,
+                  foregroundColor: cs.onError,
+                ),
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Delete'),
+              ),
+            ],
+          );
+        },
       ),
     );
 
     if (confirm == true) {
-      final txn = widget.transaction!;
       final txnId = txn.id!;
       final desc = txn.description;
       setState(() => _isLoading = true);
       await TransactionRepository.instance.deleteTransaction(txnId);
+
+      if (blockSender && txn.smsId != null) {
+        try {
+          final contacts = await TransactionRepository.instance.getAllSmsContacts();
+          for (final c in contacts) {
+            if (c.senderIds.any((s) => desc.toLowerCase().contains(s.toLowerCase()) || txn.smsId!.toLowerCase().contains(s.toLowerCase()))) {
+              await TransactionRepository.instance.setSmsContactBlocked(c.id, true);
+            }
+          }
+          await SmsService.reloadSmsContacts();
+        } catch (e) {
+          debugPrint('Error blocking contact on delete: $e');
+        }
+      }
+
       setState(() => _isLoading = false);
       if (mounted) {
         final navigator = Navigator.of(context);
@@ -227,7 +283,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
         appScaffoldMessengerKey.currentState?.clearSnackBars();
         appScaffoldMessengerKey.currentState?.showSnackBar(
           SnackBar(
-            content: Text('Deleted "$desc"'),
+            content: Text(blockSender ? 'Deleted "$desc" and blocked sender' : 'Deleted "$desc"'),
             behavior: SnackBarBehavior.floating,
             action: SnackBarAction(
               label: 'UNDO',
