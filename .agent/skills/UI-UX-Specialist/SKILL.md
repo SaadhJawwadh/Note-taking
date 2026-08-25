@@ -48,6 +48,9 @@ Refer to [design.md](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/.ag
 * **Top Header Far-Right Action Alignment**: In custom top app bars and silver headers (`HomeAppBar`, `FinancialManagerScreen`), always place action controls (`Sync`, `Calendar`, `View Mode`, `More Menu`) to the right of `const Spacer()` so action buttons are neatly grouped on the far right side of the screen.
 * **Authentic Currency Badges & Pickers**: Currency selection dialogs and settings tiles MUST render authentic tonal circular avatars displaying the genuine currency symbol (e.g. `Rs.`, `₹`, `$`, `€`, `£`, `¥`, `د.إ`, `﷼`, `C$`, `A$`, `S$`, `RM`, `NZ$`, `CHF`), bold code, and full name rather than generic dollar icons.
 * **Hardware-Aware AI UI Gating**: Never render AI sparkle icons, refine menu items, or assist floating buttons unless `settings.isAiActive` is true. This prevents dead interactive elements on emulators and non-NPU devices.
+* **AI Action Iconography & Phrasing Standards**:
+  - Always use canonical Material 3 `Icons.auto_fix_high_rounded` (for AI title/text refinement and formatting actions) or `Icons.auto_awesome_rounded` (for generative creation).
+  - Never clutter action labels with temporal brackets or internal time windows (e.g., use `'Refine Titles with AI'` instead of `'Refine Titles with AI (48h)'`). Keep action titles clean, imperative, and action-oriented.
 
 ## 2. Material 3 Official Components Catalog ([m3.material.io](https://m3.material.io/components))
 When implementing UI components, strictly follow the M3 guidelines codified in [design.md Section 9](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/.agent/skills/UI-UX-Specialist/design.md#9-comprehensive-material-3-component-specifications--guidance-catalog-m3materialio):

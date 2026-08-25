@@ -129,7 +129,7 @@ void main() {
       final csv = FinancialExportService.generateCsv(transactions, currency: 'Rs.');
       final lines = csv.trim().split('\n');
 
-      expect(lines.first, 'Date,Time,Description,Category,Type,Amount,Currency,SMS_ID');
+      expect(lines.first, 'Date,Time,Description,Category,Account,Type,Amount,Currency,SMS_ID');
       expect(lines.length, 3);
 
       // Line 1 checks quoted escaped comma and quote

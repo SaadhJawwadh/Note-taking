@@ -224,7 +224,7 @@ class FinancialLedgerTab extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                               ),
                               subtitle: Text(
-                                '${transaction.category} • ${DateFormat('hh:mm a').format(transaction.date)}',
+                                '${transaction.account == AccountType.savings ? '🏦 Savings • ' : ''}${transaction.category} • ${DateFormat('hh:mm a').format(transaction.date)}',
                                 style: textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
                               ),
                               trailing: Text(

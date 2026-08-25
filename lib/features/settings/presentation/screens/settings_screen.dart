@@ -770,12 +770,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         subtitle: 'Schedule automatic backups',
                                         value: settings.autoBackupEnabled,
                                         onChanged: (value) async {
-                                          if (value) {
-                                            AppLockScreen.ignoreNextResumeLock();
-                                            final dir = await FilePicker.platform.getDirectoryPath();
-                                            if (dir == null) return;
-                                            await settings.setAutoBackupPath(dir);
-                                          }
                                           await settings.setAutoBackupEnabled(value);
                                           await syncAutoBackupSchedule();
                                         },
@@ -796,16 +790,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           icon: Icons.folder_outlined,
                                           iconColor: colorScheme.secondary,
                                           title: 'Backup Location',
-                                          subtitle: settings.autoBackupPath ?? 'App default directory',
+                                          subtitle: settings.autoBackupPath ?? 'Secure App Storage (Resilient)',
                                           showArrow: true,
-                                          onTap: () async {
-                                            AppLockScreen.ignoreNextResumeLock();
-                                            final dir = await FilePicker.platform.getDirectoryPath();
-                                            if (dir != null) {
-                                              await settings.setAutoBackupPath(dir);
-                                              await syncAutoBackupSchedule();
-                                            }
-                                          },
+                                          onTap: () => _showBackupLocationPicker(context, settings),
                                         ),
                                         if (settings.lastAutoBackupTime != null) ...[
                                           const _Divider(),
@@ -1316,12 +1303,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           subtitle: 'Schedule automatic backups',
           value: settings.autoBackupEnabled,
           onChanged: (value) async {
-            if (value) {
-              AppLockScreen.ignoreNextResumeLock();
-              final dir = await FilePicker.platform.getDirectoryPath();
-              if (dir == null) return;
-              await settings.setAutoBackupPath(dir);
-            }
             await settings.setAutoBackupEnabled(value);
             await syncAutoBackupSchedule();
           },
@@ -1348,20 +1329,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           SettingsTile(
             icon: Icons.folder_outlined,
             title: 'Backup Location',
-            subtitle: settings.autoBackupPath ?? 'App default directory',
+            subtitle: settings.autoBackupPath ?? 'Secure App Storage (Resilient)',
             showArrow: true,
-            onTap: () async {
-              AppLockScreen.ignoreNextResumeLock();
-              final dir = await FilePicker.platform.getDirectoryPath();
-              if (dir != null) {
-                await settings.setAutoBackupPath(dir);
-                await syncAutoBackupSchedule();
-              }
-            },
+            onTap: () => _showBackupLocationPicker(context, settings),
           ),
           'Data & Backup',
           'Backup Location',
-          settings.autoBackupPath ?? 'App default directory',
+          settings.autoBackupPath ?? 'Secure App Storage (Resilient)',
         );
       }
     }
@@ -1726,6 +1700,82 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
           );
         }).toList(),
+      ),
+    );
+  }
+
+  void _showBackupLocationPicker(BuildContext context, SettingsProvider settings) {
+    final colorScheme = Theme.of(context).colorScheme;
+    AppBottomSheet.show(
+      context: context,
+      title: 'Backup Storage Location',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: Icon(
+              Icons.security_outlined,
+              color: settings.autoBackupPath == null ? colorScheme.primary : colorScheme.onSurfaceVariant,
+            ),
+            title: Text(
+              'Secure App Storage (Recommended)',
+              style: TextStyle(
+                fontWeight: settings.autoBackupPath == null ? FontWeight.bold : FontWeight.w500,
+                color: settings.autoBackupPath == null ? colorScheme.primary : colorScheme.onSurface,
+              ),
+            ),
+            subtitle: Text(
+              'Stored in protected app documents — never revoked across OS updates',
+              style: TextStyle(
+                fontSize: 12,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            trailing: settings.autoBackupPath == null
+                ? Icon(Icons.check_circle_rounded, color: colorScheme.primary)
+                : null,
+            onTap: () async {
+              await HapticFeedback.selectionClick();
+              await settings.setAutoBackupPath(null);
+              await syncAutoBackupSchedule();
+              if (context.mounted) Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            leading: Icon(
+              Icons.folder_open_outlined,
+              color: settings.autoBackupPath != null ? colorScheme.primary : colorScheme.onSurfaceVariant,
+            ),
+            title: Text(
+              'Custom Device Folder',
+              style: TextStyle(
+                fontWeight: settings.autoBackupPath != null ? FontWeight.bold : FontWeight.w500,
+                color: settings.autoBackupPath != null ? colorScheme.primary : colorScheme.onSurface,
+              ),
+            ),
+            subtitle: Text(
+              settings.autoBackupPath ?? 'Select an external device folder via file picker',
+              style: TextStyle(
+                fontSize: 12,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            trailing: settings.autoBackupPath != null
+                ? Icon(Icons.check_circle_rounded, color: colorScheme.primary)
+                : null,
+            onTap: () async {
+              await HapticFeedback.selectionClick();
+              if (context.mounted) Navigator.pop(context);
+              AppLockScreen.ignoreNextResumeLock();
+              final dir = await FilePicker.platform.getDirectoryPath();
+              if (dir != null) {
+                await settings.setAutoBackupPath(dir);
+                await syncAutoBackupSchedule();
+              }
+            },
+          ),
+          const SizedBox(height: 12),
+        ],
       ),
     );
   }

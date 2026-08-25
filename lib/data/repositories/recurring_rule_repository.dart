@@ -66,6 +66,32 @@ class RecurringRuleRepository {
     return rows.map(RecurringRule.fromJson).toList();
   }
 
+  Future<RecurringRule?> findMatchingRule({
+    required String description,
+    required String category,
+    required bool isExpense,
+    double? amount,
+  }) async {
+    final allRules = await readAllRules();
+    final descLower = description.trim().toLowerCase();
+    final catLower = category.trim().toLowerCase();
+
+    for (final rule in allRules) {
+      if (rule.isExpense != isExpense) continue;
+      final ruleDescLower = rule.description.trim().toLowerCase();
+      final ruleCatLower = rule.category.trim().toLowerCase();
+
+      final isExactDesc = ruleDescLower == descLower;
+      final isSubstring = descLower.contains(ruleDescLower) || ruleDescLower.contains(descLower);
+      final isWordMatch = descLower.split(' ').any((w) => w.length > 3 && ruleDescLower.contains(w));
+
+      if (isExactDesc || (isSubstring && (ruleCatLower == catLower || (amount != null && (rule.amount - amount).abs() < 1.0))) || isWordMatch) {
+        return rule;
+      }
+    }
+    return null;
+  }
+
   Future<void> deleteRule(String id) async {
     final db = await _db;
     await db.delete(TableNames.recurringRules,

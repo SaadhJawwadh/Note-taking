@@ -606,7 +606,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ],
                   ),
                   subtitle: Text(
-                    'Track expenses, interactive donut charts, 3-slide visual forecast decks, budgets, and bank SMS auto-import.',
+                    'Track expenses, dual bank accounts (Daily & Savings), interactive donut charts, budgets, and bank SMS auto-import.',
                     style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   ),
                   value: settings.showFinancialManager,

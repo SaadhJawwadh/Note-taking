@@ -51,6 +51,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
   List<TransactionModel> _allDateFiltered = [];
   bool _isLoading = true;
   String? _selectedCategory;
+  String _selectedAccount = 'all'; // 'all', 'daily', 'savings'
   List<String> _activeCategories = [];
   late String _selectedTab;
 
@@ -194,17 +195,21 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     }
   }
 
-  /// Applies category and search filters from the cached [_allDateFiltered]
+  /// Applies account, category, and search filters from the cached [_allDateFiltered]
   /// list. No DB call, no loading spinner — instant.
   void _applyFilters() {
     final activeCategories =
         _allDateFiltered.map((t) => t.category).toSet().toList()..sort();
 
-    var filtered = _selectedCategory == null
-        ? _allDateFiltered
-        : _allDateFiltered
-            .where((t) => t.category == _selectedCategory)
-            .toList();
+    var filtered = _allDateFiltered;
+
+    if (_selectedAccount != 'all') {
+      filtered = filtered.where((t) => t.account == _selectedAccount).toList();
+    }
+
+    if (_selectedCategory != null) {
+      filtered = filtered.where((t) => t.category == _selectedCategory).toList();
+    }
 
     if (_searchQuery.isNotEmpty) {
       filtered = filtered
@@ -219,6 +224,18 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
       _transactions = filtered;
       _isLoading = false;
     });
+  }
+
+  double get _dailyCashFlow {
+    return _allDateFiltered
+        .where((t) => t.account != AccountType.savings)
+        .fold(0.0, (sum, t) => sum + (t.isExpense ? -t.amount : t.amount));
+  }
+
+  double get _savingsVaultCashFlow {
+    return _allDateFiltered
+        .where((t) => t.account == AccountType.savings)
+        .fold(0.0, (sum, t) => sum + (t.isExpense ? -t.amount : t.amount));
   }
 
   double get _totalExpense {
@@ -882,6 +899,90 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 8),
+            Divider(color: onColor.withValues(alpha: 0.2), height: 1),
+            const SizedBox(height: 8),
+
+            // Dual Account Quick-Filter Badges (Daily Operating vs. Savings Vault)
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() {
+                        _selectedAccount = _selectedAccount == AccountType.daily ? 'all' : AccountType.daily;
+                      });
+                      _applyFilters();
+                    },
+                    borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: _selectedAccount == AccountType.daily ? onColor.withValues(alpha: 0.18) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                        border: Border.all(color: onColor.withValues(alpha: _selectedAccount == AccountType.daily ? 0.4 : 0.15)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.credit_card_outlined, size: 13, color: onColor.withValues(alpha: 0.85)),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              'Daily: $currency ${_dailyCashFlow.toStringAsFixed(0)}',
+                              style: tt.labelSmall?.copyWith(
+                                color: onColor,
+                                fontWeight: _selectedAccount == AccountType.daily ? FontWeight.bold : FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() {
+                        _selectedAccount = _selectedAccount == AccountType.savings ? 'all' : AccountType.savings;
+                      });
+                      _applyFilters();
+                    },
+                    borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: _selectedAccount == AccountType.savings ? onColor.withValues(alpha: 0.18) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                        border: Border.all(color: onColor.withValues(alpha: _selectedAccount == AccountType.savings ? 0.4 : 0.15)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.account_balance_outlined, size: 13, color: onColor.withValues(alpha: 0.85)),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              'Savings: $currency ${_savingsVaultCashFlow.toStringAsFixed(0)}',
+                              style: tt.labelSmall?.copyWith(
+                                color: onColor,
+                                fontWeight: _selectedAccount == AccountType.savings ? FontWeight.bold : FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -1203,7 +1304,8 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                     if (mounted) _refreshTransactions();
                                   });
                                 } else if (value == 'export') {
-                                  FinancialExportService.shareTransactionsCsv(
+                                  FinancialExportService.showExportSheet(
+                                    context,
                                     _transactions,
                                     currency: currency,
                                   );
@@ -1430,6 +1532,55 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
               ),
             ),
 
+        // ── Account Selector Segment ──────────────────────────────────
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  FilterChip(
+                    showCheckmark: false,
+                    avatar: const Icon(Icons.account_tree_outlined, size: 16),
+                    label: const Text('All Accounts'),
+                    selected: _selectedAccount == 'all',
+                    onSelected: (_) {
+                      HapticFeedback.lightImpact();
+                      setState(() => _selectedAccount = 'all');
+                      _applyFilters();
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  FilterChip(
+                    showCheckmark: false,
+                    avatar: const Icon(Icons.credit_card_outlined, size: 16),
+                    label: const Text('Daily Operating'),
+                    selected: _selectedAccount == AccountType.daily,
+                    onSelected: (_) {
+                      HapticFeedback.lightImpact();
+                      setState(() => _selectedAccount = AccountType.daily);
+                      _applyFilters();
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  FilterChip(
+                    showCheckmark: false,
+                    avatar: const Icon(Icons.account_balance_outlined, size: 16),
+                    label: const Text('Savings Vault'),
+                    selected: _selectedAccount == AccountType.savings,
+                    onSelected: (_) {
+                      HapticFeedback.lightImpact();
+                      setState(() => _selectedAccount = AccountType.savings);
+                      _applyFilters();
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
         // ── Category filter chips ────────────────────────────────────
         if (_activeCategories.isNotEmpty) ...[
           SliverToBoxAdapter(
@@ -1448,7 +1599,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                           FilterChip(
                             showCheckmark: false,
                             avatar: const Icon(Icons.all_inclusive, size: 16),
-                            label: const Text('All'),
+                            label: const Text('All Categories'),
                             selected: _selectedCategory == null,
                             onSelected: (_) {
                               HapticFeedback.lightImpact();
@@ -1518,6 +1669,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                     isExpense: transaction.isExpense,
                     category: transaction.category,
                     smsId: null,
+                    account: transaction.account,
                   );
                   await TransactionRepository.instance.createTransaction(duplicate);
                   await _refreshTransactions();

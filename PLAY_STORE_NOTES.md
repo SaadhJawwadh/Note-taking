@@ -1,20 +1,20 @@
 <en-US>
 🌟 What's New
-• Smart SMS Ledger: 100% offline auto-import for bank receipts & transfers.
-• Recurring Subscriptions: Manage repeating bills, salaries & deduplication.
-• SMS Automation Hub: Custom rules, sender blocklist & live test sandbox.
+• Dual Bank Accounts: Separate Daily Operating vs. Savings Vault with instant filters.
+• AI Spending Analysis: Export CSV with structured prompts for Claude, ChatGPT & Gemini.
+• Resilient Auto-Backups: Protected local storage immune to OS permission resets.
 
 🚀 Improvements
-• Refined Material 3 Expressive design & spending trend analytics.
-• 0ms instant optimistic updates with zero flicker.
+• Smart Recurring Sync: Edit repeating rules directly from transactions.
+• Widget SMS Catch-Up: Fast background sync on launch.
 </en-US>
 <ta-IN>
 🌟 புதிய அம்சங்கள்
-• ஆஃப்லைன் வங்கி SMS தானியங்கி வரவு-செலவு கணக்கு.
-• தொடர் கட்டணங்கள் மற்றும் சந்தா மேலாண்மை.
-• தனிப்பயன் SMS விதிகள் மற்றும் சோதனை தளம்.
+• இரட்டை வங்கிக் கணக்குகள்: தினசரி செலவு மற்றும் சேமிப்பு கணக்குகள்.
+• AI செலவு பகுப்பாய்வு: AI கருவிகளுக்கான உடனடி CSV ஏற்றுமதி.
+• நம்பகமான காப்புப்பிரதி: அனுமதிகள் இழக்காத பாதுகாப்பான சேமிப்பு.
 
 🚀 மேம்பாடுகள்
-• மேம்படுத்தப்பட்ட Material 3 வடிவமைப்பு மற்றும் செலவு போக்கு வரைபடம்.
-• 0ms உடனடி செயல்பாடு.
+• தொடர் கட்டண விதிகள் புதுப்பித்தல்.
+• விட்ஜெட் SMS தானியங்கி ஒத்திசைவு.
 </ta-IN>

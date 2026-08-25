@@ -131,21 +131,27 @@ Google Play Console enforces strict dimensions for marketing assets. Use `sips` 
   sips -c 500 1024 <source_graphic.png> --out <dest_graphic_1024x500.png>
   ```
 
-### 2. Creating Mockups with Real Emulator Screenshots
-To showcase real app workflows in mockups instead of placeholders:
-1. Launch the app on the connected emulator:
+### 2. Creating Mockups with Real Emulator Screenshots (On-Demand)
+> [!IMPORTANT]
+> **User Request Gate**: Only execute this screenshot and mockup generation workflow **if explicitly requested by the user**. Do NOT generate mockups on every standard release cycle.
+
+To showcase real app workflows in mockups instead of generic placeholders:
+1. Launch the app on the connected emulator using the canonical application identifier:
    ```bash
-   adb shell am start -n <package>/<main_activity>
+   adb shell am start -n com.saadhjawwadh.notebook/com.saadhjawwadh.notebook.MainActivity
    ```
-2. Switch tabs or trigger actions by tapping exact coordinates (e.g., `x=540, y=2300` for bottom navigation bar):
+2. Switch tabs or trigger actions by tapping exact coordinates (e.g., `x=270, y=2250` for Notes, `x=750, y=2250` for Finances):
    ```bash
    adb shell input tap <x> <y>
    ```
 3. Capture screen contents directly to files:
    ```bash
-   adb exec-out screencap -p > <output_path.png>
+   adb exec-out screencap -p > screenshots/<name>.png
    ```
-4. Pass the captured file path to `ImagePaths` in the `generate_image` tool, prompting it to overlay the screenshot inside a bezel-less smartphone frame on a custom gradient background.
+4. Pass the captured screenshot paths to `generate_image` using:
+   - **Feature Graphic (16:9)**: High-impact banner showcasing core pillars.
+   - **Showcase Cards (9:16)**: Framing real screenshots inside modern bezels with bold Google Sans headlines and subtle Material 3 ambient gradients.
+5. Save finished assets to `distribution/playstore_assets/` ready for Google Play Developer Console upload.
 
 ### 3. Android Monochrome Launcher Override Gotcha
 If regenerating adaptive icons using tools like `flutter_launcher_icons`, check for any pre-existing monochrome vector resource at `android/app/src/main/res/drawable/ic_launcher_monochrome.xml`. Delete this stale XML to allow the system launcher to fallback correctly to the newly generated transparent PNG layers.

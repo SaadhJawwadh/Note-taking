@@ -77,6 +77,15 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 - **SMS Permission Manifest Parity**: Only request and check permissions declared in `AndroidManifest.xml` (`Permission.sms`). Never query undeclared companion permissions (e.g. `Permission.phone`), as `permission_handler` permanently returns `denied` for undeclared permissions and silently blocks SMS sync.
 - **Non-Blocking Chunked Sync & Instant Cancellation**: Background SMS inbox sync processes messages in non-blocking batches of 25-50 messages (yielding to the event loop), checks `_cancelRequested`, and exposes a responsive "Cancel" button on sync progress banners.
 - **Financial Trash Bin & Permanent Tombstones**: Soft-deleted transactions (`deletedAt != null`) are excluded from active ledger queries but retained for 30-day auto-purge retention. Permanently purged transactions write their `smsId` to `deleted_transaction_sms_ids`. `TransactionRepository.createSmsTransaction` MUST query `smsExists(smsId)` by default to permanently prevent deleted SMS transactions from being re-imported during bulk scans unless `bypassTombstones: true` is explicitly provided.
+- **SMS Bank Parser & Self-Transfer (CEFTS) Ingestion**:
+  - Automatically recognizes CEFTS / IB CEFTS transfers (`trf`, `cefts`, `ib cefts`) and personal account matches (`to:\s*saadh`, `saadh com`, `saadh tab`), categorizing them as `TransactionCategory.transfer` with zero expense burn impact.
+  - Automatically filters non-financial fuel quota and broadcast notifications (e.g. `Quota used: ... Balance: ...`).
+  - Cleans extracted merchant titles by stripping telephone numbers (`\b011\d{7}\b`) and geographic suffixes (`COLOMBO \d+`, `LK`, `SRI LANKA`).
+- **Sender Blocklist & Soft-Delete Protocol**: When deleting an SMS-derived transaction, the delete dialog provides a non-intrusive checkbox `[ ] Block future SMS imports for this source` to instantly update `sms_contacts.is_blocked` and clear active filter caches.
+- **Smart Recurring Subscriptions & Live Category Auto-Detection**:
+  - When typing a description (*"Netflix"*, *"Spotify"*, *"Starlink"*, *"Rent"*), the recurring rule form automatically pre-selects the appropriate category in real-time.
+  - Default category selection defaults to `Subscriptions` (for expenses) and `Deposit` (for income).
+  - Built-in deduplication prevents creating duplicate rules for the same merchant and frequency.
 - **Native Telephony Channel Safety Guardrail**: Wrap `_startTelephonyListening()` and `listenIncomingSms` in safe try-catch blocks and verify `await hasPermission()` BEFORE invoking `telephony.listenIncomingSms()`. Prevents `IllegalStateException: Reply already submitted` crashes on Android when SMS permissions are revoked or denied.
 - **AI Title Refinement Pipeline**: `refineSingleTransactionWithAi()` and `performBulkAiRefine()` clean up cryptic bank codes (e.g. `POS/12345/KEELLS`) into clean merchant titles. Reads original SMS body safely via `getOriginalSmsBody()` from native telephony logs.
 - **Background Isolate & Workmanager Safety**: `backgroundMessageHandler` and `performDailyTransactionSync` MUST invoke `WidgetsFlutterBinding.ensureInitialized()` at entry to prevent isolate crashes when accessing `SharedPreferences`, `DatabaseHelper`, or platform channels. Task re-scheduling in `performDailyTransactionSync` MUST be wrapped in a `finally` block so daily sync chains never break on execution errors.
@@ -86,8 +95,8 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 - **Trend Forecasting & Active Month-End Run-Rate**: `SpendingForecastService.calculateMonthlyForecast()` is the canonical source of truth for ongoing projections. On days 1–3, smoothly blend current daily burn with prior 3-month historical daily average to prevent rent/utility bill spikes.
 - **Dynamic 3-Slide Visual Intelligence Deck (`MinimalChartDeck`)**:
   - **Dynamic Gating**: Gated on `totalBudget > 0` for 3 slides (Trajectory $\to$ Donut $\to$ Budget Pacing) or 2 slides (Trajectory $\to$ Donut).
+  - **Slide Header Density**: Use compact title `'Spending Trend'` (instead of `'Spending Trajectory'`) and keep badges under 15 characters (e.g. `Est ~395.8k`) so deck titles never truncate into ellipsis on narrow screens.
   - **Context-Aware Deep Linking**: Tapping "Details >" inspects active page index and deep-links to sub-tabs (Slide 0/1 $\to$ Breakdown, Slide 2 $\to$ Budgets).
-  - **Compact Badge Invariant**: Keep badges under 15 characters (e.g. `Est ~395.8k`) so deck titles never truncate into ellipsis on narrow screens.
   - **Chart Tooltip 1px Accent Outline**: Floating Canvas chart tooltips (`LineTouchTooltipData`) must specify a 1px primary accent border (`BorderSide(color: colorScheme.primary.withValues(alpha: 0.3), width: 1.0)`) and rounded radius (`AppLayout.radiusM`) to prevent light-mode blending against surface cards.
 - **Android App Widget Dynamic Canvas Sparkline**: Render anti-aliased canvas sparklines in `FinanceWidgetProvider.kt` with gradient underfill and glowing forecast dots, fed by `WidgetHelper.dart` via `widget_sparkline_data`.
 

@@ -649,11 +649,12 @@ class SmsService {
     return success;
   }
 
-  static Future<void> performAppLaunchCatchUpSync() async {
+  static Future<void> performAppLaunchCatchUpSync({bool force = false}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final enabled = prefs.getBool('dailySyncEnabled') ?? false;
-      if (!enabled) return;
+      final fmEnabled = prefs.getBool('showFinancialManager') ?? false;
+      final dailySyncEnabled = prefs.getBool('dailySyncEnabled') ?? false;
+      if (!fmEnabled && !dailySyncEnabled) return;
       if (!await hasPermission()) return;
 
       final lastSyncStr = prefs.getString('lastSmsSyncTime');
@@ -666,7 +667,8 @@ class SmsService {
         }
       }
 
-      if (DateTime.now().difference(from).inMinutes >= 15) {
+      final minutesSinceLast = DateTime.now().difference(from).inMinutes;
+      if (force || minutesSinceLast >= 5) {
         final count = await performSmsSync(
           trigger: SmsSyncTrigger.catchUp,
           fromTime: from,

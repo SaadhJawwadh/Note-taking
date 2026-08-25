@@ -1,5 +1,10 @@
 import 'transaction_category.dart';
 
+class AccountType {
+  static const String daily = 'daily';
+  static const String savings = 'savings';
+}
+
 class TransactionModel {
   final int? id;
   final double amount;
@@ -9,6 +14,7 @@ class TransactionModel {
   final String category;
   final String? smsId;
   final DateTime? deletedAt;
+  final String account;
 
   TransactionModel({
     this.id,
@@ -19,6 +25,7 @@ class TransactionModel {
     this.category = TransactionCategory.other,
     this.smsId,
     this.deletedAt,
+    this.account = AccountType.daily,
   });
 
   TransactionModel copy({
@@ -30,6 +37,7 @@ class TransactionModel {
     String? category,
     String? smsId,
     DateTime? deletedAt,
+    String? account,
   }) =>
       TransactionModel(
         id: id ?? this.id,
@@ -40,6 +48,7 @@ class TransactionModel {
         category: category ?? this.category,
         smsId: smsId ?? this.smsId,
         deletedAt: deletedAt ?? this.deletedAt,
+        account: account ?? this.account,
       );
 
   static TransactionModel fromJson(Map<String, Object?> json) =>
@@ -57,6 +66,7 @@ class TransactionModel {
         deletedAt: json[TransactionFields.deletedAt] != null
             ? DateTime.tryParse(json[TransactionFields.deletedAt] as String)
             : null,
+        account: (json[TransactionFields.account] as String?) ?? AccountType.daily,
       );
 
   Map<String, Object?> toJson() => {
@@ -68,6 +78,7 @@ class TransactionModel {
         TransactionFields.category: category,
         TransactionFields.smsId: smsId,
         TransactionFields.deletedAt: deletedAt?.toIso8601String(),
+        TransactionFields.account: account,
       };
 }
 
@@ -81,6 +92,7 @@ class TransactionFields {
     category,
     smsId,
     deletedAt,
+    account,
   ];
 
   static const String id = '_id';
@@ -91,4 +103,5 @@ class TransactionFields {
   static const String category = 'category';
   static const String smsId = 'smsId';
   static const String deletedAt = 'deletedAt';
+  static const String account = 'account';
 }

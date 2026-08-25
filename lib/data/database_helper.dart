@@ -100,7 +100,7 @@ class DatabaseHelper {
       return await openDatabase(
         path,
         password: password,
-        version: 19,
+        version: 20,
         onCreate: _createDB,
         onUpgrade: _upgradeDB,
         onOpen: _onOpenDB,
@@ -121,7 +121,7 @@ class DatabaseHelper {
         return await openDatabase(
           path,
           password: password,
-          version: 19,
+          version: 20,
           onCreate: _createDB,
           onUpgrade: _upgradeDB,
           onOpen: _onOpenDB,
@@ -242,7 +242,8 @@ class DatabaseHelper {
         isExpense INTEGER NOT NULL,
         category TEXT NOT NULL DEFAULT 'Other',
         smsId TEXT,
-        deletedAt TEXT
+        deletedAt TEXT,
+        account TEXT NOT NULL DEFAULT 'daily'
       )
     ''');
     await db.execute(
@@ -399,6 +400,13 @@ class DatabaseHelper {
     if (oldVersion < 19) {
       await db.execute('ALTER TABLE ${TableNames.transactions} ADD COLUMN deletedAt TEXT');
       await db.execute('CREATE TABLE IF NOT EXISTS ${TableNames.deletedTransactionSmsIds} (smsId TEXT PRIMARY KEY, deletedAt TEXT NOT NULL)');
+    }
+    if (oldVersion < 20) {
+      final cols = await db.rawQuery('PRAGMA table_info(${TableNames.transactions})');
+      final hasAccountCol = cols.any((col) => col['name'] == 'account');
+      if (!hasAccountCol) {
+        await db.execute("ALTER TABLE ${TableNames.transactions} ADD COLUMN account TEXT NOT NULL DEFAULT 'daily'");
+      }
     }
   }
 }

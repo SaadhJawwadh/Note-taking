@@ -138,17 +138,28 @@ Future<bool> performAutoBackup() async {
     final prefs = await SharedPreferences.getInstance();
     if (!(prefs.getBool('autoBackupEnabled') ?? false)) return true;
     String? targetPath = prefs.getString('autoBackupPath');
-    if (targetPath != null && !await Directory(targetPath).exists()) targetPath = null;
-    if (targetPath == null) {
-      final appDir = await getApplicationDocumentsDirectory();
-      targetPath = appDir.path;
+    if (targetPath != null && !await Directory(targetPath).exists()) {
+      targetPath = null;
     }
+    final appDir = await getApplicationDocumentsDirectory();
+    final effectivePath = targetPath ?? appDir.path;
+
     final jsonContent = await generateBackupJson();
     final dateStr = DateTime.now().toString().replaceAll(RegExp(r'[: ]'), '_').split('.')[0];
-    final file = File('$targetPath/notebook_auto_backup_$dateStr.json');
-    await file.writeAsString(jsonContent);
+    
+    File file;
+    try {
+      file = File('$effectivePath/notebook_auto_backup_$dateStr.json');
+      await file.writeAsString(jsonContent);
+      await _rotateBackups(effectivePath);
+    } catch (e) {
+      debugPrint('AutoBackup custom directory write failed ($e), falling back to app documents directory');
+      file = File('${appDir.path}/notebook_auto_backup_$dateStr.json');
+      await file.writeAsString(jsonContent);
+      await _rotateBackups(appDir.path);
+    }
+
     await prefs.setString('lastAutoBackupTime', DateTime.now().toIso8601String());
-    await _rotateBackups(targetPath);
 
     final formattedTime = DateFormat('h:mm a, MMM d').format(DateTime.now());
     final fileName = file.path.split('/').last;

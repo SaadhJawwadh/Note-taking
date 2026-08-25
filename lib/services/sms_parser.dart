@@ -162,6 +162,12 @@ class SmsParser {
         ? '${messageId}_$messageDate'
         : 'hash_${address.toLowerCase()}_${normalizedBody.hashCode}_$messageDate';
 
+    final isSavings = bodyLower.contains('saving') ||
+                      bodyLower.contains('fixed deposit') ||
+                      bodyLower.contains('fd interest') ||
+                      bodyLower.contains('vault');
+    final account = isSavings ? AccountType.savings : AccountType.daily;
+
     return TransactionModel(
       amount: amount,
       description: description,
@@ -169,6 +175,7 @@ class SmsParser {
       isExpense: isExpense,
       category: category,
       smsId: smsId,
+      account: account,
     );
   }
 

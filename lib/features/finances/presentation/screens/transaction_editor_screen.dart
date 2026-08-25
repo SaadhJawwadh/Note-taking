@@ -40,7 +40,9 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
   bool _isFabExpanded = true;
   bool _isRefiningAi = false;
   String _category = TransactionCategory.other;
+  String _account = AccountType.daily;
   RecurringFrequency? _repeatFrequency;
+  String? _matchedRuleId;
 
   bool _onScrollNotification(UserScrollNotification notification) {
     if (notification.direction == ScrollDirection.reverse) {
@@ -63,8 +65,28 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
       _selectedDate = widget.transaction!.date;
       _isExpense = widget.transaction!.isExpense;
       _category = widget.transaction!.category;
+      _account = widget.transaction!.account;
+      _checkExistingRecurringRule();
     }
     _initialCategory = _category;
+  }
+
+  Future<void> _checkExistingRecurringRule() async {
+    if (widget.transaction == null) return;
+    try {
+      final rule = await RecurringRuleRepository.instance.findMatchingRule(
+        description: widget.transaction!.description,
+        category: widget.transaction!.category,
+        isExpense: widget.transaction!.isExpense,
+        amount: widget.transaction!.amount,
+      );
+      if (rule != null && mounted) {
+        setState(() {
+          _matchedRuleId = rule.id;
+          _repeatFrequency = rule.frequency;
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -103,6 +125,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
       isExpense: _isExpense,
       category: _category,
       smsId: widget.transaction?.smsId,
+      account: _account,
     );
 
     if (widget.transaction == null) {
@@ -112,23 +135,68 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
     }
 
     if (_repeatFrequency != null) {
-      // The transaction covers this period; the rule owns the next one onward.
-      var rule = RecurringRule(
-        id: const Uuid().v4(),
-        description: description,
-        amount: amount,
-        category: _category,
-        isExpense: _isExpense,
-        frequency: _repeatFrequency!,
-        nextDue: _selectedDate,
-      );
-      rule = rule.copyWith(nextDue: rule.advance(_selectedDate));
-      await RecurringRuleRepository.instance.createRule(rule);
+      if (_matchedRuleId != null) {
+        // Update existing rule so future materialized transactions reflect the new details
+        final allRules = await RecurringRuleRepository.instance.readAllRules();
+        RecurringRule? existing;
+        for (final r in allRules) {
+          if (r.id == _matchedRuleId) {
+            existing = r;
+            break;
+          }
+        }
+        if (existing != null) {
+          final updatedRule = existing.copyWith(
+            description: description,
+            amount: amount,
+            category: _category,
+            isExpense: _isExpense,
+            frequency: _repeatFrequency!,
+          );
+          await RecurringRuleRepository.instance.updateRule(updatedRule);
+        } else {
+          var rule = RecurringRule(
+            id: _matchedRuleId!,
+            description: description,
+            amount: amount,
+            category: _category,
+            isExpense: _isExpense,
+            frequency: _repeatFrequency!,
+            nextDue: _selectedDate,
+          );
+          rule = rule.copyWith(nextDue: rule.advance(_selectedDate));
+          await RecurringRuleRepository.instance.createRule(rule);
+        }
+      } else {
+        // The transaction covers this period; the rule owns the next one onward.
+        var rule = RecurringRule(
+          id: const Uuid().v4(),
+          description: description,
+          amount: amount,
+          category: _category,
+          isExpense: _isExpense,
+          frequency: _repeatFrequency!,
+          nextDue: _selectedDate,
+        );
+        rule = rule.copyWith(nextDue: rule.advance(_selectedDate));
+        await RecurringRuleRepository.instance.createRule(rule);
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-                'Repeats ${_repeatFrequency!.label.toLowerCase()} — manage in Settings → Financial Manager'),
+                'Repeats ${_repeatFrequency!.label.toLowerCase()} — updated for future payments'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } else if (_matchedRuleId != null) {
+      // Frequency was removed / set to None on an existing recurring transaction
+      await RecurringRuleRepository.instance.deleteRule(_matchedRuleId!);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Removed recurring rule for upcoming payments'),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -868,6 +936,34 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                             },
                           ),
                         );
+                      },
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Account Bucket (Daily Operating vs. Savings Vault)
+                    Text(
+                      'Account Bucket',
+                      style: textTheme.labelLarge
+                          ?.copyWith(color: colorScheme.onSurfaceVariant),
+                    ),
+                    const SizedBox(height: 8),
+                    SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(
+                          value: AccountType.daily,
+                          label: Text('Daily Operating'),
+                          icon: Icon(Icons.credit_card_outlined),
+                        ),
+                        ButtonSegment(
+                          value: AccountType.savings,
+                          label: Text('Savings Vault'),
+                          icon: Icon(Icons.account_balance_outlined),
+                        ),
+                      ],
+                      selected: {_account},
+                      onSelectionChanged: (selected) {
+                        HapticFeedback.selectionClick();
+                        setState(() => _account = selected.first);
                       },
                     ),
                     const SizedBox(height: 24),

@@ -23,7 +23,6 @@ Consult the detailed [Developer Map (.agent/map.md)](file:///Users/saadhjawwadh/
 ```
 lib/
 ├── core/                               # Shared design system, UI primitives, and router
-│   ├── constants/app_constants.dart    # App metadata, curated currencies (CurrencyInfo)
 │   ├── routes/app_router.dart          # Centralized route strings and M3 shared-axis transitions
 │   ├── theme/                          # Single Source of Truth Design Tokens
 │   │   ├── app_layout.dart             # Spacings (spaceXS–XXL), radii (radiusS–MAX), spring curves
