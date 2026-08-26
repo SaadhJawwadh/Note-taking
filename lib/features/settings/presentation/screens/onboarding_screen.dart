@@ -646,6 +646,35 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     },
                   ),
                 ),
+                const SizedBox(height: AppLayout.spaceS),
+                AppCard(
+                  margin: const EdgeInsets.only(left: AppLayout.spaceL),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppLayout.spaceL,
+                    vertical: AppLayout.spaceXS,
+                  ),
+                  child: SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    secondary: Icon(
+                      Icons.account_balance_wallet_outlined,
+                      color: theme.colorScheme.secondary,
+                      size: 20,
+                    ),
+                    title: Text(
+                      'Savings Vault & Dual Accounts',
+                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      'Separate daily cash flow from long-term savings.',
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                    value: settings.enableSavingsVault,
+                    onChanged: (val) {
+                      HapticFeedback.lightImpact();
+                      settings.setEnableSavingsVault(val);
+                    },
+                  ),
+                ),
               ],
               const SizedBox(height: AppLayout.spaceM),
 
@@ -696,6 +725,58 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   onChanged: (val) {
                     HapticFeedback.lightImpact();
                     settings.setIsPeriodTrackerEnabled(val);
+                  },
+                ),
+              ),
+              const SizedBox(height: AppLayout.spaceM),
+
+              // Split Bills Powerup Card
+              AppCard(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppLayout.spaceL,
+                  vertical: AppLayout.spaceS,
+                ),
+                child: SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  secondary: Icon(
+                    Icons.pie_chart_outline_rounded,
+                    color: theme.colorScheme.primary,
+                  ),
+                  title: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          'Split Bills & Shared Debts',
+                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: AppLayout.spaceS),
+                      if (settings.showSplitBills)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'Active',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onPrimaryContainer,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  subtitle: Text(
+                    'Group bill splitting, equal & exact shares, 100% offline receipt OCR, WhatsApp breakdowns, and debt tracking.',
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                  value: settings.showSplitBills,
+                  onChanged: (val) {
+                    HapticFeedback.lightImpact();
+                    settings.setShowSplitBills(val);
                   },
                 ),
               ),

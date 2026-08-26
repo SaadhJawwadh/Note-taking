@@ -7,6 +7,41 @@ class TableNames {
   static const String periodLogs = 'period_logs';
   static const String recurringRules = 'recurring_rules';
   static const String deletedTransactionSmsIds = 'deleted_transaction_sms_ids';
+  static const String splitBills = 'split_bills';
+  static const String splitParticipants = 'split_participants';
+  static const String splitContacts = 'split_contacts';
+}
+
+class SplitBillFields {
+  static const String id = 'id';
+  static const String transactionId = 'transactionId';
+  static const String title = 'title';
+  static const String totalAmount = 'totalAmount';
+  static const String payerName = 'payerName';
+  static const String isPayerUser = 'isPayerUser';
+  static const String splitMode = 'splitMode';
+  static const String groupTag = 'groupTag';
+  static const String date = 'date';
+  static const String notes = 'notes';
+  static const String receiptImagePath = 'receiptImagePath';
+  static const String status = 'status';
+  static const String deletedAt = 'deletedAt';
+}
+
+class SplitParticipantFields {
+  static const String id = 'id';
+  static const String billId = 'billId';
+  static const String contactName = 'contactName';
+  static const String shareAmount = 'shareAmount';
+  static const String hasPaid = 'hasPaid';
+  static const String paidAt = 'paidAt';
+}
+
+class SplitContactFields {
+  static const String name = 'name';
+  static const String phoneNumber = 'phoneNumber';
+  static const String colorValue = 'colorValue';
+  static const String lastUsed = 'lastUsed';
 }
 
 class NoteFields {

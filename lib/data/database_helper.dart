@@ -100,7 +100,7 @@ class DatabaseHelper {
       return await openDatabase(
         path,
         password: password,
-        version: 20,
+        version: 21,
         onCreate: _createDB,
         onUpgrade: _upgradeDB,
         onOpen: _onOpenDB,
@@ -121,7 +121,7 @@ class DatabaseHelper {
         return await openDatabase(
           path,
           password: password,
-          version: 20,
+          version: 21,
           onCreate: _createDB,
           onUpgrade: _upgradeDB,
           onOpen: _onOpenDB,
@@ -143,6 +143,10 @@ class DatabaseHelper {
       await db.execute('CREATE INDEX IF NOT EXISTS idx_transactions_smsid ON transactions(smsId);');
       await db.execute('CREATE INDEX IF NOT EXISTS idx_transactions_deleted ON transactions(deletedAt);');
       await db.execute('CREATE INDEX IF NOT EXISTS idx_tombstones_smsid ON deleted_transaction_sms_ids(smsId);');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_split_bills_deleted ON ${TableNames.splitBills}(${SplitBillFields.deletedAt});');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_split_bills_txid ON ${TableNames.splitBills}(${SplitBillFields.transactionId});');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_split_participants_bill ON ${TableNames.splitParticipants}(${SplitParticipantFields.billId});');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_split_participants_contact ON ${TableNames.splitParticipants}(${SplitParticipantFields.contactName});');
     } catch (e) {
       debugPrint('[DatabaseHelper] PRAGMA & Index creation onOpen warning: $e');
     }
@@ -304,6 +308,45 @@ class DatabaseHelper {
 
     // tombstone table — must match the _upgradeDB < 18 migration
     await db.execute('CREATE TABLE IF NOT EXISTS deleted_notes (id TEXT PRIMARY KEY, deletedAt TEXT NOT NULL)');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ${TableNames.splitBills} (
+        ${SplitBillFields.id} TEXT PRIMARY KEY,
+        ${SplitBillFields.transactionId} INTEGER,
+        ${SplitBillFields.title} TEXT NOT NULL,
+        ${SplitBillFields.totalAmount} REAL NOT NULL,
+        ${SplitBillFields.payerName} TEXT NOT NULL,
+        ${SplitBillFields.isPayerUser} INTEGER NOT NULL DEFAULT 1,
+        ${SplitBillFields.splitMode} TEXT NOT NULL DEFAULT 'equal',
+        ${SplitBillFields.groupTag} TEXT,
+        ${SplitBillFields.date} TEXT NOT NULL,
+        ${SplitBillFields.notes} TEXT,
+        ${SplitBillFields.receiptImagePath} TEXT,
+        ${SplitBillFields.status} TEXT NOT NULL DEFAULT 'unsettled',
+        ${SplitBillFields.deletedAt} TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ${TableNames.splitParticipants} (
+        ${SplitParticipantFields.id} TEXT PRIMARY KEY,
+        ${SplitParticipantFields.billId} TEXT NOT NULL,
+        ${SplitParticipantFields.contactName} TEXT NOT NULL,
+        ${SplitParticipantFields.shareAmount} REAL NOT NULL,
+        ${SplitParticipantFields.hasPaid} INTEGER NOT NULL DEFAULT 0,
+        ${SplitParticipantFields.paidAt} TEXT,
+        FOREIGN KEY (${SplitParticipantFields.billId}) REFERENCES ${TableNames.splitBills} (${SplitBillFields.id}) ON DELETE CASCADE
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ${TableNames.splitContacts} (
+        ${SplitContactFields.name} TEXT PRIMARY KEY,
+        ${SplitContactFields.phoneNumber} TEXT,
+        ${SplitContactFields.colorValue} INTEGER NOT NULL,
+        ${SplitContactFields.lastUsed} TEXT NOT NULL
+      )
+    ''');
   }
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -407,6 +450,46 @@ class DatabaseHelper {
       if (!hasAccountCol) {
         await db.execute("ALTER TABLE ${TableNames.transactions} ADD COLUMN account TEXT NOT NULL DEFAULT 'daily'");
       }
+    }
+    if (oldVersion < 21) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS ${TableNames.splitBills} (
+          ${SplitBillFields.id} TEXT PRIMARY KEY,
+          ${SplitBillFields.transactionId} INTEGER,
+          ${SplitBillFields.title} TEXT NOT NULL,
+          ${SplitBillFields.totalAmount} REAL NOT NULL,
+          ${SplitBillFields.payerName} TEXT NOT NULL,
+          ${SplitBillFields.isPayerUser} INTEGER NOT NULL DEFAULT 1,
+          ${SplitBillFields.splitMode} TEXT NOT NULL DEFAULT 'equal',
+          ${SplitBillFields.groupTag} TEXT,
+          ${SplitBillFields.date} TEXT NOT NULL,
+          ${SplitBillFields.notes} TEXT,
+          ${SplitBillFields.receiptImagePath} TEXT,
+          ${SplitBillFields.status} TEXT NOT NULL DEFAULT 'unsettled',
+          ${SplitBillFields.deletedAt} TEXT
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS ${TableNames.splitParticipants} (
+          ${SplitParticipantFields.id} TEXT PRIMARY KEY,
+          ${SplitParticipantFields.billId} TEXT NOT NULL,
+          ${SplitParticipantFields.contactName} TEXT NOT NULL,
+          ${SplitParticipantFields.shareAmount} REAL NOT NULL,
+          ${SplitParticipantFields.hasPaid} INTEGER NOT NULL DEFAULT 0,
+          ${SplitParticipantFields.paidAt} TEXT,
+          FOREIGN KEY (${SplitParticipantFields.billId}) REFERENCES ${TableNames.splitBills} (${SplitBillFields.id}) ON DELETE CASCADE
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS ${TableNames.splitContacts} (
+          ${SplitContactFields.name} TEXT PRIMARY KEY,
+          ${SplitContactFields.phoneNumber} TEXT,
+          ${SplitContactFields.colorValue} INTEGER NOT NULL,
+          ${SplitContactFields.lastUsed} TEXT NOT NULL
+        )
+      ''');
     }
   }
 }

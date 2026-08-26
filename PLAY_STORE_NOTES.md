@@ -1,20 +1,20 @@
 <en-US>
 🌟 What's New
-• Dual Bank Accounts: Separate Daily Operating vs. Savings Vault with instant filters.
-• AI Spending Analysis: Export CSV with structured prompts for Claude, ChatGPT & Gemini.
-• Resilient Auto-Backups: Protected local storage immune to OS permission resets.
+• Split Bills: Split group expenses with equal/exact shares & WhatsApp reminders.
+• Offline Receipt Scanner: Instant camera OCR on-device.
+• Modular Dual Accounts: Optional Savings Vault toggle.
 
 🚀 Improvements
-• Smart Recurring Sync: Edit repeating rules directly from transactions.
-• Widget SMS Catch-Up: Fast background sync on launch.
+• Unified category pickers & enlarged touch targets.
+• 0ms instant ledger settlements & UI updates.
 </en-US>
 <ta-IN>
 🌟 புதிய அம்சங்கள்
-• இரட்டை வங்கிக் கணக்குகள்: தினசரி செலவு மற்றும் சேமிப்பு கணக்குகள்.
-• AI செலவு பகுப்பாய்வு: AI கருவிகளுக்கான உடனடி CSV ஏற்றுமதி.
-• நம்பகமான காப்புப்பிரதி: அனுமதிகள் இழக்காத பாதுகாப்பான சேமிப்பு.
+• பில் பகிர்வு: நண்பர்களுடன் செலவுகளை சமமாக அல்லது தனித்தனியாக பகிருங்கள்.
+• ஆஃப்லைன் ரசீது ஸ்கேனர்: கேமரா மூலம் உடனடி OCR.
+• விருப்ப சேமிப்பு கணக்கு: தேவைக்கேற்ப இயக்கும் வசதி.
 
 🚀 மேம்பாடுகள்
-• தொடர் கட்டண விதிகள் புதுப்பித்தல்.
-• விட்ஜெட் SMS தானியங்கி ஒத்திசைவு.
+• ஒருங்கிணைந்த வகை தேர்வுகள்.
+• விரைவான கணக்கு தீர்வுகள்.
 </ta-IN>

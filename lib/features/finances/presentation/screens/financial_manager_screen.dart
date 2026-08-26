@@ -29,12 +29,14 @@ import '../widgets/financial_ledger_tab.dart';
 import '../widgets/financial_analytics_tab.dart';
 import '../widgets/minimal_chart_deck.dart';
 import '../widgets/recurring_rules_sheet.dart';
+import '../widgets/split_bills_tab.dart';
 import '../../services/financial_export_service.dart';
 import '../../services/spending_forecast_service.dart';
 
 
 class FinancialManagerScreen extends StatefulWidget {
   static final ValueNotifier<String?> tabRedirectNotifier = ValueNotifier<String?>(null);
+  static final ValueNotifier<int> refreshNotifier = ValueNotifier<int>(0);
 
   const FinancialManagerScreen({super.key});
 
@@ -76,12 +78,13 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     _heroPageController = PageController(initialPage: 0);
     final initialTab = FinancialManagerScreen.tabRedirectNotifier.value;
     if (initialTab != null) {
-      _selectedTab = (initialTab == 'Ledger') ? 'Ledger' : 'Budgets';
+      _selectedTab = initialTab;
       FinancialManagerScreen.tabRedirectNotifier.value = null; // consume
     } else {
       _selectedTab = 'Ledger';
     }
     FinancialManagerScreen.tabRedirectNotifier.addListener(_handleTabRedirect);
+    FinancialManagerScreen.refreshNotifier.addListener(_handleExternalRefresh);
     _refreshTransactions(showLoading: true);
     _startHeroAutoCycleTimer();
     _smsSubscription = SmsService.incomingTransactions.listen((t) async {
@@ -95,12 +98,20 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     });
   }
 
+  void _handleExternalRefresh() {
+    if (mounted) {
+      _refreshTransactions();
+    }
+  }
+
   void _startHeroAutoCycleTimer() {
     _heroAutoCycleTimer?.cancel();
     if (_heroUserInteracted) return;
-    _heroAutoCycleTimer = Timer.periodic(const Duration(milliseconds: 5500), (timer) {
-      if (!mounted || _heroUserInteracted || !_heroPageController.hasClients) {
-        timer.cancel();
+    _heroAutoCycleTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted || _heroUserInteracted) return;
+      if (!_heroPageController.hasClients) return;
+      if (_selectedTab != 'Ledger') {
+        _heroAutoCycleTimer?.cancel();
         return;
       }
       final nextPage = (_heroCardMode + 1) % 3;
@@ -123,7 +134,13 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     final newTab = FinancialManagerScreen.tabRedirectNotifier.value;
     if (newTab != null && mounted) {
       setState(() {
-        _selectedTab = (newTab == 'Ledger') ? 'Ledger' : 'Budgets';
+        if (newTab == 'Ledger') {
+          _selectedTab = 'Ledger';
+        } else if (newTab == 'Split Bills') {
+          _selectedTab = 'Split Bills';
+        } else {
+          _selectedTab = 'Budgets';
+        }
       });
       FinancialManagerScreen.tabRedirectNotifier.value = null; // consume
     }
@@ -135,6 +152,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     _heroPageController.dispose();
     _searchController.dispose();
     FinancialManagerScreen.tabRedirectNotifier.removeListener(_handleTabRedirect);
+    FinancialManagerScreen.refreshNotifier.removeListener(_handleExternalRefresh);
     _smsSubscription?.cancel();
     _smsProgressSub?.cancel();
     super.dispose();
@@ -899,90 +917,92 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 8),
-            Divider(color: onColor.withValues(alpha: 0.2), height: 1),
-            const SizedBox(height: 8),
+            if (settings.enableSavingsVault) ...[
+              const SizedBox(height: 8),
+              Divider(color: onColor.withValues(alpha: 0.2), height: 1),
+              const SizedBox(height: 8),
 
-            // Dual Account Quick-Filter Badges (Daily Operating vs. Savings Vault)
-            Row(
-              children: [
-                Expanded(
-                  child: InkWell(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      setState(() {
-                        _selectedAccount = _selectedAccount == AccountType.daily ? 'all' : AccountType.daily;
-                      });
-                      _applyFilters();
-                    },
-                    borderRadius: BorderRadius.circular(AppLayout.radiusS),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _selectedAccount == AccountType.daily ? onColor.withValues(alpha: 0.18) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(AppLayout.radiusS),
-                        border: Border.all(color: onColor.withValues(alpha: _selectedAccount == AccountType.daily ? 0.4 : 0.15)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.credit_card_outlined, size: 13, color: onColor.withValues(alpha: 0.85)),
-                          const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
-                              'Daily: $currency ${_dailyCashFlow.toStringAsFixed(0)}',
-                              style: tt.labelSmall?.copyWith(
-                                color: onColor,
-                                fontWeight: _selectedAccount == AccountType.daily ? FontWeight.bold : FontWeight.w500,
+              // Dual Account Quick-Filter Badges (Daily Operating vs. Savings Vault)
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() {
+                          _selectedAccount = _selectedAccount == AccountType.daily ? 'all' : AccountType.daily;
+                        });
+                        _applyFilters();
+                      },
+                      borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _selectedAccount == AccountType.daily ? onColor.withValues(alpha: 0.18) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                          border: Border.all(color: onColor.withValues(alpha: _selectedAccount == AccountType.daily ? 0.4 : 0.15)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.credit_card_outlined, size: 13, color: onColor.withValues(alpha: 0.85)),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                'Daily: $currency ${_dailyCashFlow.toStringAsFixed(0)}',
+                                style: tt.labelSmall?.copyWith(
+                                  color: onColor,
+                                  fontWeight: _selectedAccount == AccountType.daily ? FontWeight.bold : FontWeight.w500,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: InkWell(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      setState(() {
-                        _selectedAccount = _selectedAccount == AccountType.savings ? 'all' : AccountType.savings;
-                      });
-                      _applyFilters();
-                    },
-                    borderRadius: BorderRadius.circular(AppLayout.radiusS),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _selectedAccount == AccountType.savings ? onColor.withValues(alpha: 0.18) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(AppLayout.radiusS),
-                        border: Border.all(color: onColor.withValues(alpha: _selectedAccount == AccountType.savings ? 0.4 : 0.15)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.account_balance_outlined, size: 13, color: onColor.withValues(alpha: 0.85)),
-                          const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
-                              'Savings: $currency ${_savingsVaultCashFlow.toStringAsFixed(0)}',
-                              style: tt.labelSmall?.copyWith(
-                                color: onColor,
-                                fontWeight: _selectedAccount == AccountType.savings ? FontWeight.bold : FontWeight.w500,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() {
+                          _selectedAccount = _selectedAccount == AccountType.savings ? 'all' : AccountType.savings;
+                        });
+                        _applyFilters();
+                      },
+                      borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _selectedAccount == AccountType.savings ? onColor.withValues(alpha: 0.18) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                          border: Border.all(color: onColor.withValues(alpha: _selectedAccount == AccountType.savings ? 0.4 : 0.15)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.account_balance_outlined, size: 13, color: onColor.withValues(alpha: 0.85)),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                'Savings: $currency ${_savingsVaultCashFlow.toStringAsFixed(0)}',
+                                style: tt.labelSmall?.copyWith(
+                                  color: onColor,
+                                  fontWeight: _selectedAccount == AccountType.savings ? FontWeight.bold : FontWeight.w500,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -1303,6 +1323,17 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                   FinancialTrashSheet.show(context).then((_) {
                                     if (mounted) _refreshTransactions();
                                   });
+                                } else if (value == 'split_bills') {
+                                  final settings = Provider.of<SettingsProvider>(context, listen: false);
+                                  if (!settings.showSplitBills) {
+                                    settings.setShowSplitBills(true);
+                                    setState(() => _selectedTab = 'Split Bills');
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Split Bills module enabled!')),
+                                    );
+                                  } else {
+                                    setState(() => _selectedTab = 'Split Bills');
+                                  }
                                 } else if (value == 'export') {
                                   FinancialExportService.showExportSheet(
                                     context,
@@ -1314,7 +1345,8 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                 }
                               },
                               itemBuilder: (ctx) {
-                                 final isAiEnabled = ctx.read<SettingsProvider>().isAiActive;
+                                 final settings = ctx.read<SettingsProvider>();
+                                 final isAiEnabled = settings.isAiActive;
                                  return [
                                    if (isAiEnabled)
                                      PopupMenuItem(
@@ -1328,6 +1360,17 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                          ],
                                        ),
                                      ),
+                                   PopupMenuItem(
+                                     value: 'split_bills',
+                                     height: 48,
+                                     child: Row(
+                                       children: [
+                                         Icon(Icons.pie_chart_outline_rounded, size: 20, color: colorScheme.primary),
+                                         const SizedBox(width: 12),
+                                         Text(settings.showSplitBills ? 'Go to Split Bills' : 'Enable Split Bills', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                       ],
+                                     ),
+                                   ),
                                    PopupMenuItem(
                                      value: 'recurring',
                                      height: 48,
@@ -1533,53 +1576,54 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
             ),
 
         // ── Account Selector Segment ──────────────────────────────────
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  FilterChip(
-                    showCheckmark: false,
-                    avatar: const Icon(Icons.account_tree_outlined, size: 16),
-                    label: const Text('All Accounts'),
-                    selected: _selectedAccount == 'all',
-                    onSelected: (_) {
-                      HapticFeedback.lightImpact();
-                      setState(() => _selectedAccount = 'all');
-                      _applyFilters();
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  FilterChip(
-                    showCheckmark: false,
-                    avatar: const Icon(Icons.credit_card_outlined, size: 16),
-                    label: const Text('Daily Operating'),
-                    selected: _selectedAccount == AccountType.daily,
-                    onSelected: (_) {
-                      HapticFeedback.lightImpact();
-                      setState(() => _selectedAccount = AccountType.daily);
-                      _applyFilters();
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  FilterChip(
-                    showCheckmark: false,
-                    avatar: const Icon(Icons.account_balance_outlined, size: 16),
-                    label: const Text('Savings Vault'),
-                    selected: _selectedAccount == AccountType.savings,
-                    onSelected: (_) {
-                      HapticFeedback.lightImpact();
-                      setState(() => _selectedAccount = AccountType.savings);
-                      _applyFilters();
-                    },
-                  ),
-                ],
+        if (settings.enableSavingsVault)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    FilterChip(
+                      showCheckmark: false,
+                      avatar: const Icon(Icons.account_tree_outlined, size: 16),
+                      label: const Text('All Accounts'),
+                      selected: _selectedAccount == 'all',
+                      onSelected: (_) {
+                        HapticFeedback.lightImpact();
+                        setState(() => _selectedAccount = 'all');
+                        _applyFilters();
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    FilterChip(
+                      showCheckmark: false,
+                      avatar: const Icon(Icons.credit_card_outlined, size: 16),
+                      label: const Text('Daily Operating'),
+                      selected: _selectedAccount == AccountType.daily,
+                      onSelected: (_) {
+                        HapticFeedback.lightImpact();
+                        setState(() => _selectedAccount = AccountType.daily);
+                        _applyFilters();
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    FilterChip(
+                      showCheckmark: false,
+                      avatar: const Icon(Icons.account_balance_outlined, size: 16),
+                      label: const Text('Savings Vault'),
+                      selected: _selectedAccount == AccountType.savings,
+                      onSelected: (_) {
+                        HapticFeedback.lightImpact();
+                        setState(() => _selectedAccount = AccountType.savings);
+                        _applyFilters();
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
 
         // ── Category filter chips ────────────────────────────────────
         if (_activeCategories.isNotEmpty) ...[
@@ -1761,7 +1805,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                   await _refreshTransactions();
                 },
               ),
-      ] else ...[
+      ] else if (_selectedTab == 'Budgets') ...[
         // ── Tab 2: Budgets & Intelligence Dashboard ────────────────────
         Consumer<SettingsProvider>(
           builder: (context, settings, child) {
@@ -1775,29 +1819,46 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
             );
           },
         ),
+      ] else if (_selectedTab == 'Split Bills') ...[
+        // ── Tab 3: Split Bills & Shared Liabilities ──────────────────
+        const SliverFillRemaining(
+          hasScrollBody: true,
+          child: SplitBillsTab(),
+        ),
       ],
     ];
   }
 
-  // Helper tab selector: Clean 2-segment toggle for Ledger vs Budgets
+  // Helper tab selector: 2 or 3-segment toggle for Ledger, Budgets & Split Bills
   Widget _buildTabSelector(ColorScheme colorScheme) {
+    final settings = Provider.of<SettingsProvider>(context);
+    final showSplitBills = settings.showSplitBills;
+
+    final effectiveSelected = (showSplitBills || _selectedTab != 'Split Bills') ? _selectedTab : 'Ledger';
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: SegmentedButton<String>(
         showSelectedIcon: false,
-        segments: const [
-          ButtonSegment<String>(
+        segments: [
+          const ButtonSegment<String>(
             value: 'Ledger',
             label: Text('Ledger', maxLines: 1, softWrap: false),
             icon: Icon(Icons.receipt_long_outlined, size: 18),
           ),
-          ButtonSegment<String>(
+          const ButtonSegment<String>(
             value: 'Budgets',
             label: Text('Budgets', maxLines: 1, softWrap: false),
             icon: Icon(Icons.track_changes_rounded, size: 18),
           ),
+          if (showSplitBills)
+            const ButtonSegment<String>(
+              value: 'Split Bills',
+              label: Text('Split Bills', maxLines: 1, softWrap: false),
+              icon: Icon(Icons.pie_chart_outline_rounded, size: 18),
+            ),
         ],
-        selected: {_selectedTab},
+        selected: {effectiveSelected},
         onSelectionChanged: (Set<String> newSelection) {
           HapticFeedback.lightImpact();
           setState(() {
@@ -1807,7 +1868,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
         style: SegmentedButton.styleFrom(
           visualDensity: VisualDensity.compact,
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           selectedBackgroundColor: colorScheme.secondaryContainer,
           selectedForegroundColor: colorScheme.onSecondaryContainer,
           backgroundColor: colorScheme.surfaceContainerLow,

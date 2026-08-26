@@ -36,6 +36,15 @@ class SettingsProvider extends ChangeNotifier {
   bool _showFinancialManager = false;
   bool get showFinancialManager => _showFinancialManager;
 
+  bool _showSplitBills = false;
+  bool get showSplitBills => _showSplitBills;
+
+  bool _enableSavingsVault = true;
+  bool get enableSavingsVault => _enableSavingsVault;
+
+  String _defaultPaymentInfo = '';
+  String get defaultPaymentInfo => _defaultPaymentInfo;
+
   String _currency = 'LKR';
   String get currency => _currency;
 
@@ -144,6 +153,9 @@ class SettingsProvider extends ChangeNotifier {
       _noteViewMode = legacyGrid ? NoteViewMode.grid : NoteViewMode.list;
     }
     _showFinancialManager = prefs.getBool('showFinancialManager') ?? false;
+    _showSplitBills = prefs.getBool('showSplitBills') ?? false;
+    _enableSavingsVault = prefs.getBool('enableSavingsVault') ?? true;
+    _defaultPaymentInfo = prefs.getString('defaultPaymentInfo') ?? '';
     _currency = prefs.getString('currency') ?? 'LKR';
 
     _autoBackupEnabled = prefs.getBool('autoBackupEnabled') ?? false;
@@ -329,6 +341,27 @@ class SettingsProvider extends ChangeNotifier {
     _showFinancialManager = show;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('showFinancialManager', show);
+    notifyListeners();
+  }
+
+  Future<void> setShowSplitBills(bool show) async {
+    _showSplitBills = show;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('showSplitBills', show);
+    notifyListeners();
+  }
+
+  Future<void> setEnableSavingsVault(bool enable) async {
+    _enableSavingsVault = enable;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('enableSavingsVault', enable);
+    notifyListeners();
+  }
+
+  Future<void> setDefaultPaymentInfo(String info) async {
+    _defaultPaymentInfo = info;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('defaultPaymentInfo', info);
     notifyListeners();
   }
 

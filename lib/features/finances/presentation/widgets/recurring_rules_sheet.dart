@@ -153,33 +153,75 @@ class _RecurringRulesSheetState extends State<RecurringRulesSheet> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    key: ValueKey('cat_$selectedCategory'),
-                    initialValue: selectedCategory,
-                    decoration: const InputDecoration(
-                      labelText: 'Category',
-                      border: OutlineInputBorder(),
+                  Text(
+                    'Category',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 6),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: TransactionCategory.allNames.map((c) {
+                        final isSelected = selectedCategory == c;
+                        final color = TransactionCategory.colorFor(c);
+                        final colorScheme = Theme.of(context).colorScheme;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: FilterChip(
+                            showCheckmark: false,
+                            avatar: Icon(
+                              TransactionCategory.iconFor(c),
+                              size: 16,
+                              color: isSelected ? color : colorScheme.onSurfaceVariant,
+                            ),
+                            label: Text(c),
+                            selected: isSelected,
+                            selectedColor: color.withValues(alpha: 0.18),
+                            side: BorderSide(
+                              color: isSelected ? color : colorScheme.outline.withValues(alpha: 0.25),
+                              width: isSelected ? 1.4 : 1.0,
+                            ),
+                            labelStyle: TextStyle(
+                              color: isSelected ? color : colorScheme.onSurface,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              fontSize: 13,
+                            ),
+                            onSelected: (_) {
+                              HapticFeedback.selectionClick();
+                              setDialogState(() => selectedCategory = c);
+                            },
+                          ),
+                        );
+                      }).toList(),
                     ),
-                    items: TransactionCategory.all.map((c) {
-                      return DropdownMenuItem(value: c, child: Text(c));
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) setDialogState(() => selectedCategory = val);
-                    },
                   ),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<RecurringFrequency>(
-                    initialValue: selectedFreq,
-                    decoration: const InputDecoration(
-                      labelText: 'Frequency',
-                      border: OutlineInputBorder(),
+                  Text(
+                    'Frequency',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 6),
+                  SizedBox(
+                    width: double.infinity,
+                    child: SegmentedButton<RecurringFrequency>(
+                      showSelectedIcon: false,
+                      segments: RecurringFrequency.values.map((f) {
+                        return ButtonSegment<RecurringFrequency>(
+                          value: f,
+                          label: Text(f.label, style: const TextStyle(fontSize: 12)),
+                        );
+                      }).toList(),
+                      selected: {selectedFreq},
+                      onSelectionChanged: (val) {
+                        HapticFeedback.selectionClick();
+                        setDialogState(() => selectedFreq = val.first);
+                      },
+                      style: SegmentedButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        selectedBackgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                        selectedForegroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
+                      ),
                     ),
-                    items: RecurringFrequency.values.map((f) {
-                      return DropdownMenuItem(value: f, child: Text(f.label));
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) setDialogState(() => selectedFreq = val);
-                    },
                   ),
                   const SizedBox(height: 12),
                   ListTile(
@@ -285,32 +327,75 @@ class _RecurringRulesSheetState extends State<RecurringRulesSheet> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    initialValue: TransactionCategory.all.contains(selectedCategory) ? selectedCategory : TransactionCategory.all.first,
-                    decoration: const InputDecoration(
-                      labelText: 'Category',
-                      border: OutlineInputBorder(),
+                  Text(
+                    'Category',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 6),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: TransactionCategory.allNames.map((c) {
+                        final isSelected = selectedCategory == c;
+                        final color = TransactionCategory.colorFor(c);
+                        final colorScheme = Theme.of(context).colorScheme;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: FilterChip(
+                            showCheckmark: false,
+                            avatar: Icon(
+                              TransactionCategory.iconFor(c),
+                              size: 16,
+                              color: isSelected ? color : colorScheme.onSurfaceVariant,
+                            ),
+                            label: Text(c),
+                            selected: isSelected,
+                            selectedColor: color.withValues(alpha: 0.18),
+                            side: BorderSide(
+                              color: isSelected ? color : colorScheme.outline.withValues(alpha: 0.25),
+                              width: isSelected ? 1.4 : 1.0,
+                            ),
+                            labelStyle: TextStyle(
+                              color: isSelected ? color : colorScheme.onSurface,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              fontSize: 13,
+                            ),
+                            onSelected: (_) {
+                              HapticFeedback.selectionClick();
+                              setDialogState(() => selectedCategory = c);
+                            },
+                          ),
+                        );
+                      }).toList(),
                     ),
-                    items: TransactionCategory.all.map((c) {
-                      return DropdownMenuItem(value: c, child: Text(c));
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) setDialogState(() => selectedCategory = val);
-                    },
                   ),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<RecurringFrequency>(
-                    initialValue: selectedFreq,
-                    decoration: const InputDecoration(
-                      labelText: 'Frequency',
-                      border: OutlineInputBorder(),
+                  Text(
+                    'Frequency',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 6),
+                  SizedBox(
+                    width: double.infinity,
+                    child: SegmentedButton<RecurringFrequency>(
+                      showSelectedIcon: false,
+                      segments: RecurringFrequency.values.map((f) {
+                        return ButtonSegment<RecurringFrequency>(
+                          value: f,
+                          label: Text(f.label, style: const TextStyle(fontSize: 12)),
+                        );
+                      }).toList(),
+                      selected: {selectedFreq},
+                      onSelectionChanged: (val) {
+                        HapticFeedback.selectionClick();
+                        setDialogState(() => selectedFreq = val.first);
+                      },
+                      style: SegmentedButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        selectedBackgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                        selectedForegroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
+                      ),
                     ),
-                    items: RecurringFrequency.values.map((f) {
-                      return DropdownMenuItem(value: f, child: Text(f.label));
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) setDialogState(() => selectedFreq = val);
-                    },
                   ),
                   const SizedBox(height: 12),
                   ListTile(

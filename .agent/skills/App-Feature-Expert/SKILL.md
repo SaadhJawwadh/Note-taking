@@ -70,6 +70,23 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 
 ## 3. Financial Manager & SMS Ledger (`lib/features/finances/`)
 
+- **Two-Bank Account Architecture (`AccountType.daily` vs `AccountType.savings`)**:
+  - `TransactionModel` and database schema (version 20+) support explicit account bucket tagging: `account: AccountType.daily` (`'daily'`, default) and `account: AccountType.savings` (`'savings'`).
+  - **Dynamic Hero Card Split**: The top hero card computes `_dailyCashFlow` and `_savingsVaultCashFlow`, rendering dedicated interactive balance badges. Tapping either badge filters the ledger to that account.
+  - **Account Filter Row**: Segmented button/filter chips (`[ All Accounts | 💳 Daily Operating | 🏦 Savings Vault ]`) provide instant 0ms ledger filtering.
+  - **Auto-Deposit Routing**: `SmsParser` detects fixed deposits, vault deposits, and savings keywords (`'savings'`, `'fixed deposit'`, `'vault'`, `'transferred to savings'`), automatically assigning `account: AccountType.savings`.
+- **Recurring Payment Rule Propagation**:
+  - `RecurringRuleRepository.findMatchingRule(description, category, isExpense)` links individual transaction records back to their master `RecurringRule`.
+  - When editing a recurring transaction in `TransactionEditorScreen`, updates to amount, description, category, and frequency propagate to the parent rule definition to keep all future materialized occurrences accurate.
+  - Canceling a recurring payment sets the rule status to canceled without destroying historical transaction records.
+- **AI Spending Analysis & CSV Export Protocol**:
+  - `FinancialExportService.buildAiAnalysisPrompt()` formats ledger summaries, burn rate metrics, 50/30/20 budget allocations, and merchant drains into a structured LLM prompt tailored for Claude, ChatGPT, Gemini, and NotebookLM.
+  - `FinancialExportService.showExportSheet()` presents an M3 bottom sheet offering:
+    1. CSV export with pre-loaded AI prompt.
+    2. 1-tap clipboard copying of the AI prompt text.
+    3. Clean RFC 4180 CSV export with the `Account` column.
+- **Widget Launch & App Start SMS Catch-Up Sync**:
+  - `SmsService.performAppLaunchCatchUpSync()` executes a 5-minute debounced background check for missed SMS notifications whenever the app is opened directly or via home screen widgets.
 - **SMS Auto-Import & Sandbox Pipeline**: Decoupled regex parsing (`SmsParser` + `sms_constants.dart`) and `SmsService`. 5-minute transaction deduplication window. Reversals purge target transaction within 7 days. `SmsParser` allows long merchant descriptions up to 60 characters and recognizes sandbox test identifiers (`'BANK_SMS'`, `'CARD'`, `'ALERTS'`, `'BANK'`) alongside major banks. PII reference cleaners MUST use digit lookaheads (`\b(?=[A-Za-z0-9]*\d)[A-Za-z0-9]{10,}\b`) to avoid truncating legitimate 10+ character English words.
 - **Currencies & Multi-Currency Extraction**: Curated currency metadata (`CurrencyInfo` in `AppConstants`) provides authentic symbols and supports custom currency codes. `SmsConstants.buildPreferredAmountRegex(currency)` prioritizes matching against the user's active preferred currency before general currency fallbacks.
 - **One-Tap Category Learning**: When editing transactions, wrap category suggestions in a scoped `ListenableBuilder` tied to `_descriptionController` with stopword protection (`_stopwords`) to let users persist clean merchant keywords directly into `CategoryDefinition`.
@@ -114,6 +131,7 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 ## 5. Settings & App Configuration (`lib/features/settings/`)
 
 - **Settings State (`SettingsProvider`)**: Manages theme mode, dynamic color schemes, currency selection, custom transaction rules, app lock timeouts, and category budgets.
+- **Resilient Auto-Backup Storage Contract**: `BackupService.performAutoBackup()` defaults to protected app storage (`getApplicationDocumentsDirectory()`), which Android guarantees is immune to Storage Access Framework (SAF) URI permission revocations across app updates and phone reboots. If custom external folders fail permission verification, the service gracefully falls back to app storage.
 - **Hardware-Aware AI Support State**: `checkAiCoreSupport(LocalAiService)` checks Android AICore on launch, setting `_isDeviceAiSupported`. `isAiActive` provides a single source of truth for both hardware capability and user preference.
 - **Schedule Sync On Preference Changes**: Setter methods (`setAutoBackupEnabled`, `setAutoBackupFrequency`, `setAutoBackupPath`, `setDailySyncEnabled`) MUST invoke their respective schedule sync helpers (`syncAutoBackupSchedule`, `syncDailySyncSchedule`) to guarantee Workmanager tasks stay in sync with stored preferences.
 - **Backup & Restore**: Encryption-guarded backup JSON via `BackupService`. Excludes sensitive biometric settings to prevent override via untrusted files.

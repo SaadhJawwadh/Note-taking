@@ -1,0 +1,84 @@
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
+import '../data/models/split_bill_model.dart';
+
+class SplitShareService {
+  static String formatBillSummary(
+    SplitBillModel bill, {
+    String currencySymbol = 'Rs.',
+    String? defaultPaymentInfo,
+  }) {
+    final dateFormat = DateFormat('MMM d, yyyy');
+    final formattedDate = dateFormat.format(bill.date);
+    final groupHeader = bill.groupTag != null && bill.groupTag!.isNotEmpty ? ' (${bill.groupTag})' : '';
+
+    final buffer = StringBuffer();
+    buffer.writeln('🧾 ${bill.title}$groupHeader');
+    buffer.writeln('🗓️ $formattedDate • Total: $currencySymbol ${bill.totalAmount.toStringAsFixed(2).replaceAll('.00', '')}');
+    buffer.writeln('');
+
+    if (bill.isPayerUser) {
+      buffer.writeln('• ${bill.payerName} (Paid for bill): $currencySymbol ${bill.userShare.toStringAsFixed(2).replaceAll('.00', '')} ✅');
+      for (final p in bill.participants) {
+        if (p.contactName.trim().toLowerCase() != 'you') {
+          final statusIcon = p.hasPaid ? '✅ Paid' : '⏳ Pending';
+          buffer.writeln('• ${p.contactName}: $currencySymbol ${p.shareAmount.toStringAsFixed(2).replaceAll('.00', '')} $statusIcon');
+        }
+      }
+    } else {
+      buffer.writeln('• ${bill.payerName} (Paid for bill) ✅');
+      for (final p in bill.participants) {
+        final statusIcon = p.hasPaid ? '✅ Paid' : '⏳ Pending';
+        buffer.writeln('• ${p.contactName}: $currencySymbol ${p.shareAmount.toStringAsFixed(2).replaceAll('.00', '')} $statusIcon');
+      }
+    }
+
+    if (defaultPaymentInfo != null && defaultPaymentInfo.trim().isNotEmpty) {
+      buffer.writeln('');
+      buffer.writeln('💳 Payment Details:');
+      buffer.writeln(defaultPaymentInfo.trim());
+    }
+
+    return buffer.toString().trim();
+  }
+
+  static String formatPersonReminder({
+    required String contactName,
+    required String billTitle,
+    required double shareAmount,
+    String currencySymbol = 'Rs.',
+    String? defaultPaymentInfo,
+  }) {
+    final buffer = StringBuffer();
+    buffer.writeln('👋 Hey $contactName,');
+    buffer.writeln('Your share for "$billTitle" is $currencySymbol ${shareAmount.toStringAsFixed(2).replaceAll('.00', '')}.');
+    
+    if (defaultPaymentInfo != null && defaultPaymentInfo.trim().isNotEmpty) {
+      buffer.writeln('');
+      buffer.writeln('💳 Send to:');
+      buffer.writeln(defaultPaymentInfo.trim());
+    }
+    return buffer.toString().trim();
+  }
+
+  static Future<void> shareToWhatsAppOrSystem(
+    SplitBillModel bill, {
+    String currencySymbol = 'Rs.',
+    String? defaultPaymentInfo,
+  }) async {
+    final text = formatBillSummary(
+      bill,
+      currencySymbol: currencySymbol,
+      defaultPaymentInfo: defaultPaymentInfo,
+    );
+    await Share.share(
+      text,
+      subject: 'Split Bill: ${bill.title}',
+    );
+  }
+
+  static Future<void> copyToClipboard(String text) async {
+    await Clipboard.setData(ClipboardData(text: text));
+  }
+}

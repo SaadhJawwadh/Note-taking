@@ -64,18 +64,21 @@ lib/
 * Never gate AI UI triggers on `useOnDeviceAi` alone.
 * AI sparkle icons, toolbar assist buttons, and refine menu actions MUST query `settings.isAiActive` (`_useOnDeviceAi && _isDeviceAiSupported`) so emulators and devices lacking on-device Gemini Nano/AICore hardware cleanly hide non-functional controls.
 
-### 💳 Invariant 4: Authentic Currencies, SMS Deduplication, Tombstone Safety & Manifest Parity
+### 💳 Invariant 4: Authentic Currencies, SMS Deduplication, Tombstone Safety, Dual Accounts & Recurring Sync
 * **Authentic Symbol Badges**: Render authentic tonal circular avatars displaying the genuine currency symbol (e.g. `Rs.`, `₹`, `$`, `€`, `£`, `¥`, `د.إ`, `﷼`, `C$`, `A$`, `S$`, `RM`, `NZ$`, `CHF`), bold code, and full name instead of generic dollar icons.
+* **Two-Bank Account Model**: All financial records and transactions support explicit account tagging (`AccountType.daily` = `'daily'`, `AccountType.savings` = `'savings'`). The Financial Manager Hero Card displays dual interactive balance metrics (`_dailyCashFlow` vs `_savingsVaultCashFlow`), and the ledger supports 0ms account filtering. Bank deposits and savings keywords are auto-routed to `AccountType.savings`.
+* **Recurring Rule Propagation**: Editing recurring transaction details (amount, category, description, frequency) in `TransactionEditorScreen` MUST propagate changes to the master `RecurringRule` definition via `RecurringRuleRepository.findMatchingRule()`, keeping all future auto-generated cycles in sync.
 * **PII Lookahead Assertions**: Reference number stripping regexes MUST require digit lookaheads (`\b(?=[A-Za-z0-9]*\d)[A-Za-z0-9]{10,}\b`) to avoid truncating legitimate 10+ character English words.
 * **SMS Sandbox Whitelisting**: SMS parsing engines must recognize simulated test senders (`'BANK_SMS'`, `'CARD'`, `'ALERTS'`, `'BANK'`) as verified financial senders.
 * **SMS Permission Manifest Parity**: Permission services must strictly query declared permissions (`Permission.sms`). Never query undeclared permissions (e.g. `Permission.phone`), as `permission_handler` permanently returns `denied` for undeclared permissions.
 * **Tombstone Ingestion Guardrail**: `TransactionRepository.createSmsTransaction` must query `smsExists(smsId)` against active `transactions` and `deleted_transaction_sms_ids` by default, rejecting re-imports unless `bypassTombstones: true` is explicitly requested.
-* **SMS Timestamp Normalization**: All SMS ingestion engines must pass message dates through `SmsParser.resolveMessageDate(messageDate)` to normalize 10-digit second and 13-digit millisecond epoch timestamps, strictly preserving genuine historical arrival dates.
+* **SMS Timestamp Normalization & Widget Catch-Up**: All SMS ingestion engines must pass message dates through `SmsParser.resolveMessageDate(messageDate)` to normalize 10-digit second and 13-digit millisecond epoch timestamps. App starts and widget interactions trigger debounced (5-min) catch-up sync via `SmsService.performAppLaunchCatchUpSync()`.
 * **Soft-Delete Undo Parity**: All deletion undo handlers must invoke `restoreTransaction(id)` (`UPDATE transactions SET deletedAt = NULL WHERE id = ?`) or `restoreNote(id)` rather than attempting record re-insertion (`createTransaction`/`insertNote`), preventing primary key collisions and tombstone re-import blocks.
 * **Non-Blocking Chunked Sync & Cancellation**: SMS inbox syncing must process messages in non-blocking chunks (yielding every 25 messages), check `_cancelRequested`, and display an instant `Cancel` button on sync progress banners.
 
-### 🔒 Invariant 5: Local-First Security & SQLite WAL Mode
+### 🔒 Invariant 5: Local-First Security, SQLite WAL Mode & Resilient Backups
 * **SQLCipher Password Contract**: Pass explicit encryption keys to `openDatabase()`. In `DatabaseHelper.onOpen`, execute `PRAGMA journal_mode = WAL;` via `db.rawQuery(...)` for non-blocking concurrent writes.
+* **Resilient Auto-Backup Storage Priority**: Scheduled background backups (`BackupService.performAutoBackup()`) MUST default to sandboxed protected app documents (`getApplicationDocumentsDirectory()`), preventing Android Storage Access Framework (SAF) URI permission revocations across OS updates and device reboots.
 * **Local Auth / Dialog Resume**: Screens invoking native file pickers or share sheets must call `AppLockScreen.ignoreNextResumeLock()` to prevent unintentional app locking on resume.
 
 ### 🔄 Invariant 6: Zero-Cloud P2P Sync & Bi-Directional Merge

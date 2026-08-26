@@ -20,6 +20,7 @@ import 'package:note_taking_app/core/ui/app_morphing_fab.dart';
 import 'package:note_taking_app/widgets/frosted_glass_sliver_app_bar.dart';
 import 'package:note_taking_app/utils/app_globals.dart';
 import 'package:note_taking_app/features/finances/providers/financial_manager_provider.dart';
+import 'split_bill_editor_screen.dart';
 
 class TransactionEditorScreen extends StatefulWidget {
   final TransactionModel? transaction;
@@ -938,35 +939,35 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                         );
                       },
                     ),
-                    const SizedBox(height: 24),
-
-                    // Account Bucket (Daily Operating vs. Savings Vault)
-                    Text(
-                      'Account Bucket',
-                      style: textTheme.labelLarge
-                          ?.copyWith(color: colorScheme.onSurfaceVariant),
-                    ),
-                    const SizedBox(height: 8),
-                    SegmentedButton<String>(
-                      segments: const [
-                        ButtonSegment(
-                          value: AccountType.daily,
-                          label: Text('Daily Operating'),
-                          icon: Icon(Icons.credit_card_outlined),
-                        ),
-                        ButtonSegment(
-                          value: AccountType.savings,
-                          label: Text('Savings Vault'),
-                          icon: Icon(Icons.account_balance_outlined),
-                        ),
-                      ],
-                      selected: {_account},
-                      onSelectionChanged: (selected) {
-                        HapticFeedback.selectionClick();
-                        setState(() => _account = selected.first);
-                      },
-                    ),
-                    const SizedBox(height: 24),
+                    if (Provider.of<SettingsProvider>(context, listen: false).enableSavingsVault) ...[
+                      // Account Bucket (Daily Operating vs. Savings Vault)
+                      Text(
+                        'Account Bucket',
+                        style: textTheme.labelLarge
+                            ?.copyWith(color: colorScheme.onSurfaceVariant),
+                      ),
+                      const SizedBox(height: 8),
+                      SegmentedButton<String>(
+                        segments: const [
+                          ButtonSegment(
+                            value: AccountType.daily,
+                            label: Text('Daily Operating'),
+                            icon: Icon(Icons.credit_card_outlined),
+                          ),
+                          ButtonSegment(
+                            value: AccountType.savings,
+                            label: Text('Savings Vault'),
+                            icon: Icon(Icons.account_balance_outlined),
+                          ),
+                        ],
+                        selected: {_account},
+                        onSelectionChanged: (selected) {
+                          HapticFeedback.selectionClick();
+                          setState(() => _account = selected.first);
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                    ],
 
                     // Date Picker
                     InkWell(
@@ -1033,6 +1034,33 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                             ?.copyWith(color: colorScheme.onSurfaceVariant),
                       ),
                     ],
+
+                    const SizedBox(height: 20),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        final title = _descriptionController.text.trim();
+                        final amount = double.tryParse(_amountController.text.trim());
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => SplitBillEditorScreen(
+                              prelinkedTransactionId: widget.transaction?.id,
+                              initialTitle: title.isNotEmpty ? title : null,
+                              initialAmount: amount,
+                              initialDate: _selectedDate,
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.pie_chart_outline_rounded),
+                      label: const Text('Split This Bill with Friends'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                        ),
+                      ),
+                    ),
 
                     // Guaranteed bottom clearance past floating action button
                     const SizedBox(height: AppLayout.fabBottomPadding),

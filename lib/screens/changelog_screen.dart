@@ -28,9 +28,33 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
+                  version: 'v2.24.0',
+                  date: 'August 26, 2026',
+                  isLatest: true,
+                  changes: [
+                    _ChangelogGroup(
+                      title: "🌟 What's New",
+                      items: [
+                        'Split Bills & Shared Debts: Group bill splitting with equal or custom exact splits, friend balances, and 1-tap WhatsApp breakdown reminders.',
+                        '100% Offline Receipt Scanner: Instant OCR totals and merchant extraction directly on-device with zero cloud dependency.',
+                        'Modular Dual-Account Toggle: Flexible switch to enable or disable the Savings Vault & Daily Operating two-bucket view anytime.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🚀 Improvements',
+                      items: [
+                        'Unified Category Pickers: Color-coded category chips cloud seamlessly shared across Transactions, Split Bills, and Recurring Rules.',
+                        'Accessibility & Touch Hit Targets: Enhanced TalkBack / VoiceOver semantics and enlarged interactive touch targets across all sheets.',
+                        'Optimized Custom Amount Inputs: Spacious, unclipped multi-currency number entry fields.',
+                      ],
+                    ),
+                  ],
+                ),
+                _buildVersionSection(
+                  context,
                   version: 'v2.23.0',
                   date: 'August 25, 2026',
-                  isLatest: true,
+                  isLatest: false,
                   changes: [
                     _ChangelogGroup(
                       title: "🌟 What's New",

@@ -408,7 +408,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   onThemeModeChanged: settings.setThemeMode,
                                 ),
 
-                                 // 1. Manage Features Section
+                                // 1. Manage Features Section
                                 SettingsSection(
                                   title: 'Manage Features',
                                   icon: Icons.apps_outlined,
@@ -431,6 +431,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       subtitle: 'Optional cycle tracking & predictions',
                                       value: settings.isPeriodTrackerEnabled,
                                       onChanged: settings.setIsPeriodTrackerEnabled,
+                                    ),
+                                    const _Divider(),
+                                    SettingsSwitchTile(
+                                      icon: Icons.pie_chart_outline_rounded,
+                                      iconColor: colorScheme.tertiary,
+                                      iconBackgroundColor: colorScheme.tertiaryContainer.withValues(alpha: 0.5),
+                                      title: 'Split Bills & Shared Debts',
+                                      subtitle: 'Group bill splitting, friend balances & receipt scanner',
+                                      value: settings.showSplitBills,
+                                      onChanged: settings.setShowSplitBills,
+                                    ),
+                                    const _Divider(),
+                                    SettingsSwitchTile(
+                                      icon: Icons.account_balance_wallet_outlined,
+                                      iconColor: colorScheme.secondary,
+                                      iconBackgroundColor: colorScheme.secondaryContainer.withValues(alpha: 0.5),
+                                      title: 'Savings Vault & Dual Accounts',
+                                      subtitle: 'Separate daily operating cash flow from long-term savings',
+                                      value: settings.enableSavingsVault,
+                                      onChanged: settings.setEnableSavingsVault,
                                     ),
                                   ],
                                 ),
@@ -509,6 +529,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           title: 'Sync SMS Now',
                                           subtitle: 'Instantly scan inbox for recent transactions',
                                           onTap: () => _performManualSmsSync(context),
+                                        ),
+                                      ],
+                                      if (settings.showSplitBills) ...[
+                                        const _Divider(),
+                                        SettingsTile(
+                                          icon: Icons.account_balance_outlined,
+                                          iconColor: colorScheme.secondary,
+                                          title: 'Default Payment Details',
+                                          subtitle: settings.defaultPaymentInfo.isNotEmpty
+                                              ? settings.defaultPaymentInfo
+                                              : 'Set bank / mobile pay details for WhatsApp split reminders',
+                                          showArrow: true,
+                                          onTap: () => _showDefaultPaymentInfoDialog(context, settings),
                                         ),
                                       ],
                                     ],
@@ -935,9 +968,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
       'Period Tracker',
       'Optional cycle tracking',
     );
+    addTile(
+      SettingsSwitchTile(
+        icon: Icons.pie_chart_outline_rounded,
+        title: 'Split Bills & Shared Debts',
+        subtitle: 'Group bill splitting & debt tracking',
+        value: settings.showSplitBills,
+        onChanged: settings.setShowSplitBills,
+      ),
+      'Finances',
+      'Split Bills & Shared Debts',
+      'Group bill splitting & debt tracking',
+    );
+    addTile(
+      SettingsSwitchTile(
+        icon: Icons.account_balance_wallet_outlined,
+        title: 'Savings Vault & Dual Accounts',
+        subtitle: 'Separate daily operating cash flow from long-term savings',
+        value: settings.enableSavingsVault,
+        onChanged: settings.setEnableSavingsVault,
+      ),
+      'Finances',
+      'Savings Vault & Dual Accounts',
+      'Separate daily operating cash flow from long-term savings',
+    );
 
     // 2. Financial Manager Settings
     if (settings.showFinancialManager) {
+      if (settings.showSplitBills) {
+        addTile(
+          SettingsTile(
+            icon: Icons.account_balance_outlined,
+            title: 'Default Payment Details',
+            subtitle: settings.defaultPaymentInfo.isNotEmpty
+                ? settings.defaultPaymentInfo
+                : 'Set bank / mobile pay details for WhatsApp split reminders',
+            showArrow: true,
+            onTap: () => _showDefaultPaymentInfoDialog(context, settings),
+          ),
+          'Finances',
+          'Default Payment Details',
+          settings.defaultPaymentInfo,
+        );
+      }
       addTile(
         SettingsTile(
           icon: Icons.currency_exchange_outlined,
@@ -1894,6 +1967,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ),
     );
+  }
+
+  void _showDefaultPaymentInfoDialog(BuildContext context, SettingsProvider settings) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final controller = TextEditingController(text: settings.defaultPaymentInfo);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Default Payment Details'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter your bank account, UPI ID, or mobile pay instructions to automatically attach to WhatsApp split reminders:',
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                hintText: 'e.g. Bank: Commercial Bank\nAcc: 1234567890\nName: Alex',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await settings.setDefaultPaymentInfo(controller.text.trim());
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Payment details saved.')),
+        );
+      }
+    }
   }
 }
 

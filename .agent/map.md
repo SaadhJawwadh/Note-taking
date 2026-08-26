@@ -31,30 +31,41 @@ lib/
 │       ├── app_morphing_fab.dart     # Standardized stadium-to-circle morphing action button
 │       └── frosted_sliver_app_bar.dart# Glassmorphic edge-to-edge top app bar
 ├── features/                         # Modular Domain Feature Bundles
-│   ├── finances/                     # Financial Manager Feature Module
+│   ├── finances/                     # Financial Manager & Split Bills Feature Module
 │   │   ├── data/
-│   │   │   └── transaction_repository.dart# Transactions, categories, SMS senders CRUD & tombstones
+│   │   │   ├── models/
+│   │   │   │   └── split_bill_model.dart     # SplitBillModel, SplitParticipantModel, SplitContactModel
+│   │   │   ├── repositories/
+│   │   │   │   └── split_bill_repository.dart# SQLite CRUD, participant syncing, friend contact auto-save
+│   │   │   └── transaction_repository.dart   # Transactions, categories, SMS senders CRUD & tombstones
 │   │   ├── services/
-│   │   │   ├── financial_export_service.dart# RFC 4180 CSV generation & AI analysis prompt export
-│   │   │   └── spending_forecast_service.dart# Unified active month run-rate forecasting & smoothing
+│   │   │   ├── financial_export_service.dart # RFC 4180 CSV generation & AI analysis prompt export
+│   │   │   ├── receipt_scanner_service.dart  # 100% offline ML Kit OCR & on-device AI receipt parsing
+│   │   │   ├── spending_forecast_service.dart# Unified active month run-rate forecasting & smoothing
+│   │   │   └── split_share_service.dart      # WhatsApp formatted markdown breakdown & reminder dispatches
 │   │   ├── presentation/
 │   │   │   ├── screens/
 │   │   │   │   ├── category_management_screen.dart# Custom financial categories controller
-│   │   │   │   ├── financial_manager_screen.dart# Ledger, analytics, bulk AI title refine, dual-gesture sync
-│   │   │   │   ├── sms_contacts_screen.dart  # SMS Sender list (block list & custom senders)
-│   │   │   │   ├── sms_rules_screen.dart     # Custom SMS pattern definition editor
-│   │   │   │   └── transaction_editor_screen.dart# Single transaction editor with inline AI title refine
+│   │   │   │   ├── financial_manager_screen.dart  # Ledger, analytics, split bills tab, bulk AI title refine
+│   │   │   │   ├── sms_contacts_screen.dart       # SMS Sender list (block list & custom senders)
+│   │   │   │   ├── sms_rules_screen.dart          # Custom SMS pattern definition editor
+│   │   │   │   ├── split_bill_editor_screen.dart  # Group bill creator, equal/exact splits, OCR receipt hook
+│   │   │   │   └── transaction_editor_screen.dart # Single transaction editor with inline split button
 │   │   │   └── widgets/              # Feature-specific finance UI widgets
-│   │   │       ├── burn_rate_forecast_card.dart# Daily Safe-to-Spend burn rate & month-end pacing
-│   │   │       ├── category_budgets_card.dart# Dynamic budget progress card with over-budget alerts
-│   │   │       ├── financial_analytics_tab.dart# Centered interactive donut breakdown & ranked category spend
-│   │   │       ├── financial_ledger_tab.dart # Grouped transactions list, swipe duplicate/delete with undo
-│   │   │       ├── financial_trash_sheet.dart# Trashed transactions manager & bulk purge
-│   │   │       ├── minimal_chart_deck.dart   # 3-slide visual intelligence deck (Trajectory, Donut, Budget Pace)
-│   │   │       ├── recurring_rules_sheet.dart# Subscriptions & recurring rule manager sheet
-│   │   │       └── top_merchants_card.dart   # Top spending destinations & merchant breakdown
+│   │   │       ├── burn_rate_forecast_card.dart   # Daily Safe-to-Spend burn rate & month-end pacing
+│   │   │       ├── category_budgets_card.dart     # Dynamic budget progress card with over-budget alerts
+│   │   │       ├── financial_analytics_tab.dart   # Centered interactive donut breakdown & ranked category spend
+│   │   │       ├── financial_ledger_tab.dart      # Grouped transactions list, swipe duplicate/delete with undo
+│   │   │       ├── financial_trash_sheet.dart     # Trashed transactions manager & bulk purge
+│   │   │       ├── minimal_chart_deck.dart        # 3-slide visual intelligence deck (Trajectory, Donut, Budget Pace)
+│   │   │       ├── receipt_scanner_sheet.dart     # Camera/Gallery offline OCR receipt scanner modal
+│   │   │       ├── recurring_rules_sheet.dart     # Subscriptions & recurring rule manager sheet
+│   │   │       ├── settle_up_sheet.dart           # Debt settlement sheet with optional Daily Account ledger entry
+│   │   │       ├── split_bills_tab.dart           # 3rd Finance tab: Hero summary, People/Bills view, filter chips
+│   │   │       └── top_merchants_card.dart        # Top spending destinations & merchant breakdown
 │   │   └── providers/
-│   │       └── financial_manager_provider.dart# Income/expense calculations, filters, state
+│   │       ├── financial_manager_provider.dart    # Income/expense calculations, filters, state
+│   │       └── split_bill_provider.dart           # Split bills state, 0ms optimistic UI, debts & balances
 │   ├── health/                       # Health & Period Tracker Feature Module
 │   │   ├── data/
 │   │   │   └── period_repository.dart# Period logs database operations
@@ -277,6 +288,7 @@ erDiagram
         text date
         integer isExpense
         text category
+        text account
         text smsId UK
         text deletedAt
     }
