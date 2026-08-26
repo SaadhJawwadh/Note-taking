@@ -108,10 +108,18 @@ lib/
 * **Chart Tooltip 1px Accent Outline**: Floating Canvas chart tooltips (`LineTouchTooltipData`) must specify a 1px primary accent border (`BorderSide(color: colorScheme.primary.withValues(alpha: 0.3), width: 1.0)`) and rounded radius (`AppLayout.radiusM`) to prevent light-mode blending against surface cards.
 * **Prohibition of Raw Text Emojis (Rule 41)**: Strictly replace raw Unicode emoji glyphs (`🔮`, `🔴`, `🟢`) in UI labels and badges with authentic Material Symbols (`Icons.auto_awesome_rounded`) and plain-language semantic labels.
 
-### ⚡ Invariant 11: 0ms Optimistic UI & Silent Background Refresh Protocol
-* **0ms Interactive Latency**: All user-initiated state mutations (Delete, Undo, Pin, Archive, Symptom/Flow toggles) MUST immediately mutate active in-memory lists and notify listeners/trigger `setState` synchronously (0ms UI latency). Database writes persist asynchronously in the background.
-* **No Spinner Jitter on User Actions**: Refresh routines (`_refreshTransactions`, `refreshNotes`, `_loadTrashed`) MUST support `{bool showLoading = false}` and ONLY show full-page loading indicators on cold launch when the dataset is empty. Never unmount active lists during background sync or user mutations.
-* **Soft-Delete Undo Contract**: Undo handlers MUST invoke `restoreTransaction(id)` or `restoreNote(id)`. Never invoke `createTransaction` or `insertNote` to undo a soft-deletion.
+### 🤝 Invariant 12: Split Bills & Shared Debts Domain Integration
+* **Modular Integration**: Split Bills is an optional financial sub-feature gated by `settings.showSplitBills`. When enabled, it appears as the third tab in `FinancialManagerScreen` (`Ledger`, `Budgets`, `Split Bills`).
+* **Ledger Cash Flow Contract**: 
+  - When the user pays for a group bill, the master expense reflects the full receipt total (matching bank SMS debits).
+  - Debt repayments from participants settled in `SettleUpSheet` MUST record as `Income` in the Daily Operating account.
+  - When a friend pays for a bill, the user's ledger records personal liability *only* upon settling up with that friend.
+* **Offline OCR & Sharing**: Receipt scanning (`ReceiptScannerService`) operates 100% locally on-device via ML Kit. WhatsApp payment reminder templates (`SplitShareService`) format genuine breakdown summaries and include user-configured default payment info without third-party cloud SDKs.
+
+### 🎨 Invariant 13: Selection Controls Modernization & Legacy Dropdown Prohibition
+* **No Legacy M2 Dropdowns**: Never use `DropdownButton` or `DropdownButtonFormField`.
+* **Short Option Sets (2–4 choices)**: Use `SegmentedButton<T>` with compact visual density and haptic feedback.
+* **Large Datasets (Categories)**: Use dynamic `FilterChip` clouds sourced strictly from `TransactionCategory.allNames` with authentic icons (`TransactionCategory.iconFor(c)`) and color backgrounds (`TransactionCategory.colorFor(c)`).
 
 ---
 

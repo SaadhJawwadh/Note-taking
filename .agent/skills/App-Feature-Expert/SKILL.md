@@ -119,7 +119,30 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 
 ---
 
-## 4. Health & Period Tracker (`lib/features/health/`)
+## 4. Split Bills & Shared Debts (`lib/features/finances/`)
+
+- **Domain Architecture & Provider**:
+  - `SplitBillModel`, `SplitParticipantModel`, and `SplitReceiptDraft` in `lib/features/finances/data/models/split_bill_model.dart`.
+  - `SplitBillRepository` manages SQLite persistence across `split_bills`, `split_participants`, and `split_receipt_drafts`.
+  - `SplitBillProvider` manages reactive in-memory state, search queries, participant filtering (`all`, `unsettled`, `settled`, `i_owe`, `i_am_owed`), bill mutations, and settlements.
+- **Split Mathematics & Payer Attribution**:
+  - Supports `SplitType.equal` (auto-distributes among selected participants + user) and `SplitType.customExact` (exact individual amount tracking with discrepancy validation).
+  - Handles `PayerType.userPaid` (User paid for all, participants owe user) and `PayerType.friendPaid` (Friend paid for group, user and other friends owe that friend).
+- **Ledger Interop & Settle-Up Protocol (`SettleUpSheet`)**:
+  - Settling a debt where a friend owes the user creates an `Income` transaction (`AccountType.daily`, category: `Income`, tag: `[Split Settlement]`).
+  - Settling a debt where the user owes a friend creates an `Expense` transaction (`AccountType.daily`, category: `Split Settlement`).
+  - All settlements execute with 0ms optimistic UI feedback.
+- **100% Offline Receipt OCR (`ReceiptScannerService`)**:
+  - On-device text recognition using Google ML Kit.
+  - Regex parser extracts grand total (`TOTAL`, `GRAND TOTAL`, `AMOUNT PAID`), subtotal, taxes, and merchant name.
+  - Generates pre-filled `SplitReceiptDraft` for 1-tap bill creation without manual typing.
+- **WhatsApp Breakdown Sharing (`SplitShareService`)**:
+  - Generates formatted personal settlement messages including participant breakdown, total, and user-configured payment details (`Account Number`, `Bank`, `Payee Name`).
+  - Launches native WhatsApp deep links (`https://wa.me/?text=...`) or copies to clipboard with haptic feedback.
+
+---
+
+## 5. Health & Period Tracker (`lib/features/health/`)
 
 - **Cycle Predictions & Ovulation**: Rolling average from last 3 to 7 cycles (excluding outliers $<15$ or $>60$ days). Ovulation window estimated 14 days prior to expected start.
 - **Notification Rescheduling**: `NotificationService.schedulePeriodNotifications()` MUST be invoked in `PeriodRepository` when period logs are created, updated, or deleted, and in `SettingsProvider.loadSettings()` on app launch if enabled.

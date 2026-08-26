@@ -58,6 +58,12 @@
 -keep class dev.fluttercommunity.plus.share.** { *; }
 -keep class gal.** { *; }
 
+# Google ML Kit & Text Recognition
+-keep class com.google_mlkit_text_recognition.** { *; }
+-keep class com.google.mlkit.vision.text.** { *; }
+-keep class com.google.mlkit.vision.common.** { *; }
+-dontwarn com.google.mlkit.vision.text.**
+
 # General JNI keep
 -keepclassmembers class * { native <methods>; }
 
