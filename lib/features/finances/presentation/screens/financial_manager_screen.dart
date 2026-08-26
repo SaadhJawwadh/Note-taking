@@ -15,6 +15,7 @@ import '../../../../services/sms_service.dart';
 import '../../../../services/sms_constants.dart';
 import '../../../../services/gemini_nano_service.dart';
 import 'package:note_taking_app/features/finances/presentation/screens/transaction_editor_screen.dart';
+import 'package:note_taking_app/features/finances/presentation/screens/sms_rules_screen.dart';
 import 'package:note_taking_app/features/settings/presentation/screens/settings_screen.dart';
 import '../../../../screens/app_lock_screen.dart';
 import '../../../../utils/app_route.dart';
@@ -1340,6 +1341,8 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                     _transactions,
                                     currency: currency,
                                   );
+                                } else if (value == 'sms_rules') {
+                                  AppRoute.push(context, const SmsRulesScreen());
                                 } else if (value == 'settings') {
                                   AppRoute.push(context, const SettingsScreen());
                                 }
@@ -1360,6 +1363,17 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                          ],
                                        ),
                                      ),
+                                   PopupMenuItem(
+                                     value: 'sms_rules',
+                                     height: 48,
+                                     child: Row(
+                                       children: [
+                                         Icon(Icons.tune_rounded, size: 20, color: colorScheme.primary),
+                                         const SizedBox(width: 12),
+                                         Text('SMS Rules & Training', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                       ],
+                                     ),
+                                   ),
                                    PopupMenuItem(
                                      value: 'split_bills',
                                      height: 48,

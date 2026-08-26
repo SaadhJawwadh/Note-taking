@@ -62,6 +62,7 @@ lib/
 │   │   │       ├── recurring_rules_sheet.dart     # Subscriptions & recurring rule manager sheet
 │   │   │       ├── settle_up_sheet.dart           # Debt settlement sheet with optional Daily Account ledger entry
 │   │   │       ├── split_bills_tab.dart           # 3rd Finance tab: Hero summary, People/Bills view, filter chips
+│   │   │       ├── teach_sms_rule_sheet.dart      # Interactive SMS rule training modal sheet
 │   │   │       └── top_merchants_card.dart        # Top spending destinations & merchant breakdown
 │   │   └── providers/
 │   │       ├── financial_manager_provider.dart    # Income/expense calculations, filters, state

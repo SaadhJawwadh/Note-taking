@@ -100,6 +100,7 @@ lib/
 
 ### 🖼️ Invariant 9: R8 Full-Mode Optimization & Bitmap Memory Downsampling
 * **R8 Full-Mode Hygiene**: Maintain `android.enableR8.fullMode=true` in `android/gradle.properties`. Avoid broad wildcards like `-keep class io.flutter.** { *; }` in `proguard-rules.pro` that disable dead code elimination and method inlining passes.
+* **Native & ML Plugin ProGuard Rules**: When introducing native plugins with optional sub-modules or dynamic model loaders (e.g. Google ML Kit, FFmpeg, Biometrics), always declare explicit `-keep class <plugin>.** { *; }` and `-dontwarn <plugin>.**` rules in `android/app/proguard-rules.pro` to prevent R8 class-stripping aborts during release compilation.
 * **Bitmap Downsampling Bounds**: Never decode raw 12–48MP images without bounding parameters. All `Image.file`, `Image.network`, and `Image.asset` preview widgets MUST supply `cacheWidth` (e.g. `cacheWidth: 1080` for note embeds, `cacheWidth: 400` for grid/list cards) and provide `errorBuilder` fallbacks to prevent OOM memory pressure.
 * **Global Image Cache Bounds**: `main.dart` must maintain `imageCache.maximumSizeBytes = 100 * 1024 * 1024` (100MB) and `maximumSize = 100`.
 

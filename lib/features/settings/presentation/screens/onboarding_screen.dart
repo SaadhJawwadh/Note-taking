@@ -12,6 +12,7 @@ import '../../../../providers/note_provider.dart';
 import '../../../sync/presentation/widgets/qr_scanner_dialog.dart';
 import '../../../sync/providers/p2p_sync_provider.dart';
 import '../../../sync/presentation/screens/p2p_sync_screen.dart';
+import '../../../finances/presentation/screens/sms_rules_screen.dart';
 
 /// Full-Screen Interactive Onboarding Wizard
 class OnboardingScreen extends StatefulWidget {
@@ -673,6 +674,49 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       HapticFeedback.lightImpact();
                       settings.setEnableSavingsVault(val);
                     },
+                  ),
+                ),
+                const SizedBox(height: AppLayout.spaceS),
+                AppCard(
+                  margin: const EdgeInsets.only(left: AppLayout.spaceL),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppLayout.spaceL,
+                    vertical: AppLayout.spaceS,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.tune_rounded,
+                        color: theme.colorScheme.primary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: AppLayout.spaceM),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Custom Bank SMS Training',
+                              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              'Teach custom rules for unique bank SMS and OTP formats.',
+                              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          HapticFeedback.lightImpact();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const SmsRulesScreen()),
+                          );
+                        },
+                        child: const Text('Configure'),
+                      ),
+                    ],
                   ),
                 ),
               ],

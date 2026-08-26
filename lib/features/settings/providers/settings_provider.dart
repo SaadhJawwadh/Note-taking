@@ -7,6 +7,7 @@ import '../../../services/sms_service.dart';
 import '../../../services/backup_service.dart';
 import '../../../screens/app_lock_screen.dart';
 import '../../../utils/widget_helper.dart';
+import '../../../data/custom_sms_rule.dart';
 import 'dart:convert';
 
 enum NoteViewMode { list, grid }
@@ -80,6 +81,10 @@ class SettingsProvider extends ChangeNotifier {
 
   List<String> _customIncomeRules = [];
   List<String> get customIncomeRules => _customIncomeRules;
+
+  List<CustomSmsRule> _customSmsRules = [];
+  List<CustomSmsRule> get customSmsRules => _customSmsRules;
+  List<CustomSmsRule> get activeCustomSmsRules => _customSmsRules.where((r) => r.isEnabled).toList();
 
   bool _useOnDeviceAi = false;
   bool get useOnDeviceAi => _useOnDeviceAi;
@@ -173,6 +178,45 @@ class SettingsProvider extends ChangeNotifier {
     _customExpenseRules = prefs.getStringList('customExpenseRules') ?? [];
     _customIncomeRules = prefs.getStringList('customIncomeRules') ?? [];
 
+    final storedCustomSmsRules = prefs.getStringList('customSmsRules_v2');
+    if (storedCustomSmsRules != null && storedCustomSmsRules.isNotEmpty) {
+      _customSmsRules = storedCustomSmsRules
+          .map((s) {
+            try {
+              return CustomSmsRule.fromJson(s);
+            } catch (_) {
+              return null;
+            }
+          })
+          .whereType<CustomSmsRule>()
+          .toList();
+    } else {
+      _customSmsRules = [];
+      for (final r in _customExpenseRules) {
+        if (r.trim().isNotEmpty) {
+          _customSmsRules.add(CustomSmsRule(
+            id: 'exp_${r.hashCode}_${DateTime.now().millisecondsSinceEpoch}',
+            keyword: r.trim(),
+            type: RuleTransactionType.expense,
+            createdAt: DateTime.now(),
+          ));
+        }
+      }
+      for (final r in _customIncomeRules) {
+        if (r.trim().isNotEmpty) {
+          _customSmsRules.add(CustomSmsRule(
+            id: 'inc_${r.hashCode}_${DateTime.now().millisecondsSinceEpoch}',
+            keyword: r.trim(),
+            type: RuleTransactionType.income,
+            createdAt: DateTime.now(),
+          ));
+        }
+      }
+      if (_customSmsRules.isNotEmpty) {
+        await _persistCustomSmsRules(prefs);
+      }
+    }
+
     _useOnDeviceAi = prefs.getBool('useOnDeviceAi') ?? false;
     _useDynamicColor = prefs.getBool('useDynamicColor') ?? true;
     _dailySyncEnabled = prefs.getBool('dailySyncEnabled') ?? false;
@@ -243,41 +287,92 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addCustomRule(String rule, {required bool isExpense}) async {
+  Future<void> _persistCustomSmsRules(SharedPreferences prefs) async {
+    final list = _customSmsRules.map((r) => r.toJson()).toList();
+    await prefs.setStringList('customSmsRules_v2', list);
+    _customExpenseRules = _customSmsRules
+        .where((r) => r.isEnabled && r.type == RuleTransactionType.expense)
+        .map((r) => r.keyword)
+        .toList();
+    _customIncomeRules = _customSmsRules
+        .where((r) => r.isEnabled && r.type == RuleTransactionType.income)
+        .map((r) => r.keyword)
+        .toList();
+    await prefs.setStringList('customExpenseRules', _customExpenseRules);
+    await prefs.setStringList('customIncomeRules', _customIncomeRules);
+  }
+
+  Future<void> saveCustomSmsRule(CustomSmsRule rule) async {
     final prefs = await SharedPreferences.getInstance();
-    if (isExpense) {
-      if (!_customExpenseRules.contains(rule)) {
-        _customExpenseRules.add(rule);
-        await prefs.setStringList('customExpenseRules', _customExpenseRules);
-      }
+    final index = _customSmsRules.indexWhere((r) => r.id == rule.id);
+    if (index >= 0) {
+      _customSmsRules[index] = rule;
     } else {
-      if (!_customIncomeRules.contains(rule)) {
-        _customIncomeRules.add(rule);
-        await prefs.setStringList('customIncomeRules', _customIncomeRules);
-      }
+      _customSmsRules.insert(0, rule);
     }
+    await _persistCustomSmsRules(prefs);
     notifyListeners();
   }
 
+  Future<void> deleteCustomSmsRule(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    _customSmsRules.removeWhere((r) => r.id == id);
+    await _persistCustomSmsRules(prefs);
+    notifyListeners();
+  }
+
+  Future<void> toggleCustomSmsRule(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final index = _customSmsRules.indexWhere((r) => r.id == id);
+    if (index >= 0) {
+      final current = _customSmsRules[index];
+      _customSmsRules[index] = current.copyWith(isEnabled: !current.isEnabled);
+      await _persistCustomSmsRules(prefs);
+      notifyListeners();
+    }
+  }
+
+  Future<void> restoreCustomSmsRule(CustomSmsRule rule) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!_customSmsRules.any((r) => r.id == rule.id)) {
+      _customSmsRules.insert(0, rule);
+      await _persistCustomSmsRules(prefs);
+      notifyListeners();
+    }
+  }
+
+  Future<void> addCustomRule(String rule, {required bool isExpense}) async {
+    final clean = rule.trim();
+    if (clean.isEmpty) return;
+    final newRule = CustomSmsRule(
+      id: '${isExpense ? "exp" : "inc"}_${clean.hashCode}_${DateTime.now().millisecondsSinceEpoch}',
+      keyword: clean,
+      type: isExpense ? RuleTransactionType.expense : RuleTransactionType.income,
+      createdAt: DateTime.now(),
+    );
+    await saveCustomSmsRule(newRule);
+  }
+
   Future<void> clearCustomRules() async {
+    _customSmsRules = [];
     _customExpenseRules = [];
     _customIncomeRules = [];
     final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('customSmsRules_v2', []);
     await prefs.setStringList('customExpenseRules', []);
     await prefs.setStringList('customIncomeRules', []);
     notifyListeners();
   }
 
   Future<void> removeCustomRule(String rule, {required bool isExpense}) async {
-    final prefs = await SharedPreferences.getInstance();
-    if (isExpense) {
-      _customExpenseRules.remove(rule);
-      await prefs.setStringList('customExpenseRules', _customExpenseRules);
-    } else {
-      _customIncomeRules.remove(rule);
-      await prefs.setStringList('customIncomeRules', _customIncomeRules);
+    final targetType = isExpense ? RuleTransactionType.expense : RuleTransactionType.income;
+    final match = _customSmsRules.firstWhere(
+      (r) => r.keyword.toLowerCase() == rule.trim().toLowerCase() && r.type == targetType,
+      orElse: () => _customSmsRules.firstWhere((r) => r.keyword == rule, orElse: () => CustomSmsRule(id: '', keyword: '', type: targetType, createdAt: DateTime.now())),
+    );
+    if (match.id.isNotEmpty) {
+      await deleteCustomSmsRule(match.id);
     }
-    notifyListeners();
   }
 
   Future<void> setAutoBackupEnabled(bool enabled) async {

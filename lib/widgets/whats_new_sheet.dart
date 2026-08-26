@@ -37,19 +37,19 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.primaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
+            icon: Icons.tune_rounded,
+            title: "Interactive Custom SMS Training",
+            desc: "Train the app to recognize unique bank SMS and transfer approval formats directly from the test sandbox.",
+          ),
+          _WhatsNewItem(
+            icon: Icons.title_rounded,
+            title: "Personalized Transaction Titles",
+            desc: "Set clean custom descriptions that automatically replace noisy bank SMS and merchant text.",
+          ),
+          _WhatsNewItem(
             icon: Icons.pie_chart_outline_rounded,
             title: "Split Bills & Shared Debts",
             desc: "Split group expenses with equal or exact shares, track friend balances, and send 1-tap WhatsApp breakdown reminders.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.document_scanner_outlined,
-            title: "100% Offline Receipt Scanner",
-            desc: "Scan receipts directly with your camera to extract totals and merchants instantly on-device without cloud dependency.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.account_balance_wallet_outlined,
-            title: "Modular Dual-Account Toggle",
-            desc: "Easily switch between a minimalist single ledger or dual Daily Operating & Savings Vault accounts in Settings.",
           ),
         ],
       ),
@@ -59,19 +59,19 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.tertiaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.category_outlined,
-            title: "Unified Category Pickers",
-            desc: "Color-coordinated category clouds seamlessly shared across Transactions, Split Bills, and Recurring Rules.",
+            icon: Icons.lock_open_rounded,
+            title: "OTP Bypass Safeguard",
+            desc: "Built-in authorization override for banks that send transfer approval codes without a second confirmation SMS.",
           ),
           _WhatsNewItem(
-            icon: Icons.touch_app_outlined,
-            title: "Enlarged Touch Targets & A11y",
-            desc: "Comfortable touch bounds and enhanced TalkBack/VoiceOver labels across all interactive sheets and cards.",
+            icon: Icons.document_scanner_outlined,
+            title: "100% Offline Receipt Scanner",
+            desc: "Scan receipts directly with your camera to extract totals and merchants instantly on-device without cloud dependency.",
           ),
           _WhatsNewItem(
-            icon: Icons.bolt_rounded,
-            title: "0ms Instant Settlements",
-            desc: "Settling up shared debts instantly credits your Daily Operating ledger with zero latency or loading delay.",
+            icon: Icons.more_vert_rounded,
+            title: "Quick-Access Menu Entry",
+            desc: "Access SMS rules and training directly from the Financial Manager 3-dot overflow menu.",
           ),
         ],
       ),
@@ -81,14 +81,14 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.secondaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.tune_rounded,
-            title: "Spacious Number Inputs",
-            desc: "Redesigned custom split amount boxes preventing digit clipping across all currencies.",
+            icon: Icons.campaign_outlined,
+            title: "Promotional Filter Precision",
+            desc: "Distinguishes promotional discount codes from authentic bank transfer authorization numbers.",
           ),
           _WhatsNewItem(
-            icon: Icons.auto_awesome_rounded,
-            title: "Clean Modern Dialogs",
-            desc: "Replaced legacy dropdowns with tactile Material 3 segmented buttons and chip filters.",
+            icon: Icons.category_outlined,
+            title: "Unified Category Pickers",
+            desc: "Color-coordinated category clouds seamlessly shared across Transactions, Split Bills, and Recurring Rules.",
           ),
           _WhatsNewItem(
             icon: Icons.shield_outlined,

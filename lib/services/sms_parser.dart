@@ -1,6 +1,7 @@
 import '../data/transaction_model.dart';
 import '../data/transaction_category.dart';
 import '../data/category_constants.dart';
+import '../data/custom_sms_rule.dart';
 import 'sms_constants.dart';
 
 class SmsParser {
@@ -10,6 +11,7 @@ class SmsParser {
     required Set<String> allowedSenderIds,
     required Set<String> blockedSenderIds,
     String? preferredCurrency,
+    List<CustomSmsRule>? customSmsRules,
   }) {
     if (body.trim().isEmpty) return false;
 
@@ -22,13 +24,23 @@ class SmsParser {
     final senderLower = address.toLowerCase();
     if (blockedSenderIds.any((s) => senderLower.contains(s))) return false;
 
-    // Reject OTP/verification messages
-    if (SmsConstants.otpRegex.hasMatch(body)) return false;
+    final bodyLower = body.toLowerCase();
+    final matchingRule = customSmsRules?.cast<CustomSmsRule?>().firstWhere(
+      (r) => r != null && r.isEnabled && bodyLower.contains(r.keyword.toLowerCase()),
+      orElse: () => null,
+    );
+
+    // Reject OTP/verification messages unless explicitly bypassed by a custom rule
+    if (SmsConstants.otpRegex.hasMatch(body)) {
+      if (matchingRule == null || !matchingRule.bypassOtpFilter) {
+        return false;
+      }
+    }
 
     // Reject promotional SMS unless explicit executed transaction terms exist
     final isPromotional = SmsConstants.promotionalRegex.hasMatch(body);
     final hasExecuted = SmsConstants.executedTransactionRegex.hasMatch(body);
-    if (isPromotional && !hasExecuted) return false;
+    if (isPromotional && !hasExecuted && matchingRule == null) return false;
 
     // Check if it has a valid amount match (checking preferred currency, general currencies, or bare amount)
     var cleanBody = body.replaceAll(SmsConstants.piiBalanceRegex, '');
@@ -47,13 +59,16 @@ class SmsParser {
         address.toUpperCase().contains('CARD') ||
         address == 'TEST' ||
         address == 'BANK_SMS';
-    final isKnownSender = isBank || allowedSenderIds.any((s) => senderLower.contains(s));
+    final isKnownSender = isBank ||
+        allowedSenderIds.any((s) => senderLower.contains(s)) ||
+        matchingRule != null;
     
     final hasTransactionAction = SmsConstants.debitRegex.hasMatch(body) || 
                                  SmsConstants.creditRegex.hasMatch(body) ||
                                  SmsConstants.transferRegex.hasMatch(body) ||
                                  SmsConstants.depositRegex.hasMatch(body) ||
-                                 SmsConstants.purchaseRegex.hasMatch(body);
+                                 SmsConstants.purchaseRegex.hasMatch(body) ||
+                                 matchingRule != null;
 
     return isKnownSender || hasTransactionAction;
   }
@@ -67,6 +82,7 @@ class SmsParser {
     required Set<String> blockedSenderIds,
     required List<String> customExpenseRules,
     required List<String> customIncomeRules,
+    List<CustomSmsRule>? customSmsRules,
     String? preferredCurrency,
   }) {
     if (body.trim().isEmpty) return null;
@@ -78,17 +94,28 @@ class SmsParser {
     final senderLower = address.toLowerCase();
     if (blockedSenderIds.any((s) => senderLower.contains(s))) return null;
 
-    // Reject OTP/verification codes
-    if (SmsConstants.otpRegex.hasMatch(body)) return null;
+    final bodyLower = body.toLowerCase();
+    final matchingRule = customSmsRules?.cast<CustomSmsRule?>().firstWhere(
+      (r) => r != null && r.isEnabled && bodyLower.contains(r.keyword.toLowerCase()),
+      orElse: () => null,
+    );
+
+    // Reject OTP/verification codes unless bypassed by user-taught rule
+    if (SmsConstants.otpRegex.hasMatch(body)) {
+      if (matchingRule == null || !matchingRule.bypassOtpFilter) {
+        return null;
+      }
+    }
 
     // Reject promotional SMS unless explicit executed transaction terms exist
     final isPromotional = SmsConstants.promotionalRegex.hasMatch(body);
     final hasExecuted = SmsConstants.executedTransactionRegex.hasMatch(body);
-    if (isPromotional && !hasExecuted) return null;
+    if (isPromotional && !hasExecuted && matchingRule == null) return null;
 
-    final bodyLower = body.toLowerCase();
-    final matchesExpenseRule = customExpenseRules.any((r) => bodyLower.contains(r.toLowerCase()));
-    final matchesIncomeRule = customIncomeRules.any((r) => bodyLower.contains(r.toLowerCase()));
+    final matchesExpenseRule = (matchingRule != null && (matchingRule.type == RuleTransactionType.expense || matchingRule.type == RuleTransactionType.transfer)) ||
+        customExpenseRules.any((r) => bodyLower.contains(r.toLowerCase()));
+    final matchesIncomeRule = (matchingRule != null && matchingRule.type == RuleTransactionType.income) ||
+        customIncomeRules.any((r) => bodyLower.contains(r.toLowerCase()));
 
     final isBank = SmsConstants.bankSenders.any((s) => address.toUpperCase().contains(s.toUpperCase())) ||
         address.toUpperCase().contains('BANK') ||
@@ -97,11 +124,12 @@ class SmsParser {
         address == 'TEST' ||
         address == 'BANK_SMS';
     final isKnownSender = isBank ||
-        allowedSenderIds.any((s) => senderLower.contains(s));
+        allowedSenderIds.any((s) => senderLower.contains(s)) ||
+        matchingRule != null;
     
     final isInwardTransfer = SmsConstants.inwardTransferRegex.hasMatch(body);
     final isExplicitCredit = SmsConstants.creditRegex.hasMatch(body) || SmsConstants.depositRegex.hasMatch(body);
-    final isSelfTransfer = SmsConstants.selfTransferRegex.hasMatch(body);
+    final isSelfTransfer = SmsConstants.selfTransferRegex.hasMatch(body) || (matchingRule != null && matchingRule.type == RuleTransactionType.transfer);
 
     final isCredit = matchesIncomeRule || (!matchesExpenseRule && (isInwardTransfer || isExplicitCredit));
     final isDebit = matchesExpenseRule || (!isCredit && isBank && SmsConstants.debitRegex.hasMatch(body));
@@ -146,11 +174,20 @@ class SmsParser {
 
     final isExpense = !isCredit && !isReversal;
 
-    final description = buildDescription(body, address, amount, isExpense: isExpense);
+    // Use custom description if specified by user-taught rule
+    final String description;
+    if (matchingRule != null && matchingRule.customDescription != null && matchingRule.customDescription!.trim().isNotEmpty) {
+      description = matchingRule.customDescription!.trim();
+    } else {
+      description = buildDescription(body, address, amount, isExpense: isExpense);
+    }
+
     final String category;
     if (isReversal) {
       category = SmsConstants.reversalSentinel;
-    } else if (isSelfTransfer) {
+    } else if (matchingRule != null && matchingRule.category != null && matchingRule.category!.trim().isNotEmpty) {
+      category = matchingRule.category!.trim();
+    } else if (isSelfTransfer || (matchingRule != null && matchingRule.type == RuleTransactionType.transfer)) {
       category = CategoryConstants.transfer;
     } else {
       category = TransactionCategory.fromDescriptionCached('$description $body');

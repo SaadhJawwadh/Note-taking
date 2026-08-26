@@ -4,6 +4,7 @@ import 'package:note_taking_app/data/database_helper.dart';
 import 'package:note_taking_app/data/transaction_model.dart';
 import 'package:note_taking_app/features/finances/data/transaction_repository.dart';
 import 'package:note_taking_app/services/sms_parser.dart';
+import 'package:note_taking_app/services/sms_constants.dart';
 import 'package:note_taking_app/services/sms_service.dart';
 
 void main() {
@@ -259,6 +260,21 @@ void main() {
         customIncomeRules: [],
       );
       expect(parsed, isNull, reason: 'OTP messages must be rejected');
+
+      const combankApproval = 'ComBank Digital-Transfer within ComBank LKR 10,000.00 attempted. Please use code 968352 to approve. Do NOT share this number with anyone. PbgqGoDg8jk';
+      final parsedCombank = SmsParser.parseMessage(
+        body: combankApproval,
+        address: 'COMBANK',
+        messageId: 1012,
+        messageDate: DateTime.now().millisecondsSinceEpoch,
+        allowedSenderIds: {},
+        blockedSenderIds: {},
+        customExpenseRules: [],
+        customIncomeRules: [],
+      );
+      expect(parsedCombank, isNull, reason: 'Approval code messages must be rejected');
+      expect(SmsConstants.otpRegex.hasMatch(combankApproval), isTrue);
+      expect(SmsConstants.promotionalRegex.hasMatch(combankApproval), isFalse);
     });
 
     test('Rejects promotional and discount offer messages without executed transaction keywords', () {

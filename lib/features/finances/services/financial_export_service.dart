@@ -23,33 +23,37 @@ class FinancialExportService {
         : 'from my complete transaction ledger';
 
     return '''
-# AI Financial Health & Spending Habits Analysis Prompt
+# Advanced Financial Health, Visual Trend & Behavioral Analytics Prompt
 
-Act as my expert personal financial advisor and spending habit analyst.
-I have attached my raw financial transactions CSV ($transactionCount records in $currency, $rangeText).
+Act as an expert data analyst and personal financial advisor. Analyze the attached raw financial transactions CSV ($transactionCount records in $currency, $rangeText).
 
-Please conduct an in-depth financial analysis and provide a structured report covering:
+Execute Python data visualization workflows to render clear, standalone charts alongside a structured analytical report.
 
-1. 📊 **Executive Financial Overview**:
-   - Total Income, Total Expenses, Net Cash Flow, and Overall Savings Rate (%).
-   - Monthly average burn rate and income vs. expense balance.
+### 1. 📊 Executive Summary & Core Metrics
+- Generate a summary table: Total Inflow, Total Outflow, Net Surplus, Savings Rate (%), and Average Daily Burn Rate.
+- Account Separation: Distinguish between Daily Operating cash flow and Savings Vault accumulations.
+- Calculate runway projections based on current non-discretionary commitments.
 
-2. 🏷️ **Category & Habit Breakdown (50/30/20 Rule)**:
-   - Categorize spending into Needs (essentials), Wants (discretionary), and Savings/Investments.
-   - Highlight the top 5 expense categories with total amounts and percentage of total spend.
+### 2. 📈 Visual Graphs & Charts (Render Directly)
+Please generate and display the following 4 charts:
+1. **Category Breakdown**: A donut chart or treemap showing spend distribution across categories (Needs vs. Wants vs. Savings).
+2. **Cumulative Cash Burn vs. Income**: A dual-line chart tracking cumulative income against cumulative expenses across the date timeline.
+3. **Behavioral Heatmap / Day-of-Week Distribution**: A bar chart or heatmap comparing spending volume across weekdays vs. weekends and time intervals (Morning, Afternoon, Evening, Night).
+4. **Merchant Pareto Chart**: A Pareto chart displaying the top 10 merchants by cumulative spend with an 80/20 cumulative percentage curve.
 
-3. 🔁 **Recurring Subscriptions & Fixed Leaks**:
-   - Detect recurring payments (streaming, gym, utilities, recurring digital subscriptions).
-   - Flag any forgotten, duplicated, or creeping recurring subscriptions.
+### 3. 📉 Trend & Velocity Analysis
+- **Post-Payday Velocity**: Detect spend spikes immediately following salary deposits.
+- **Micro-Transaction Frequency**: Identify high-frequency, low-ticket merchants (e.g., food delivery, ride-hailing).
+- **Fixed vs. Variable Burn Trajectory**: Measure how fixed recurring costs accelerate month-to-date depletion.
 
-4. 🔍 **Top Merchant Drains & Outliers**:
-   - Identify merchants with highest cumulative spend.
-   - Detect unusual single transaction spikes or impulsive weekend clusters.
+### 4. 🔁 Recurring Subscriptions & Anomaly Flags
+- Table of detected recurring debits with renewal frequency and status.
+- Duplicate transaction detection (matching amounts within short time intervals).
 
-5. 💡 **3 High-Impact Actionable Recommendations**:
-   - Concrete, realistic suggestions to cut discretionary leaks and boost monthly savings by at least 10–15%.
+### 5. 💡 3 Actionable Financial Adjustments
+- Quantified recommendations to reduce leakages and increase the monthly savings rate by 10–15%.
 
-Please format your response using clean Markdown with tables, bullet points, and actionable takeaways.
+Please format your response using clean Markdown with tables, code blocks, rendered charts, and actionable takeaways.
 '''.trim();
   }
 

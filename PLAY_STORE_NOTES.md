@@ -1,20 +1,20 @@
 <en-US>
 🌟 What's New
-• Split Bills: Split group expenses with equal/exact shares & WhatsApp reminders.
-• Offline Receipt Scanner: Instant camera OCR on-device.
-• Modular Dual Accounts: Optional Savings Vault toggle.
+• Custom SMS Training: Teach custom bank formats & clean titles.
+• OTP Bypass Safeguard: Support for intra-bank transfer codes.
+• Split Bills: Group expenses, friend balances & reminders.
 
 🚀 Improvements
-• Unified category pickers & enlarged touch targets.
-• 0ms instant ledger settlements & UI updates.
+• Rule management cards with instant toggles & swipe-to-delete.
+• Quick access via Financial Manager menu & onboarding wizard.
 </en-US>
 <ta-IN>
 🌟 புதிய அம்சங்கள்
-• பில் பகிர்வு: நண்பர்களுடன் செலவுகளை சமமாக அல்லது தனித்தனியாக பகிருங்கள்.
-• ஆஃப்லைன் ரசீது ஸ்கேனர்: கேமரா மூலம் உடனடி OCR.
-• விருப்ப சேமிப்பு கணக்கு: தேவைக்கேற்ப இயக்கும் வசதி.
+• தனிப்பயன் SMS விதிகள்: வங்கி SMS வடிவங்களை எளிதாக பயிற்றுவிக்கவும்.
+• பரிமாற்ற குறியீட்டு ஆதரவு: வங்கி ஒப்புதல் குறியீடுகளுக்கான வசதி.
+• பில் பகிர்வு: நண்பர்களுடன் செலவுகளை சமமாக பகிருங்கள்.
 
 🚀 மேம்பாடுகள்
-• ஒருங்கிணைந்த வகை தேர்வுகள்.
-• விரைவான கணக்கு தீர்வுகள்.
+• மேம்படுத்தப்பட்ட விதி மேலாண்மை அட்டைகள்.
+• விரைவான அணுகல் மெனு.
 </ta-IN>

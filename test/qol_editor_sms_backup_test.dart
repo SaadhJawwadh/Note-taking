@@ -90,12 +90,12 @@ void main() {
         currency: 'LKR',
       );
 
-      expect(prompt, contains('AI Financial Health & Spending Habits Analysis Prompt'));
+      expect(prompt, contains('Advanced Financial Health, Visual Trend & Behavioral Analytics Prompt'));
       expect(prompt, contains('42 records in LKR'));
-      expect(prompt, contains('Executive Financial Overview'));
-      expect(prompt, contains('50/30/20 Rule'));
+      expect(prompt, contains('Executive Summary & Core Metrics'));
+      expect(prompt, contains('Visual Graphs & Charts'));
       expect(prompt, contains('Recurring Subscriptions'));
-      expect(prompt, contains('Top Merchant Drains'));
+      expect(prompt, contains('Merchant Pareto Chart'));
     });
 
     test('FinancialExportService generateCsv formats RFC 4180 CSV with optional AI header', () {

@@ -9,6 +9,8 @@ import 'package:note_taking_app/services/sms_service.dart';
 import 'package:note_taking_app/services/sms_parser.dart';
 import 'package:note_taking_app/services/sms_constants.dart';
 import 'package:note_taking_app/core/theme/app_layout.dart';
+import 'package:note_taking_app/data/custom_sms_rule.dart';
+import 'package:note_taking_app/features/finances/presentation/widgets/teach_sms_rule_sheet.dart';
 import 'package:note_taking_app/utils/app_route.dart';
 import 'package:note_taking_app/widgets/frosted_glass_sliver_app_bar.dart';
 import 'package:note_taking_app/features/finances/presentation/screens/category_management_screen.dart';
@@ -244,23 +246,38 @@ class _SmsRulesScreenState extends State<SmsRulesScreen> {
                             blockedSenderIds: const {},
                             customExpenseRules: expenseRules,
                             customIncomeRules: incomeRules,
+                            customSmsRules: settings.customSmsRules,
                             preferredCurrency: settings.currency,
                           );
 
+                          Widget previewCard;
                           if (parsed == null) {
+                            final isOtp = SmsConstants.otpRegex.hasMatch(testText);
                             final isPromo = SmsConstants.promotionalRegex.hasMatch(testText);
-                            final errorMessage = isPromo
-                                ? 'Ignored: Detected as a promotional broadcast or conditional marketing offer (no money was moved).'
-                                : 'Not recognized as an executed financial transaction. Verify transaction keywords or currency amount format.';
-                            return Container(
+                            final isIgnored = isOtp || isPromo;
+
+                            final String errorMessage;
+                            final IconData statusIcon;
+                            if (isOtp) {
+                              errorMessage = 'Ignored: Detected as an OTP, 2FA, or transfer authorization code (no money has moved yet).';
+                              statusIcon = Icons.lock_outline_rounded;
+                            } else if (isPromo) {
+                              errorMessage = 'Ignored: Detected as a promotional broadcast or conditional marketing offer (no money was moved).';
+                              statusIcon = Icons.campaign_outlined;
+                            } else {
+                              errorMessage = 'Not recognized as an executed financial transaction. Verify transaction keywords or currency amount format.';
+                              statusIcon = Icons.warning_amber_rounded;
+                            }
+
+                            previewCard = Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: isPromo
+                                color: isIgnored
                                     ? cs.surfaceContainerHighest.withValues(alpha: 0.8)
                                     : cs.errorContainer.withValues(alpha: 0.5),
                                 borderRadius: BorderRadius.circular(AppLayout.radiusM),
                                 border: Border.all(
-                                  color: isPromo
+                                  color: isIgnored
                                       ? cs.outlineVariant.withValues(alpha: 0.5)
                                       : cs.error.withValues(alpha: 0.3),
                                 ),
@@ -268,76 +285,104 @@ class _SmsRulesScreenState extends State<SmsRulesScreen> {
                               child: Row(
                                 children: [
                                   Icon(
-                                    isPromo ? Icons.campaign_outlined : Icons.warning_amber_rounded,
+                                    statusIcon,
                                     size: 20,
-                                    color: isPromo ? cs.primary : cs.error,
+                                    color: isIgnored ? cs.primary : cs.error,
                                   ),
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
                                       errorMessage,
                                       style: tt.bodySmall?.copyWith(
-                                        color: isPromo ? cs.onSurface : cs.onErrorContainer,
-                                        fontWeight: isPromo ? FontWeight.w500 : FontWeight.normal,
+                                        color: isIgnored ? cs.onSurface : cs.onErrorContainer,
+                                        fontWeight: isIgnored ? FontWeight.w500 : FontWeight.normal,
                                       ),
                                     ),
                                   ),
                                 ],
                               ),
                             );
-                          }
-
-                          return Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: cs.primaryContainer.withValues(alpha: 0.4),
-                              borderRadius: BorderRadius.circular(AppLayout.radiusM),
-                              border: Border.all(color: cs.primary.withValues(alpha: 0.3)),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      parsed.isExpense ? Icons.arrow_outward_rounded : Icons.arrow_downward_rounded,
-                                      size: 18,
-                                      color: parsed.isExpense ? cs.error : cs.primary,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      '${parsed.isExpense ? '-' : '+'} ${settings.currency} ${parsed.amount.toStringAsFixed(2)}',
-                                      style: tt.titleSmall?.copyWith(
-                                        fontWeight: FontWeight.bold,
+                          } else {
+                            previewCard = Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: cs.primaryContainer.withValues(alpha: 0.4),
+                                borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                                border: Border.all(color: cs.primary.withValues(alpha: 0.3)),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        parsed.isExpense ? Icons.arrow_outward_rounded : Icons.arrow_downward_rounded,
+                                        size: 18,
                                         color: parsed.isExpense ? cs.error : cs.primary,
                                       ),
-                                    ),
-                                    const Spacer(),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: cs.surfaceContainerHighest,
-                                        borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        '${parsed.isExpense ? '-' : '+'} ${settings.currency} ${parsed.amount.toStringAsFixed(2)}',
+                                        style: tt.titleSmall?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: parsed.isExpense ? cs.error : cs.primary,
+                                        ),
                                       ),
-                                      child: Text(
-                                        parsed.isExpense ? 'Expense' : 'Income',
-                                        style: tt.labelSmall?.copyWith(fontWeight: FontWeight.bold),
+                                      const Spacer(),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: cs.surfaceContainerHighest,
+                                          borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                                        ),
+                                        child: Text(
+                                          parsed.isExpense ? 'Expense' : 'Income',
+                                          style: tt.labelSmall?.copyWith(fontWeight: FontWeight.bold),
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    '🏷️ Title: ${parsed.description}',
+                                    style: tt.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '📂 Category: ${parsed.category}',
+                                    style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              previewCard,
+                              const SizedBox(height: 10),
+                              OutlinedButton.icon(
+                                onPressed: () async {
+                                  final result = await TeachSmsRuleSheet.show(
+                                    context: context,
+                                    sampleSmsBody: testText,
+                                  );
+                                  if (result != null) {
+                                    await SmsService.reloadSmsContacts();
+                                    if (mounted) setState(() {});
+                                  }
+                                },
+                                icon: const Icon(Icons.school_rounded, size: 18),
+                                label: const Text('Teach App / Customize Rule from this SMS'),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                                  ),
                                 ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  '🏷️ Title: ${parsed.description}',
-                                  style: tt.bodySmall?.copyWith(fontWeight: FontWeight.w600),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '📂 Category: ${parsed.category}',
-                                  style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           );
                         },
                       ),
@@ -348,158 +393,255 @@ class _SmsRulesScreenState extends State<SmsRulesScreen> {
             ),
             const SizedBox(height: 12),
 
-            // Expense Rules Section
+            // Taught Custom Bank Rules Section
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Expense Keywords',
-                    style: tt.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: cs.error,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
-                        child: TextField(
-                          controller: _expenseRuleController,
-                          decoration: const InputDecoration(
-                            hintText: 'e.g. Paid, Sent, Debited',
-                            isDense: true,
-                          ),
-                          onSubmitted: (val) {
-                            if (val.trim().isNotEmpty) {
-                              settings.addCustomRule(val.trim(), isExpense: true);
-                              SmsService.reloadSmsContacts();
-                              _expenseRuleController.clear();
-                            }
-                          },
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Taught Custom Rules',
+                              style: tt.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              'Personalized rules taught to recognize your bank formats',
+                              style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed: () {
-                          final val = _expenseRuleController.text.trim();
-                          if (val.isNotEmpty) {
-                            settings.addCustomRule(val, isExpense: true);
-                            SmsService.reloadSmsContacts();
-                            _expenseRuleController.clear();
+                      FilledButton.tonalIcon(
+                        onPressed: () async {
+                          final result = await TeachSmsRuleSheet.show(context: context);
+                          if (result != null) {
+                            await SmsService.reloadSmsContacts();
+                            if (mounted) setState(() {});
                           }
                         },
-                        child: const Text('Add'),
+                        icon: const Icon(Icons.add_rounded, size: 18),
+                        label: const Text('Add Rule'),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  if (expenseRules.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Text(
-                        'No custom expense rules set.',
-                        style: TextStyle(fontStyle: FontStyle.italic, color: cs.onSurfaceVariant),
+
+                  if (settings.customSmsRules.isEmpty)
+                    Card(
+                      elevation: 0,
+                      color: cs.surfaceContainerLow,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppLayout.radiusL),
+                        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
                       ),
-                    )
-                  else
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: expenseRules.map((rule) {
-                        return Chip(
-                          label: Text(rule),
-                          deleteIcon: const Icon(Icons.close, size: 16),
-                          onDeleted: () {
-                            settings.removeCustomRule(rule, isExpense: true);
-                            SmsService.reloadSmsContacts();
-                          },
-                          backgroundColor: cs.errorContainer.withValues(alpha: 0.3),
-                          side: BorderSide(color: cs.error.withValues(alpha: 0.3)),
-                        );
-                      }).toList(),
-                    ),
-                ],
-              ),
-            ),
-
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Divider(),
-            ),
-
-            // Income Rules Section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Income Keywords',
-                    style: tt.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: cs.tertiary,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _incomeRuleController,
-                          decoration: const InputDecoration(
-                            hintText: 'e.g. Received, Deposited, Salary',
-                            isDense: true,
-                          ),
-                          onSubmitted: (val) {
-                            if (val.trim().isNotEmpty) {
-                              settings.addCustomRule(val.trim(), isExpense: false);
-                              SmsService.reloadSmsContacts();
-                              _incomeRuleController.clear();
-                            }
-                          },
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline_rounded, color: cs.primary),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'No custom rules taught yet. Paste any SMS in the tester above or tap "+ Add Rule" to train the parser.',
+                                style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed: () {
-                          final val = _incomeRuleController.text.trim();
-                          if (val.isNotEmpty) {
-                            settings.addCustomRule(val, isExpense: false);
-                            SmsService.reloadSmsContacts();
-                            _incomeRuleController.clear();
-                          }
-                        },
-                        child: const Text('Add'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  if (incomeRules.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Text(
-                        'No custom income rules set.',
-                        style: TextStyle(fontStyle: FontStyle.italic, color: cs.onSurfaceVariant),
-                      ),
                     )
                   else
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: incomeRules.map((rule) {
-                        return Chip(
-                          label: Text(rule),
-                          deleteIcon: const Icon(Icons.close, size: 16),
-                          onDeleted: () {
-                            settings.removeCustomRule(rule, isExpense: false);
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: settings.customSmsRules.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final rule = settings.customSmsRules[index];
+                        final typeColor = switch (rule.type) {
+                          RuleTransactionType.expense => cs.error,
+                          RuleTransactionType.income => cs.tertiary,
+                          RuleTransactionType.transfer => cs.secondary,
+                        };
+                        final typeIcon = switch (rule.type) {
+                          RuleTransactionType.expense => Icons.arrow_upward_rounded,
+                          RuleTransactionType.income => Icons.arrow_downward_rounded,
+                          RuleTransactionType.transfer => Icons.swap_horiz_rounded,
+                        };
+
+                        return Dismissible(
+                          key: Key(rule.id),
+                          direction: DismissDirection.endToStart,
+                          background: Container(
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.only(right: 20),
+                            decoration: BoxDecoration(
+                              color: cs.errorContainer,
+                              borderRadius: BorderRadius.circular(AppLayout.radiusL),
+                            ),
+                            child: Icon(Icons.delete_outline_rounded, color: cs.onErrorContainer),
+                          ),
+                          onDismissed: (_) {
+                            settings.deleteCustomSmsRule(rule.id);
                             SmsService.reloadSmsContacts();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Removed rule "${rule.keyword}"'),
+                                action: SnackBarAction(
+                                  label: 'Undo',
+                                  onPressed: () {
+                                    settings.restoreCustomSmsRule(rule);
+                                    SmsService.reloadSmsContacts();
+                                  },
+                                ),
+                              ),
+                            );
                           },
-                          backgroundColor: cs.tertiaryContainer.withValues(alpha: 0.3),
-                          side: BorderSide(color: cs.tertiary.withValues(alpha: 0.3)),
+                          child: Card(
+                            elevation: 0,
+                            color: rule.isEnabled ? cs.surfaceContainerLow : cs.surfaceContainerLowest.withValues(alpha: 0.5),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppLayout.radiusL),
+                              side: BorderSide(
+                                color: rule.isEnabled
+                                    ? cs.outlineVariant.withValues(alpha: 0.4)
+                                    : cs.outlineVariant.withValues(alpha: 0.15),
+                              ),
+                            ),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(AppLayout.radiusL),
+                              onTap: () async {
+                                final result = await TeachSmsRuleSheet.show(
+                                  context: context,
+                                  existingRule: rule,
+                                );
+                                if (result != null) {
+                                  await SmsService.reloadSmsContacts();
+                                  if (mounted) setState(() {});
+                                }
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        // Keyword Badge
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: cs.primaryContainer,
+                                            borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.key_rounded, size: 14, color: cs.onPrimaryContainer),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                rule.keyword,
+                                                style: tt.labelSmall?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: cs.onPrimaryContainer,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+
+                                        // Type Pill
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: typeColor.withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(typeIcon, size: 13, color: typeColor),
+                                              const SizedBox(width: 3),
+                                              Text(
+                                                rule.type.label,
+                                                style: tt.labelSmall?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: typeColor,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+
+                                        // Category Pill (if set)
+                                        if (rule.category != null && rule.category!.isNotEmpty)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: cs.surfaceContainerHighest,
+                                              borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                                            ),
+                                            child: Text(
+                                              rule.category!,
+                                              style: tt.labelSmall?.copyWith(
+                                                color: cs.onSurfaceVariant,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+
+                                        // OTP Bypass Pill
+                                        if (rule.bypassOtpFilter) ...[
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: cs.tertiaryContainer.withValues(alpha: 0.5),
+                                              borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                                            ),
+                                            child: Icon(Icons.lock_open_rounded, size: 13, color: cs.onTertiaryContainer),
+                                          ),
+                                        ],
+
+                                        const Spacer(),
+
+                                        // Enable/Disable Switch
+                                        Switch.adaptive(
+                                          value: rule.isEnabled,
+                                          onChanged: (val) {
+                                            HapticFeedback.selectionClick();
+                                            settings.toggleCustomSmsRule(rule.id);
+                                            SmsService.reloadSmsContacts();
+                                          },
+                                        ),
+                                      ],
+                                    ),
+
+                                    // Custom Description line if configured
+                                    if (rule.customDescription != null && rule.customDescription!.isNotEmpty) ...[
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        '🏷️ Title: ${rule.customDescription}',
+                                        style: tt.bodySmall?.copyWith(
+                                          fontWeight: FontWeight.w500,
+                                          color: cs.onSurface,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
                         );
-                      }).toList(),
+                      },
                     ),
                 ],
               ),

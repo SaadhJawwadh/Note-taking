@@ -97,11 +97,15 @@ flutter analyze && ./deploy.sh <version>
 * **R8 Code & Resource Shrinking**: Release builds use `isMinifyEnabled = true` and `isShrinkResources = true`. When adding any new third-party Flutter plugin that uses native Android code, reflection, or native channels:
   1. Add a corresponding `-keep class <package_name>.** { *; }` rule to `android/app/proguard-rules.pro`.
   2. Always build a local release APK (`flutter build apk --release`) to verify R8 compiles without class-stripping errors.
-* **ProGuard Core Rules**: Ensure core drivers (SQLCipher, sqflite, Pigeon, WorkManager, LocalAuth) are protected in `android/app/proguard-rules.pro`:
+* **ProGuard Core Rules**: Ensure core drivers (SQLCipher, sqflite, Pigeon, WorkManager, LocalAuth, Google ML Kit) are protected in `android/app/proguard-rules.pro`:
   ```proguard
   -keep class net.sqlcipher.** { *; }
   -keep class net.sqlcipher.database.SQLiteDatabase { *; }
   -keep class com.tekartik.sqflite.** { *; }
+  -keep class com.google_mlkit_text_recognition.** { *; }
+  -keep class com.google.mlkit.vision.text.** { *; }
+  -keep class com.google.mlkit.vision.common.** { *; }
+  -dontwarn com.google.mlkit.vision.text.**
   ```
 * **Flutter Icon Tree-Shaking Rule**:
   * **Zero Non-Constant `IconData` Calls**: Never instantiate `IconData(codePoint, ...)` using dynamic or runtime variables anywhere in Dart code. Flutter's release AOT compiler statically inspects `IconData` invocations to tree-shake font files and will abort the build with `Error: Avoid non-constant invocations of IconData`.

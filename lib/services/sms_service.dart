@@ -7,6 +7,7 @@ import '../features/finances/data/transaction_repository.dart';
 import '../data/transaction_model.dart';
 import '../data/transaction_category.dart';
 import '../data/sms_contact.dart';
+import '../data/custom_sms_rule.dart';
 import 'sms_parser.dart';
 import 'sms_constants.dart';
 import 'gemini_nano_service.dart';
@@ -127,6 +128,7 @@ class SmsService {
   static Set<String> _blockedSenderIds = {};
   static var _customExpenseRules = <String>[];
   static var _customIncomeRules = <String>[];
+  static var _customSmsRules = <CustomSmsRule>[];
 
   static Future<void> reloadSmsContacts() async {
     final contacts = await TransactionRepository.instance.getAllSmsContacts();
@@ -145,6 +147,19 @@ class SmsService {
       final prefs = await SharedPreferences.getInstance();
       _customExpenseRules = prefs.getStringList('customExpenseRules') ?? [];
       _customIncomeRules = prefs.getStringList('customIncomeRules') ?? [];
+      final storedRules = prefs.getStringList('customSmsRules_v2');
+      if (storedRules != null) {
+        _customSmsRules = storedRules
+            .map((s) {
+              try {
+                return CustomSmsRule.fromJson(s);
+              } catch (_) {
+                return null;
+              }
+            })
+            .whereType<CustomSmsRule>()
+            .toList();
+      }
     } catch (_) {}
   }
 
@@ -229,6 +244,7 @@ class SmsService {
         blockedSenderIds: _blockedSenderIds,
         customExpenseRules: _customExpenseRules,
         customIncomeRules: _customIncomeRules,
+        customSmsRules: _customSmsRules,
       );
 
       if (t == null || t.smsId == null) {
@@ -346,6 +362,7 @@ class SmsService {
     required Set<String> blockedSenderIds,
     required List<String> customExpenseRules,
     required List<String> customIncomeRules,
+    List<CustomSmsRule>? customSmsRules,
   }) async {
     if (body.trim().isEmpty) return null;
 
@@ -362,6 +379,7 @@ class SmsService {
           allowedSenderIds: allowedSenderIds,
           blockedSenderIds: blockedSenderIds,
           preferredCurrency: preferredCurrency,
+          customSmsRules: customSmsRules,
         )) {
       await TransactionCategory.reload();
       final activeCategories = TransactionCategory.allNames;
@@ -409,6 +427,7 @@ class SmsService {
         blockedSenderIds: blockedSenderIds,
         customExpenseRules: customExpenseRules,
         customIncomeRules: customIncomeRules,
+        customSmsRules: customSmsRules,
         preferredCurrency: preferredCurrency,
       );
 
@@ -792,6 +811,17 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
     final prefs = await SharedPreferences.getInstance();
     final customExpenseRules = prefs.getStringList('customExpenseRules') ?? [];
     final customIncomeRules = prefs.getStringList('customIncomeRules') ?? [];
+    final storedCustomSmsRules = prefs.getStringList('customSmsRules_v2');
+    final customSmsRules = storedCustomSmsRules
+        ?.map((s) {
+          try {
+            return CustomSmsRule.fromJson(s);
+          } catch (_) {
+            return null;
+          }
+        })
+        .whereType<CustomSmsRule>()
+        .toList();
     
     final contacts = await TransactionRepository.instance.getAllSmsContacts();
     final allowed = <String>{};
@@ -815,6 +845,7 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
       blockedSenderIds: blocked,
       customExpenseRules: customExpenseRules,
       customIncomeRules: customIncomeRules,
+      customSmsRules: customSmsRules,
     );
     if (transaction != null) {
       if (await TransactionRepository.instance.hasCrossSenderDuplicate(transaction.amount, transaction.date)) {

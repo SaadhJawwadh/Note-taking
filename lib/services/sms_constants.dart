@@ -81,7 +81,7 @@ class SmsConstants {
   static final reversalRegex = RegExp(r'\b(reversal|reversed|refund(?:ed)?|chargeback|credit\s+back|amount\s+refunded|money\s+returned|returned\s+to\s+your\s+card|reversed\s+back)\b', caseSensitive: false);
   static final cancellationRegex = RegExp(r'\b(cancelled|cancellation|transaction\s+failed|declined|not\s+processed|unsuccessful)\b', caseSensitive: false);
   static final promotionalRegex = RegExp(
-      r'\b(offer|offers|dining\s+offer|discount|discounts|promo|exclusive|earn\s+\d+\s+points|cashback|cash\s*back|get\s+\d+%|voucher|reward\s+point|apply\s+now|eligible|eligible\s+for|loan\s+up\s+to|credit\s+limit\s+(?:increase|enhancement)|special\s+deal|enjoy\s+(?:up\s+to|\d+%)|subscribe|deal\s+at|deals\s+at|save\s+up\s+to|valid\s+(?:till|until|on)|when\s+you\s+spend|on\s+spend\s+of|on\s+minimum\s+spend|purchases?\s+(?:above|over|exceeding)|buy\s+1\s+get\s+1|bogo|pre-approved|use\s+coupon|use\s+code\s+[A-Za-z0-9]+)\b',
+      r'\b(offer|offers|dining\s+offer|discount|discounts|promo|exclusive|earn\s+\d+\s+points|cashback|cash\s*back|get\s+\d+%|voucher|reward\s+point|apply\s+now|eligible|eligible\s+for|loan\s+up\s+to|credit\s+limit\s+(?:increase|enhancement)|special\s+deal|enjoy\s+(?:up\s+to|\d+%)|subscribe|deal\s+at|deals\s+at|save\s+up\s+to|valid\s+(?:till|until|on)|when\s+you\s+spend|on\s+spend\s+of|on\s+minimum\s+spend|purchases?\s+(?:above|over|exceeding)|buy\s+1\s+get\s+1|bogo|pre-approved|use\s+coupon|use\s+promo(?:\s+code)?\s+[A-Za-z0-9]+|coupon\s+code\s+[A-Za-z0-9]+|promo\s+code\s+[A-Za-z0-9]+)\b',
       caseSensitive: false);
   static final otpRegex = RegExp(
       r'\b(otp|verification\s+code|v-code|one\s+time\s+password|secret\s+code|do\s+not\s+share|use\s+code\s+\d+|pin\s+code)\b',
