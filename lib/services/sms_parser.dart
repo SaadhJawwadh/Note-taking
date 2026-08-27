@@ -84,23 +84,31 @@ class SmsParser {
     required List<String> customIncomeRules,
     List<CustomSmsRule>? customSmsRules,
     String? preferredCurrency,
+    Map<String, String>? categoryAccountRouting,
   }) {
     if (body.trim().isEmpty) return null;
 
     final isReversal = SmsConstants.reversalRegex.hasMatch(body);
-    final isCancellation = SmsConstants.cancellationRegex.hasMatch(body);
-    if (isCancellation && !isReversal) return null;
-
-    final senderLower = address.toLowerCase();
-    if (blockedSenderIds.any((s) => senderLower.contains(s))) return null;
-
+    final senderLower = address.toLowerCase().trim();
     final bodyLower = body.toLowerCase();
-    final matchingRule = customSmsRules?.cast<CustomSmsRule?>().firstWhere(
-      (r) => r != null && r.isEnabled && bodyLower.contains(r.keyword.toLowerCase()),
-      orElse: () => null,
-    );
 
-    // Reject OTP/verification codes unless bypassed by user-taught rule
+    // Check custom taught rules first (takes precedence)
+    CustomSmsRule? matchingRule;
+    if (customSmsRules != null && customSmsRules.isNotEmpty) {
+      for (final rule in customSmsRules) {
+        if (rule.isEnabled && rule.keyword.trim().isNotEmpty) {
+          if (bodyLower.contains(rule.keyword.trim().toLowerCase())) {
+            matchingRule = rule;
+            break;
+          }
+        }
+      }
+    }
+
+    if (blockedSenderIds.contains(senderLower)) return null;
+
+    // Guardrail: Reject standard OTP / 2FA / Authorization messages
+    // UNLESS the matching custom rule explicitly has bypassOtpFilter: true
     if (SmsConstants.otpRegex.hasMatch(body)) {
       if (matchingRule == null || !matchingRule.bypassOtpFilter) {
         return null;
@@ -199,11 +207,12 @@ class SmsParser {
         ? '${messageId}_$messageDate'
         : 'hash_${address.toLowerCase()}_${normalizedBody.hashCode}_$messageDate';
 
-    final isSavings = bodyLower.contains('saving') ||
-                      bodyLower.contains('fixed deposit') ||
-                      bodyLower.contains('fd interest') ||
-                      bodyLower.contains('vault');
-    final account = isSavings ? AccountType.savings : AccountType.daily;
+    final account = resolveAccount(
+      body: body,
+      category: category,
+      matchingRule: matchingRule,
+      categoryAccountRouting: categoryAccountRouting,
+    );
 
     return TransactionModel(
       amount: amount,
@@ -214,6 +223,28 @@ class SmsParser {
       smsId: smsId,
       account: account,
     );
+  }
+
+  /// Resolves the destination account ('daily' or 'savings') applying
+  /// taught rule target account -> category routing -> keyword checks -> 'daily'.
+  static String resolveAccount({
+    required String body,
+    required String category,
+    CustomSmsRule? matchingRule,
+    Map<String, String>? categoryAccountRouting,
+  }) {
+    if (matchingRule != null && matchingRule.targetAccount != null && matchingRule.targetAccount!.trim().isNotEmpty) {
+      return matchingRule.targetAccount!.trim();
+    }
+    if (categoryAccountRouting != null && categoryAccountRouting.containsKey(category)) {
+      return categoryAccountRouting[category]!;
+    }
+    final bodyLower = body.toLowerCase();
+    final isSavings = bodyLower.contains('saving') ||
+                      bodyLower.contains('fixed deposit') ||
+                      bodyLower.contains('fd interest') ||
+                      bodyLower.contains('vault');
+    return isSavings ? AccountType.savings : AccountType.daily;
   }
 
   static String buildDescription(String body, String sender, double amount, {required bool isExpense}) {

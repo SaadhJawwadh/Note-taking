@@ -93,7 +93,7 @@ class _CalculatorDialogState extends State<CalculatorDialog> {
     }
   }
 
-  Widget _buildButton(String text, {Color? textColor, Color? bgColor}) {
+  Widget _buildButton(String text, {IconData? icon, Color? textColor, Color? bgColor}) {
     return Expanded(
       child: Container(
         margin: const EdgeInsets.all(4),
@@ -104,14 +104,20 @@ class _CalculatorDialogState extends State<CalculatorDialog> {
           child: InkWell(
             onTap: () => _onPressed(text),
             child: Center(
-              child: Text(
-                text,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: textColor ?? Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
+              child: icon != null
+                  ? Icon(
+                      icon,
+                      size: 22,
+                      color: textColor ?? Theme.of(context).colorScheme.onSurface,
+                    )
+                  : Text(
+                      text,
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: textColor ?? Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
             ),
           ),
         ),
@@ -218,7 +224,7 @@ class _CalculatorDialogState extends State<CalculatorDialog> {
                     children: [
                       _buildButton('.'),
                       _buildButton('0'),
-                      _buildButton('⌫'),
+                      _buildButton('⌫', icon: Icons.backspace_outlined),
                       Expanded(
                         child: Container(
                           margin: const EdgeInsets.all(4),

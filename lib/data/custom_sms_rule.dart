@@ -19,6 +19,7 @@ class CustomSmsRule {
   final RuleTransactionType type;
   final String? category;
   final String? customDescription;
+  final String? targetAccount;
   final bool bypassOtpFilter;
   final bool isEnabled;
   final DateTime createdAt;
@@ -29,6 +30,7 @@ class CustomSmsRule {
     required this.type,
     this.category,
     this.customDescription,
+    this.targetAccount,
     this.bypassOtpFilter = false,
     this.isEnabled = true,
     required this.createdAt,
@@ -41,6 +43,7 @@ class CustomSmsRule {
       'type': type.name,
       'category': category,
       'customDescription': customDescription,
+      'targetAccount': targetAccount,
       'bypassOtpFilter': bypassOtpFilter,
       'isEnabled': isEnabled,
       'createdAt': createdAt.toIso8601String(),
@@ -57,6 +60,7 @@ class CustomSmsRule {
       ),
       category: map['category'] as String?,
       customDescription: map['customDescription'] as String?,
+      targetAccount: map['targetAccount'] as String?,
       bypassOtpFilter: map['bypassOtpFilter'] as bool? ?? false,
       isEnabled: map['isEnabled'] as bool? ?? true,
       createdAt: map['createdAt'] != null
@@ -76,6 +80,7 @@ class CustomSmsRule {
     RuleTransactionType? type,
     String? category,
     String? customDescription,
+    String? targetAccount,
     bool? bypassOtpFilter,
     bool? isEnabled,
     DateTime? createdAt,
@@ -86,6 +91,7 @@ class CustomSmsRule {
       type: type ?? this.type,
       category: category ?? this.category,
       customDescription: customDescription ?? this.customDescription,
+      targetAccount: targetAccount ?? this.targetAccount,
       bypassOtpFilter: bypassOtpFilter ?? this.bypassOtpFilter,
       isEnabled: isEnabled ?? this.isEnabled,
       createdAt: createdAt ?? this.createdAt,

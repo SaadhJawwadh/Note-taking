@@ -70,6 +70,24 @@ class HomeTipCard extends StatelessWidget {
             'Enable App Lock in Settings to protect your private notes, financial ledger, and cycle logs behind biometrics.',
       ),
       const ProTipItem(
+        icon: Icons.pie_chart_outline_rounded,
+        title: 'Split Bills & Receipt Scanner',
+        description:
+            'Split group expenses with friends, scan receipts with your camera for instant totals, and send 1-tap WhatsApp breakdown reminders.',
+      ),
+      const ProTipItem(
+        icon: Icons.account_balance_wallet_outlined,
+        title: 'Savings Vault & Dual Accounts',
+        description:
+            'Keep daily operating cash flow separate from long-term savings in Financial Manager with dedicated balance badges and instant filtering.',
+      ),
+      const ProTipItem(
+        icon: Icons.tune_rounded,
+        title: 'Train Bank SMS Rules',
+        description:
+            'Paste any bank SMS into the SMS Rules test sandbox to teach the app custom descriptions, transfer approvals, and keywords.',
+      ),
+      const ProTipItem(
         icon: Icons.water_drop_outlined,
         title: 'Discreet Cycle Alerts',
         description:

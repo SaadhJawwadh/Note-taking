@@ -15,6 +15,7 @@ class TransactionModel {
   final String? smsId;
   final DateTime? deletedAt;
   final String account;
+  final bool isAiRefined;
 
   TransactionModel({
     this.id,
@@ -26,6 +27,7 @@ class TransactionModel {
     this.smsId,
     this.deletedAt,
     this.account = AccountType.daily,
+    this.isAiRefined = false,
   });
 
   TransactionModel copy({
@@ -38,6 +40,7 @@ class TransactionModel {
     String? smsId,
     DateTime? deletedAt,
     String? account,
+    bool? isAiRefined,
   }) =>
       TransactionModel(
         id: id ?? this.id,
@@ -49,6 +52,7 @@ class TransactionModel {
         smsId: smsId ?? this.smsId,
         deletedAt: deletedAt ?? this.deletedAt,
         account: account ?? this.account,
+        isAiRefined: isAiRefined ?? this.isAiRefined,
       );
 
   static TransactionModel fromJson(Map<String, Object?> json) =>
@@ -67,6 +71,7 @@ class TransactionModel {
             ? DateTime.tryParse(json[TransactionFields.deletedAt] as String)
             : null,
         account: (json[TransactionFields.account] as String?) ?? AccountType.daily,
+        isAiRefined: ((json[TransactionFields.isAiRefined] as int?) ?? 0) == 1,
       );
 
   Map<String, Object?> toJson() => {
@@ -79,6 +84,7 @@ class TransactionModel {
         TransactionFields.smsId: smsId,
         TransactionFields.deletedAt: deletedAt?.toIso8601String(),
         TransactionFields.account: account,
+        TransactionFields.isAiRefined: isAiRefined ? 1 : 0,
       };
 }
 
@@ -93,6 +99,7 @@ class TransactionFields {
     smsId,
     deletedAt,
     account,
+    isAiRefined,
   ];
 
   static const String id = '_id';
@@ -104,4 +111,5 @@ class TransactionFields {
   static const String smsId = 'smsId';
   static const String deletedAt = 'deletedAt';
   static const String account = 'account';
+  static const String isAiRefined = 'isAiRefined';
 }

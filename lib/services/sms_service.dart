@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:another_telephony/telephony.dart' hide NetworkType;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -129,6 +130,7 @@ class SmsService {
   static var _customExpenseRules = <String>[];
   static var _customIncomeRules = <String>[];
   static var _customSmsRules = <CustomSmsRule>[];
+  static var _categoryAccountRouting = <String, String>{};
 
   static Future<void> reloadSmsContacts() async {
     final contacts = await TransactionRepository.instance.getAllSmsContacts();
@@ -159,6 +161,15 @@ class SmsService {
             })
             .whereType<CustomSmsRule>()
             .toList();
+      }
+      final routingStr = prefs.getString('categoryAccountRouting');
+      if (routingStr != null) {
+        try {
+          final Map<String, dynamic> decoded = jsonDecode(routingStr);
+          _categoryAccountRouting = decoded.map((k, v) => MapEntry(k, v.toString()));
+        } catch (_) {}
+      } else {
+        _categoryAccountRouting = {};
       }
     } catch (_) {}
   }
@@ -401,6 +412,17 @@ class SmsService {
               category = TransactionCategory.fromDescriptionCached('$description $body');
             }
 
+            final matchingRule = customSmsRules?.cast<CustomSmsRule?>().firstWhere(
+              (r) => r != null && r.isEnabled && body.toLowerCase().contains(r.keyword.toLowerCase()),
+              orElse: () => null,
+            );
+            final account = SmsParser.resolveAccount(
+              body: body,
+              category: category,
+              matchingRule: matchingRule,
+              categoryAccountRouting: _categoryAccountRouting,
+            );
+
             transaction = TransactionModel(
               amount: (aiParsed['amount'] as num).toDouble(),
               description: description,
@@ -408,6 +430,8 @@ class SmsService {
               isExpense: aiParsed['isExpense'] ?? true,
               category: category,
               smsId: smsId,
+              account: account,
+              isAiRefined: true,
             );
           }
         }
@@ -429,6 +453,7 @@ class SmsService {
         customIncomeRules: customIncomeRules,
         customSmsRules: customSmsRules,
         preferredCurrency: preferredCurrency,
+        categoryAccountRouting: _categoryAccountRouting,
       );
 
       // AI Refinement Step: Refine description of regex-parsed transaction if AI is enabled and supported
@@ -441,7 +466,7 @@ class SmsService {
               body,
             );
             if (refined != null && refined.isNotEmpty) {
-              transaction = transaction.copy(description: refined);
+              transaction = transaction.copy(description: refined, isAiRefined: true);
             }
           }
         } catch (e) {
@@ -475,6 +500,17 @@ class SmsService {
           category = TransactionCategory.fromDescriptionCached('$description $body');
         }
 
+        final matchingRule = customSmsRules?.cast<CustomSmsRule?>().firstWhere(
+          (r) => r != null && r.isEnabled && body.toLowerCase().contains(r.keyword.toLowerCase()),
+          orElse: () => null,
+        );
+        final account = SmsParser.resolveAccount(
+          body: body,
+          category: category,
+          matchingRule: matchingRule,
+          categoryAccountRouting: _categoryAccountRouting,
+        );
+
         transaction = TransactionModel(
           amount: (aiParsed['amount'] as num).toDouble(),
           description: description,
@@ -482,6 +518,8 @@ class SmsService {
           isExpense: aiParsed['isExpense'] ?? true,
           category: category,
           smsId: smsId,
+          account: account,
+          isAiRefined: true,
         );
       }
     }
@@ -766,21 +804,39 @@ class SmsService {
     return null;
   }
 
-  /// Bulk refines SMS transactions created within the specified lookback window (default: 48 hours).
+  /// Bulk refines unrefined SMS transactions created within a smart window (start of today or since last sync, max 24 hours).
   /// Returns the total count of successfully refined transactions.
   static Future<int> performBulkAiRefine({
-    Duration lookbackWindow = const Duration(hours: 48),
+    Duration? lookbackWindow,
     void Function(int processed, int total)? onProgress,
   }) async {
     final aiService = GeminiNanoService();
     if (!await aiService.isSupported()) return 0;
 
-    final cutoff = DateTime.now().subtract(lookbackWindow);
+    final now = DateTime.now();
+    final prefs = await SharedPreferences.getInstance();
+    final lastSyncStr = prefs.getString('lastSmsSyncTime');
+    final lastSync = lastSyncStr != null ? DateTime.tryParse(lastSyncStr) : null;
+    final startOfToday = DateTime(now.year, now.month, now.day);
+    final maxLookback = now.subtract(lookbackWindow ?? const Duration(hours: 24));
+
+    DateTime cutoff;
+    if (lookbackWindow != null) {
+      cutoff = now.subtract(lookbackWindow);
+    } else if (lastSync != null && lastSync.isBefore(startOfToday) && lastSync.isAfter(maxLookback)) {
+      cutoff = lastSync;
+    } else if (lastSync != null && lastSync.isAfter(startOfToday)) {
+      cutoff = startOfToday;
+    } else {
+      cutoff = startOfToday.isAfter(maxLookback) ? startOfToday : maxLookback;
+    }
+
     final allTransactions = await TransactionRepository.instance.readAllTransactions();
     final candidates = allTransactions.where((t) {
       return t.deletedAt == null &&
           t.smsId != null &&
-          t.date.isAfter(cutoff);
+          !t.isAiRefined &&
+          (t.date.isAfter(cutoff) || t.date.isAtSameMomentAs(cutoff));
     }).toList();
 
     if (candidates.isEmpty) return 0;
@@ -792,9 +848,13 @@ class SmsService {
     for (final t in candidates) {
       processedCount++;
       final refined = await refineSingleTransactionWithAi(t);
-      if (refined != null && (refined.description != t.description || refined.category != t.category)) {
-        await TransactionRepository.instance.updateTransaction(refined);
+      if (refined != null) {
+        final updated = refined.copy(isAiRefined: true);
+        await TransactionRepository.instance.updateTransaction(updated);
         refinedCount++;
+      } else {
+        // Even if description wasn't altered, mark as AI checked so we don't repeat
+        await TransactionRepository.instance.updateTransaction(t.copy(isAiRefined: true));
       }
       onProgress?.call(processedCount, candidates.length);
     }
@@ -808,21 +868,9 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
     // Setup SharedPreferences and database config for the isolate
-    final prefs = await SharedPreferences.getInstance();
-    final customExpenseRules = prefs.getStringList('customExpenseRules') ?? [];
-    final customIncomeRules = prefs.getStringList('customIncomeRules') ?? [];
-    final storedCustomSmsRules = prefs.getStringList('customSmsRules_v2');
-    final customSmsRules = storedCustomSmsRules
-        ?.map((s) {
-          try {
-            return CustomSmsRule.fromJson(s);
-          } catch (_) {
-            return null;
-          }
-        })
-        .whereType<CustomSmsRule>()
-        .toList();
-    
+    await SmsService.reloadSmsContacts();
+    await TransactionCategory.reload();
+
     final contacts = await TransactionRepository.instance.getAllSmsContacts();
     final allowed = <String>{};
     final blocked = <String>{};
@@ -834,8 +882,6 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
       }
     }
 
-    await TransactionCategory.reload();
-
     final transaction = await SmsService._parseWithAiFallback(
       body: message.body ?? '',
       address: message.address ?? '',
@@ -843,9 +889,9 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
       messageDate: message.date,
       allowedSenderIds: allowed,
       blockedSenderIds: blocked,
-      customExpenseRules: customExpenseRules,
-      customIncomeRules: customIncomeRules,
-      customSmsRules: customSmsRules,
+      customExpenseRules: SmsService._customExpenseRules,
+      customIncomeRules: SmsService._customIncomeRules,
+      customSmsRules: SmsService._customSmsRules,
     );
     if (transaction != null) {
       if (await TransactionRepository.instance.hasCrossSenderDuplicate(transaction.amount, transaction.date)) {

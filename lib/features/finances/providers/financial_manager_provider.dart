@@ -49,6 +49,8 @@ class FinancialManagerProvider extends ChangeNotifier {
   double _totalIncome = 0;
   double _totalExpense = 0;
   double _balance = 0;
+  double _dailyCashFlow = 0;
+  double _savingsVaultCashFlow = 0;
 
   List<TransactionModel> get transactions => List.unmodifiable(_filteredTransactions);
   List<TransactionModel> get trashedTransactions => List.unmodifiable(_trashedTransactions);
@@ -62,6 +64,8 @@ class FinancialManagerProvider extends ChangeNotifier {
   double get totalIncome => _totalIncome;
   double get totalExpense => _totalExpense;
   double get balance => _balance;
+  double get dailyCashFlow => _dailyCashFlow;
+  double get savingsVaultCashFlow => _savingsVaultCashFlow;
 
   Future<void> loadTransactions() async {
     _isLoading = true;
@@ -119,15 +123,26 @@ class FinancialManagerProvider extends ChangeNotifier {
   void _calculateTotals() {
     _totalIncome = 0;
     _totalExpense = 0;
+    _dailyCashFlow = 0;
+    _savingsVaultCashFlow = 0;
 
     for (final tx in _filteredTransactions) {
-      if (tx.category.toLowerCase() == 'transfer') {
-        continue;
+      final isTransfer = tx.category.toLowerCase() == 'transfer';
+      final isSavings = tx.account == 'savings' || tx.account == AccountType.savings;
+
+      if (!isTransfer) {
+        if (tx.isExpense) {
+          _totalExpense += tx.amount;
+        } else {
+          _totalIncome += tx.amount;
+        }
       }
-      if (tx.isExpense) {
-        _totalExpense += tx.amount;
+
+      final delta = tx.isExpense ? -tx.amount : tx.amount;
+      if (isSavings) {
+        _savingsVaultCashFlow += delta;
       } else {
-        _totalIncome += tx.amount;
+        _dailyCashFlow += delta;
       }
     }
 

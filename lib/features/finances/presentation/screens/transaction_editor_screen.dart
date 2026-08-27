@@ -948,16 +948,16 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                       ),
                       const SizedBox(height: 8),
                       SegmentedButton<String>(
-                        segments: const [
+                        segments: [
                           ButtonSegment(
                             value: AccountType.daily,
-                            label: Text('Daily Operating'),
-                            icon: Icon(Icons.credit_card_outlined),
+                            label: Text(settings.account1Name),
+                            icon: const Icon(Icons.credit_card_outlined),
                           ),
                           ButtonSegment(
                             value: AccountType.savings,
-                            label: Text('Savings Vault'),
-                            icon: Icon(Icons.account_balance_outlined),
+                            label: Text(settings.account2Name),
+                            icon: const Icon(Icons.account_balance_outlined),
                           ),
                         ],
                         selected: {_account},

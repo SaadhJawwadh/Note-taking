@@ -80,6 +80,57 @@ class _SmsRulesScreenState extends State<SmsRulesScreen> {
     }
   }
 
+  String _formatTimeOfDay(BuildContext context, String timeStr) {
+    try {
+      final parts = timeStr.split(':');
+      final hour = int.parse(parts[0]);
+      final minute = int.parse(parts[1]);
+      final time = TimeOfDay(hour: hour, minute: minute);
+      return time.format(context);
+    } catch (_) {
+      return timeStr;
+    }
+  }
+
+  void _showTimePicker(BuildContext context, SettingsProvider settings) async {
+    final parts = settings.dailySyncTime.split(':');
+    final initialHour = parts.isNotEmpty ? int.tryParse(parts[0]) ?? 20 : 20;
+    final initialMinute = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
+
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: initialHour, minute: initialMinute),
+    );
+
+    if (picked != null) {
+      final formattedTime =
+          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      await settings.setDailySyncTime(formattedTime);
+    }
+  }
+
+  void _performManualSmsSync(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('Scanning SMS inbox for bank transactions...'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+    final count = await SmsService.performDailySyncManualTrigger();
+    if (!mounted) return;
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          count > 0
+              ? 'Synced $count new bank transaction${count == 1 ? "" : "s"} successfully.'
+              : 'SMS scan complete. No new bank transactions found.',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -140,6 +191,58 @@ class _SmsRulesScreenState extends State<SmsRulesScreen> {
                     ),
                   ),
                 ],
+              ),
+            ),
+
+            // Automated Daily Sync Card
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppLayout.radiusL),
+                  side: BorderSide(
+                    color: cs.outlineVariant.withValues(alpha: 0.5),
+                  ),
+                ),
+                color: cs.surfaceContainerLow,
+                child: Column(
+                  children: [
+                    SwitchListTile(
+                      secondary: Icon(Icons.sync_outlined, color: cs.primary),
+                      title: const Text('Automated Daily Sync', style: TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: const Text('Scan inbox for bank transactions in background'),
+                      value: settings.dailySyncEnabled,
+                      onChanged: settings.setDailySyncEnabled,
+                    ),
+                    if (settings.dailySyncEnabled) ...[
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: Icon(Icons.access_time_outlined, color: cs.secondary),
+                        title: const Text('Auto-Sync Time', style: TextStyle(fontWeight: FontWeight.w500)),
+                        subtitle: const Text('Scheduled background execution time'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _formatTimeOfDay(context, settings.dailySyncTime),
+                              style: TextStyle(fontWeight: FontWeight.bold, color: cs.primary),
+                            ),
+                            const Icon(Icons.chevron_right, size: 20),
+                          ],
+                        ),
+                        onTap: () => _showTimePicker(context, settings),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: Icon(Icons.play_circle_outline_rounded, color: cs.primary),
+                        title: const Text('Sync SMS Now', style: TextStyle(fontWeight: FontWeight.w500)),
+                        subtitle: const Text('Instantly scan inbox for recent transactions'),
+                        onTap: () => _performManualSmsSync(context),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
 

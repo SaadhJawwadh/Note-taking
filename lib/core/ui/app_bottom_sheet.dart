@@ -47,18 +47,18 @@ class AppBottomSheet extends StatelessWidget {
 
     return Align(
       alignment: Alignment.bottomCenter,
-      child: Container(
+      child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: AppLayout.maxContentWidth),
-        decoration: BoxDecoration(
+        child: Material(
           color: theme.colorScheme.surfaceContainerHigh,
           borderRadius: const BorderRadius.vertical(
             top: Radius.circular(AppLayout.radiusXXL),
           ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
             if (showDragHandle)
               Center(
                 child: Container(
@@ -95,7 +95,8 @@ class AppBottomSheet extends StatelessWidget {
                 child: child,
               ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );

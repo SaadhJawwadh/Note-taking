@@ -8,6 +8,7 @@ import '../../../services/backup_service.dart';
 import '../../../screens/app_lock_screen.dart';
 import '../../../utils/widget_helper.dart';
 import '../../../data/custom_sms_rule.dart';
+import '../../../data/transaction_model.dart';
 import 'dart:convert';
 
 enum NoteViewMode { list, grid }
@@ -42,6 +43,22 @@ class SettingsProvider extends ChangeNotifier {
 
   bool _enableSavingsVault = true;
   bool get enableSavingsVault => _enableSavingsVault;
+
+  String _account1Name = 'Daily';
+  String get account1Name => _account1Name;
+
+  String _account2Name = 'Savings';
+  String get account2Name => _account2Name;
+
+  Map<String, String> _categoryAccountRouting = {};
+  Map<String, String> get categoryAccountRouting => Map.unmodifiable(_categoryAccountRouting);
+
+  String getAccountDisplayName(String accountKey) {
+    if (accountKey == 'savings' || accountKey == AccountType.savings) {
+      return _account2Name;
+    }
+    return _account1Name;
+  }
 
   String _defaultPaymentInfo = '';
   String get defaultPaymentInfo => _defaultPaymentInfo;
@@ -160,6 +177,15 @@ class SettingsProvider extends ChangeNotifier {
     _showFinancialManager = prefs.getBool('showFinancialManager') ?? false;
     _showSplitBills = prefs.getBool('showSplitBills') ?? false;
     _enableSavingsVault = prefs.getBool('enableSavingsVault') ?? true;
+    _account1Name = prefs.getString('account1Name') ?? 'Daily';
+    _account2Name = prefs.getString('account2Name') ?? 'Savings';
+    final routingStr = prefs.getString('categoryAccountRouting');
+    if (routingStr != null) {
+      try {
+        final Map<String, dynamic> decoded = jsonDecode(routingStr);
+        _categoryAccountRouting = decoded.map((k, v) => MapEntry(k, v.toString()));
+      } catch (_) {}
+    }
     _defaultPaymentInfo = prefs.getString('defaultPaymentInfo') ?? '';
     _currency = prefs.getString('currency') ?? 'LKR';
 
@@ -450,6 +476,35 @@ class SettingsProvider extends ChangeNotifier {
     _enableSavingsVault = enable;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('enableSavingsVault', enable);
+    notifyListeners();
+  }
+
+  Future<void> setAccount1Name(String name) async {
+    final clean = name.trim().isEmpty ? 'Daily' : name.trim();
+    _account1Name = clean;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('account1Name', clean);
+    notifyListeners();
+  }
+
+  Future<void> setAccount2Name(String name) async {
+    final clean = name.trim().isEmpty ? 'Savings' : name.trim();
+    _account2Name = clean;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('account2Name', clean);
+    notifyListeners();
+  }
+
+  Future<void> setCategoryAccountRouting(String category, String? accountKey) async {
+    final updated = Map<String, String>.from(_categoryAccountRouting);
+    if (accountKey == null || accountKey.isEmpty) {
+      updated.remove(category);
+    } else {
+      updated[category] = accountKey;
+    }
+    _categoryAccountRouting = updated;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('categoryAccountRouting', jsonEncode(updated));
     notifyListeners();
   }
 

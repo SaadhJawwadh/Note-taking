@@ -7,9 +7,7 @@ import 'dart:io';
 import 'package:provider/provider.dart';
 import '../../providers/settings_provider.dart';
 import 'package:note_taking_app/features/notes/presentation/screens/manage_tags_screen.dart';
-import 'package:note_taking_app/features/notes/presentation/screens/filtered_notes_screen.dart';
 import 'package:note_taking_app/features/finances/presentation/screens/category_management_screen.dart';
-import 'package:note_taking_app/features/finances/presentation/screens/sms_contacts_screen.dart';
 import 'package:note_taking_app/features/finances/presentation/screens/sms_rules_screen.dart';
 import 'package:note_taking_app/features/sync/presentation/screens/p2p_sync_screen.dart';
 import '../../../../screens/changelog_screen.dart';
@@ -21,13 +19,12 @@ import '../../../../core/theme/app_layout.dart';
 import '../../../../core/ui/frosted_sliver_app_bar.dart';
 import '../../../../core/ui/app_bottom_sheet.dart';
 import '../../../../core/ui/app_chip.dart';
+import '../../../../data/transaction_category.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../../screens/app_lock_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../services/backup_service.dart';
-import '../../../../services/sms_service.dart';
 import '../../../../widgets/settings_widgets.dart';
-import '../../../../widgets/sms_import_sheet.dart';
 import '../../../../widgets/recurring_rules_sheet.dart';
 import '../../../../l10n/app_localizations.dart';
 
@@ -50,11 +47,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   final List<String> _searchCategories = [
     'All',
-    'Finances',
-    'Security',
     'Appearance',
-    'Data & Backup',
-    'Notes & Tags',
+    'Features',
+    'Security',
+    'Data',
+    'About',
   ];
 
   @override
@@ -408,59 +405,86 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   onThemeModeChanged: settings.setThemeMode,
                                 ),
 
-                                // 1. Manage Features Section
+                                 // 1. Appearance & UI
                                 SettingsSection(
-                                  title: 'Manage Features',
+                                  title: 'Appearance & UI',
+                                  icon: Icons.palette_outlined,
+                                  children: [
+                                    SettingsSwitchTile(
+                                      icon: Icons.color_lens_outlined,
+                                      iconColor: colorScheme.secondary,
+                                      title: 'Dynamic Wallpaper Theme',
+                                      subtitle: 'Match app colors with device wallpaper (Android 12+)',
+                                      value: settings.useDynamicColor,
+                                      onChanged: settings.setUseDynamicColor,
+                                    ),
+                                    const _Divider(),
+                                    SettingsSegmentedTile<double>(
+                                      icon: Icons.text_fields,
+                                      title: 'Text Scale',
+                                      subtitle: 'Global font sizing',
+                                      segments: const [
+                                        ButtonSegment(value: 14.0, label: Text('Small')),
+                                        ButtonSegment(value: 16.0, label: Text('Medium')),
+                                        ButtonSegment(value: 20.0, label: Text('Large')),
+                                      ],
+                                      selectedValue: settings.textSize,
+                                      onSelectionChanged: settings.setTextSize,
+                                    ),
+                                  ],
+                                ),
+
+                                // 2. Features & Modules
+                                SettingsSection(
+                                  title: 'Features & Modules',
                                   icon: Icons.apps_outlined,
                                   children: [
+                                    // 2.1 Notes & Organization
+                                    SettingsTile(
+                                      icon: Icons.label_outline,
+                                      iconColor: colorScheme.primary,
+                                      title: 'Manage Tags',
+                                      subtitle: 'Rename or delete note tags',
+                                      showArrow: true,
+                                      onTap: () => AppRoute.push(context, const ManageTagsScreen()),
+                                    ),
+                                    const _Divider(),
+                                    SettingsTile(
+                                      icon: Icons.auto_delete_outlined,
+                                      iconColor: colorScheme.tertiary,
+                                      title: 'Trash Auto-Purge',
+                                      subtitle: 'Automatic deletion schedule for trash',
+                                      valueBadge: settings.trashAutoPurgeDays <= 0
+                                          ? 'Disabled'
+                                          : '${settings.trashAutoPurgeDays} Days',
+                                      showArrow: true,
+                                      onTap: () => _showTrashPurgeDialog(context, settings),
+                                    ),
+                                    if (settings.isDeviceAiSupported) ...[
+                                      const _Divider(),
+                                      SettingsSwitchTile(
+                                        icon: Icons.auto_awesome_outlined,
+                                        iconColor: colorScheme.primary,
+                                        title: 'Gemini Nano AI',
+                                        subtitle: 'Enable offline summaries, tag suggestions & smart SMS parsing',
+                                        value: settings.useOnDeviceAi,
+                                        onChanged: settings.setUseOnDeviceAi,
+                                      ),
+                                    ],
+
+                                    // 2.2 Financial Manager
+                                    const _Divider(),
                                     SettingsSwitchTile(
                                       icon: Icons.account_balance_wallet_outlined,
                                       iconColor: colorScheme.primary,
                                       iconBackgroundColor: colorScheme.primaryContainer.withValues(alpha: 0.5),
                                       title: 'Financial Manager',
-                                      subtitle: 'Enable expense tracking & SMS ledger',
+                                      subtitle: 'Expense tracking, SMS bank ledger & budgets',
                                       value: settings.showFinancialManager,
                                       onChanged: settings.setShowFinancialManager,
                                     ),
-                                    const _Divider(),
-                                    SettingsSwitchTile(
-                                      icon: Icons.calendar_month_outlined,
-                                      iconColor: colorScheme.secondary,
-                                      iconBackgroundColor: colorScheme.secondaryContainer.withValues(alpha: 0.5),
-                                      title: 'Period Tracker',
-                                      subtitle: 'Optional cycle tracking & predictions',
-                                      value: settings.isPeriodTrackerEnabled,
-                                      onChanged: settings.setIsPeriodTrackerEnabled,
-                                    ),
-                                    const _Divider(),
-                                    SettingsSwitchTile(
-                                      icon: Icons.pie_chart_outline_rounded,
-                                      iconColor: colorScheme.tertiary,
-                                      iconBackgroundColor: colorScheme.tertiaryContainer.withValues(alpha: 0.5),
-                                      title: 'Split Bills & Shared Debts',
-                                      subtitle: 'Group bill splitting, friend balances & receipt scanner',
-                                      value: settings.showSplitBills,
-                                      onChanged: settings.setShowSplitBills,
-                                    ),
-                                    const _Divider(),
-                                    SettingsSwitchTile(
-                                      icon: Icons.account_balance_wallet_outlined,
-                                      iconColor: colorScheme.secondary,
-                                      iconBackgroundColor: colorScheme.secondaryContainer.withValues(alpha: 0.5),
-                                      title: 'Savings Vault & Dual Accounts',
-                                      subtitle: 'Separate daily operating cash flow from long-term savings',
-                                      value: settings.enableSavingsVault,
-                                      onChanged: settings.setEnableSavingsVault,
-                                    ),
-                                  ],
-                                ),
-
-                                // 2. Financial Manager Settings
-                                if (settings.showFinancialManager)
-                                  SettingsSection(
-                                    title: 'Financial Manager Settings',
-                                    icon: Icons.wallet_outlined,
-                                    children: [
+                                    if (settings.showFinancialManager) ...[
+                                      const _Divider(),
                                       SettingsTile(
                                         icon: Icons.currency_exchange_outlined,
                                         iconColor: colorScheme.primary,
@@ -504,33 +528,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       ),
                                       const _Divider(),
                                       SettingsSwitchTile(
-                                        icon: Icons.sync_outlined,
-                                        iconColor: colorScheme.primary,
-                                        title: 'SMS Auto-Sync',
-                                        subtitle: 'Import bank transactions automatically in background',
-                                        value: settings.dailySyncEnabled,
-                                        onChanged: settings.setDailySyncEnabled,
+                                        icon: Icons.account_balance_wallet_outlined,
+                                        iconColor: colorScheme.secondary,
+                                        iconBackgroundColor: colorScheme.secondaryContainer.withValues(alpha: 0.5),
+                                        title: 'Savings Vault & Dual Accounts',
+                                        subtitle: 'Separate daily operating cash flow from long-term savings',
+                                        value: settings.enableSavingsVault,
+                                        onChanged: settings.setEnableSavingsVault,
                                       ),
-                                      if (settings.dailySyncEnabled) ...[
+                                      if (settings.enableSavingsVault) ...[
                                         const _Divider(),
                                         SettingsTile(
-                                          icon: Icons.access_time_outlined,
-                                          iconColor: colorScheme.secondary,
-                                          title: 'Auto-Sync Time',
-                                          subtitle: 'Scheduled background execution time',
-                                          valueBadge: _formatTimeOfDay(context, settings.dailySyncTime),
-                                          showArrow: true,
-                                          onTap: () => _showTimePicker(context, settings),
-                                        ),
-                                        const _Divider(),
-                                        SettingsTile(
-                                          icon: Icons.play_circle_outline_rounded,
+                                          icon: Icons.drive_file_rename_outline_rounded,
                                           iconColor: colorScheme.primary,
-                                          title: 'Sync SMS Now',
-                                          subtitle: 'Instantly scan inbox for recent transactions',
-                                          onTap: () => _performManualSmsSync(context),
+                                          title: 'Account Names & Routing',
+                                          subtitle: '${settings.account1Name} & ${settings.account2Name} • Category defaults',
+                                          showArrow: true,
+                                          onTap: () => _showAccountNamingAndRoutingSheet(context, settings),
                                         ),
                                       ],
+                                      const _Divider(),
+                                      SettingsSwitchTile(
+                                        icon: Icons.pie_chart_outline_rounded,
+                                        iconColor: colorScheme.tertiary,
+                                        iconBackgroundColor: colorScheme.tertiaryContainer.withValues(alpha: 0.5),
+                                        title: 'Split Bills & Shared Debts',
+                                        subtitle: 'Group bill splitting, friend balances & receipt scanner',
+                                        value: settings.showSplitBills,
+                                        onChanged: settings.setShowSplitBills,
+                                      ),
                                       if (settings.showSplitBills) ...[
                                         const _Divider(),
                                         SettingsTile(
@@ -545,14 +571,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         ),
                                       ],
                                     ],
-                                  ),
 
-                                // 3. Period Tracker Settings
-                                if (settings.isPeriodTrackerEnabled)
-                                  SettingsSection(
-                                    title: 'Period Tracker Settings',
-                                    icon: Icons.calendar_today_outlined,
-                                    children: [
+                                    // 2.3 Period Tracker
+                                    const _Divider(),
+                                    SettingsSwitchTile(
+                                      icon: Icons.calendar_month_outlined,
+                                      iconColor: colorScheme.secondary,
+                                      iconBackgroundColor: colorScheme.secondaryContainer.withValues(alpha: 0.5),
+                                      title: 'Period Tracker',
+                                      subtitle: 'Optional cycle tracking & predictions',
+                                      value: settings.isPeriodTrackerEnabled,
+                                      onChanged: settings.setIsPeriodTrackerEnabled,
+                                    ),
+                                    if (settings.isPeriodTrackerEnabled) ...[
+                                      const _Divider(),
                                       SettingsTile(
                                         icon: Icons.notifications_none_outlined,
                                         iconColor: colorScheme.secondary,
@@ -563,9 +595,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         onTap: () => _showNotificationTextDialog(context, settings),
                                       ),
                                     ],
-                                  ),
+                                  ],
+                                ),
 
-                                // 4. Privacy & Security
+                                // 3. Privacy & Security
                                 SettingsSection(
                                   title: 'Privacy & Security',
                                   icon: Icons.security_outlined,
@@ -602,170 +635,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ],
                                 ),
 
-                                // 5. Appearance & UI
+                                // 4. Data, Sync & Backups
                                 SettingsSection(
-                                  title: 'Appearance & UI',
-                                  icon: Icons.palette_outlined,
-                                  children: [
-                                    SettingsSegmentedTile<ThemeMode>(
-                                      icon: Icons.brightness_6_outlined,
-                                      title: 'Theme Preference',
-                                      subtitle: 'App visual color theme',
-                                      segments: const [
-                                        ButtonSegment(
-                                          value: ThemeMode.system,
-                                          icon: Icon(Icons.brightness_auto_rounded, size: 16),
-                                          label: Text('System'),
-                                        ),
-                                        ButtonSegment(
-                                          value: ThemeMode.light,
-                                          icon: Icon(Icons.light_mode_rounded, size: 16),
-                                          label: Text('Light'),
-                                        ),
-                                        ButtonSegment(
-                                          value: ThemeMode.dark,
-                                          icon: Icon(Icons.dark_mode_rounded, size: 16),
-                                          label: Text('Dark'),
-                                        ),
-                                      ],
-                                      selectedValue: settings.themeMode,
-                                      onSelectionChanged: settings.setThemeMode,
-                                    ),
-                                    const _Divider(),
-                                    SettingsSwitchTile(
-                                      icon: Icons.color_lens_outlined,
-                                      iconColor: colorScheme.secondary,
-                                      title: 'Dynamic Wallpaper Theme',
-                                      subtitle: 'Match app colors with device wallpaper (Android 12+)',
-                                      value: settings.useDynamicColor,
-                                      onChanged: settings.setUseDynamicColor,
-                                    ),
-                                    const _Divider(),
-                                    SettingsSegmentedTile<double>(
-                                      icon: Icons.text_fields,
-                                      title: 'Text Scale',
-                                      subtitle: 'Global font sizing',
-                                      segments: const [
-                                        ButtonSegment(value: 14.0, label: Text('Small')),
-                                        ButtonSegment(value: 16.0, label: Text('Medium')),
-                                        ButtonSegment(value: 20.0, label: Text('Large')),
-                                      ],
-                                      selectedValue: settings.textSize,
-                                      onSelectionChanged: settings.setTextSize,
-                                    ),
-                                  ],
-                                ),
-
-                                // 6. Organization & Folders
-                                SettingsSection(
-                                  title: 'Organization & Folders',
-                                  icon: Icons.folder_open_outlined,
-                                  children: [
-                                    SettingsTile(
-                                      icon: Icons.label_outline,
-                                      iconColor: colorScheme.primary,
-                                      title: 'Manage Tags',
-                                      subtitle: 'Rename or delete note tags',
-                                      showArrow: true,
-                                      onTap: () => AppRoute.push(context, const ManageTagsScreen()),
-                                    ),
-                                    const _Divider(),
-                                    SettingsTile(
-                                      icon: Icons.archive_outlined,
-                                      iconColor: colorScheme.secondary,
-                                      title: 'Archive',
-                                      subtitle: 'View archived notes',
-                                      showArrow: true,
-                                      onTap: () => AppRoute.push(
-                                        context,
-                                        const FilteredNotesScreen(filterType: FilterType.archived),
-                                      ),
-                                    ),
-                                    const _Divider(),
-                                    SettingsTile(
-                                      icon: Icons.delete_outline,
-                                      iconColor: colorScheme.error,
-                                      iconBackgroundColor: colorScheme.errorContainer.withValues(alpha: 0.4),
-                                      title: 'Trash',
-                                      subtitle: 'View deleted notes',
-                                      showArrow: true,
-                                      onTap: () => AppRoute.push(
-                                        context,
-                                        const FilteredNotesScreen(filterType: FilterType.trash),
-                                      ),
-                                    ),
-                                    const _Divider(),
-                                    SettingsTile(
-                                      icon: Icons.auto_delete_outlined,
-                                      iconColor: colorScheme.tertiary,
-                                      title: 'Trash Auto-Purge',
-                                      subtitle: 'Automatic deletion schedule for trash',
-                                      valueBadge: settings.trashAutoPurgeDays <= 0
-                                          ? 'Disabled'
-                                          : '${settings.trashAutoPurgeDays} Days',
-                                      showArrow: true,
-                                      onTap: () => _showTrashPurgeDialog(context, settings),
-                                    ),
-                                  ],
-                                ),
-
-                                // 7. Local AI Features
-                                SettingsSection(
-                                  title: 'Local AI Features',
-                                  icon: Icons.psychology_outlined,
-                                  children: [
-                                    if (settings.isDeviceAiSupported)
-                                      SettingsSwitchTile(
-                                        icon: Icons.auto_awesome_outlined,
-                                        iconColor: colorScheme.primary,
-                                        title: 'Gemini Nano AI',
-                                        subtitle: 'Enable offline summaries, tag suggestions & smart SMS parsing',
-                                        value: settings.useOnDeviceAi,
-                                        onChanged: settings.setUseOnDeviceAi,
-                                      )
-                                    else
-                                      Material(
-                                        color: Colors.transparent,
-                                        child: ListTile(
-                                          leading: Container(
-                                            padding: const EdgeInsets.all(9),
-                                            decoration: BoxDecoration(
-                                              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                                              borderRadius: BorderRadius.circular(AppLayout.radiusM),
-                                            ),
-                                            child: Icon(
-                                              Icons.auto_awesome_outlined,
-                                              size: 20,
-                                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.38),
-                                            ),
-                                          ),
-                                          title: Text(
-                                            'Gemini Nano Offline AI',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w500,
-                                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.38),
-                                            ),
-                                          ),
-                                          subtitle: Text(
-                                            'Unsupported on this device (requires compatible NPU and Android AI Core)',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.38),
-                                            ),
-                                          ),
-                                          trailing: Icon(
-                                            Icons.info_outline,
-                                            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.38),
-                                          ),
-                                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-
-                                // 8. Data & Backup
-                                SettingsSection(
-                                  title: 'Data & Backup',
+                                  title: 'Data, Sync & Backups',
                                   icon: Icons.cloud_sync_outlined,
                                   children: [
                                     SettingsTile(
@@ -842,7 +714,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ],
                                 ),
 
-                                // 9. About Section
+                                // 5. About Section
                                 SettingsSection(
                                   title: 'About',
                                   icon: Icons.info_outline_rounded,
@@ -943,278 +815,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     }
 
-    // 1. Manage Features
-    addTile(
-      SettingsSwitchTile(
-        icon: Icons.account_balance_wallet_outlined,
-        title: 'Financial Manager',
-        subtitle: 'Enable expense tracking',
-        value: settings.showFinancialManager,
-        onChanged: settings.setShowFinancialManager,
-      ),
-      'Finances',
-      'Financial Manager',
-      'Enable expense tracking',
-    );
-    addTile(
-      SettingsSwitchTile(
-        icon: Icons.calendar_month_outlined,
-        title: 'Period Tracker',
-        subtitle: 'Optional cycle tracking',
-        value: settings.isPeriodTrackerEnabled,
-        onChanged: settings.setIsPeriodTrackerEnabled,
-      ),
-      'Finances',
-      'Period Tracker',
-      'Optional cycle tracking',
-    );
-    addTile(
-      SettingsSwitchTile(
-        icon: Icons.pie_chart_outline_rounded,
-        title: 'Split Bills & Shared Debts',
-        subtitle: 'Group bill splitting & debt tracking',
-        value: settings.showSplitBills,
-        onChanged: settings.setShowSplitBills,
-      ),
-      'Finances',
-      'Split Bills & Shared Debts',
-      'Group bill splitting & debt tracking',
-    );
-    addTile(
-      SettingsSwitchTile(
-        icon: Icons.account_balance_wallet_outlined,
-        title: 'Savings Vault & Dual Accounts',
-        subtitle: 'Separate daily operating cash flow from long-term savings',
-        value: settings.enableSavingsVault,
-        onChanged: settings.setEnableSavingsVault,
-      ),
-      'Finances',
-      'Savings Vault & Dual Accounts',
-      'Separate daily operating cash flow from long-term savings',
-    );
-
-    // 2. Financial Manager Settings
-    if (settings.showFinancialManager) {
-      if (settings.showSplitBills) {
-        addTile(
-          SettingsTile(
-            icon: Icons.account_balance_outlined,
-            title: 'Default Payment Details',
-            subtitle: settings.defaultPaymentInfo.isNotEmpty
-                ? settings.defaultPaymentInfo
-                : 'Set bank / mobile pay details for WhatsApp split reminders',
-            showArrow: true,
-            onTap: () => _showDefaultPaymentInfoDialog(context, settings),
-          ),
-          'Finances',
-          'Default Payment Details',
-          settings.defaultPaymentInfo,
-        );
-      }
-      addTile(
-        SettingsTile(
-          icon: Icons.currency_exchange_outlined,
-          title: 'Currency',
-          subtitle: settings.currency,
-          valueBadge: settings.currency,
-          showArrow: true,
-          onTap: () => _showCurrencyPicker(context, settings),
-        ),
-        'Finances',
-        'Currency',
-        settings.currency,
-      );
-      addTile(
-        SettingsTile(
-          icon: Icons.sms_outlined,
-          title: 'Advanced SMS Import',
-          subtitle: 'Fetch past bank transactions from messages',
-          showArrow: true,
-          onTap: () => showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            showDragHandle: true,
-            builder: (_) => const SmsImportSheet(),
-          ),
-        ),
-        'Finances',
-        'Advanced SMS Import',
-        'Fetch past bank transactions from messages',
-      );
-      addTile(
-        SettingsTile(
-          icon: Icons.category_outlined,
-          title: 'Manage Categories',
-          subtitle: 'Customise keywords and create new categories',
-          showArrow: true,
-          onTap: () => AppRoute.push(context, const CategoryManagementScreen()),
-        ),
-        'Finances',
-        'Manage Categories',
-        'Customise keywords and create new categories',
-      );
-      addTile(
-        SettingsTile(
-          icon: Icons.contacts_outlined,
-          title: 'SMS Contacts',
-          subtitle: 'Manage bank & custom senders for auto-import',
-          showArrow: true,
-          onTap: () => AppRoute.push(context, const SmsContactsScreen()),
-        ),
-        'Finances',
-        'SMS Contacts',
-        'Manage bank & custom senders for auto-import',
-      );
-      addTile(
-        SettingsTile(
-          icon: Icons.event_repeat_outlined,
-          title: 'Recurring Transactions',
-          subtitle: 'Manage automatically repeating entries',
-          showArrow: true,
-          onTap: () => showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            showDragHandle: true,
-            builder: (_) => const RecurringRulesSheet(),
-          ),
-        ),
-        'Finances',
-        'Recurring Transactions',
-        'Manage automatically repeating entries',
-      );
-      addTile(
-        SettingsTile(
-          icon: Icons.rule_folder_outlined,
-          title: 'SMS Import Rules',
-          subtitle: 'Manage auto-categorization and transaction type rules',
-          showArrow: true,
-          onTap: () => AppRoute.push(context, const SmsRulesScreen()),
-        ),
-        'Finances',
-        'SMS Import Rules',
-        'Manage auto-categorization and transaction type rules',
-      );
-      addTile(
-        SettingsTile(
-          icon: Icons.file_upload_outlined,
-          title: 'Import Transactions (CSV)',
-          subtitle: 'Import ledger records from a CSV file',
-          showArrow: true,
-          onTap: () => BackupService.importTransactionsFromCsv(context),
-        ),
-        'Finances',
-        'Import Transactions (CSV)',
-        'Import ledger records from a CSV file',
-      );
-      addTile(
-        SettingsSwitchTile(
-          icon: Icons.sync_outlined,
-          title: 'SMS Auto-Sync',
-          subtitle: 'Import bank transactions automatically in background',
-          value: settings.dailySyncEnabled,
-          onChanged: settings.setDailySyncEnabled,
-        ),
-        'Finances',
-        'SMS Auto-Sync',
-        'Import bank transactions automatically in background',
-      );
-      if (settings.dailySyncEnabled) {
-        final timeSub = _formatTimeOfDay(context, settings.dailySyncTime);
-        addTile(
-          SettingsTile(
-            icon: Icons.access_time_outlined,
-            title: 'Auto-Sync Time',
-            subtitle: timeSub,
-            valueBadge: timeSub,
-            showArrow: true,
-            onTap: () => _showTimePicker(context, settings),
-          ),
-          'Finances',
-          'Auto-Sync Time',
-          timeSub,
-        );
-        addTile(
-          SettingsTile(
-            icon: Icons.sync,
-            title: 'Test Auto-Sync Now',
-            subtitle: 'Run background SMS sync test now to verify functionality',
-            onTap: () async {
-              await HapticFeedback.mediumImpact();
-              if (!context.mounted) return;
-              final messenger = ScaffoldMessenger.of(context);
-              messenger.showSnackBar(const SnackBar(content: Text('Running SMS sync test...')));
-              final success = await SmsService.performDailyTransactionSync();
-              messenger.showSnackBar(SnackBar(
-                content: Text(success ? 'SMS sync test completed successfully.' : 'SMS sync test completed.'),
-              ));
-            },
-          ),
-          'Finances',
-          'Test Auto-Sync Now',
-          'Run background SMS sync test now',
-        );
-      }
-    }
-
-    // 3. Period Tracker Settings
-    if (settings.isPeriodTrackerEnabled) {
-      addTile(
-        SettingsTile(
-          icon: Icons.notifications_none_outlined,
-          title: 'Discreet Notification Text',
-          subtitle: settings.discreetNotificationText,
-          valueBadge: settings.discreetNotificationText,
-          showArrow: true,
-          onTap: () => _showNotificationTextDialog(context, settings),
-        ),
-        'Finances',
-        'Discreet Notification Text',
-        settings.discreetNotificationText,
-      );
-    }
-
-    // 4. Privacy & Security
-    addTile(
-      SettingsSwitchTile(
-        icon: Icons.lock_outline,
-        title: 'App Lock',
-        subtitle: 'Require authentication to open app',
-        value: settings.appLockEnabled,
-        onChanged: settings.setAppLockEnabled,
-      ),
-      'Security',
-      'App Lock',
-      'Require authentication to open app',
-    );
-    if (settings.appLockEnabled) {
-      addTile(
-        SettingsSwitchTile(
-          icon: Icons.fingerprint_outlined,
-          title: 'Use Biometrics',
-          subtitle: 'Require biometric scan specifically',
-          value: settings.useBiometrics,
-          onChanged: settings.setUseBiometrics,
-        ),
-        'Security',
-        'Use Biometrics',
-        'Require biometric scan specifically',
-      );
-      addTile(
-        SettingsTile(
-          icon: Icons.timer_outlined,
-          title: 'Auto-Lock Timeout',
-          subtitle: _getTimeoutLabel(settings.appLockTimeout),
-          valueBadge: _getTimeoutLabel(settings.appLockTimeout),
-          showArrow: true,
-          onTap: () => _showTimeoutPicker(context, settings),
-        ),
-        'Security',
-        'Auto-Lock Timeout',
-        _getTimeoutLabel(settings.appLockTimeout),
-      );
-    }
-
-    // 5. Appearance & UI
+    // 1. Appearance
     addTile(
       SettingsTile(
         icon: Icons.palette_outlined,
@@ -1266,48 +867,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
       'Rotate actionable powerup tips every 3 days',
     );
 
-    // 6. Organization & Folders
+    // 2. Features & Modules
     addTile(
       SettingsTile(
         icon: Icons.label_outline,
         title: 'Manage Tags',
-        subtitle: 'Rename or delete tags',
+        subtitle: 'Rename or delete note tags',
         showArrow: true,
         onTap: () => AppRoute.push(context, const ManageTagsScreen()),
       ),
-      'Notes & Tags',
+      'Features',
       'Manage Tags',
-      'Rename or delete tags',
-    );
-    addTile(
-      SettingsTile(
-        icon: Icons.archive_outlined,
-        title: 'Archive',
-        subtitle: 'View archived notes',
-        showArrow: true,
-        onTap: () => AppRoute.push(
-          context,
-          const FilteredNotesScreen(filterType: FilterType.archived),
-        ),
-      ),
-      'Notes & Tags',
-      'Archive',
-      'View archived notes',
-    );
-    addTile(
-      SettingsTile(
-        icon: Icons.delete_outline,
-        title: 'Trash',
-        subtitle: 'View deleted notes',
-        showArrow: true,
-        onTap: () => AppRoute.push(
-          context,
-          const FilteredNotesScreen(filterType: FilterType.trash),
-        ),
-      ),
-      'Notes & Tags',
-      'Trash',
-      'View deleted notes',
+      'Rename or delete note tags',
     );
     addTile(
       SettingsTile(
@@ -1322,12 +893,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         showArrow: true,
         onTap: () => _showTrashPurgeDialog(context, settings),
       ),
-      'Notes & Tags',
+      'Features',
       'Trash Auto-Purge',
       'Automatic deletion schedule for trash',
     );
-
-    // 7. Local AI
     if (settings.isDeviceAiSupported) {
       addTile(
         SettingsSwitchTile(
@@ -1337,36 +906,238 @@ class _SettingsScreenState extends State<SettingsScreen> {
           value: settings.useOnDeviceAi,
           onChanged: settings.setUseOnDeviceAi,
         ),
-        'Data & Backup',
+        'Features',
         'Gemini Nano AI',
         'Enable offline summaries, tag suggestions & smart SMS parsing',
       );
     }
+    addTile(
+      SettingsSwitchTile(
+        icon: Icons.account_balance_wallet_outlined,
+        title: 'Financial Manager',
+        subtitle: 'Expense tracking, SMS bank ledger & budgets',
+        value: settings.showFinancialManager,
+        onChanged: settings.setShowFinancialManager,
+      ),
+      'Features',
+      'Financial Manager',
+      'Expense tracking, SMS bank ledger & budgets',
+    );
+    if (settings.showFinancialManager) {
+      addTile(
+        SettingsTile(
+          icon: Icons.currency_exchange_outlined,
+          title: 'Currency',
+          subtitle: settings.currency,
+          valueBadge: settings.currency,
+          showArrow: true,
+          onTap: () => _showCurrencyPicker(context, settings),
+        ),
+        'Features',
+        'Currency',
+        settings.currency,
+      );
+      addTile(
+        SettingsTile(
+          icon: Icons.mark_chat_unread_outlined,
+          title: 'SMS & Bank Automation',
+          subtitle: 'Auto-sync, import rules, sender blocklist & parser testing',
+          showArrow: true,
+          onTap: () => AppRoute.push(context, const SmsRulesScreen()),
+        ),
+        'Features',
+        'SMS & Bank Automation',
+        'Auto-sync, import rules, sender blocklist & parser testing',
+      );
+      addTile(
+        SettingsTile(
+          icon: Icons.category_outlined,
+          title: 'Categories & Budgets',
+          subtitle: 'Customise keywords, budget allocations & colors',
+          showArrow: true,
+          onTap: () => AppRoute.push(context, const CategoryManagementScreen()),
+        ),
+        'Features',
+        'Categories & Budgets',
+        'Customise keywords, budget allocations & colors',
+      );
+      addTile(
+        SettingsTile(
+          icon: Icons.event_repeat_outlined,
+          title: 'Recurring Subscriptions',
+          subtitle: 'Manage repeating bills, salaries & automated rules',
+          showArrow: true,
+          onTap: () => showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            showDragHandle: true,
+            builder: (_) => const RecurringRulesSheet(),
+          ),
+        ),
+        'Features',
+        'Recurring Subscriptions',
+        'Manage repeating bills, salaries & automated rules',
+      );
+      addTile(
+        SettingsSwitchTile(
+          icon: Icons.account_balance_wallet_outlined,
+          title: 'Savings Vault & Dual Accounts',
+          subtitle: 'Separate daily operating cash flow from long-term savings',
+          value: settings.enableSavingsVault,
+          onChanged: settings.setEnableSavingsVault,
+        ),
+        'Features',
+        'Savings Vault & Dual Accounts',
+        'Separate daily operating cash flow from long-term savings',
+      );
+      if (settings.enableSavingsVault) {
+        addTile(
+          SettingsTile(
+            icon: Icons.drive_file_rename_outline_rounded,
+            title: 'Account Names & Routing',
+            subtitle: '${settings.account1Name} & ${settings.account2Name} • Category defaults',
+            showArrow: true,
+            onTap: () => _showAccountNamingAndRoutingSheet(context, settings),
+          ),
+          'Features',
+          'Account Names & Routing',
+          '${settings.account1Name} ${settings.account2Name}',
+        );
+      }
+      addTile(
+        SettingsSwitchTile(
+          icon: Icons.pie_chart_outline_rounded,
+          title: 'Split Bills & Shared Debts',
+          subtitle: 'Group bill splitting, friend balances & receipt scanner',
+          value: settings.showSplitBills,
+          onChanged: settings.setShowSplitBills,
+        ),
+        'Features',
+        'Split Bills & Shared Debts',
+        'Group bill splitting, friend balances & receipt scanner',
+      );
+      if (settings.showSplitBills) {
+        addTile(
+          SettingsTile(
+            icon: Icons.account_balance_outlined,
+            title: 'Default Payment Details',
+            subtitle: settings.defaultPaymentInfo.isNotEmpty
+                ? settings.defaultPaymentInfo
+                : 'Set bank / mobile pay details for WhatsApp split reminders',
+            showArrow: true,
+            onTap: () => _showDefaultPaymentInfoDialog(context, settings),
+          ),
+          'Features',
+          'Default Payment Details',
+          settings.defaultPaymentInfo,
+        );
+      }
+    }
+    addTile(
+      SettingsSwitchTile(
+        icon: Icons.calendar_month_outlined,
+        title: 'Period Tracker',
+        subtitle: 'Optional cycle tracking & predictions',
+        value: settings.isPeriodTrackerEnabled,
+        onChanged: settings.setIsPeriodTrackerEnabled,
+      ),
+      'Features',
+      'Period Tracker',
+      'Optional cycle tracking & predictions',
+    );
+    if (settings.isPeriodTrackerEnabled) {
+      addTile(
+        SettingsTile(
+          icon: Icons.notifications_none_outlined,
+          title: 'Discreet Notification Text',
+          subtitle: settings.discreetNotificationText,
+          valueBadge: settings.discreetNotificationText,
+          showArrow: true,
+          onTap: () => _showNotificationTextDialog(context, settings),
+        ),
+        'Features',
+        'Discreet Notification Text',
+        settings.discreetNotificationText,
+      );
+    }
 
-    // 8. Data & Backup
+    // 3. Privacy & Security
+    addTile(
+      SettingsSwitchTile(
+        icon: Icons.lock_outline,
+        title: 'App Lock',
+        subtitle: 'Require authentication to open app',
+        value: settings.appLockEnabled,
+        onChanged: settings.setAppLockEnabled,
+      ),
+      'Security',
+      'App Lock',
+      'Require authentication to open app',
+    );
+    if (settings.appLockEnabled) {
+      addTile(
+        SettingsSwitchTile(
+          icon: Icons.fingerprint_outlined,
+          title: 'Use Biometrics',
+          subtitle: 'Require biometric scan specifically',
+          value: settings.useBiometrics,
+          onChanged: settings.setUseBiometrics,
+        ),
+        'Security',
+        'Use Biometrics',
+        'Require biometric scan specifically',
+      );
+      addTile(
+        SettingsTile(
+          icon: Icons.timer_outlined,
+          title: 'Auto-Lock Timeout',
+          subtitle: _getTimeoutLabel(settings.appLockTimeout),
+          valueBadge: _getTimeoutLabel(settings.appLockTimeout),
+          showArrow: true,
+          onTap: () => _showTimeoutPicker(context, settings),
+        ),
+        'Security',
+        'Auto-Lock Timeout',
+        _getTimeoutLabel(settings.appLockTimeout),
+      );
+    }
+
+    // 4. Data, Sync & Backups
+    addTile(
+      SettingsTile(
+        icon: Icons.devices_rounded,
+        title: 'P2P Device Sync',
+        subtitle: 'Sync notes between devices (Local / Relay)',
+        showArrow: true,
+        onTap: () => AppRoute.push(context, const P2pSyncScreen()),
+      ),
+      'Data',
+      'P2P Device Sync',
+      'Sync notes between devices (Local / Relay)',
+    );
     addTile(
       SettingsTile(
         icon: Icons.download_outlined,
         title: 'Export Backup',
-        subtitle: 'Save notes to a JSON file',
+        subtitle: 'Save notes to an encrypted JSON file',
         showArrow: true,
         onTap: () => BackupService.exportBackup(context),
       ),
-      'Data & Backup',
+      'Data',
       'Export Backup',
-      'Save notes to a JSON file',
+      'Save notes to an encrypted JSON file',
     );
     addTile(
       SettingsTile(
         icon: Icons.upload_outlined,
         title: 'Import Backup',
-        subtitle: 'Restore from a JSON file',
+        subtitle: 'Restore from a JSON backup file',
         showArrow: true,
         onTap: () => BackupService.importBackup(context),
       ),
-      'Data & Backup',
+      'Data',
       'Import Backup',
-      'Restore from a JSON file',
+      'Restore from a JSON backup file',
     );
     if (!kIsWeb && Platform.isAndroid) {
       addTile(
@@ -1380,7 +1151,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             await syncAutoBackupSchedule();
           },
         ),
-        'Data & Backup',
+        'Data',
         'Auto Backup',
         'Schedule automatic backups',
       );
@@ -1394,7 +1165,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             showArrow: true,
             onTap: () => _showFrequencyPicker(context, settings),
           ),
-          'Data & Backup',
+          'Data',
           'Backup Frequency',
           _getFrequencyLabel(settings.autoBackupFrequency),
         );
@@ -1406,14 +1177,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             showArrow: true,
             onTap: () => _showBackupLocationPicker(context, settings),
           ),
-          'Data & Backup',
+          'Data',
           'Backup Location',
           settings.autoBackupPath ?? 'Secure App Storage (Resilient)',
         );
       }
     }
 
-    // 9. About
+    // 5. About
     addTile(
       SettingsTile(
         icon: Icons.star_outline_rounded,
@@ -1426,7 +1197,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         onTap: () => _launchUrl('https://play.google.com/store/apps/details?id=com.saadhjawwadh.notebook'),
       ),
-      'Notes & Tags',
+      'About',
       'Rate & Feedback',
       'Love the app? Rate us on the Play Store',
     );
@@ -1438,7 +1209,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         showArrow: true,
         onTap: () => AppRoute.push(context, const ChangelogScreen()),
       ),
-      'Notes & Tags',
+      'About',
       'Changelog',
       'View version release logs',
     );
@@ -1456,7 +1227,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           );
         },
       ),
-      'Notes & Tags',
+      'About',
       'Replay Setup & Intro',
       'Configure theme, modules, and AI assistant',
     );
@@ -1918,57 +1689,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  String _formatTimeOfDay(BuildContext context, String timeStr) {
-    try {
-      final parts = timeStr.split(':');
-      final hour = int.parse(parts[0]);
-      final minute = int.parse(parts[1]);
-      final time = TimeOfDay(hour: hour, minute: minute);
-      return time.format(context);
-    } catch (_) {
-      return timeStr;
-    }
-  }
-
-  void _showTimePicker(BuildContext context, SettingsProvider settings) async {
-    final parts = settings.dailySyncTime.split(':');
-    final initialHour = parts.isNotEmpty ? int.tryParse(parts[0]) ?? 20 : 20;
-    final initialMinute = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
-
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(hour: initialHour, minute: initialMinute),
-    );
-
-    if (picked != null) {
-      final formattedTime =
-          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
-      await settings.setDailySyncTime(formattedTime);
-    }
-  }
-
-  void _performManualSmsSync(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Scanning SMS inbox for bank transactions...'),
-        duration: Duration(seconds: 2),
-      ),
-    );
-    final count = await SmsService.performDailySyncManualTrigger();
-    if (!context.mounted) return;
-    messenger.clearSnackBars();
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          count > 0
-              ? 'Synced $count new bank transaction${count == 1 ? "" : "s"} successfully.'
-              : 'SMS scan complete. No new bank transactions found.',
-        ),
-      ),
-    );
-  }
-
   void _showDefaultPaymentInfoDialog(BuildContext context, SettingsProvider settings) async {
     final messenger = ScaffoldMessenger.of(context);
     final controller = TextEditingController(text: settings.defaultPaymentInfo);
@@ -2015,6 +1735,162 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       }
     }
+  }
+
+  void _showAccountNamingAndRoutingSheet(BuildContext context, SettingsProvider settings) {
+    final acc1Controller = TextEditingController(text: settings.account1Name);
+    final acc2Controller = TextEditingController(text: settings.account2Name);
+    final routingMap = Map<String, String>.from(settings.categoryAccountRouting);
+
+    Future<void> saveAndClose(BuildContext ctx) async {
+      await HapticFeedback.lightImpact();
+      await settings.setAccount1Name(acc1Controller.text.trim());
+      await settings.setAccount2Name(acc2Controller.text.trim());
+      for (final cat in TransactionCategory.allNames) {
+        await settings.setCategoryAccountRouting(cat, routingMap[cat]);
+      }
+      if (context.mounted) {
+        Navigator.pop(ctx);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Account settings and category routing saved.')),
+        );
+      }
+    }
+
+    AppBottomSheet.show(
+      context: context,
+      title: 'Account Names & Routing',
+      actions: [
+        FilledButton.tonal(
+          onPressed: () => saveAndClose(context),
+          child: const Text('Save'),
+        ),
+      ],
+      child: StatefulBuilder(
+        builder: (ctx, setModalState) {
+          final cs = Theme.of(ctx).colorScheme;
+          final tt = Theme.of(ctx).textTheme;
+
+          return SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Customize presentation names for your dual accounts and assign default target accounts for categories.',
+                  style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                ),
+                const SizedBox(height: AppLayout.spaceL),
+
+                // Account 1 Name
+                Text('Account 1 (Daily Operating)', style: tt.labelLarge?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: acc1Controller,
+                  onChanged: (_) => setModalState(() {}),
+                  decoration: InputDecoration(
+                    hintText: 'e.g. Daily, Commercial Bank, Cash Wallet',
+                    prefixIcon: const Icon(Icons.credit_card_outlined),
+                    filled: true,
+                    fillColor: cs.surfaceContainerLow,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppLayout.spaceM),
+
+                // Account 2 Name
+                Text('Account 2 (Savings Vault)', style: tt.labelLarge?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: acc2Controller,
+                  onChanged: (_) => setModalState(() {}),
+                  decoration: InputDecoration(
+                    hintText: 'e.g. Savings, HNB Vault, Emergency Fund',
+                    prefixIcon: const Icon(Icons.account_balance_outlined),
+                    filled: true,
+                    fillColor: cs.surfaceContainerLow,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppLayout.spaceL),
+
+                // Category Default Routing
+                Text('Category Default Routing', style: tt.labelLarge?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text(
+                  'Transactions with these categories will default to the selected account.',
+                  style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                ),
+                const SizedBox(height: AppLayout.spaceS),
+                ...TransactionCategory.allNames.map((cat) {
+                  final currentAccount = routingMap[cat];
+                  final catIcon = TransactionCategory.iconFor(cat);
+                  final catColor = TransactionCategory.colorFor(cat);
+
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        Icon(catIcon, size: 18, color: catColor),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(cat, style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
+                        ),
+                        SegmentedButton<String?>(
+                          showSelectedIcon: false,
+                          style: const ButtonStyle(
+                            visualDensity: VisualDensity.compact,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          segments: [
+                            const ButtonSegment<String?>(
+                              value: null,
+                              label: Text('Auto'),
+                            ),
+                            ButtonSegment<String?>(
+                              value: 'daily',
+                              label: Text(acc1Controller.text.trim().isNotEmpty ? acc1Controller.text.trim() : 'Daily'),
+                            ),
+                            ButtonSegment<String?>(
+                              value: 'savings',
+                              label: Text(acc2Controller.text.trim().isNotEmpty ? acc2Controller.text.trim() : 'Savings'),
+                            ),
+                          ],
+                          selected: {currentAccount},
+                          onSelectionChanged: (selected) {
+                            HapticFeedback.selectionClick();
+                            setModalState(() {
+                              final sel = selected.first;
+                              if (sel == null) {
+                                routingMap.remove(cat);
+                              } else {
+                                routingMap[cat] = sel;
+                              }
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+                const SizedBox(height: AppLayout.spaceXL),
+
+                FilledButton(
+                  onPressed: () => saveAndClose(ctx),
+                  child: const Text('Save Settings'),
+                ),
+                const SizedBox(height: AppLayout.spaceM),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 }
 

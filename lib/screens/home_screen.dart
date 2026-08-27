@@ -267,6 +267,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && mounted) {
       context.read<NoteProvider>().refreshNotes();
+      FinancialManagerScreen.refreshNotifier.value++;
       final settings = Provider.of<SettingsProvider>(context, listen: false);
       final bool isLocked = settings.appLockEnabled && !AppLockScreen.sessionAuthenticated.value;
       if (!isLocked) {

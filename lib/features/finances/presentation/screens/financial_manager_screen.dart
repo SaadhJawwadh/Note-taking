@@ -10,13 +10,11 @@ import '../../data/transaction_repository.dart';
 import '../../../../data/repositories/recurring_rule_repository.dart';
 import '../../../../data/transaction_model.dart';
 import '../../../../data/transaction_category.dart';
-import '../../../../data/sms_contact.dart';
 import '../../../../services/sms_service.dart';
 import '../../../../services/sms_constants.dart';
 import '../../../../services/gemini_nano_service.dart';
 import 'package:note_taking_app/features/finances/presentation/screens/transaction_editor_screen.dart';
 import 'package:note_taking_app/features/finances/presentation/screens/sms_rules_screen.dart';
-import 'package:note_taking_app/features/settings/presentation/screens/settings_screen.dart';
 import '../../../../screens/app_lock_screen.dart';
 import '../../../../utils/app_route.dart';
 import 'package:note_taking_app/features/finances/providers/financial_manager_provider.dart';
@@ -45,7 +43,7 @@ class FinancialManagerScreen extends StatefulWidget {
   State<FinancialManagerScreen> createState() => _FinancialManagerScreenState();
 }
 
-class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
+class _FinancialManagerScreenState extends State<FinancialManagerScreen> with WidgetsBindingObserver {
   DateTimeRange _selectedRange = DateTimeRange(
     start: DateTime(DateTime.now().year, DateTime.now().month, 1),
     end: DateTime.now(),
@@ -76,6 +74,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _heroPageController = PageController(initialPage: 0);
     final initialTab = FinancialManagerScreen.tabRedirectNotifier.value;
     if (initialTab != null) {
@@ -97,6 +96,14 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
         setState(() => _isSmsSyncing = progress.isSyncing);
       }
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      _refreshTransactions();
+      SmsService.performAppLaunchCatchUpSync();
+    }
   }
 
   void _handleExternalRefresh() {
@@ -149,6 +156,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _heroAutoCycleTimer?.cancel();
     _heroPageController.dispose();
     _searchController.dispose();
@@ -278,6 +286,19 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
+
+    // Pre-calculate daily net spend per calendar day
+    final dailyNetMap = <DateTime, double>{};
+    for (final t in _transactions) {
+      if (t.category.toLowerCase() == 'transfer') continue;
+      final tDate = DateTime(t.date.year, t.date.month, t.date.day);
+      final delta = t.isExpense ? -t.amount : t.amount;
+      dailyNetMap[tDate] = (dailyNetMap[tDate] ?? 0) + delta;
+    }
+
+    final currency = context.read<SettingsProvider>().currency;
+    final numFormat = NumberFormat('#,##0.##');
+
     for (final t in _transactions) {
       final tDate = DateTime(t.date.year, t.date.month, t.date.day);
       if (lastDate == null || tDate != lastDate) {
@@ -289,6 +310,14 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
         } else {
           header = DateFormat.MMMd().format(tDate);
         }
+
+        final dailyNet = dailyNetMap[tDate];
+        if (dailyNet != null && dailyNet != 0) {
+          final sign = dailyNet < 0 ? '-' : '+';
+          final formattedAmount = numFormat.format(dailyNet.abs());
+          header = '$header • $sign$currency $formattedAmount';
+        }
+
         items.add(header);
         lastDate = tDate;
       }
@@ -553,25 +582,6 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
     unawaited(SmsService.performDailySyncManualTrigger());
   }
 
-  Future<void> _cleanupLedgerDuplicates() async {
-    final messenger = ScaffoldMessenger.of(context);
-    await HapticFeedback.mediumImpact();
-    final count = await TransactionRepository.instance.cleanupDuplicates();
-    if (!mounted) return;
-    await _refreshTransactions();
-    messenger.clearSnackBars();
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          count == 0
-              ? 'Ledger is 100% clean! No duplicate transactions found.'
-              : 'Successfully cleaned up $count duplicate transaction${count == 1 ? '' : 's'}!',
-        ),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
   Future<void> _bulkRefineRecentTransactionsWithAi() async {
     final messenger = ScaffoldMessenger.of(context);
     await HapticFeedback.mediumImpact();
@@ -597,9 +607,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
       ),
     );
 
-    final count = await SmsService.performBulkAiRefine(
-      lookbackWindow: const Duration(hours: 48),
-    );
+    final count = await SmsService.performBulkAiRefine();
 
     if (!mounted) return;
     await _refreshTransactions();
@@ -613,95 +621,6 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
         ),
         behavior: SnackBarBehavior.floating,
       ),
-    );
-  }
-
-  Future<void> _discoverBankSenders() async {
-    final messenger = ScaffoldMessenger.of(context);
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    await HapticFeedback.mediumImpact();
-
-    final candidates = await SmsService.discoverNewBankSenders();
-    if (!mounted) return;
-
-    if (candidates.isEmpty) {
-      messenger.clearSnackBars();
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('No unrecognized bank senders found in your inbox.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    await showModalBottomSheet(
-      context: context,
-      backgroundColor: colorScheme.surfaceContainerHigh,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.radar_outlined, color: colorScheme.primary),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Discovered Bank Senders',
-                      style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Found ${candidates.length} candidate bank sender${candidates.length == 1 ? '' : 's'} in your messages. Tap to allow auto-import:',
-                  style: textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 16),
-                Flexible(
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: candidates.length,
-                    itemBuilder: (context, index) {
-                      final sender = candidates[index];
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          leading: const CircleAvatar(child: Icon(Icons.account_balance_outlined, size: 20)),
-                          title: Text(sender, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          trailing: FilledButton.tonal(
-                            onPressed: () async {
-                              await TransactionRepository.instance.upsertSmsContact(
-                                SmsContact(id: sender, label: sender, senderIds: [sender], isBlocked: false),
-                              );
-                              if (ctx.mounted) Navigator.pop(ctx);
-                              messenger.showSnackBar(
-                                SnackBar(
-                                  content: Text('Added "$sender" to allowed bank senders!'),
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
-                            },
-                            child: const Text('Allow'),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -950,7 +869,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                             const SizedBox(width: 4),
                             Flexible(
                               child: Text(
-                                'Daily: $currency ${_dailyCashFlow.toStringAsFixed(0)}',
+                                '${settings.account1Name}: $currency ${_dailyCashFlow.toStringAsFixed(0)}',
                                 style: tt.labelSmall?.copyWith(
                                   color: onColor,
                                   fontWeight: _selectedAccount == AccountType.daily ? FontWeight.bold : FontWeight.w500,
@@ -988,7 +907,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                             const SizedBox(width: 4),
                             Flexible(
                               child: Text(
-                                'Savings: $currency ${_savingsVaultCashFlow.toStringAsFixed(0)}',
+                                '${settings.account2Name}: $currency ${_savingsVaultCashFlow.toStringAsFixed(0)}',
                                 style: tt.labelSmall?.copyWith(
                                   color: onColor,
                                   fontWeight: _selectedAccount == AccountType.savings ? FontWeight.bold : FontWeight.w500,
@@ -1310,156 +1229,98 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                                 HapticFeedback.selectionClick();
                                 if (value == 'ai_refine') {
                                   _bulkRefineRecentTransactionsWithAi();
+                                } else if (value == 'sms_rules') {
+                                  AppRoute.push(context, const SmsRulesScreen());
                                 } else if (value == 'recurring') {
-                                  RecurringRulesSheet.show(
-                                    context: context,
-                                    currency: currency,
-                                    onRulesUpdated: _refreshTransactions,
-                                  );
-                                } else if (value == 'cleanup') {
-                                  _cleanupLedgerDuplicates();
-                                } else if (value == 'discover') {
-                                  _discoverBankSenders();
-                                } else if (value == 'trash') {
-                                  FinancialTrashSheet.show(context).then((_) {
-                                    if (mounted) _refreshTransactions();
-                                  });
-                                } else if (value == 'split_bills') {
-                                  final settings = Provider.of<SettingsProvider>(context, listen: false);
-                                  if (!settings.showSplitBills) {
-                                    settings.setShowSplitBills(true);
-                                    setState(() => _selectedTab = 'Split Bills');
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Split Bills module enabled!')),
-                                    );
-                                  } else {
-                                    setState(() => _selectedTab = 'Split Bills');
-                                  }
+                                RecurringRulesSheet.show(
+                                  context: context,
+                                  currency: currency,
+                                  onRulesUpdated: _refreshTransactions,
+                                );
                                 } else if (value == 'export') {
                                   FinancialExportService.showExportSheet(
                                     context,
                                     _transactions,
                                     currency: currency,
                                   );
-                                } else if (value == 'sms_rules') {
-                                  AppRoute.push(context, const SmsRulesScreen());
-                                } else if (value == 'settings') {
-                                  AppRoute.push(context, const SettingsScreen());
+                                } else if (value == 'trash') {
+                                  FinancialTrashSheet.show(context).then((_) {
+                                    if (mounted) _refreshTransactions();
+                                  });
                                 }
                               },
                               itemBuilder: (ctx) {
-                                 final settings = ctx.read<SettingsProvider>();
-                                 final isAiEnabled = settings.isAiActive;
-                                 return [
-                                   if (isAiEnabled)
-                                     PopupMenuItem(
-                                       value: 'ai_refine',
-                                       height: 48,
-                                       child: Row(
-                                         children: [
-                                           Icon(Icons.auto_fix_high_rounded, size: 20, color: colorScheme.primary),
-                                           const SizedBox(width: 12),
-                                           Text('Refine Titles with AI', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                                         ],
-                                       ),
-                                     ),
-                                   PopupMenuItem(
-                                     value: 'sms_rules',
-                                     height: 48,
-                                     child: Row(
-                                       children: [
-                                         Icon(Icons.tune_rounded, size: 20, color: colorScheme.primary),
-                                         const SizedBox(width: 12),
-                                         Text('SMS Rules & Training', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                                       ],
-                                     ),
-                                   ),
-                                   PopupMenuItem(
-                                     value: 'split_bills',
-                                     height: 48,
-                                     child: Row(
-                                       children: [
-                                         Icon(Icons.pie_chart_outline_rounded, size: 20, color: colorScheme.primary),
-                                         const SizedBox(width: 12),
-                                         Text(settings.showSplitBills ? 'Go to Split Bills' : 'Enable Split Bills', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                                       ],
-                                     ),
-                                   ),
-                                   PopupMenuItem(
-                                     value: 'recurring',
-                                     height: 48,
-                                     child: Row(
-                                       children: [
-                                         Icon(Icons.repeat_outlined, size: 20, color: colorScheme.onSurfaceVariant),
-                                         const SizedBox(width: 12),
-                                         Text('Recurring Subscriptions', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                                       ],
-                                     ),
-                                   ),
-                                   PopupMenuItem(
-                                     value: 'cleanup',
-                                     height: 48,
-                                     child: Row(
-                                       children: [
-                                         Icon(Icons.cleaning_services_outlined, size: 20, color: colorScheme.onSurfaceVariant),
-                                         const SizedBox(width: 12),
-                                         Text('Purge Duplicates', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                                       ],
-                                     ),
-                                   ),
-                                   PopupMenuItem(
-                                     value: 'discover',
-                                     height: 48,
-                                     child: Row(
-                                       children: [
-                                         Icon(Icons.radar_outlined, size: 20, color: colorScheme.onSurfaceVariant),
-                                         const SizedBox(width: 12),
-                                         Text('Discover Bank Senders', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                                       ],
-                                     ),
-                                   ),
-                                   PopupMenuItem(
-                                     value: 'trash',
-                                     height: 48,
-                                     child: Row(
-                                       children: [
-                                         Icon(Icons.delete_outline_rounded, size: 20, color: colorScheme.onSurfaceVariant),
-                                         const SizedBox(width: 12),
-                                         Expanded(
-                                           child: Text('Trash Bin', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                                         ),
-                                         if (_trashedCount > 0)
-                                           Badge(
-                                             label: Text('$_trashedCount'),
-                                             backgroundColor: colorScheme.error,
-                                           ),
-                                       ],
-                                     ),
-                                   ),
-                                   PopupMenuItem(
-                                     value: 'export',
-                                     height: 48,
-                                     child: Row(
-                                       children: [
-                                         Icon(Icons.table_view_outlined, size: 20, color: colorScheme.onSurfaceVariant),
-                                         const SizedBox(width: 12),
-                                         Text('Export to CSV', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                                       ],
-                                     ),
-                                   ),
-                                   PopupMenuItem(
-                                     value: 'settings',
-                                     height: 48,
-                                     child: Row(
-                                       children: [
-                                         Icon(Icons.settings_outlined, size: 20, color: colorScheme.onSurfaceVariant),
-                                         const SizedBox(width: 12),
-                                         Text('Settings', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                                       ],
-                                     ),
-                                   ),
-                                 ];
-                               },
+                                final settings = ctx.read<SettingsProvider>();
+                                final isAiEnabled = settings.isAiActive;
+                                return [
+                                  if (isAiEnabled) ...[
+                                    PopupMenuItem(
+                                      value: 'ai_refine',
+                                      height: 48,
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.auto_fix_high_rounded, size: 20, color: colorScheme.primary),
+                                          const SizedBox(width: 12),
+                                          Text('Refine Recent with AI', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                        ],
+                                      ),
+                                    ),
+                                    const PopupMenuDivider(),
+                                  ],
+                                  PopupMenuItem(
+                                    value: 'sms_rules',
+                                    height: 48,
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.flash_on_rounded, size: 20, color: colorScheme.primary),
+                                        const SizedBox(width: 12),
+                                        Text('SMS & Bank Automation', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                      ],
+                                    ),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'recurring',
+                                    height: 48,
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.repeat_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                                        const SizedBox(width: 12),
+                                        Text('Recurring Subscriptions', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                      ],
+                                    ),
+                                  ),
+                                  const PopupMenuDivider(),
+                                  PopupMenuItem(
+                                    value: 'export',
+                                    height: 48,
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.ios_share_rounded, size: 20, color: colorScheme.onSurfaceVariant),
+                                        const SizedBox(width: 12),
+                                        Text('Export Ledger', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                      ],
+                                    ),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'trash',
+                                    height: 48,
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.delete_outline_rounded, size: 20, color: colorScheme.onSurfaceVariant),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text('Trash Bin', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                        ),
+                                        if (_trashedCount > 0)
+                                          Badge(
+                                            label: Text('$_trashedCount'),
+                                            backgroundColor: colorScheme.error,
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ];
+                              },
                             ),
                           ],
                         ),
@@ -1613,7 +1474,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                     FilterChip(
                       showCheckmark: false,
                       avatar: const Icon(Icons.credit_card_outlined, size: 16),
-                      label: const Text('Daily Operating'),
+                      label: Text(settings.account1Name),
                       selected: _selectedAccount == AccountType.daily,
                       onSelected: (_) {
                         HapticFeedback.lightImpact();
@@ -1625,7 +1486,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> {
                     FilterChip(
                       showCheckmark: false,
                       avatar: const Icon(Icons.account_balance_outlined, size: 16),
-                      label: const Text('Savings Vault'),
+                      label: Text(settings.account2Name),
                       selected: _selectedAccount == AccountType.savings,
                       onSelected: (_) {
                         HapticFeedback.lightImpact();

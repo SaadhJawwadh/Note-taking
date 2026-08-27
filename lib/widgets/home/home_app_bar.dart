@@ -77,7 +77,7 @@ class _HomeAppBarState extends State<HomeAppBar> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final statusBarHeight = MediaQuery.of(context).padding.top;
 
-    final totalHeight = statusBarHeight + 68.0;
+    final totalHeight = statusBarHeight + 72.0;
 
     return SliverAppBar(
       pinned: true,
@@ -94,10 +94,10 @@ class _HomeAppBarState extends State<HomeAppBar> {
           filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: Container(
             padding: EdgeInsets.only(
-              top: statusBarHeight + 6,
+              top: statusBarHeight + 4,
               left: 16,
               right: 16,
-              bottom: 6,
+              bottom: 4,
             ),
             decoration: BoxDecoration(
               color: Theme.of(context)
@@ -108,7 +108,7 @@ class _HomeAppBarState extends State<HomeAppBar> {
             child: Align(
               alignment: Alignment.center,
               child: SizedBox(
-                height: 56,
+                height: 60,
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 180),
                   switchInCurve: Curves.fastOutSlowIn,
@@ -444,7 +444,7 @@ class _HomeAppBarState extends State<HomeAppBar> {
               _showFolderPicker(context, noteProvider);
             },
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               child: Row(
                 children: [
                   Icon(
@@ -457,6 +457,7 @@ class _HomeAppBarState extends State<HomeAppBar> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Row(
                           children: [

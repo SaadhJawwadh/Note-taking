@@ -100,7 +100,7 @@ class DatabaseHelper {
       return await openDatabase(
         path,
         password: password,
-        version: 21,
+        version: 22,
         onCreate: _createDB,
         onUpgrade: _upgradeDB,
         onOpen: _onOpenDB,
@@ -121,7 +121,7 @@ class DatabaseHelper {
         return await openDatabase(
           path,
           password: password,
-          version: 21,
+          version: 22,
           onCreate: _createDB,
           onUpgrade: _upgradeDB,
           onOpen: _onOpenDB,
@@ -147,6 +147,12 @@ class DatabaseHelper {
       await db.execute('CREATE INDEX IF NOT EXISTS idx_split_bills_txid ON ${TableNames.splitBills}(${SplitBillFields.transactionId});');
       await db.execute('CREATE INDEX IF NOT EXISTS idx_split_participants_bill ON ${TableNames.splitParticipants}(${SplitParticipantFields.billId});');
       await db.execute('CREATE INDEX IF NOT EXISTS idx_split_participants_contact ON ${TableNames.splitParticipants}(${SplitParticipantFields.contactName});');
+
+      final cols = await db.rawQuery('PRAGMA table_info(${TableNames.transactions})');
+      final hasAiRefinedCol = cols.any((col) => col['name'] == 'isAiRefined');
+      if (!hasAiRefinedCol) {
+        await db.execute("ALTER TABLE ${TableNames.transactions} ADD COLUMN isAiRefined INTEGER NOT NULL DEFAULT 0");
+      }
     } catch (e) {
       debugPrint('[DatabaseHelper] PRAGMA & Index creation onOpen warning: $e');
     }
@@ -247,7 +253,8 @@ class DatabaseHelper {
         category TEXT NOT NULL DEFAULT 'Other',
         smsId TEXT,
         deletedAt TEXT,
-        account TEXT NOT NULL DEFAULT 'daily'
+        account TEXT NOT NULL DEFAULT 'daily',
+        isAiRefined INTEGER NOT NULL DEFAULT 0
       )
     ''');
     await db.execute(
@@ -490,6 +497,13 @@ class DatabaseHelper {
           ${SplitContactFields.lastUsed} TEXT NOT NULL
         )
       ''');
+    }
+    if (oldVersion < 22) {
+      final cols = await db.rawQuery('PRAGMA table_info(${TableNames.transactions})');
+      final hasAiRefinedCol = cols.any((col) => col['name'] == 'isAiRefined');
+      if (!hasAiRefinedCol) {
+        await db.execute("ALTER TABLE ${TableNames.transactions} ADD COLUMN isAiRefined INTEGER NOT NULL DEFAULT 0");
+      }
     }
   }
 }

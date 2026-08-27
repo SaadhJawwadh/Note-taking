@@ -37,19 +37,19 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.primaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.tune_rounded,
-            title: "Interactive Custom SMS Training",
-            desc: "Train the app to recognize unique bank SMS and transfer approval formats directly from the test sandbox.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.title_rounded,
-            title: "Personalized Transaction Titles",
-            desc: "Set clean custom descriptions that automatically replace noisy bank SMS and merchant text.",
-          ),
-          _WhatsNewItem(
             icon: Icons.pie_chart_outline_rounded,
-            title: "Split Bills & Shared Debts",
-            desc: "Split group expenses with equal or exact shares, track friend balances, and send 1-tap WhatsApp breakdown reminders.",
+            title: "Split Bills & 100% Offline Receipt OCR",
+            desc: "Split group expenses with friends, scan paper receipts directly with your camera for instant totals, and send 1-tap WhatsApp breakdown reminders.",
+          ),
+          _WhatsNewItem(
+            icon: Icons.tune_rounded,
+            title: "Interactive Bank SMS Training & Titles",
+            desc: "Train the app to recognize unique bank SMS formats in the sandbox and set clean custom descriptions that replace noisy bank text.",
+          ),
+          _WhatsNewItem(
+            icon: Icons.account_balance_wallet_outlined,
+            title: "Savings Vault & Dual Accounts",
+            desc: "Keep daily operating cash flow separate from long-term savings with interactive balance badges and instant ledger account filtering.",
           ),
         ],
       ),
@@ -59,19 +59,19 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.tertiaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
+            icon: Icons.dashboard_customize_outlined,
+            title: "5-Pillar Settings Control Center",
+            desc: "Refreshed settings hub with active module status badges, 1-tap theme switcher, and centralized background sync automation.",
+          ),
+          _WhatsNewItem(
             icon: Icons.lock_open_rounded,
-            title: "OTP Bypass Safeguard",
+            title: "OTP & Transfer Approval Bypass",
             desc: "Built-in authorization override for banks that send transfer approval codes without a second confirmation SMS.",
           ),
           _WhatsNewItem(
-            icon: Icons.document_scanner_outlined,
-            title: "100% Offline Receipt Scanner",
-            desc: "Scan receipts directly with your camera to extract totals and merchants instantly on-device without cloud dependency.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.more_vert_rounded,
-            title: "Quick-Access Menu Entry",
-            desc: "Access SMS rules and training directly from the Financial Manager 3-dot overflow menu.",
+            icon: Icons.cloud_done_outlined,
+            title: "Resilient Backups & AI Spending Export",
+            desc: "Sandboxed automatic backups prevent permission revocations, with smart export prompts crafted for Claude, ChatGPT, and Gemini.",
           ),
         ],
       ),

@@ -41,6 +41,7 @@ class _TeachSmsRuleSheetState extends State<TeachSmsRuleSheet> {
   late final TextEditingController _descriptionController;
   late RuleTransactionType _selectedType;
   String? _selectedCategory;
+  String? _targetAccount;
   late bool _bypassOtpFilter;
   List<String> _suggestedTokens = [];
 
@@ -52,6 +53,7 @@ class _TeachSmsRuleSheetState extends State<TeachSmsRuleSheet> {
     _descriptionController = TextEditingController(text: rule?.customDescription ?? '');
     _selectedType = rule?.type ?? RuleTransactionType.expense;
     _selectedCategory = rule?.category;
+    _targetAccount = rule?.targetAccount;
     _bypassOtpFilter = rule?.bypassOtpFilter ?? false;
 
     _extractSuggestedTokens();
@@ -113,6 +115,7 @@ class _TeachSmsRuleSheetState extends State<TeachSmsRuleSheet> {
       type: _selectedType,
       category: _selectedCategory,
       customDescription: customDesc.isNotEmpty ? customDesc : null,
+      targetAccount: _targetAccount,
       bypassOtpFilter: _bypassOtpFilter,
       isEnabled: widget.existingRule?.isEnabled ?? true,
       createdAt: widget.existingRule?.createdAt ?? DateTime.now(),
@@ -265,6 +268,59 @@ class _TeachSmsRuleSheetState extends State<TeachSmsRuleSheet> {
             }).toList(),
           ),
           const SizedBox(height: AppLayout.spaceL),
+
+          // Target Account Picker (if Dual Accounts is enabled)
+          Consumer<SettingsProvider>(
+            builder: (context, settings, _) {
+              if (!settings.enableSavingsVault) return const SizedBox.shrink();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Target Account (Optional)', style: tt.labelLarge?.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Explicitly route transactions matching this rule to a specific account.',
+                    style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: AppLayout.spaceS),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('Auto / Default'),
+                        selected: _targetAccount == null,
+                        onSelected: (selected) {
+                          if (selected) {
+                            HapticFeedback.selectionClick();
+                            setState(() => _targetAccount = null);
+                          }
+                        },
+                      ),
+                      ChoiceChip(
+                        avatar: const Icon(Icons.account_balance_wallet_outlined, size: 16),
+                        label: Text(settings.account1Name),
+                        selected: _targetAccount == 'daily',
+                        onSelected: (selected) {
+                          HapticFeedback.selectionClick();
+                          setState(() => _targetAccount = selected ? 'daily' : null);
+                        },
+                      ),
+                      ChoiceChip(
+                        avatar: const Icon(Icons.savings_outlined, size: 16),
+                        label: Text(settings.account2Name),
+                        selected: _targetAccount == 'savings',
+                        onSelected: (selected) {
+                          HapticFeedback.selectionClick();
+                          setState(() => _targetAccount = selected ? 'savings' : null);
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppLayout.spaceL),
+                ],
+              );
+            },
+          ),
 
           // Custom Clean Title / Description (Optional)
           Text('Custom Transaction Title (Optional)', style: tt.labelLarge?.copyWith(fontWeight: FontWeight.bold)),

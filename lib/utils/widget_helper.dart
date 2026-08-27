@@ -119,10 +119,10 @@ class WidgetHelper {
         forecastAmountStr =
             '~$currency ${numberFormat.format(spendingForecast.projectedMonthEndSpend)}';
         forecastTrendStr = spendingForecast.status == SpendingPaceStatus.overPace
-            ? 'Pacing Fast 🟠'
+            ? 'Pacing Fast'
             : spendingForecast.status == SpendingPaceStatus.exhausted
-                ? 'Exhausted 🔴'
-                : 'On Track 🟢';
+                ? 'Exhausted'
+                : 'On Track';
         isTrendingUp = spendingForecast.status == SpendingPaceStatus.overPace ||
             spendingForecast.status == SpendingPaceStatus.exhausted;
 
