@@ -28,9 +28,33 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
-                  version: 'v2.25.1',
+                  version: 'v2.25.2',
                   date: 'August 28, 2026',
                   isLatest: true,
+                  changes: [
+                    _ChangelogGroup(
+                      title: "🌟 What's New",
+                      items: [
+                        'Unified Top App Bar & Scope Pills: Modernized frosted glass headers across Notes, Finances, and Period Tracker with interactive tonal scope pills.',
+                        'Universal Module Tools (3-Dot Menu): Dedicated overflow action menus consolidating view modes, sorting, tag management, SMS automation, and educational guides.',
+                        'Cycle Phase Guide: Built-in interactive educational guide explaining cycle phases, symptoms, and self-care recommendations.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🚀 Improvements',
+                      items: [
+                        'Universal Settings Anchor: Consistent quick-access Settings shortcut button across all primary module headers.',
+                        'Material 3 Dropdown Modernization: Refreshed all dropdown icons with rounded Material 3 chevrons.',
+                        'Layout Precision & Polish: Cleaned sub-pixel bounds across financial metrics, hero cards, and health dialogs.',
+                      ],
+                    ),
+                  ],
+                ),
+                _buildVersionSection(
+                  context,
+                  version: 'v2.25.1',
+                  date: 'August 28, 2026',
+                  isLatest: false,
                   changes: [
                     _ChangelogGroup(
                       title: '🚀 Improvements',

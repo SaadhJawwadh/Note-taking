@@ -3661,7 +3661,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                                                     ),
                                                                   ),
                                                                   Icon(
-                                                                    Icons.arrow_drop_down,
+                                                                    Icons.keyboard_arrow_down_rounded,
                                                                     size: 16,
                                                                     color: textColor,
                                                                   ),

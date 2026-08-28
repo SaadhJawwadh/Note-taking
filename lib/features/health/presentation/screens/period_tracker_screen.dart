@@ -72,6 +72,136 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> with WidgetsB
     }
   }
 
+  void _showPhaseGuideDialog(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final semantic = theme.extension<AppSemanticColors>();
+
+    final phases = [
+      (
+        'Menstrual Phase',
+        'Days 1–5',
+        'Uterine lining sheds. Energy is lower; prioritize rest, hydration, and gentle movement.',
+        semantic?.phaseMenstrual ?? const Color(0xFFD32F2F),
+        Icons.water_drop_rounded,
+      ),
+      (
+        'Follicular Phase',
+        'Days 6–13',
+        'Estrogen rises as follicles mature. Energy, mood, and creative focus naturally peak.',
+        semantic?.phaseFollicular ?? const Color(0xFF1976D2),
+        Icons.wb_sunny_rounded,
+      ),
+      (
+        'Ovulatory Phase',
+        'Days 14–16',
+        'Luteinizing hormone surge triggers egg release. Peak confidence, social energy, and fertility.',
+        semantic?.phaseOvulatory ?? const Color(0xFFF57C00),
+        Icons.local_fire_department_rounded,
+      ),
+      (
+        'Luteal Phase',
+        'Days 17–28',
+        'Progesterone rises. Energy turns inward; PMS symptoms may occur. Prioritize winding down.',
+        semantic?.phaseLuteal ?? const Color(0xFF7B1FA2),
+        Icons.nightlight_round,
+      ),
+    ];
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.menu_book_rounded, color: colorScheme.primary, size: 22),
+            const SizedBox(width: 10),
+            Text(
+              'Cycle Phase Guide',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: phases.map((p) {
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: p.$4.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                    border: Border.all(color: p.$4.withValues(alpha: 0.25), width: 1),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: p.$4.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(p.$5, color: p.$4, size: 18),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    p.$1,
+                                    style: theme.textTheme.titleSmall?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: p.$4,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  p.$2,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              p.$3,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                                height: 1.35,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+        actions: [
+          FilledButton.tonal(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<PeriodTrackerProvider>(
@@ -123,7 +253,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> with WidgetsB
                   primary: false,
                   backgroundColor: Colors.transparent,
                   elevation: 0,
-                  toolbarHeight: MediaQuery.of(context).padding.top + 68.0,
+                  toolbarHeight: MediaQuery.of(context).padding.top + 72.0,
                   titleSpacing: 0,
                   automaticallyImplyLeading: false,
                   flexibleSpace: ClipRect(
@@ -140,34 +270,59 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> with WidgetsB
                           color: colorScheme.surfaceContainerLow.withValues(alpha: isDark ? 0.82 : 0.88),
                         ),
                         child: SizedBox(
-                          height: 56,
+                          height: 60,
                           child: Row(
                             children: [
-                              const SizedBox(width: 4),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
                                       'Period Tracker',
-                                      overflow: TextOverflow.ellipsis,
                                       maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: theme.textTheme.titleLarge?.copyWith(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 18,
                                       ),
                                     ),
-                                    Text(
-                                      provider.currentCycleDay != null
-                                          ? 'Day ${provider.currentCycleDay} • ${provider.currentPhase}'
-                                          : provider.currentPhase,
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
-                                      style: theme.textTheme.bodySmall?.copyWith(
-                                        color: colorScheme.tertiary,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
+                                    const SizedBox(height: 3),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                      decoration: BoxDecoration(
+                                        color: phaseColor.withValues(alpha: isDark ? 0.18 : 0.12),
+                                        borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                                        border: Border.all(
+                                          color: phaseColor.withValues(alpha: 0.25),
+                                          width: 0.8,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.spa_rounded,
+                                            size: 13,
+                                            color: phaseColor,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Flexible(
+                                            child: Text(
+                                              provider.currentCycleDay != null
+                                                  ? 'Day ${provider.currentCycleDay} • ${provider.currentPhase}'
+                                                  : provider.currentPhase,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: theme.textTheme.bodySmall?.copyWith(
+                                                color: phaseColor,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],
@@ -176,6 +331,8 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> with WidgetsB
                               IconButton(
                                 icon: const Icon(Icons.today_outlined),
                                 tooltip: 'Today',
+                                padding: EdgeInsets.zero,
+                                visualDensity: VisualDensity.compact,
                                 onPressed: () async {
                                   await HapticFeedback.selectionClick();
                                   setState(() {
@@ -191,14 +348,82 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> with WidgetsB
                                   }
                                 },
                               ),
+                              PopupMenuButton<String>(
+                                icon: const Icon(Icons.more_vert),
+                                tooltip: 'Health Tools',
+                                padding: EdgeInsets.zero,
+                                elevation: 3,
+                                shadowColor: colorScheme.shadow.withValues(alpha: 0.15),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(AppLayout.radiusXL),
+                                  side: BorderSide(
+                                    color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+                                    width: 1,
+                                  ),
+                                ),
+                                color: colorScheme.surfaceContainerHigh,
+                                onSelected: (value) {
+                                  HapticFeedback.selectionClick();
+                                  if (value == 'log_period') {
+                                    PeriodLogEditorSheet.show(
+                                      context: context,
+                                      defaultStartDate: _selectedDay ?? DateTime.now(),
+                                      provider: provider,
+                                    );
+                                  } else if (value == 'phase_guide') {
+                                    _showPhaseGuideDialog(context);
+                                  } else if (value == 'cycle_settings') {
+                                    AppRoute.push(context, const SettingsScreen());
+                                  }
+                                },
+                                itemBuilder: (ctx) => [
+                                  PopupMenuItem(
+                                    value: 'log_period',
+                                    height: 48,
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.edit_calendar_rounded, size: 20, color: colorScheme.primary),
+                                        const SizedBox(width: 12),
+                                        Text('Log Cycle & Symptoms', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                      ],
+                                    ),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'phase_guide',
+                                    height: 48,
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.menu_book_rounded, size: 20, color: colorScheme.onSurfaceVariant),
+                                        const SizedBox(width: 12),
+                                        Text('Cycle Phase Guide', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                      ],
+                                    ),
+                                  ),
+                                  const PopupMenuDivider(),
+                                  PopupMenuItem(
+                                    value: 'cycle_settings',
+                                    height: 48,
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.tune_rounded, size: 20, color: colorScheme.onSurfaceVariant),
+                                        const SizedBox(width: 12),
+                                        Text('Cycle Preferences', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                               IconButton(
                                 icon: const Icon(Icons.settings_outlined),
                                 tooltip: 'Settings',
+                                padding: EdgeInsets.zero,
+                                visualDensity: VisualDensity.compact,
                                 onPressed: () {
                                   HapticFeedback.selectionClick();
                                   AppRoute.push(context, const SettingsScreen());
                                 },
                               ),
+                              const SizedBox(width: 4),
                             ],
                           ),
                         ),

@@ -15,6 +15,7 @@ import '../../../../services/sms_constants.dart';
 import '../../../../services/gemini_nano_service.dart';
 import 'package:note_taking_app/features/finances/presentation/screens/transaction_editor_screen.dart';
 import 'package:note_taking_app/features/finances/presentation/screens/sms_rules_screen.dart';
+import 'package:note_taking_app/features/settings/presentation/screens/settings_screen.dart';
 import '../../../../screens/app_lock_screen.dart';
 import '../../../../utils/app_route.dart';
 import 'package:note_taking_app/features/finances/providers/financial_manager_provider.dart';
@@ -739,7 +740,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
             Listener(
               onPointerDown: (_) => _pauseHeroAutoCycle(userAction: true),
               child: SizedBox(
-                height: 58,
+                height: 66,
                 child: PageView(
                   controller: _heroPageController,
                   physics: const BouncingScrollPhysics(),
@@ -753,12 +754,16 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        '${isPositive ? '+' : '-'} $currency ${net.abs().toStringAsFixed(0)}',
-                        style: tt.headlineMedium?.copyWith(
-                          color: onColor,
-                          fontWeight: FontWeight.bold,
-                          fontFeatures: const [FontFeature.tabularFigures()],
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          '${isPositive ? '+' : '-'} $currency ${net.abs().toStringAsFixed(0)}',
+                          style: tt.headlineMedium?.copyWith(
+                            color: onColor,
+                            fontWeight: FontWeight.bold,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
                         ),
                       ),
                       Text(
@@ -773,12 +778,16 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        '$currency ${dailyAvgExpense.toStringAsFixed(0)} / day',
-                        style: tt.headlineMedium?.copyWith(
-                          color: onColor,
-                          fontWeight: FontWeight.bold,
-                          fontFeatures: const [FontFeature.tabularFigures()],
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          '$currency ${dailyAvgExpense.toStringAsFixed(0)} / day',
+                          style: tt.headlineMedium?.copyWith(
+                            color: onColor,
+                            fontWeight: FontWeight.bold,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
                         ),
                       ),
                       Text(
@@ -796,12 +805,16 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          '~$currency ${numberFormat.format(spendingForecast.projectedMonthEndSpend)}',
-                          style: tt.headlineMedium?.copyWith(
-                            color: onColor,
-                            fontWeight: FontWeight.bold,
-                            fontFeatures: const [FontFeature.tabularFigures()],
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            '~$currency ${numberFormat.format(spendingForecast.projectedMonthEndSpend)}',
+                            style: tt.headlineMedium?.copyWith(
+                              color: onColor,
+                              fontWeight: FontWeight.bold,
+                              fontFeatures: const [FontFeature.tabularFigures()],
+                            ),
                           ),
                         ),
                         Text(
@@ -1097,64 +1110,73 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
                           children: [
                             const SizedBox(width: 4),
                             Expanded(
-                              child: Semantics(
-                              button: true,
-                              label:
-                                  'Selected date range: ${_selectedRange.duration.inDays == 0 ? DateFormat.MMMd().format(_selectedRange.start) : '${DateFormat.MMMd().format(_selectedRange.start)} to ${DateFormat.MMMd().format(_selectedRange.end)}'}. Tap to change filter',
-                              child: InkWell(
-                                onTap: () {
-                                  HapticFeedback.lightImpact();
-                                  _selectDateRange(context);
-                                },
-                                borderRadius: BorderRadius.circular(12),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 6),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        'Finances',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: textTheme.titleLarge?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 18,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Finances',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: textTheme.titleLarge?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Semantics(
+                                    button: true,
+                                    label:
+                                        'Selected date range: ${_selectedRange.duration.inDays == 0 ? DateFormat.MMMd().format(_selectedRange.start) : '${DateFormat.MMMd().format(_selectedRange.start)} to ${DateFormat.MMMd().format(_selectedRange.end)}'}. Tap to change filter',
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                                      onTap: () {
+                                        HapticFeedback.lightImpact();
+                                        _selectDateRange(context);
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                        decoration: BoxDecoration(
+                                          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.75),
+                                          borderRadius: BorderRadius.circular(AppLayout.radiusS),
                                         ),
-                                      ),
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Flexible(
-                                            child: Text(
-                                              _selectedRange.duration.inDays == 0
-                                                  ? DateFormat.MMMd()
-                                                      .format(_selectedRange.start)
-                                                  : '${DateFormat.MMMd().format(_selectedRange.start)} – ${DateFormat.MMMd().format(_selectedRange.end)}',
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style:
-                                                  textTheme.bodySmall?.copyWith(
-                                                color: colorScheme.primary,
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w500,
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.calendar_today_outlined,
+                                              size: 13,
+                                              color: colorScheme.primary,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Flexible(
+                                              child: Text(
+                                                _selectedRange.duration.inDays == 0
+                                                    ? DateFormat.MMMd().format(_selectedRange.start)
+                                                    : '${DateFormat.MMMd().format(_selectedRange.start)} – ${DateFormat.MMMd().format(_selectedRange.end)}',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: textTheme.bodySmall?.copyWith(
+                                                  color: colorScheme.onSurfaceVariant,
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                          const SizedBox(width: 2),
-                                          Icon(
-                                            Icons.arrow_drop_down,
-                                            size: 18,
-                                            color: colorScheme.primary,
-                                          ),
-                                        ],
+                                            const SizedBox(width: 2),
+                                            Icon(
+                                              Icons.keyboard_arrow_down_rounded,
+                                              size: 14,
+                                              color: colorScheme.onSurfaceVariant,
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ],
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
-                            ),
                             ),
                             Semantics(
                               button: true,
@@ -1165,7 +1187,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
                                     'Quick Sync (Tap) | Advanced Import (Hold)',
                                 child: ConstrainedBox(
                                   constraints: const BoxConstraints(
-                                      minWidth: 48, minHeight: 48),
+                                      minWidth: 44, minHeight: 44),
                                   child: BouncingWidget(
                                     onTap: () {
                                       HapticFeedback.lightImpact();
@@ -1204,17 +1226,9 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
                                 ),
                               ),
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.calendar_today_outlined),
-                              tooltip: 'Select Date Range',
-                              onPressed: () {
-                                HapticFeedback.lightImpact();
-                                _selectDateRange(context);
-                              },
-                            ),
                             PopupMenuButton<String>(
                               icon: const Icon(Icons.more_vert),
-                              tooltip: 'More Tools',
+                              tooltip: 'Finances Tools',
                               elevation: 3,
                               shadowColor: colorScheme.shadow.withValues(alpha: 0.15),
                               shape: RoundedRectangleBorder(
@@ -1232,11 +1246,11 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
                                 } else if (value == 'sms_rules') {
                                   AppRoute.push(context, const SmsRulesScreen());
                                 } else if (value == 'recurring') {
-                                RecurringRulesSheet.show(
-                                  context: context,
-                                  currency: currency,
-                                  onRulesUpdated: _refreshTransactions,
-                                );
+                                  RecurringRulesSheet.show(
+                                    context: context,
+                                    currency: currency,
+                                    onRulesUpdated: _refreshTransactions,
+                                  );
                                 } else if (value == 'export') {
                                   FinancialExportService.showExportSheet(
                                     context,
@@ -1247,6 +1261,9 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
                                   FinancialTrashSheet.show(context).then((_) {
                                     if (mounted) _refreshTransactions();
                                   });
+                                } else if (value == 'settings') {
+                                  AppRoute.push(context, const SettingsScreen())
+                                      .then((_) => _refreshTransactions());
                                 }
                               },
                               itemBuilder: (ctx) {
@@ -1319,9 +1336,33 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
                                       ],
                                     ),
                                   ),
+                                  const PopupMenuDivider(),
+                                  PopupMenuItem(
+                                    value: 'settings',
+                                    height: 48,
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.settings_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                                        const SizedBox(width: 12),
+                                        Text('Settings', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                      ],
+                                    ),
+                                  ),
                                 ];
                               },
                             ),
+                            IconButton(
+                              icon: const Icon(Icons.settings_outlined),
+                              tooltip: 'Settings',
+                              padding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                              onPressed: () {
+                                HapticFeedback.selectionClick();
+                                AppRoute.push(context, const SettingsScreen())
+                                    .then((_) => _refreshTransactions());
+                              },
+                            ),
+                            const SizedBox(width: 4),
                           ],
                         ),
                       ),

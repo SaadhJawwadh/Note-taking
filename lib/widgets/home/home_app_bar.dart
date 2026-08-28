@@ -8,9 +8,10 @@ import '../../providers/note_provider.dart';
 import '../../features/sync/providers/p2p_sync_provider.dart';
 import 'package:note_taking_app/features/sync/presentation/screens/p2p_sync_screen.dart';
 import 'package:note_taking_app/features/settings/presentation/screens/settings_screen.dart';
+import 'package:note_taking_app/features/notes/presentation/screens/manage_tags_screen.dart';
+import 'package:note_taking_app/features/notes/presentation/screens/filtered_notes_screen.dart';
 import '../../core/theme/app_layout.dart';
 import '../../utils/app_route.dart';
-import '../../l10n/app_localizations.dart';
 import '../bouncing_widget.dart';
 
 class HomeAppBar extends StatefulWidget implements PreferredSizeWidget {
@@ -437,71 +438,89 @@ class _HomeAppBarState extends State<HomeAppBar> {
       children: [
         const SizedBox(width: 4),
         Expanded(
-          child: InkWell(
-            borderRadius: BorderRadius.circular(AppLayout.radiusM),
-            onTap: () {
-              HapticFeedback.selectionClick();
-              _showFolderPicker(context, noteProvider);
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              child: Row(
-                children: [
-                  Icon(
-                    noteProvider.selectedFolder != null ? Icons.folder : Icons.folder_open_outlined,
-                    size: 20,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Notes',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+              ),
+              const SizedBox(height: 3),
+              Semantics(
+                button: true,
+                label: 'Folder: $displayFolder, $count notes. Tap to change folder',
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    _showFolderPicker(context, noteProvider);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.75),
+                      borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                    ),
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                displayFolder,
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18,
-                                    ),
-                              ),
-                            ),
-                            const SizedBox(width: 2),
-                            Icon(
-                              Icons.arrow_drop_down,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              size: 18,
-                            ),
-                          ],
+                        Icon(
+                          noteProvider.selectedFolder != null ? Icons.folder_rounded : Icons.folder_open_rounded,
+                          size: 13,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
-                        Text(
-                          AppLocalizations.of(context)!.noteCount(count),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            '$displayFolder • $count',
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          size: 14,
                         ),
                       ],
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
-        PopupMenuButton<String>(
-          icon: const Icon(Icons.sort_rounded),
-          tooltip: 'Sort notes',
+        IconButton(
+          icon: const Icon(Icons.search),
+          tooltip: 'Search notes',
           padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+          visualDensity: VisualDensity.compact,
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            setState(() {
+              _isSearching = true;
+            });
+          },
+        ),
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert),
+          tooltip: 'Notes Tools',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
           elevation: 3,
           shadowColor: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.15),
           shape: RoundedRectangleBorder(
@@ -512,94 +531,140 @@ class _HomeAppBarState extends State<HomeAppBar> {
             ),
           ),
           color: Theme.of(context).colorScheme.surfaceContainerHigh,
-          onSelected: (mode) {
+          onSelected: (action) {
             HapticFeedback.selectionClick();
-            noteProvider.setSortMode(mode);
+            if (action == 'view_mode') {
+              widget.onCycleViewMode();
+            } else if (action == 'manage_folders') {
+              _showFolderPicker(context, noteProvider);
+            } else if (action == 'manage_tags') {
+              AppRoute.push(context, const ManageTagsScreen());
+            } else if (action == 'trash') {
+              AppRoute.push(context, const FilteredNotesScreen(filterType: FilterType.trash));
+            } else {
+              noteProvider.setSortMode(action);
+            }
           },
           itemBuilder: (context) {
             final colorScheme = Theme.of(context).colorScheme;
             final currentSort = noteProvider.sortMode;
-            final items = [
-              ('modified', 'Last modified', Icons.access_time_rounded),
-              ('created', 'Date created', Icons.calendar_today_rounded),
-              ('title', 'Title', Icons.sort_by_alpha_rounded),
-              ('color', 'Color', Icons.palette_outlined),
-            ];
 
-            return items.map((item) {
-              final isSelected = currentSort == item.$1;
-              return PopupMenuItem<String>(
-                value: item.$1,
-                height: 48,
+            return [
+              PopupMenuItem<String>(
+                value: 'view_mode',
+                height: 44,
                 child: Row(
                   children: [
                     Icon(
-                      item.$3,
+                      _getIconForMode(settings.noteViewMode),
                       size: 20,
-                      color: isSelected
-                          ? colorScheme.primary
-                          : colorScheme.onSurfaceVariant,
+                      color: colorScheme.onSurfaceVariant,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        item.$2,
+                        _getTooltipForMode(settings.noteViewMode),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight:
-                                  isSelected ? FontWeight.bold : FontWeight.w500,
-                              color: isSelected
-                                  ? colorScheme.primary
-                                  : colorScheme.onSurface,
+                              fontWeight: FontWeight.w500,
+                              color: colorScheme.onSurface,
                             ),
                       ),
                     ),
-                    if (isSelected)
-                      Icon(
-                        Icons.check_rounded,
-                        size: 18,
-                        color: colorScheme.primary,
-                      ),
                   ],
                 ),
-              );
-            }).toList();
+              ),
+              const PopupMenuDivider(height: 1),
+              ...[
+                ('modified', 'Sort by Last Modified', Icons.access_time_rounded),
+                ('created', 'Sort by Date Created', Icons.calendar_today_rounded),
+                ('title', 'Sort by Title', Icons.sort_by_alpha_rounded),
+                ('color', 'Sort by Color', Icons.palette_outlined),
+              ].map((item) {
+                final isSelected = currentSort == item.$1;
+                return PopupMenuItem<String>(
+                  value: item.$1,
+                  height: 44,
+                  child: Row(
+                    children: [
+                      Icon(
+                        item.$3,
+                        size: 20,
+                        color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          item.$2,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                color: isSelected ? colorScheme.primary : colorScheme.onSurface,
+                              ),
+                        ),
+                      ),
+                      if (isSelected)
+                        Icon(
+                          Icons.check_rounded,
+                          size: 18,
+                          color: colorScheme.primary,
+                        ),
+                    ],
+                  ),
+                );
+              }),
+              const PopupMenuDivider(height: 1),
+              PopupMenuItem<String>(
+                value: 'manage_folders',
+                height: 44,
+                child: Row(
+                  children: [
+                    Icon(Icons.create_new_folder_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Manage Folders',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            color: colorScheme.onSurface,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'manage_tags',
+                height: 44,
+                child: Row(
+                  children: [
+                    Icon(Icons.label_outline_rounded, size: 20, color: colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Manage Tags',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            color: colorScheme.onSurface,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'trash',
+                height: 44,
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_outline_rounded, size: 20, color: colorScheme.error),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Trash Bin',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            color: colorScheme.error,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ];
           },
-        ),
-        BouncingWidget(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            widget.onCycleViewMode();
-          },
-          child: IconButton(
-            icon: Icon(_getIconForMode(settings.noteViewMode)),
-            tooltip: _getTooltipForMode(settings.noteViewMode),
-            padding: EdgeInsets.zero,
-            visualDensity: VisualDensity.compact,
-            onPressed: () {
-              HapticFeedback.selectionClick();
-              widget.onCycleViewMode();
-            },
-          ),
-        ),
-        BouncingWidget(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            setState(() {
-              _isSearching = true;
-            });
-          },
-          child: IconButton(
-            icon: const Icon(Icons.search),
-            tooltip: 'Global search',
-            padding: EdgeInsets.zero,
-            visualDensity: VisualDensity.compact,
-            onPressed: () {
-              HapticFeedback.selectionClick();
-              setState(() {
-                _isSearching = true;
-              });
-            },
-          ),
         ),
         Consumer<P2pSyncProvider>(
           builder: (context, syncProvider, _) {
@@ -660,23 +725,16 @@ class _HomeAppBarState extends State<HomeAppBar> {
             );
           },
         ),
-        BouncingWidget(
-          onTap: () {
+        IconButton(
+          icon: const Icon(Icons.settings_outlined),
+          tooltip: 'Settings',
+          padding: EdgeInsets.zero,
+          visualDensity: VisualDensity.compact,
+          onPressed: () {
             HapticFeedback.selectionClick();
             AppRoute.push(context, const SettingsScreen())
                 .then((_) => widget.onRefresh());
           },
-          child: IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Settings',
-            padding: EdgeInsets.zero,
-            visualDensity: VisualDensity.compact,
-            onPressed: () {
-              HapticFeedback.selectionClick();
-              AppRoute.push(context, const SettingsScreen())
-                  .then((_) => widget.onRefresh());
-            },
-          ),
         ),
         const SizedBox(width: 4),
       ],

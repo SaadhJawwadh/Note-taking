@@ -992,7 +992,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                                 color: colorScheme.onSurface,
                               ),
                             ),
-                            Icon(Icons.arrow_drop_down,
+                            Icon(Icons.keyboard_arrow_down_rounded,
                                 color: colorScheme.onSurfaceVariant),
                           ],
                         ),
