@@ -28,9 +28,30 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
+                  version: 'v2.25.1',
+                  date: 'August 28, 2026',
+                  isLatest: true,
+                  changes: [
+                    _ChangelogGroup(
+                      title: '🚀 Improvements',
+                      items: [
+                        'Settings Control Center Polish: Ensured subtitle text in the hero card scales down smoothly without truncation across all display text sizes.',
+                        'Home Header Alignment: Fine-tuned folder dropdown vertical spacing and expanded toolbar constraints for clean layout across compact viewports.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🐛 Fixes',
+                      items: [
+                        'Release Pipeline Synchronization: Updated release build code and Play Store deployment artifacts for seamless in-app updates.',
+                      ],
+                    ),
+                  ],
+                ),
+                _buildVersionSection(
+                  context,
                   version: 'v2.25.0',
                   date: 'August 27, 2026',
-                  isLatest: true,
+                  isLatest: false,
                   changes: [
                     _ChangelogGroup(
                       title: "🌟 What's New",
