@@ -535,7 +535,7 @@ class P2pSyncService {
       final res = await req.close();
 
       if (res.statusCode == 200) {
-        final responseBody = await utf8.decoder.bind(res).join();
+        final responseBody = await utf8.decoder.bind(res).join().timeout(const Duration(seconds: 10));
         final decryptedReply = _crypto.decryptPayload(responseBody, pairCode);
         if (decryptedReply != null) {
           final Map<String, dynamic> replyMap = json.decode(decryptedReply);

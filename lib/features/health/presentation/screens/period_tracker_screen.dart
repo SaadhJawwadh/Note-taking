@@ -508,7 +508,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> with WidgetsB
                       verticalOffset: 24.0,
                       child: FadeInAnimation(
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, AppLayout.fabBottomPadding),
                           child: PeriodCalendarCard(
                             focusedDay: _focusedDay,
                             selectedDay: _selectedDay,

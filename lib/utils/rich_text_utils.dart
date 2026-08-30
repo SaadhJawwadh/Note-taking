@@ -118,9 +118,75 @@ class RichTextUtils {
     return buffer.toString();
   }
 
+  /// Sanitizes a Delta by ensuring inline attributes are not applied to newline characters
+  /// and separating text insertions from block newline insertions without stripping formatting.
+  static Delta sanitizeDelta(Delta delta) {
+    if (delta.isEmpty) return Delta()..insert('\n');
+    final sanitized = Delta();
+
+    for (final op in delta.toList()) {
+      if (!op.isInsert) {
+        sanitized.push(op);
+        continue;
+      }
+
+      if (op.data is! String) {
+        sanitized.push(op);
+        continue;
+      }
+
+      final text = op.data as String;
+      if (text.isEmpty) continue;
+
+      final attrs = op.attributes;
+      if (attrs == null || attrs.isEmpty) {
+        sanitized.insert(text);
+        continue;
+      }
+
+      if (!text.contains('\n')) {
+        final inlineAttrs = Map<String, dynamic>.from(attrs);
+        inlineAttrs.removeWhere((k, v) => k == 'header' || k == 'list' || k == 'blockquote' || k == 'code-block' || k == 'align');
+        sanitized.insert(text, inlineAttrs.isEmpty ? null : inlineAttrs);
+      } else {
+        final lines = text.split('\n');
+        for (int i = 0; i < lines.length; i++) {
+          final line = lines[i];
+          if (line.isNotEmpty) {
+            final inlineAttrs = Map<String, dynamic>.from(attrs);
+            inlineAttrs.removeWhere((k, v) => k == 'header' || k == 'list' || k == 'blockquote' || k == 'code-block' || k == 'align');
+            sanitized.insert(line, inlineAttrs.isEmpty ? null : inlineAttrs);
+          }
+          if (i < lines.length - 1) {
+            final blockAttrs = Map<String, dynamic>.from(attrs);
+            blockAttrs.removeWhere((k, v) => k != 'header' && k != 'list' && k != 'blockquote' && k != 'code-block' && k != 'align');
+            sanitized.insert('\n', blockAttrs.isEmpty ? null : blockAttrs);
+          }
+        }
+      }
+    }
+
+    if (sanitized.isEmpty) {
+      return Delta()..insert('\n');
+    }
+
+    final last = sanitized.last;
+    if (last.isInsert) {
+      if (last.data is String) {
+        if (!(last.data as String).endsWith('\n')) {
+          sanitized.insert('\n');
+        }
+      } else {
+        sanitized.insert('\n');
+      }
+    }
+
+    return sanitized;
+  }
+
   /// Serialises a Delta to a lossless JSON string for storage.
   static String deltaToJson(Delta delta) {
-    return jsonEncode(delta.toJson());
+    return jsonEncode(sanitizeDelta(delta).toJson());
   }
 
   /// Loads content from storage: tries Delta JSON first, falls back to Markdown for old notes.
@@ -129,10 +195,10 @@ class RichTextUtils {
     if (content.startsWith('[')) {
       try {
         final ops = jsonDecode(content) as List;
-        return Delta.fromJson(ops);
+        return sanitizeDelta(Delta.fromJson(ops));
       } catch (_) {}
     }
-    return markdownToDelta(content); // legacy Markdown fallback
+    return sanitizeDelta(markdownToDelta(content)); // legacy Markdown fallback
   }
 
   /// Extracts plain text from either Delta JSON or Markdown content for card preview.

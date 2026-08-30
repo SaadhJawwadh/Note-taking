@@ -64,6 +64,24 @@
 -keep class com.google.mlkit.vision.common.** { *; }
 -dontwarn com.google.mlkit.vision.text.**
 
+# Mobile Scanner
+-keep class dev.steenbakker.mobile_scanner.** { *; }
+-dontwarn dev.steenbakker.mobile_scanner.**
+
+# Speech to Text
+-keep class com.csdcorp.speech_to_text.** { *; }
+-dontwarn com.csdcorp.speech_to_text.**
+
+# Gemini Nano / AICore
+-keep class com.example.gemini_nano_android.** { *; }
+-dontwarn com.example.gemini_nano_android.**
+
+# In-App Update & In-App Review
+-keep class de.schilken.in_app_update.** { *; }
+-dontwarn de.schilken.in_app_update.**
+-keep class dev.fluttercommunity.plus.in_app_review.** { *; }
+-dontwarn dev.fluttercommunity.plus.in_app_review.**
+
 # General JNI keep
 -keepclassmembers class * { native <methods>; }
 

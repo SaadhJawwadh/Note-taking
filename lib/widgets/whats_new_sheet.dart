@@ -37,19 +37,19 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.primaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.search_rounded,
-            title: "Top Bar Transaction Search",
-            desc: "Full-width instant transaction search right in the top app bar with live query filtering, auto-switching, and 1-tap clear.",
+            icon: Icons.sync_lock_rounded,
+            title: "Split Bills Backup & Sync",
+            desc: "Group expenses, debt settlements, and friends now back up in encrypted files and sync bi-directionally across your devices.",
           ),
           _WhatsNewItem(
-            icon: Icons.sync_rounded,
-            title: "SMS 24-Hour Default Sync & Banner",
-            desc: "Syncs the last 24 hours by default to prevent skipped transactions, with real-time frosted progress indicator and instant cancel.",
+            icon: Icons.format_paint_rounded,
+            title: "Intelligent Rich Text Engine",
+            desc: "Preserves your bold, italic, and underline styling when formatting headers, bullet points, checklists, and tables.",
           ),
           _WhatsNewItem(
-            icon: Icons.view_headline_rounded,
-            title: "Unified Scope Pills & Action Symmetry",
-            desc: "High-contrast dynamic scope pills and standardized muscle-memory action bars across Notes, Finances, and Period Tracker.",
+            icon: Icons.speed_rounded,
+            title: "High-Performance Indexing",
+            desc: "Faster search and instant loading across transactions, notes, split bills, and menstrual cycle logs.",
           ),
         ],
       ),

@@ -8,7 +8,7 @@ import 'data/transaction_category.dart';
 import 'services/sms_service.dart';
 import 'package:note_taking_app/core/theme/app_theme.dart';
 import 'screens/home_screen.dart';
-import 'features/settings/settings.dart';
+import 'screens/app_lock_screen.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';

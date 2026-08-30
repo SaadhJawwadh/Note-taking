@@ -337,6 +337,7 @@ class NoteRepository {
     if (days <= 0) return; // Disabled
     final db = await _db;
     final cutoff = DateTime.now().subtract(Duration(days: days));
+    final nowIso = DateTime.now().toIso8601String();
     await db.transaction((txn) async {
       final oldNotes = await txn.query(
         TableNames.notes,
@@ -348,6 +349,7 @@ class NoteRepository {
         final id = row[NoteFields.id] as String;
         await NotificationService.cancelNoteReminder(id);
         await txn.delete('note_tags', where: 'note_id = ?', whereArgs: [id]);
+        await txn.insert('deleted_notes', {'id': id, 'deletedAt': nowIso}, conflictAlgorithm: ConflictAlgorithm.replace);
         await txn.delete(TableNames.notes, where: '${NoteFields.id} = ?', whereArgs: [id]);
       }
     });

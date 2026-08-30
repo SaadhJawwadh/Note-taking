@@ -28,9 +28,38 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
-                  version: 'v2.26.0',
+                  version: 'v2.27.0',
                   date: 'August 30, 2026',
                   isLatest: true,
+                  changes: [
+                    _ChangelogGroup(
+                      title: "🌟 What's New",
+                      items: [
+                        'Split Bills Cloudless Backup & Sync: Group expenses, debt balances, and friend contacts now automatically back up in encrypted JSON files and sync bi-directionally across your paired devices over local Wi-Fi.',
+                        'Intelligent Rich Text Formatting: Upgraded note formatting engine keeps your bold, italic, and underline styling intact when converting headers, bullet points, and checklists.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🚀 Improvements',
+                      items: [
+                        'Faster Database Queries: Added performance indexing across transactions, notes, split bills, and health logs for instant screen loads.',
+                        'Memory & Storage Optimization: High-resolution camera photos are safely downsampled and isolated in protected storage to save device battery and memory.',
+                        'Seamless Screen Navigation: Smoother transition between system dialogs, file pickers, and WhatsApp sharing without accidental lock screen triggers.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🐛 Fixes',
+                      items: [
+                        'Precision Text Selection: Fixed cursor navigation when tapping near note boundaries and tables.',
+                      ],
+                    ),
+                  ],
+                ),
+                _buildVersionSection(
+                  context,
+                  version: 'v2.26.0',
+                  date: 'August 30, 2026',
+                  isLatest: false,
                   changes: [
                     _ChangelogGroup(
                       title: "🌟 What's New",

@@ -160,10 +160,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         opacity: _currentPage > 0 ? 1.0 : 0.0,
                         child: IgnorePointer(
                           ignoring: _currentPage == 0,
-                          child: IconButton.outlined(
-                            onPressed: _previousPage,
-                            icon: const Icon(Icons.arrow_back_rounded),
-                            tooltip: 'Back',
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                            child: IconButton.outlined(
+                              onPressed: _previousPage,
+                              icon: const Icon(Icons.arrow_back_rounded),
+                              tooltip: 'Back',
+                            ),
                           ),
                         ),
                       ),
@@ -190,36 +193,40 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       // Primary Action Button (Next / Get Started)
                       BouncingWidget(
                         onTap: _nextPage,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppLayout.spaceXL,
-                            vertical: AppLayout.spaceM,
-                          ),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary,
-                            borderRadius: BorderRadius.circular(AppLayout.radiusL),
-                            boxShadow: AppLayout.softShadow(context),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                _currentPage == _totalPages - 1 ? 'Get Started' : 'Next',
-                                style: TextStyle(
-                                  color: theme.colorScheme.onPrimary,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 48, minWidth: 100),
+                          child: Container(
+                            alignment: Alignment.center,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppLayout.spaceXL,
+                              vertical: AppLayout.spaceM,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary,
+                              borderRadius: BorderRadius.circular(AppLayout.radiusL),
+                              boxShadow: AppLayout.softShadow(context),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  _currentPage == _totalPages - 1 ? 'Get Started' : 'Next',
+                                  style: TextStyle(
+                                    color: theme.colorScheme.onPrimary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: AppLayout.spaceS),
-                              Icon(
-                                _currentPage == _totalPages - 1
-                                    ? Icons.check_circle_rounded
-                                    : Icons.arrow_forward_rounded,
-                                color: theme.colorScheme.onPrimary,
-                                size: 18,
-                              ),
-                            ],
+                                const SizedBox(width: AppLayout.spaceS),
+                                Icon(
+                                  _currentPage == _totalPages - 1
+                                      ? Icons.check_circle_rounded
+                                      : Icons.arrow_forward_rounded,
+                                  color: theme.colorScheme.onPrimary,
+                                  size: 18,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),

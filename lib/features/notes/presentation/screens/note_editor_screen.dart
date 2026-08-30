@@ -7,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 import '../../../../screens/app_lock_screen.dart';
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
+import 'dart:math';
+import 'package:path/path.dart' as p;
 import 'dart:async';
 import '../../data/note_repository.dart';
 import '../../../../data/note_model.dart';
@@ -163,21 +165,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
               : delta);
     }
 
-    // Sanitize delta: ensure inline attributes (like strike) are not assigned to line breaks (\n)
-    final sanitizedOps = <Operation>[];
-    for (final op in delta.toList()) {
-      if (op.data is String && (op.data as String).contains('\n') && op.attributes != null) {
-        final cleanAttrs = Map<String, dynamic>.from(op.attributes!);
-        cleanAttrs.remove('strike');
-        cleanAttrs.remove('bold');
-        cleanAttrs.remove('italic');
-        cleanAttrs.remove('underline');
-        sanitizedOps.add(Operation.insert(op.data, cleanAttrs.isEmpty ? null : cleanAttrs));
-      } else {
-        sanitizedOps.add(op);
-      }
-    }
-    delta = Delta.fromOperations(sanitizedOps);
+    // Sanitize delta: ensure inline attributes are safely separated from block newlines
+    delta = RichTextUtils.sanitizeDelta(delta);
 
     _quillController = QuillController(
       document: Document.fromDelta(delta),
@@ -444,6 +433,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     return false;
   }
 
+  (int start, int length) _getNormalizedSelectionRange() {
+    final selection = _quillController.selection;
+    if (!selection.isValid) return (0, 0);
+    final docLen = _quillController.document.length;
+    final start = min(selection.baseOffset, selection.extentOffset).clamp(0, docLen > 0 ? docLen - 1 : 0);
+    final end = max(selection.baseOffset, selection.extentOffset).clamp(0, docLen > 0 ? docLen - 1 : 0);
+    return (start, end - start);
+  }
+
   void _nudgeSelectionLeft({bool byWord = false}) {
     if (_isEditingTableCell) return;
     final selection = _quillController.selection;
@@ -470,7 +468,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     }
 
     _quillController.updateSelection(
-      TextSelection(baseOffset: selection.baseOffset, extentOffset: newExtent),
+      selection.isCollapsed
+          ? TextSelection.collapsed(offset: newExtent)
+          : TextSelection(baseOffset: selection.baseOffset, extentOffset: newExtent),
       ChangeSource.local,
     );
   }
@@ -501,7 +501,9 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     }
 
     _quillController.updateSelection(
-      TextSelection(baseOffset: selection.baseOffset, extentOffset: newExtent),
+      selection.isCollapsed
+          ? TextSelection.collapsed(offset: newExtent)
+          : TextSelection(baseOffset: selection.baseOffset, extentOffset: newExtent),
       ChangeSource.local,
     );
   }
@@ -523,12 +525,16 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       final column = currentOffset - currentLineStart;
       final newOffset = (prevLineStart + column).clamp(0, prevLineEnd);
       _quillController.updateSelection(
-        TextSelection(baseOffset: selection.baseOffset, extentOffset: newOffset),
+        selection.isCollapsed
+            ? TextSelection.collapsed(offset: newOffset)
+            : TextSelection(baseOffset: selection.baseOffset, extentOffset: newOffset),
         ChangeSource.local,
       );
     } else {
       _quillController.updateSelection(
-        TextSelection(baseOffset: selection.baseOffset, extentOffset: 0),
+        selection.isCollapsed
+            ? const TextSelection.collapsed(offset: 0)
+            : TextSelection(baseOffset: selection.baseOffset, extentOffset: 0),
         ChangeSource.local,
       );
     }
@@ -552,12 +558,16 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       final lineEnd = nextLineEnd >= 0 ? nextLineEnd : text.length - 1;
       final newOffset = (nextLineStart + 1 + column).clamp(0, lineEnd);
       _quillController.updateSelection(
-        TextSelection(baseOffset: selection.baseOffset, extentOffset: newOffset),
+        selection.isCollapsed
+            ? TextSelection.collapsed(offset: newOffset)
+            : TextSelection(baseOffset: selection.baseOffset, extentOffset: newOffset),
         ChangeSource.local,
       );
     } else {
       _quillController.updateSelection(
-        TextSelection(baseOffset: selection.baseOffset, extentOffset: text.length - 1),
+        selection.isCollapsed
+            ? TextSelection.collapsed(offset: text.length - 1)
+            : TextSelection(baseOffset: selection.baseOffset, extentOffset: text.length - 1),
         ChangeSource.local,
       );
     }
@@ -703,12 +713,11 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     );
     final jsonStr = jsonEncode(rowsList);
 
-    final index = _quillController.selection.baseOffset;
-    final length = _quillController.selection.extentOffset - index;
+    final (index, length) = _getNormalizedSelectionRange();
 
     _quillController.replaceText(
       index,
-      length < 0 ? 0 : length,
+      length,
       TableBlockEmbed(jsonStr),
       null,
     );
@@ -949,10 +958,18 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       AppLockScreen.ignoreNextResumeLock();
       final pickedFile = await picker.pickImage(source: source);
       if (pickedFile != null) {
-        final index = _quillController.selection.baseOffset;
-        final length = _quillController.selection.extentOffset - index;
+        final appDir = await getApplicationDocumentsDirectory();
+        final imagesDir = Directory(p.join(appDir.path, 'note_images'));
+        if (!await imagesDir.exists()) {
+          await imagesDir.create(recursive: true);
+        }
+        final ext = p.extension(pickedFile.path);
+        final uniqueName = '${const Uuid().v4()}$ext';
+        final savedFile = await File(pickedFile.path).copy(p.join(imagesDir.path, uniqueName));
+
+        final (index, length) = _getNormalizedSelectionRange();
         _quillController.replaceText(
-            index, length, BlockEmbed.image(pickedFile.path), null);
+            index, length, BlockEmbed.image(savedFile.path), null);
         if (mounted) {
           Navigator.pop(context); // Close the modal
         }

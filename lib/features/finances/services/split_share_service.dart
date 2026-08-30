@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import '../data/models/split_bill_model.dart';
 
+import '../../../screens/app_lock_screen.dart';
+
 class SplitShareService {
   static String formatBillSummary(
     SplitBillModel bill, {
@@ -72,6 +74,7 @@ class SplitShareService {
       currencySymbol: currencySymbol,
       defaultPaymentInfo: defaultPaymentInfo,
     );
+    AppLockScreen.ignoreNextResumeLock();
     await Share.share(
       text,
       subject: 'Split Bill: ${bill.title}',

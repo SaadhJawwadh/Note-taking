@@ -55,11 +55,15 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
   - Always clamp `controller.selection` to `(doc.length - 1)` after deleting line nodes so cursor offsets never exceed current document text boundaries (`Range start X is out of text of length Y`).
 - **Delta Serialization & Sanitization**:
   - Separate text insertions from newline block insertions when building Deltas for database persistence.
-  - Sanitize loaded Deltas before `Document.fromDelta()` by stripping inline attributes from `\n` operations.
+  - Sanitize loaded Deltas before `Document.fromDelta()` with `RichTextUtils.sanitizeDelta(Delta delta)` to split text runs from `\n` boundaries without stripping inline text formatting (`bold`, `italic`, `underline`).
+- **Normalized Selection Range & Embed Insertions**:
+  - Use `_getNormalizedSelectionRange()` (`(min(base, extent), abs(base - extent))`) for embed insertions (tables, images) to prevent negative range exceptions on right-to-left cursor drags.
+- **Protected Image Directory**:
+  - Images picked in note editor must be copied to `getApplicationDocumentsDirectory() / 'note_images/'` with unique UUID names before embedding to guarantee sandbox isolation and resilience.
 
 ### 🖋️ Note Editor & Floating Precision Selection Invariants
 * **Symmetrical Split-Axis Flanks**:
-  - **Left Flank ($64\text{dp}$ Fixed)**: Horizontal stepper `[ ‹ ] [ › ]` (32dp per icon) with single-tap character nudges, double-tap & long-press word-boundary regex jumps, and `HapticFeedback.selectionClick()`.
+  - **Left Flank ($64\text{dp}$ Fixed)**: Horizontal stepper `[ ‹ ] [ › ]` (32dp per icon) with single-tap character nudges, double-tap & long-press word-boundary regex jumps, and `HapticFeedback.selectionClick()`. When `selection.isCollapsed`, update via `TextSelection.collapsed(offset: newOffset)` rather than opening accidental ranges.
   - **Right Flank ($64\text{dp}$ Fixed)**: Vertical stepper `[ ▲ ] [ ▼ ]` (32dp per icon) with line-level vertical navigation.
   - **Scrollable Center**: Center formatting tools (`Headings`, `B`, `I`, `U`, `S`, `Align`, `Indent`, `Quote`, `Code`) wrapped in `Expanded(child: SingleChildScrollView(scrollDirection: Axis.horizontal, ...))`.
 * **Natural Dismissal & Clean Bottom Toolbar**:

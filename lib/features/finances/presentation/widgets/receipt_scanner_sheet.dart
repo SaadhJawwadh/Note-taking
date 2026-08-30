@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/theme/app_layout.dart';
 import '../../../../core/ui/app_bottom_sheet.dart';
 import '../../../../data/settings_provider.dart';
+import '../../../../screens/app_lock_screen.dart';
 import '../../services/receipt_scanner_service.dart';
 
 class ReceiptScannerSheet extends StatefulWidget {
@@ -24,9 +25,9 @@ class ReceiptScannerSheet extends StatefulWidget {
 }
 
 class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
-  final ImagePicker _picker = ImagePicker();
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _totalController = TextEditingController();
+  final _picker = ImagePicker();
+  final _titleController = TextEditingController();
+  final _totalController = TextEditingController();
   
   String? _imagePath;
   bool _isScanning = false;
@@ -42,6 +43,7 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
 
   Future<void> _pickAndScan(ImageSource source) async {
     try {
+      AppLockScreen.ignoreNextResumeLock();
       final XFile? file = await _picker.pickImage(source: source);
       if (file == null) return;
 
@@ -74,14 +76,15 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
         }
       });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isScanning = false;
-          _errorMessage = 'Could not scan image: $e';
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _isScanning = false;
+        _errorMessage = 'Failed to process receipt: $e';
+      });
     }
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -89,39 +92,41 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
     final colorScheme = theme.colorScheme;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppLayout.spaceM, vertical: AppLayout.spaceS),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + AppLayout.spaceL,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (_imagePath == null) ...[
             Text(
-              'Capture or upload a physical bill receipt to automatically extract the total and store name offline.',
-              style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
+              'Select receipt image to automatically extract total, merchant name, and date using offline ML.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: AppLayout.spaceL),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => _pickAndScan(ImageSource.camera),
-                    icon: const Icon(Icons.camera_alt_rounded),
-                    label: const Text('Camera'),
+                    onPressed: () => _pickAndScan(ImageSource.gallery),
+                    icon: const Icon(Icons.photo_library_outlined),
+                    label: const Text('Gallery'),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusM)),
+                      padding: const EdgeInsets.symmetric(vertical: AppLayout.spaceM),
                     ),
                   ),
                 ),
                 const SizedBox(width: AppLayout.spaceM),
                 Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _pickAndScan(ImageSource.gallery),
-                    icon: const Icon(Icons.photo_library_rounded),
-                    label: const Text('Gallery'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusM)),
+                  child: FilledButton.icon(
+                    onPressed: () => _pickAndScan(ImageSource.camera),
+                    icon: const Icon(Icons.camera_alt_outlined),
+                    label: const Text('Camera'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: AppLayout.spaceM),
                     ),
                   ),
                 ),
@@ -153,6 +158,7 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
                       File(_imagePath!),
                       width: 68,
                       height: 84,
+                      cacheWidth: 300,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Container(
                         width: 68,

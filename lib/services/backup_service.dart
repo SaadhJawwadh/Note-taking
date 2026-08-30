@@ -73,6 +73,14 @@ Future<String> generateBackupJson({Map<String, dynamic>? settingsOverride}) asyn
   final smsContacts = await db.query('sms_contacts');
   final periodLogs = await db.query('period_logs');
   final recurringRules = await db.query('recurring_rules');
+  List<Map<String, dynamic>> splitBills = [];
+  List<Map<String, dynamic>> splitParticipants = [];
+  List<Map<String, dynamic>> splitContacts = [];
+  try {
+    splitBills = await db.query('split_bills');
+    splitParticipants = await db.query('split_participants');
+    splitContacts = await db.query('split_contacts');
+  } catch (_) {}
   List<Map<String, dynamic>> deletedNotes = [];
   try {
     deletedNotes = await db.query('deleted_notes');
@@ -115,6 +123,9 @@ Future<String> generateBackupJson({Map<String, dynamic>? settingsOverride}) asyn
     'smsContacts': smsContacts,
     'periodLogs': periodLogs,
     'recurringRules': recurringRules,
+    'splitBills': splitBills,
+    'splitParticipants': splitParticipants,
+    'splitContacts': splitContacts,
     'deletedNotes': deletedNotes,
     'deletedTransactionSmsIds': deletedTransactionSmsIds,
     'settings': settingsMap,
@@ -281,6 +292,7 @@ class BackupService {
     try {
       FilePickerResult? result;
       try {
+        AppLockScreen.ignoreNextResumeLock();
         result = await FilePicker.platform.pickFiles(
           type: FileType.custom,
           allowedExtensions: ['json'],
@@ -350,6 +362,11 @@ class BackupService {
       await txn.delete('transactions');
       await txn.delete('period_logs');
       await txn.delete('recurring_rules');
+      try {
+        await txn.delete('split_bills');
+        await txn.delete('split_participants');
+        await txn.delete('split_contacts');
+      } catch (_) {}
       try {
         await txn.delete('deleted_notes');
         await txn.delete('deleted_transaction_sms_ids');
@@ -467,6 +484,27 @@ class BackupService {
       if (data.containsKey('periodLogs')) {
         for (final row in data['periodLogs']) {
           batch.insert('period_logs', Map<String, Object?>.from(row), conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+      }
+      if (data.containsKey('splitBills') && data['splitBills'] is List) {
+        for (final row in data['splitBills']) {
+          if (row is Map) {
+            batch.insert('split_bills', Map<String, Object?>.from(row), conflictAlgorithm: ConflictAlgorithm.replace);
+          }
+        }
+      }
+      if (data.containsKey('splitParticipants') && data['splitParticipants'] is List) {
+        for (final row in data['splitParticipants']) {
+          if (row is Map) {
+            batch.insert('split_participants', Map<String, Object?>.from(row), conflictAlgorithm: ConflictAlgorithm.replace);
+          }
+        }
+      }
+      if (data.containsKey('splitContacts') && data['splitContacts'] is List) {
+        for (final row in data['splitContacts']) {
+          if (row is Map) {
+            batch.insert('split_contacts', Map<String, Object?>.from(row), conflictAlgorithm: ConflictAlgorithm.replace);
+          }
         }
       }
 
@@ -632,6 +670,7 @@ class BackupService {
     try {
       FilePickerResult? result;
       try {
+        AppLockScreen.ignoreNextResumeLock();
         result = await FilePicker.platform.pickFiles(
           type: FileType.custom,
           allowedExtensions: ['csv', 'txt'],

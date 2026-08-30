@@ -340,27 +340,36 @@ class _PeriodLogDashboardCardState extends State<PeriodLogDashboardCard> {
                           runSpacing: 6,
                           children: _predefinedSymptoms.map((symptom) {
                             final isSelected = selectedLog.symptoms.contains(symptom);
-                            return GestureDetector(
-                              onTap: () async {
-                                await HapticFeedback.selectionClick();
-                                await widget.provider.toggleSymptom(selectedLog, symptom);
-                              },
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 180),
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? colorScheme.primaryContainer
-                                      : colorScheme.surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(AppLayout.radiusM),
-                                ),
-                                child: Text(
-                                  symptom,
-                                  style: theme.textTheme.labelMedium?.copyWith(
-                                    color: isSelected
-                                        ? colorScheme.onPrimaryContainer
-                                        : colorScheme.onSurfaceVariant,
-                                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                            return Semantics(
+                              button: true,
+                              selected: isSelected,
+                              label: symptom,
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
+                                child: GestureDetector(
+                                  onTap: () async {
+                                    await HapticFeedback.selectionClick();
+                                    await widget.provider.toggleSymptom(selectedLog, symptom);
+                                  },
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 180),
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? colorScheme.primaryContainer
+                                          : colorScheme.surfaceContainerHighest,
+                                      borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                                    ),
+                                    child: Text(
+                                      symptom,
+                                      style: theme.textTheme.labelMedium?.copyWith(
+                                        color: isSelected
+                                            ? colorScheme.onPrimaryContainer
+                                            : colorScheme.onSurfaceVariant,
+                                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),

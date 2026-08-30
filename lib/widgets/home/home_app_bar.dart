@@ -95,10 +95,10 @@ class _HomeAppBarState extends State<HomeAppBar> {
           filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: Container(
             padding: EdgeInsets.only(
-              top: statusBarHeight + 4,
+              top: statusBarHeight + 6,
               left: 16,
               right: 16,
-              bottom: 4,
+              bottom: 6,
             ),
             decoration: BoxDecoration(
               color: Theme.of(context)

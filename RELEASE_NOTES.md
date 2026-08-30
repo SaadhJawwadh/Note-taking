@@ -1,14 +1,13 @@
 
 ### 🌟 What's New
-- **Top Bar Transaction Search**: Integrated instant search directly into the Finances top action bar, transforming the header into a full-width search input and maximizing screen space for transactions.
-- **SMS 24-Hour Default Lookback**: Quick sync and app launch catch-up now scan the last 24 hours by default, eliminating missed transaction cutoffs.
-- **Persistent Real-Time Sync Banner**: Live progress indicator beneath the top bar across all financial tabs with scanning counts and an instant Cancel button.
+- **Split Bills Cloudless Backup & Sync**: Group expenses, debt balances, and friend contacts now automatically back up in encrypted JSON files and sync bi-directionally across your paired devices over local Wi-Fi.
+- **Intelligent Rich Text Formatting**: Upgraded note formatting engine keeps your bold, italic, and underline styling intact when converting headers, bullet points, and checklists.
 
 ### 🚀 Improvements
-- **Top Action Bar Symmetry & Ordering**: Standardized button sequence (`Search` → `Sync` → `Tools` → `Settings`) and uniform spacing across Notes, Finances, and Health Tracker.
-- **Dynamic Theming Scope Pills**: High-contrast tonal container styling with subtle accent borders for folder, date range, and cycle phase pills across all wallpaper palettes.
-- **Post-Sync Feedback**: Floating SnackBar notifications showing exact transaction counts imported from the last 24 hours.
+- **Faster Database Queries**: Added performance indexing across transactions, notes, split bills, and health logs for instant screen loads.
+- **Memory & Storage Optimization**: High-resolution camera photos are safely downsampled and isolated in protected storage to save device battery and memory.
+- **Seamless Screen Navigation**: Smoother transition between system dialogs, file pickers, and WhatsApp sharing without accidental lock screen triggers.
 
 ### 🐛 Fixes
-- **Tombstone Safety & Deduplication**: Stamped genuine SMS receipt timestamps to prevent duplicate imports and protect restored transactions.
+- **Precision Text Selection**: Fixed cursor navigation when tapping near note boundaries and tables.
 

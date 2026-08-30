@@ -30,7 +30,7 @@ class DatabaseHelper {
 
   @visibleForTesting
   Future<void> createTestDatabase(Database db) async {
-    await _createDB(db, 19);
+    await _createDB(db, 22);
   }
 
   @visibleForTesting
@@ -139,14 +139,18 @@ class DatabaseHelper {
       // Performance Indexes
       await db.execute('CREATE INDEX IF NOT EXISTS idx_notes_deleted ON notes(deletedAt);');
       await db.execute('CREATE INDEX IF NOT EXISTS idx_notes_modified ON notes(dateModified);');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_notes_modified_deleted ON notes(dateModified, deletedAt);');
       await db.execute('CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date);');
       await db.execute('CREATE INDEX IF NOT EXISTS idx_transactions_smsid ON transactions(smsId);');
       await db.execute('CREATE INDEX IF NOT EXISTS idx_transactions_deleted ON transactions(deletedAt);');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_transactions_date_account ON transactions(date, account);');
       await db.execute('CREATE INDEX IF NOT EXISTS idx_tombstones_smsid ON deleted_transaction_sms_ids(smsId);');
       await db.execute('CREATE INDEX IF NOT EXISTS idx_split_bills_deleted ON ${TableNames.splitBills}(${SplitBillFields.deletedAt});');
       await db.execute('CREATE INDEX IF NOT EXISTS idx_split_bills_txid ON ${TableNames.splitBills}(${SplitBillFields.transactionId});');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_split_bills_active ON ${TableNames.splitBills}(${SplitBillFields.deletedAt}, ${SplitBillFields.status});');
       await db.execute('CREATE INDEX IF NOT EXISTS idx_split_participants_bill ON ${TableNames.splitParticipants}(${SplitParticipantFields.billId});');
       await db.execute('CREATE INDEX IF NOT EXISTS idx_split_participants_contact ON ${TableNames.splitParticipants}(${SplitParticipantFields.contactName});');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_period_logs_start ON ${TableNames.periodLogs}(${PeriodLogFields.startDate});');
 
       final cols = await db.rawQuery('PRAGMA table_info(${TableNames.transactions})');
       final hasAiRefinedCol = cols.any((col) => col['name'] == 'isAiRefined');
@@ -370,7 +374,7 @@ class DatabaseHelper {
       await db.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_smsId ON ${TableNames.transactions}(smsId) WHERE smsId IS NOT NULL');
     }
     if (oldVersion < 7) {
-      await db.execute('CREATE TABLE IF NOT EXISTS ${TableNames.categoryDefinitions} (${CategoryFields.name} TEXT PRIMARY KEY, ${CategoryFields.color} INTEGER NOT NULL, ${CategoryFields.keywords} TEXT NOT NULL DEFAULT "[]", ${CategoryFields.isBuiltIn} INTEGER NOT NULL DEFAULT 0)');
+      await db.execute("CREATE TABLE IF NOT EXISTS ${TableNames.categoryDefinitions} (${CategoryFields.name} TEXT PRIMARY KEY, ${CategoryFields.color} INTEGER NOT NULL, ${CategoryFields.keywords} TEXT NOT NULL DEFAULT '[]', ${CategoryFields.isBuiltIn} INTEGER NOT NULL DEFAULT 0)");
       await DatabaseSeed.seedBuiltInCategories(db);
     }
     if (oldVersion < 8) {
@@ -379,7 +383,7 @@ class DatabaseHelper {
     }
     if (oldVersion < 9) await db.execute('CREATE TABLE IF NOT EXISTS sms_whitelist (sender TEXT PRIMARY KEY)');
     if (oldVersion < 10) {
-      await db.execute('CREATE TABLE IF NOT EXISTS ${TableNames.smsContacts} (${SmsContactFields.id} TEXT PRIMARY KEY, ${SmsContactFields.senderIds} TEXT NOT NULL DEFAULT "[]", ${SmsContactFields.label} TEXT, ${SmsContactFields.isBuiltIn} INTEGER NOT NULL DEFAULT 0, ${SmsContactFields.isBlocked} INTEGER NOT NULL DEFAULT 0)');
+      await db.execute("CREATE TABLE IF NOT EXISTS ${TableNames.smsContacts} (${SmsContactFields.id} TEXT PRIMARY KEY, ${SmsContactFields.senderIds} TEXT NOT NULL DEFAULT '[]', ${SmsContactFields.label} TEXT, ${SmsContactFields.isBuiltIn} INTEGER NOT NULL DEFAULT 0, ${SmsContactFields.isBlocked} INTEGER NOT NULL DEFAULT 0)");
       await DatabaseSeed.seedBuiltInSmsContacts(db);
       final hasOld = (await db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='sms_whitelist'")).isNotEmpty;
       if (hasOld) {
@@ -435,7 +439,7 @@ class DatabaseHelper {
       ''');
     }
     if (oldVersion < 16) {
-      await db.execute('ALTER TABLE ${TableNames.periodLogs} ADD COLUMN ${PeriodLogFields.symptoms} TEXT NOT NULL DEFAULT "[]"');
+      await db.execute("ALTER TABLE ${TableNames.periodLogs} ADD COLUMN ${PeriodLogFields.symptoms} TEXT NOT NULL DEFAULT '[]'");
     }
     if (oldVersion < 17) {
       final cols = await db.rawQuery('PRAGMA table_info(${TableNames.categoryDefinitions})');

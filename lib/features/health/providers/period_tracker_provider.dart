@@ -36,9 +36,11 @@ class PeriodTrackerProvider extends ChangeNotifier {
     loadData();
   }
 
-  Future<void> loadData() async {
-    _isLoading = true;
-    notifyListeners();
+  Future<void> loadData({bool showLoading = false}) async {
+    if (showLoading || _logs.isEmpty) {
+      _isLoading = true;
+      notifyListeners();
+    }
 
     _logs = await PeriodRepository.instance.readAllPeriodLogs();
     _predictedNextPeriod = await PeriodPredictionService.estimateNextPeriod(_logs);

@@ -101,8 +101,8 @@ lib/
 
 ### 🖼️ Invariant 9: R8 Full-Mode Optimization & Bitmap Memory Downsampling
 * **R8 Full-Mode Hygiene**: Maintain `android.enableR8.fullMode=true` in `android/gradle.properties`. Avoid broad wildcards like `-keep class io.flutter.** { *; }` in `proguard-rules.pro` that disable dead code elimination and method inlining passes.
-* **Native & ML Plugin ProGuard Rules**: When introducing native plugins with optional sub-modules or dynamic model loaders (e.g. Google ML Kit, FFmpeg, Biometrics), always declare explicit `-keep class <plugin>.** { *; }` and `-dontwarn <plugin>.**` rules in `android/app/proguard-rules.pro` to prevent R8 class-stripping aborts during release compilation.
-* **Bitmap Downsampling Bounds**: Never decode raw 12–48MP images without bounding parameters. All `Image.file`, `Image.network`, and `Image.asset` preview widgets MUST supply `cacheWidth` (e.g. `cacheWidth: 1080` for note embeds, `cacheWidth: 400` for grid/list cards) and provide `errorBuilder` fallbacks to prevent OOM memory pressure.
+* **Native & ML Plugin ProGuard Rules**: When introducing native plugins with optional sub-modules or dynamic model loaders (e.g. `mobile_scanner`, `speech_to_text`, `gemini_nano_android`, `in_app_update`, `in_app_review`), always declare explicit `-keep class <plugin>.** { *; }` and `-dontwarn <plugin>.**` rules in `android/app/proguard-rules.pro` to prevent R8 class-stripping aborts during release compilation.
+* **Bitmap Downsampling Bounds**: Never decode raw 12–48MP images without bounding parameters. All `Image.file`, `Image.network`, and `Image.asset` preview widgets MUST supply `cacheWidth` (e.g. `cacheWidth: 1080` for note embeds, `cacheWidth: 400` for grid/list cards, `cacheWidth: 300` for receipt previews) and provide `errorBuilder` fallbacks to prevent OOM memory pressure.
 * **Global Image Cache Bounds**: `main.dart` must maintain `imageCache.maximumSizeBytes = 100 * 1024 * 1024` (100MB) and `maximumSize = 100`.
 
 ### 🎯 Invariant 10: Touch Target Bounds, Chart Outlines & Semantic Labels
@@ -117,6 +117,8 @@ lib/
   - Debt repayments from participants settled in `SettleUpSheet` MUST record as `Income` in the Daily Operating account.
   - When a friend pays for a bill, the user's ledger records personal liability *only* upon settling up with that friend.
 * **Offline OCR & Sharing**: Receipt scanning (`ReceiptScannerService`) operates 100% locally on-device via ML Kit. WhatsApp payment reminder templates (`SplitShareService`) format genuine breakdown summaries and include user-configured default payment info without third-party cloud SDKs.
+* **Full Backup & P2P Sync Invariant**: Split bills tables (`split_bills`, `split_participants`, `split_contacts`) MUST be serialized in `BackupService.generateBackupJson()`, restored in `BackupService.restoreFromBackupData()`, and merged via `SyncMergeService.mergeRemoteData()`.
+* **Resume Lock Bypass**: Any screen invoking external file pickers or system share sheets (JSON backups, CSV imports, Receipt Camera/Gallery, WhatsApp sharing) MUST call `AppLockScreen.ignoreNextResumeLock()` immediately before launch.
 
 ### 🎨 Invariant 13: Selection Controls Modernization & Legacy Dropdown Prohibition
 * **No Legacy M2 Dropdowns**: Never use `DropdownButton` or `DropdownButtonFormField`.

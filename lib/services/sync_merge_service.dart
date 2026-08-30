@@ -317,6 +317,35 @@ class SyncMergeService {
         }
         await batch.commit(noResult: true);
       }
+
+      // 8. Merge Split Bills, Participants & Contacts
+      if (remoteData.containsKey('splitBills') && remoteData['splitBills'] is List) {
+        final batch = txn.batch();
+        for (final item in remoteData['splitBills'] as List) {
+          if (item is Map) {
+            batch.insert('split_bills', Map<String, Object?>.from(item), conflictAlgorithm: ConflictAlgorithm.replace);
+          }
+        }
+        await batch.commit(noResult: true);
+      }
+      if (remoteData.containsKey('splitParticipants') && remoteData['splitParticipants'] is List) {
+        final batch = txn.batch();
+        for (final item in remoteData['splitParticipants'] as List) {
+          if (item is Map) {
+            batch.insert('split_participants', Map<String, Object?>.from(item), conflictAlgorithm: ConflictAlgorithm.replace);
+          }
+        }
+        await batch.commit(noResult: true);
+      }
+      if (remoteData.containsKey('splitContacts') && remoteData['splitContacts'] is List) {
+        final batch = txn.batch();
+        for (final item in remoteData['splitContacts'] as List) {
+          if (item is Map) {
+            batch.insert('split_contacts', Map<String, Object?>.from(item), conflictAlgorithm: ConflictAlgorithm.replace);
+          }
+        }
+        await batch.commit(noResult: true);
+      }
     });
 
     return SyncMergeResult(

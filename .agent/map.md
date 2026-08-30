@@ -337,6 +337,14 @@ erDiagram
     tags ||--o{ note_tags : "groups"
 ```
 
+### Hot-Path Database Composite Indexes
+- `idx_transactions_date_account` ON `transactions(date, account)`
+- `idx_notes_modified_deleted` ON `notes(modifiedAt, deletedAt)`
+- `idx_split_bills_active` ON `split_bills(deletedAt, date)`
+- `idx_period_logs_start` ON `period_logs(startDate)`
+- `idx_transactions_sms_id` ON `transactions(smsId)`
+- `idx_deleted_sms_id` ON `deleted_transaction_sms_ids(smsId)`
+
 ---
 
 ## 🔄 Core Workflows & Integrations
@@ -401,4 +409,9 @@ sequenceDiagram
     *   `03_playstore_donut_breakdown.jpg`: Interactive Donut chart and category budgets mockup card.
     *   `04_playstore_offline_privacy_sync.jpg`: Zero-cloud privacy and P2P Wi-Fi sync mockup card.
 *   **Automated Real-World Test Suites**:
+    *   `test/top_bar_search_and_sms_24h_sync_test.dart`: Validates Top Bar transaction search mode, 24-hour default SMS scan engine, persistent real-time sync progress banner, and top app bar action symmetry.
+    *   `test/split_bill_features_test.dart`: Validates Split Bills mathematics, OCR offline parsing, settle-up sheet, and WhatsApp reminder generators.
+    *   `test/period_tracker_phase4_features_test.dart`: Validates period predictions, regularity scoring, symptom toggles, and cycle phase cards.
+    *   `test/financial_trash_and_sms_fetch_test.dart`: Validates financial trash bin, tombstone re-import prevention, soft-delete UNDO restoration, and SMS cancel tokens.
     *   `test/features/sms_and_recurring_overhaul_test.dart`: Validates Fuel Pass quota filtering, CEFTS self-transfers, Amana Bank, COMBANK, PickMe Food merchant cleaning, recurring keyword auto-detection, and duplicate prevention.
+

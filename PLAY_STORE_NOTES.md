@@ -1,20 +1,20 @@
 <en-US>
 🌟 What's New
-• Top Bar Search: Instant transaction search with 1-tap clear.
-• 24-Hour SMS Sync: Auto-sync scans last 24h with live progress.
-• Unified Scope Pills: High-contrast folder & date pills.
+• Split Bills Backup: Group bills & friends now sync across paired devices & backups.
+• Enhanced Rich Text: Preserves styling when switching headers and lists.
 
 🚀 Improvements
-• Symmetrical action bars across Notes, Finances & Tracker.
-• Exact sync count notifications.
+• Faster search & database speed across all features.
+• Reduced memory usage for photos and receipts.
+• Smoother sharing without lock screen interruptions.
 </en-US>
 <ta-IN>
 🌟 புதிய அம்சங்கள்
-• தலைப்பு தேடல்: உடனடி பரிவர்த்தனை தேடல்.
-• 24 மணி நேர SMS ஒத்திசைவு: நேரலை முன்னேற்றத்துடன்.
-• புதிய பில்கள்: கோப்பு மற்றும் தேதிகளுக்கான தெளிவான பில்கள்.
+• பகிரப்பட்ட பில்கள் காப்புப்பிரதி: சாதனங்கள் மற்றும் காப்புப்பிரதிகளில் ஒத்திசைவு.
+• மேம்பட்ட உரை வடிவமைப்பு: தலைப்புகள் மற்றும் பட்டியல்களின் போது பாணிகளைப் பாதுகாக்கிறது.
 
 🚀 மேம்பாடுகள்
-• சமச்சீர் பொத்தான் அமைப்பு & மேம்பட்ட செயல்திறன்.
+• வேகமான தரவுத்தள வேகம்.
+• புகைப்படங்களுக்கான நினைவக சேமிப்பு.
 </ta-IN>
 

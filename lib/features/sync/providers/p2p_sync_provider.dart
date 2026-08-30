@@ -263,18 +263,48 @@ class P2pSyncProvider with ChangeNotifier {
 
   Future<bool> sendTestPing({PairedDevice? device, String? targetIp}) async {
     final peer = device ?? (_pairedDevices.isEmpty ? null : _pairedDevices.first);
-    final endpoint = targetIp == null ? peer?.preferredEndpoint : DeviceEndpoint(ipAddress: targetIp);
-    if (endpoint == null || peer == null) {
+    if (peer == null) {
       _status = SyncStatus.error;
-      _lastMessage = 'Test ping failed: no paired device endpoint is available.';
+      _lastMessage = 'Test ping failed: no paired device available.';
       notifyListeners();
       return false;
     }
-    _lastMessage = 'Pinging ${endpoint.ipAddress}…';
-    notifyListeners();
-    final result = await _service.sendTestPing(endpoint.ipAddress, peer.pairCode, targetPort: endpoint.port);
-    _handleSyncEvent(result);
-    return result.success;
+
+    if (targetIp != null) {
+      _lastMessage = 'Pinging $targetIp…';
+      notifyListeners();
+      final result = await _service.sendTestPing(targetIp, peer.pairCode);
+      _handleSyncEvent(result);
+      return result.success;
+    }
+
+    final endpoints = [...peer.endpoints]
+      ..sort((a, b) => (b.lastSyncedAt ?? b.lastSeenAt ?? DateTime.fromMillisecondsSinceEpoch(0))
+          .compareTo(a.lastSyncedAt ?? a.lastSeenAt ?? DateTime.fromMillisecondsSinceEpoch(0)));
+
+    if (endpoints.isEmpty) {
+      _status = SyncStatus.error;
+      _lastMessage = 'Test ping failed: no endpoint available for ${peer.deviceName}.';
+      notifyListeners();
+      return false;
+    }
+
+    SyncResult? lastResult;
+    for (final endpoint in endpoints) {
+      _lastMessage = 'Pinging ${endpoint.ipAddress}…';
+      notifyListeners();
+      final result = await _service.sendTestPing(endpoint.ipAddress, peer.pairCode, targetPort: endpoint.port);
+      lastResult = result;
+      if (result.success) {
+        _handleSyncEvent(result);
+        return true;
+      }
+    }
+
+    if (lastResult != null) {
+      _handleSyncEvent(lastResult);
+    }
+    return false;
   }
 
   void triggerEventSync() {
