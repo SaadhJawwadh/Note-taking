@@ -65,12 +65,14 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
   int _heroCardMode = 0; // 0: Net Cash Flow, 1: Daily Burn Rate, 2: Savings Rate
   int _analyticsSubView = 0; // 0: Breakdown, 1: Budgets
   String _searchQuery = '';
+  bool _isSearching = false;
   Timer? _heroAutoCycleTimer;
   bool _heroUserInteracted = false;
 
   StreamSubscription<TransactionModel>? _smsSubscription;
   StreamSubscription<SmsSyncProgress>? _smsProgressSub;
   bool _isSmsSyncing = false;
+  SmsSyncProgress? _lastSmsProgress;
 
   @override
   void initState() {
@@ -93,8 +95,40 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
       await _refreshTransactions();
     });
     _smsProgressSub = SmsService.syncProgressStream.listen((progress) {
-      if (mounted && _isSmsSyncing != progress.isSyncing) {
-        setState(() => _isSmsSyncing = progress.isSyncing);
+      if (!mounted) return;
+      final wasSyncing = _isSmsSyncing;
+      setState(() {
+        _isSmsSyncing = progress.isSyncing;
+        _lastSmsProgress = progress;
+      });
+      if (wasSyncing && !progress.isSyncing) {
+        _refreshTransactions(showLoading: false);
+        if (progress.message != 'Sync cancelled by user') {
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(
+                    progress.found > 0 ? Icons.check_circle_rounded : Icons.info_outline_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      progress.found > 0
+                          ? 'Synced ${progress.found} new transaction${progress.found == 1 ? "" : "s"} from the last 24h'
+                          : 'Up to date • No new transactions found in the last 24h',
+                    ),
+                  ),
+                ],
+              ),
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
       }
     });
   }
@@ -573,7 +607,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Scanning recent messages in background...'),
+        content: Text('Scanning messages from the last 24h...'),
         behavior: SnackBarBehavior.floating,
         duration: Duration(seconds: 2),
       ),
@@ -1068,6 +1102,460 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
       ),
     );
   }
+
+  Widget _buildSearchModeHeader(ColorScheme colorScheme, TextTheme textTheme) {
+    return Row(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Exit search',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+          visualDensity: VisualDensity.compact,
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            setState(() {
+              _isSearching = false;
+              _searchController.clear();
+              _searchQuery = '';
+              _applyFilters();
+            });
+          },
+        ),
+        Expanded(
+          child: TextField(
+            controller: _searchController,
+            autofocus: true,
+            style: textTheme.titleMedium,
+            enableInteractiveSelection: true,
+            textCapitalization: TextCapitalization.sentences,
+            autocorrect: true,
+            decoration: InputDecoration(
+              hintText: 'Search transactions, categories...',
+              hintStyle: textTheme.titleMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+              ),
+              filled: false,
+              fillColor: Colors.transparent,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+            ),
+            onChanged: (val) {
+              setState(() {
+                _searchQuery = val.trim().toLowerCase();
+                _applyFilters();
+              });
+            },
+            onSubmitted: (_) {
+              FocusScope.of(context).unfocus();
+            },
+          ),
+        ),
+        if (_searchQuery.isNotEmpty)
+          IconButton(
+            icon: const Icon(Icons.close, size: 20),
+            tooltip: 'Clear query',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+            visualDensity: VisualDensity.compact,
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              _searchController.clear();
+              setState(() {
+                _searchQuery = '';
+                _applyFilters();
+              });
+            },
+          ),
+        IconButton(
+          icon: const Icon(Icons.search),
+          tooltip: 'Search',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+          visualDensity: VisualDensity.compact,
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            FocusScope.of(context).unfocus();
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNormalHeader(ColorScheme colorScheme, TextTheme textTheme, String currency, bool isDark) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Finances',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Semantics(
+                button: true,
+                label:
+                    'Selected date range: ${_selectedRange.duration.inDays == 0 ? DateFormat.MMMd().format(_selectedRange.start) : '${DateFormat.MMMd().format(_selectedRange.start)} to ${DateFormat.MMMd().format(_selectedRange.end)}'}. Tap to change filter',
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    _selectDateRange(context);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primaryContainer.withValues(alpha: isDark ? 0.35 : 0.45),
+                      borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                      border: Border.all(
+                        color: colorScheme.primary.withValues(alpha: 0.28),
+                        width: 1.0,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.calendar_today_outlined,
+                          size: 13,
+                          color: colorScheme.primary,
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            _selectedRange.duration.inDays == 0
+                                ? DateFormat.MMMd().format(_selectedRange.start)
+                                : '${DateFormat.MMMd().format(_selectedRange.start)} – ${DateFormat.MMMd().format(_selectedRange.end)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          size: 14,
+                          color: colorScheme.primary,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.search),
+          tooltip: 'Search transactions',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+          visualDensity: VisualDensity.compact,
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            setState(() {
+              if (_selectedTab != 'Ledger') {
+                _selectedTab = 'Ledger';
+              }
+              _isSearching = true;
+            });
+          },
+        ),
+        Semantics(
+          button: true,
+          label:
+              'Sync SMS transactions. Tap for quick sync, hold for advanced import options',
+          child: Tooltip(
+            message: 'Quick Sync (Tap) | Advanced Import (Hold)',
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+              child: BouncingWidget(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  _quickImportRecentSms();
+                },
+                onLongPress: () {
+                  HapticFeedback.mediumImpact();
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    showDragHandle: true,
+                    builder: (_) => const SmsImportSheet(),
+                  );
+                },
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: _isSmsSyncing
+                        ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                colorScheme.primary,
+                              ),
+                            ),
+                          )
+                        : const Icon(Icons.sync_rounded),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert),
+          tooltip: 'Finances Tools',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+          elevation: 3,
+          shadowColor: colorScheme.shadow.withValues(alpha: 0.15),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppLayout.radiusXL),
+            side: BorderSide(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+              width: 1,
+            ),
+          ),
+          color: colorScheme.surfaceContainerHigh,
+          onSelected: (value) {
+            HapticFeedback.selectionClick();
+            if (value == 'ai_refine') {
+              _bulkRefineRecentTransactionsWithAi();
+            } else if (value == 'sms_rules') {
+              AppRoute.push(context, const SmsRulesScreen());
+            } else if (value == 'recurring') {
+              RecurringRulesSheet.show(
+                context: context,
+                currency: currency,
+                onRulesUpdated: _refreshTransactions,
+              );
+            } else if (value == 'export') {
+              FinancialExportService.showExportSheet(
+                context,
+                _transactions,
+                currency: currency,
+              );
+            } else if (value == 'trash') {
+              FinancialTrashSheet.show(context).then((_) {
+                if (mounted) _refreshTransactions();
+              });
+            } else if (value == 'settings') {
+              AppRoute.push(context, const SettingsScreen())
+                  .then((_) => _refreshTransactions());
+            }
+          },
+          itemBuilder: (ctx) {
+            final settings = ctx.read<SettingsProvider>();
+            final isAiEnabled = settings.isAiActive;
+            return [
+              if (isAiEnabled) ...[
+                PopupMenuItem(
+                  value: 'ai_refine',
+                  height: 48,
+                  child: Row(
+                    children: [
+                      Icon(Icons.auto_fix_high_rounded, size: 20, color: colorScheme.primary),
+                      const SizedBox(width: 12),
+                      Text('Refine Recent with AI', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                    ],
+                  ),
+                ),
+                const PopupMenuDivider(),
+              ],
+              PopupMenuItem(
+                value: 'sms_rules',
+                height: 48,
+                child: Row(
+                  children: [
+                    Icon(Icons.flash_on_rounded, size: 20, color: colorScheme.primary),
+                    const SizedBox(width: 12),
+                    Text('SMS & Bank Automation', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'recurring',
+                height: 48,
+                child: Row(
+                  children: [
+                    Icon(Icons.repeat_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 12),
+                    Text('Recurring Subscriptions', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              PopupMenuItem(
+                value: 'export',
+                height: 48,
+                child: Row(
+                  children: [
+                    Icon(Icons.ios_share_rounded, size: 20, color: colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 12),
+                    Text('Export Ledger', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'trash',
+                height: 48,
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_outline_rounded, size: 20, color: colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text('Trash Bin', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                    ),
+                    if (_trashedCount > 0)
+                      Badge(
+                        label: Text('$_trashedCount'),
+                        backgroundColor: colorScheme.error,
+                      ),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              PopupMenuItem(
+                value: 'settings',
+                height: 48,
+                child: Row(
+                  children: [
+                    Icon(Icons.settings_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 12),
+                    Text('Settings', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                  ],
+                ),
+              ),
+            ];
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.settings_outlined),
+          tooltip: 'Settings',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+          visualDensity: VisualDensity.compact,
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            AppRoute.push(context, const SettingsScreen())
+                .then((_) => _refreshTransactions());
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSmsSyncProgressBanner(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+    bool isDark,
+  ) {
+    final scanned = _lastSmsProgress?.scanned ?? 0;
+    final total = _lastSmsProgress?.total ?? 0;
+    final found = _lastSmsProgress?.found ?? 0;
+    final progressVal = total > 0 ? (scanned / total).clamp(0.0, 1.0) : null;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHigh.withValues(alpha: isDark ? 0.90 : 0.95),
+          borderRadius: BorderRadius.circular(AppLayout.radiusM),
+          border: Border.all(
+            color: colorScheme.primary.withValues(alpha: 0.30),
+            width: 1.0,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: colorScheme.shadow.withValues(alpha: 0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    value: progressVal,
+                    valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    total > 0
+                        ? 'Scanning $scanned / $total messages • $found found'
+                        : 'Scanning messages from the last 24h...',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                InkWell(
+                  borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    SmsService.cancelSync();
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Text(
+                      'Cancel',
+                      style: textTheme.labelSmall?.copyWith(
+                        color: colorScheme.error,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: LinearProgressIndicator(
+                value: progressVal,
+                minHeight: 3,
+                backgroundColor: colorScheme.primaryContainer.withValues(alpha: 0.4),
+                valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   List<Widget> _buildSlivers(
     ColorScheme colorScheme,
     TextTheme textTheme,
@@ -1083,7 +1571,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
               primary: false,
               backgroundColor: Colors.transparent,
               elevation: 0,
-              toolbarHeight: MediaQuery.of(context).padding.top + 68.0,
+              toolbarHeight: MediaQuery.of(context).padding.top + 72.0,
               titleSpacing: 0,
               automaticallyImplyLeading: false,
               flexibleSpace: ClipRect(
@@ -1105,272 +1593,21 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
                     child: Align(
                       alignment: Alignment.center,
                       child: SizedBox(
-                        height: 56,
-                        child: Row(
-                          children: [
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    'Finances',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: textTheme.titleLarge?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Semantics(
-                                    button: true,
-                                    label:
-                                        'Selected date range: ${_selectedRange.duration.inDays == 0 ? DateFormat.MMMd().format(_selectedRange.start) : '${DateFormat.MMMd().format(_selectedRange.start)} to ${DateFormat.MMMd().format(_selectedRange.end)}'}. Tap to change filter',
-                                    child: InkWell(
-                                      borderRadius: BorderRadius.circular(AppLayout.radiusS),
-                                      onTap: () {
-                                        HapticFeedback.lightImpact();
-                                        _selectDateRange(context);
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                                        decoration: BoxDecoration(
-                                          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.75),
-                                          borderRadius: BorderRadius.circular(AppLayout.radiusS),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              Icons.calendar_today_outlined,
-                                              size: 13,
-                                              color: colorScheme.primary,
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Flexible(
-                                              child: Text(
-                                                _selectedRange.duration.inDays == 0
-                                                    ? DateFormat.MMMd().format(_selectedRange.start)
-                                                    : '${DateFormat.MMMd().format(_selectedRange.start)} – ${DateFormat.MMMd().format(_selectedRange.end)}',
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: textTheme.bodySmall?.copyWith(
-                                                  color: colorScheme.onSurfaceVariant,
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 2),
-                                            Icon(
-                                              Icons.keyboard_arrow_down_rounded,
-                                              size: 14,
-                                              color: colorScheme.onSurfaceVariant,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Semantics(
-                              button: true,
-                              label:
-                                  'Sync SMS transactions. Tap for quick sync, hold for advanced import options',
-                              child: Tooltip(
-                                message:
-                                    'Quick Sync (Tap) | Advanced Import (Hold)',
-                                child: ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                      minWidth: 44, minHeight: 44),
-                                  child: BouncingWidget(
-                                    onTap: () {
-                                      HapticFeedback.lightImpact();
-                                      _quickImportRecentSms();
-                                    },
-                                    onLongPress: () {
-                                      HapticFeedback.mediumImpact();
-                                      showModalBottomSheet(
-                                        context: context,
-                                        isScrollControlled: true,
-                                        showDragHandle: true,
-                                        builder: (_) => const SmsImportSheet(),
-                                      );
-                                    },
-                                    child: Center(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(8.0),
-                                        child: _isSmsSyncing
-                                            ? SizedBox(
-                                                width: 20,
-                                                height: 20,
-                                                child: CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                  valueColor:
-                                                      AlwaysStoppedAnimation<Color>(
-                                                    Theme.of(context)
-                                                        .colorScheme
-                                                        .primary,
-                                                  ),
-                                                ),
-                                              )
-                                            : const Icon(Icons.sync_rounded),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            PopupMenuButton<String>(
-                              icon: const Icon(Icons.more_vert),
-                              tooltip: 'Finances Tools',
-                              elevation: 3,
-                              shadowColor: colorScheme.shadow.withValues(alpha: 0.15),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(AppLayout.radiusXL),
-                                side: BorderSide(
-                                  color: colorScheme.outlineVariant.withValues(alpha: 0.35),
-                                  width: 1,
-                                ),
-                              ),
-                              color: colorScheme.surfaceContainerHigh,
-                              onSelected: (value) {
-                                HapticFeedback.selectionClick();
-                                if (value == 'ai_refine') {
-                                  _bulkRefineRecentTransactionsWithAi();
-                                } else if (value == 'sms_rules') {
-                                  AppRoute.push(context, const SmsRulesScreen());
-                                } else if (value == 'recurring') {
-                                  RecurringRulesSheet.show(
-                                    context: context,
-                                    currency: currency,
-                                    onRulesUpdated: _refreshTransactions,
-                                  );
-                                } else if (value == 'export') {
-                                  FinancialExportService.showExportSheet(
-                                    context,
-                                    _transactions,
-                                    currency: currency,
-                                  );
-                                } else if (value == 'trash') {
-                                  FinancialTrashSheet.show(context).then((_) {
-                                    if (mounted) _refreshTransactions();
-                                  });
-                                } else if (value == 'settings') {
-                                  AppRoute.push(context, const SettingsScreen())
-                                      .then((_) => _refreshTransactions());
-                                }
-                              },
-                              itemBuilder: (ctx) {
-                                final settings = ctx.read<SettingsProvider>();
-                                final isAiEnabled = settings.isAiActive;
-                                return [
-                                  if (isAiEnabled) ...[
-                                    PopupMenuItem(
-                                      value: 'ai_refine',
-                                      height: 48,
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.auto_fix_high_rounded, size: 20, color: colorScheme.primary),
-                                          const SizedBox(width: 12),
-                                          Text('Refine Recent with AI', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                                        ],
-                                      ),
-                                    ),
-                                    const PopupMenuDivider(),
-                                  ],
-                                  PopupMenuItem(
-                                    value: 'sms_rules',
-                                    height: 48,
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.flash_on_rounded, size: 20, color: colorScheme.primary),
-                                        const SizedBox(width: 12),
-                                        Text('SMS & Bank Automation', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                                      ],
-                                    ),
-                                  ),
-                                  PopupMenuItem(
-                                    value: 'recurring',
-                                    height: 48,
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.repeat_outlined, size: 20, color: colorScheme.onSurfaceVariant),
-                                        const SizedBox(width: 12),
-                                        Text('Recurring Subscriptions', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                                      ],
-                                    ),
-                                  ),
-                                  const PopupMenuDivider(),
-                                  PopupMenuItem(
-                                    value: 'export',
-                                    height: 48,
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.ios_share_rounded, size: 20, color: colorScheme.onSurfaceVariant),
-                                        const SizedBox(width: 12),
-                                        Text('Export Ledger', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                                      ],
-                                    ),
-                                  ),
-                                  PopupMenuItem(
-                                    value: 'trash',
-                                    height: 48,
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.delete_outline_rounded, size: 20, color: colorScheme.onSurfaceVariant),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Text('Trash Bin', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                                        ),
-                                        if (_trashedCount > 0)
-                                          Badge(
-                                            label: Text('$_trashedCount'),
-                                            backgroundColor: colorScheme.error,
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                  const PopupMenuDivider(),
-                                  PopupMenuItem(
-                                    value: 'settings',
-                                    height: 48,
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.settings_outlined, size: 20, color: colorScheme.onSurfaceVariant),
-                                        const SizedBox(width: 12),
-                                        Text('Settings', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                                      ],
-                                    ),
-                                  ),
-                                ];
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.settings_outlined),
-                              tooltip: 'Settings',
-                              padding: EdgeInsets.zero,
-                              visualDensity: VisualDensity.compact,
-                              onPressed: () {
-                                HapticFeedback.selectionClick();
-                                AppRoute.push(context, const SettingsScreen())
-                                    .then((_) => _refreshTransactions());
-                              },
-                            ),
-                            const SizedBox(width: 4),
-                          ],
-                        ),
+                        height: 60,
+                        child: _isSearching
+                            ? _buildSearchModeHeader(colorScheme, textTheme)
+                            : _buildNormalHeader(colorScheme, textTheme, currency, isDark),
                       ),
                     ),
                   ),
                 ),
               ),
             ),
+
+            if (_isSmsSyncing)
+              SliverToBoxAdapter(
+                child: _buildSmsSyncProgressBanner(colorScheme, textTheme, isDark),
+              ),
 
       // ── Hero summary card (net + income/expense breakdown) ────────
             // ── Hero summary card (net + income/expense breakdown) ────────
@@ -1445,51 +1682,49 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
           ),
         ],
 
-        // ── Search bar ──────────────────────────────────────────────
-            SliverToBoxAdapter(
-              child: AnimationConfiguration.staggeredList(
-                position: 4,
-                duration: const Duration(milliseconds: 220),
-                child: SlideAnimation(
-                  verticalOffset: 24.0,
-                  child: FadeInAnimation(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: (value) {
-                          setState(
-                              () => _searchQuery = value.trim().toLowerCase());
-                          _applyFilters();
-                        },
-                        decoration: InputDecoration(
-                          hintText: 'Search transactions…',
-                          prefixIcon: const Icon(Icons.search_outlined),
-                          suffixIcon: _searchQuery.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.close),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    setState(() => _searchQuery = '');
-                                    _applyFilters();
-                                  },
-                                )
-                              : null,
-                          filled: true,
-                          fillColor: colorScheme.surfaceContainerHigh,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(28),
-                            borderSide: BorderSide.none,
+        // ── Active search query badge indicator (if query set and top bar not in search mode) ──
+        if (_searchQuery.isNotEmpty && !_isSearching)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.search, size: 14, color: colorScheme.onPrimaryContainer),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Search: "$_searchQuery"',
+                          style: textTheme.labelMedium?.copyWith(
+                            color: colorScheme.onPrimaryContainer,
+                            fontWeight: FontWeight.bold,
                           ),
-                          contentPadding:
-                              const EdgeInsets.symmetric(vertical: 0),
                         ),
-                      ),
+                        const SizedBox(width: 4),
+                        InkWell(
+                          onTap: () {
+                            _searchController.clear();
+                            setState(() {
+                              _searchQuery = '';
+                              _applyFilters();
+                            });
+                          },
+                          child: Icon(Icons.close, size: 14, color: colorScheme.onPrimaryContainer),
+                        ),
+                      ],
                     ),
                   ),
-                ),
+                ],
               ),
             ),
+          ),
 
         // ── Account Selector Segment ──────────────────────────────────
         if (settings.enableSavingsVault)

@@ -228,4 +228,44 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 - **Soft-Delete Undo Contract**: All deletion undo handlers must invoke `restoreTransaction(id)` (`UPDATE transactions SET deletedAt = NULL WHERE id = ?`) or `restoreNote(id)` rather than attempting record re-insertion (`createTransaction`/`insertNote`), preventing primary key collisions and tombstone re-import blocks.
 - **SMS Epoch Normalization**: All SMS ingestion engines must pass message dates through `SmsParser.resolveMessageDate(messageDate)` to normalize 10-digit second and 13-digit millisecond epoch timestamps, strictly preserving genuine historical arrival dates.
 
+---
+
+## 12. Canonical Module Tools (3-Dot Menu), Top Header Symmetry & SMS 24h Sync
+
+- **Top App Bar Canonical Action Architecture**: Every primary module header pairs a bold module title (`titleLarge` 18pt bold) and interactive Tonal Scope Pill on the left with a muscle-memory action bar on the right:
+  - **Action Row Sequence (Left to Right)**:
+    - **Notes**: `[ 🔍 Search ]` $\rightarrow$ `[ 🔄 P2P Sync (when paired) ]` $\rightarrow$ `[ ⋮ Notes Tools ]` $\rightarrow$ `[ ⚙️ Settings ]`
+    - **Finances**: `[ 🔍 Search ]` $\rightarrow$ `[ 🔄 SMS Sync ]` $\rightarrow$ `[ ⋮ Finances Tools ]` $\rightarrow$ `[ ⚙️ Settings ]`
+    - **Health Tracker**: `[ 📅 Today ]` $\rightarrow$ `[ ⋮ Health Tools ]` $\rightarrow$ `[ ⚙️ Settings ]`
+- **Scope Pill Dynamic Theming Standard**:
+  - Scope pills MUST use M3 Tonal Container styling (`colorScheme.primaryContainer.withValues(alpha: isDark ? 0.35 : 0.45)`) with a `1.0px` primary outline border (`colorScheme.primary.withValues(alpha: 0.28)`), `colorScheme.onSurface` label, and `colorScheme.primary` icons and dropdown chevrons for 100% contrast in dynamic themes.
+- **Top Bar Transaction Search Integration**:
+  - Tapping `[ 🔍 Search ]` transforms the top bar into full-width search mode (`_isSearching`) with back button, real-time debounced query input, and clear button (matching Notes), auto-switches to the `Ledger` tab, and eliminates redundant inline `TextField` search boxes from scroll views.
+- **SMS 24-Hour Default Scan Engine & Real-Time Banner**:
+  - Quick sync and app-launch catch-up sync MUST default to scanning the **last 24 hours** (`DateTime.now().subtract(const Duration(hours: 24))`) rather than incremental cutoffs, eliminating skipped-message bugs from "fetch only new".
+  - A persistent frosted progress banner is rendered directly below the top app bar across all financial tabs (`Ledger`, `Budgets`, `Split Bills`) during sync with a 1-tap `[ Cancel ]` button, followed by exact-count floating SnackBar feedback upon completion.
+- **Canonical 3-Dot Overflow Menu Items**:
+  - **Notes Tools (`HomeAppBar`)**:
+    1. `Switch to list/grid view` (dynamic icon + text reflecting current mode).
+    2. `Sort by Last Modified / Date Created / Title / Color` (displays checkmark on active sort).
+    3. `Manage Folders` (`_showFolderPicker`).
+    4. `Manage Tags` (`ManageTagsScreen`).
+    5. `Trash Bin` (`FilteredNotesScreen(filterType: FilterType.trash)`).
+  - **Finances Tools (`FinancialManagerScreen`)**:
+    1. `SMS & Bank Automation` (`SmsRulesScreen`).
+    2. `Recurring Subscriptions` (`RecurringRulesSheet`).
+    3. `Export Ledger` (`FinancialExportService.showExportSheet`).
+    4. `Trash Bin` (`FinancialTrashSheet`).
+    5. `Settings` (`SettingsScreen`).
+  - **Health Tools (`PeriodTrackerScreen`)**:
+    1. `Log Cycle & Symptoms` (`PeriodLogEditorSheet`).
+    2. `Cycle Phase Guide` (interactive educational dialog `_showPhaseGuideDialog`).
+    3. `Cycle Preferences` (`SettingsScreen`).
+- **Touch Target & Constraint Guardrails**:
+  - All action bar icons in the top bar MUST use `constraints: const BoxConstraints(minWidth: 40, minHeight: 40)` and `visualDensity: VisualDensity.compact` with `padding: EdgeInsets.zero` to eliminate overlapping hitboxes and guarantee uniform inter-button gaps.
+  - Outer horizontal padding MUST be strictly `16dp` left and `16dp` right with ZERO inner edge spacers.
+  - Headers hosting title + scope pill stacks MUST specify `toolbarHeight: MediaQuery.of(context).padding.top + 72.0` and child container `height: 60.0` (with `top: padding.top + 6.0, bottom: 6.0`) to avoid sub-pixel layout clipping across high-density mobile displays.
+
+
+
 

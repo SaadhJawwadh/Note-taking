@@ -45,7 +45,12 @@ Refer to [design.md](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/.ag
 * **Settings Tile Text Overflow Guardrails**: Enforce `maxLines: 1` and `TextOverflow.ellipsis` on `SettingsTile` titles, and constrain trailing `valueBadge` chips (`maxWidth: 120dp`) to guarantee single-line title alignment across all device widths.
 * **RepaintBoundary & Scroll Isolation Standards**: Wrap complex canvas rendering widgets (`fl_chart` charts, custom painters, period calendar views) inside `RepaintBoundary` to prevent unnecessary raster repaint passes during parent list scrolling. Apply `cacheExtent: 250` to primary `CustomScrollView` and `ListView` containers for smooth 60–120 FPS fling-scrolling.
 * **BouncingWidget Dual-Gesture Wrapper Rule**: NEVER wrap `IconButton` directly inside `BouncingWidget` when handling `onLongPress` events. Standard `IconButton` internal `InkWell` widgets swallow tap/press events and prevent `onLongPress` from reaching `BouncingWidget`. Use `Tooltip` wrapped around `BouncingWidget(onTap: ..., onLongPress: ..., child: Padding(padding: const EdgeInsets.all(8), child: Icon(...)))` to guarantee 100% responsive tap and hold gesture detection.
-* **Top Header Far-Right Action Alignment**: In custom top app bars and silver headers (`HomeAppBar`, `FinancialManagerScreen`), always place action controls (`Sync`, `Calendar`, `View Mode`, `More Menu`) to the right of `const Spacer()` so action buttons are neatly grouped on the far right side of the screen.
+* **Top Header Canonical Order & 16dp Edge Margin Symmetry**:
+  - In custom top app bars and sliver headers (`HomeAppBar`, `FinancialManagerScreen`, `PeriodTrackerScreen`), maintain strict horizontal outer padding (`left: 16, right: 16`) with zero inner edge spacers.
+  - Enforce canonical action sequence: Contextual Primary Action (`Search`, `Sync`, `Today`) $\rightarrow$ Penultimate Overflow Menu (`[ ⋮ Tools ]`) $\rightarrow$ Terminal Rightmost Anchor (`[ ⚙️ Settings ]`).
+  - Constrain all top action icons to `BoxConstraints(minWidth: 40, minHeight: 40)` and `VisualDensity.compact` with `padding: EdgeInsets.zero` for uniform inter-button gaps.
+  - Tapping Search transforms the header into full-width search mode (`_isSearching`) and eliminates redundant inline search textfields from scroll views.
+  - Scope pills use M3 Tonal Container styling (`colorScheme.primaryContainer.withValues(alpha: isDark ? 0.35 : 0.45)`) with a `1.0px` primary outline border (`colorScheme.primary.withValues(alpha: 0.28)`) for 100% dynamic wallpaper contrast.
 * **Authentic Currency Badges & Pickers**: Currency selection dialogs and settings tiles MUST render authentic tonal circular avatars displaying the genuine currency symbol (e.g. `Rs.`, `₹`, `$`, `€`, `£`, `¥`, `د.إ`, `﷼`, `C$`, `A$`, `S$`, `RM`, `NZ$`, `CHF`), bold code, and full name rather than generic dollar icons.
 * **Hardware-Aware AI UI Gating**: Never render AI sparkle icons, refine menu items, or assist floating buttons unless `settings.isAiActive` is true. This prevents dead interactive elements on emulators and non-NPU devices.
 * **AI Action Iconography & Phrasing Standards**:
@@ -86,3 +91,17 @@ When styling UI screens and custom widgets, strictly enforce the M3 Style system
 ## 6. 0ms Optimistic UI & Zero-Flicker State Transitions
 * **Zero Jitter on User Actions**: Interactive operations (Delete, Undo, Pin, Archive, Symptom/Flow toggling) MUST update in-memory UI models immediately in 0ms. Never unmount active lists or display modal loading spinners while writing local SQLite updates in the background.
 * **Preserve Mounted State**: When deleting or restoring items, mutate local data structures synchronously (`removeWhere`, `add`, `sort`) and trigger targeted re-renders without triggering full-screen or list-level loading indicators.
+
+## 7. Top App Bar 3-Slot Rhythm & Compact Action Row Standards
+* **3-Module Scope Hierarchy**:
+  - **Notes**: `Notes` title + `[ 📁 Folder • Count ▾ ]` tonal pill (triggers `_showFolderPicker`).
+  - **Finances**: `Finances` title + `[ 📅 Date Range ▾ ]` tonal pill (triggers `_selectDateRange`).
+  - **Health Tracker**: `Period Tracker` title + `[ 🌸 Day X • Phase ]` tonal badge (shows active cycle phase).
+* **Right Action Bar (3-Slot Symmetry)**:
+  - **Slot 1 (Module Primary Action)**: `[ 🔍 Search ]` (Notes), `[ 🔄 SMS Quick Sync ]` (Finances), `[ 📅 Today ]` (Health Tracker).
+  - **Slot 2 (Module Tools 3-Dot Menu)**: `[ ⋮ Notes Tools ]`, `[ ⋮ Finances Tools ]`, `[ ⋮ Health Tools ]`. Consolidates secondary tools, view modes, sort options, tag management, rules, and educational dialogs.
+  - **Slot 3 (Universal Settings Anchor)**: `[ ⚙️ Settings ]` present universally across all tabs.
+* **Compact Hit Constraints**: Action bar icon buttons MUST use `constraints: const BoxConstraints(minWidth: 40, minHeight: 40)` and `visualDensity: VisualDensity.compact` to eliminate overlapping hitboxes and prevent misdirected touch gestures.
+* **Sub-Pixel Headroom Invariant**: Top bars hosting title + scope pill stacks MUST specify `toolbarHeight: MediaQuery.of(context).padding.top + 72.0` and child container `height: 60.0` (with `top: padding.top + 6.0, bottom: 6.0`) to avoid sub-pixel layout clipping across high-density mobile screens.
+* **M3 Chevron Token**: Always use `Icons.keyboard_arrow_down_rounded` across all dropdown chips, form fields, and selector pills (deprecating legacy `Icons.arrow_drop_down`).
+

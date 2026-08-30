@@ -430,13 +430,15 @@ class _HomeAppBarState extends State<HomeAppBar> {
   }
 
   Widget _buildNormalMode(BuildContext context, SettingsProvider settings) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final noteProvider = context.watch<NoteProvider>();
     final displayFolder = noteProvider.selectedFolder ?? 'Notes';
     final count = noteProvider.folderCounts[displayFolder] ?? noteProvider.tagCounts['All'] ?? 0;
 
     return Row(
       children: [
-        const SizedBox(width: 4),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -447,7 +449,7 @@ class _HomeAppBarState extends State<HomeAppBar> {
                 'Notes',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
                     ),
@@ -465,34 +467,34 @@ class _HomeAppBarState extends State<HomeAppBar> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.75),
+                      color: colorScheme.primaryContainer.withValues(alpha: isDark ? 0.35 : 0.45),
                       borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                      border: Border.all(
+                        color: colorScheme.primary.withValues(alpha: 0.28),
+                        width: 1.0,
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          noteProvider.selectedFolder != null ? Icons.folder_rounded : Icons.folder_open_rounded,
+                          Icons.folder_outlined,
+                          color: colorScheme.primary,
                           size: 13,
-                          color: Theme.of(context).colorScheme.primary,
                         ),
                         const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            '$displayFolder • $count',
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                          ),
+                        Text(
+                          '$displayFolder • $count',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                                color: colorScheme.onSurface,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.2,
+                              ),
                         ),
                         const SizedBox(width: 2),
                         Icon(
                           Icons.keyboard_arrow_down_rounded,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          color: colorScheme.primary,
                           size: 14,
                         ),
                       ],
@@ -514,6 +516,67 @@ class _HomeAppBarState extends State<HomeAppBar> {
             setState(() {
               _isSearching = true;
             });
+          },
+        ),
+        Consumer<P2pSyncProvider>(
+          builder: (context, syncProvider, _) {
+            // Show when there are paired devices (regardless of auto-sync toggle)
+            if (syncProvider.pairedDevices.isEmpty) {
+              return const SizedBox.shrink();
+            }
+            final isSyncing = syncProvider.status == SyncStatus.syncing;
+            final isError = syncProvider.status == SyncStatus.error;
+            IconData syncIcon;
+            Color? iconColor;
+            if (isSyncing) {
+              syncIcon = Icons.sync_rounded;
+              iconColor = null;
+            } else if (isError) {
+              syncIcon = Icons.sync_problem_rounded;
+              iconColor = Theme.of(context).colorScheme.error;
+            } else if (syncProvider.status == SyncStatus.completed) {
+              syncIcon = Icons.sync_rounded;
+              iconColor = Theme.of(context).colorScheme.primary;
+            } else {
+              syncIcon = Icons.sync_rounded;
+              iconColor = null;
+            }
+            return ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+              child: Tooltip(
+                message: isSyncing
+                    ? 'Syncing...'
+                    : isError
+                        ? 'Sync failed — long-press for Sync settings'
+                        : 'Quick Sync (Tap) | P2P Sync Hub (Hold)',
+                child: BouncingWidget(
+                  onTap: isSyncing
+                      ? null
+                      : () async {
+                          unawaited(HapticFeedback.lightImpact());
+                          await syncProvider.syncNow(onCompleted: () {
+                            noteProvider.refreshNotes();
+                          });
+                        },
+                  onLongPress: () {
+                    HapticFeedback.mediumImpact();
+                    AppRoute.push(context, const P2pSyncScreen());
+                  },
+                  child: Center(
+                    child: isSyncing
+                        ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
+                            ),
+                          )
+                        : Icon(syncIcon, color: iconColor),
+                  ),
+                ),
+              ),
+            );
           },
         ),
         PopupMenuButton<String>(
@@ -666,69 +729,11 @@ class _HomeAppBarState extends State<HomeAppBar> {
             ];
           },
         ),
-        Consumer<P2pSyncProvider>(
-          builder: (context, syncProvider, _) {
-            // Show when there are paired devices (regardless of auto-sync toggle)
-            if (syncProvider.pairedDevices.isEmpty) {
-              return const SizedBox.shrink();
-            }
-            final isSyncing = syncProvider.status == SyncStatus.syncing;
-            final isError = syncProvider.status == SyncStatus.error;
-            IconData syncIcon;
-            Color? iconColor;
-            if (isSyncing) {
-              syncIcon = Icons.sync_rounded;
-              iconColor = null;
-            } else if (isError) {
-              syncIcon = Icons.sync_problem_rounded;
-              iconColor = Theme.of(context).colorScheme.error;
-            } else if (syncProvider.status == SyncStatus.completed) {
-              syncIcon = Icons.sync_rounded;
-              iconColor = Theme.of(context).colorScheme.primary;
-            } else {
-              syncIcon = Icons.sync_rounded;
-              iconColor = null;
-            }
-            return Tooltip(
-              message: isSyncing
-                  ? 'Syncing...'
-                  : isError
-                      ? 'Sync failed — long-press for Sync settings'
-                      : 'Quick Sync (Tap) | P2P Sync Hub (Hold)',
-              child: BouncingWidget(
-                onTap: isSyncing
-                    ? null
-                    : () async {
-                        unawaited(HapticFeedback.lightImpact());
-                        await syncProvider.syncNow(onCompleted: () {
-                          noteProvider.refreshNotes();
-                        });
-                      },
-                onLongPress: () {
-                  HapticFeedback.mediumImpact();
-                  AppRoute.push(context, const P2pSyncScreen());
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: isSyncing
-                      ? SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
-                          ),
-                        )
-                      : Icon(syncIcon, color: iconColor),
-                ),
-              ),
-            );
-          },
-        ),
         IconButton(
           icon: const Icon(Icons.settings_outlined),
           tooltip: 'Settings',
           padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
           visualDensity: VisualDensity.compact,
           onPressed: () {
             HapticFeedback.selectionClick();
@@ -736,7 +741,6 @@ class _HomeAppBarState extends State<HomeAppBar> {
                 .then((_) => widget.onRefresh());
           },
         ),
-        const SizedBox(width: 4),
       ],
     );
   }

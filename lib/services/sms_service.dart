@@ -557,10 +557,8 @@ class SmsService {
       if (fromTime != null) {
         startCutoff = fromTime;
       } else {
-        final lastSyncStr = prefs.getString('lastSmsSyncTime');
-        final lastSync = lastSyncStr != null ? DateTime.tryParse(lastSyncStr) : null;
-        final maxLookback = DateTime.now().subtract(const Duration(hours: 48));
-        startCutoff = (lastSync != null && lastSync.isAfter(maxLookback)) ? lastSync : maxLookback;
+        // Default to scanning the last 24 hours (eliminating "fetch only new" skipping bugs)
+        startCutoff = DateTime.now().subtract(const Duration(hours: 24));
       }
 
       final count = await syncInboxFrom(
@@ -715,20 +713,19 @@ class SmsService {
       if (!await hasPermission()) return;
 
       final lastSyncStr = prefs.getString('lastSmsSyncTime');
-      DateTime from = DateTime.now().subtract(const Duration(hours: 48));
+      DateTime lastRun = DateTime.fromMillisecondsSinceEpoch(0);
       if (lastSyncStr != null) {
         final parsed = DateTime.tryParse(lastSyncStr);
         if (parsed != null) {
-          final maxLookback = DateTime.now().subtract(const Duration(hours: 48));
-          from = parsed.isBefore(maxLookback) ? maxLookback : parsed;
+          lastRun = parsed;
         }
       }
 
-      final minutesSinceLast = DateTime.now().difference(from).inMinutes;
+      final minutesSinceLast = DateTime.now().difference(lastRun).inMinutes;
       if (force || minutesSinceLast >= 5) {
         final count = await performSmsSync(
           trigger: SmsSyncTrigger.catchUp,
-          fromTime: from,
+          fromTime: DateTime.now().subtract(const Duration(hours: 24)),
         );
         debugPrint('App-launch catch-up sync completed: $count transactions imported');
       }

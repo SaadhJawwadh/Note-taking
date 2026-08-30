@@ -292,11 +292,11 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> with WidgetsB
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                                       decoration: BoxDecoration(
-                                        color: phaseColor.withValues(alpha: isDark ? 0.18 : 0.12),
+                                        color: phaseColor.withValues(alpha: isDark ? 0.22 : 0.16),
                                         borderRadius: BorderRadius.circular(AppLayout.radiusS),
                                         border: Border.all(
-                                          color: phaseColor.withValues(alpha: 0.25),
-                                          width: 0.8,
+                                          color: phaseColor.withValues(alpha: 0.35),
+                                          width: 1.0,
                                         ),
                                       ),
                                       child: Row(
@@ -332,6 +332,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> with WidgetsB
                                 icon: const Icon(Icons.today_outlined),
                                 tooltip: 'Today',
                                 padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                                 visualDensity: VisualDensity.compact,
                                 onPressed: () async {
                                   await HapticFeedback.selectionClick();
@@ -352,6 +353,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> with WidgetsB
                                 icon: const Icon(Icons.more_vert),
                                 tooltip: 'Health Tools',
                                 padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                                 elevation: 3,
                                 shadowColor: colorScheme.shadow.withValues(alpha: 0.15),
                                 shape: RoundedRectangleBorder(
@@ -373,7 +375,8 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> with WidgetsB
                                   } else if (value == 'phase_guide') {
                                     _showPhaseGuideDialog(context);
                                   } else if (value == 'cycle_settings') {
-                                    AppRoute.push(context, const SettingsScreen());
+                                    AppRoute.push(context, const SettingsScreen())
+                                        .then((_) => provider.loadData());
                                   }
                                 },
                                 itemBuilder: (ctx) => [
@@ -417,13 +420,14 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> with WidgetsB
                                 icon: const Icon(Icons.settings_outlined),
                                 tooltip: 'Settings',
                                 padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                                 visualDensity: VisualDensity.compact,
                                 onPressed: () {
                                   HapticFeedback.selectionClick();
-                                  AppRoute.push(context, const SettingsScreen());
+                                  AppRoute.push(context, const SettingsScreen())
+                                      .then((_) => provider.loadData());
                                 },
                               ),
-                              const SizedBox(width: 4),
                             ],
                           ),
                         ),

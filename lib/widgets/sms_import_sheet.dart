@@ -11,8 +11,7 @@ class SmsImportSheet extends StatefulWidget {
 
 class _SmsImportSheetState extends State<SmsImportSheet> {
   static const _periods = [
-    ('Since Last Sync (Incremental)', -1),
-    ('Last 24 hours (1 day)', 1),
+    ('Last 24 hours (Default)', 1),
     ('Last 7 days', 7),
     ('Last 30 days', 30),
     ('Last 90 days', 90),
@@ -57,14 +56,9 @@ class _SmsImportSheetState extends State<SmsImportSheet> {
     }
 
     final offsetDays = _periods[_selectedIndex].$2;
-    DateTime? from;
-    if (offsetDays == -1) {
-      from = null; // Uses lastSmsSyncTime automatically
-    } else if (offsetDays != null) {
-      from = DateTime.now().subtract(Duration(days: offsetDays));
-    } else {
-      from = DateTime(2000);
-    }
+    final from = offsetDays != null
+        ? DateTime.now().subtract(Duration(days: offsetDays))
+        : DateTime(2000);
 
     // Non-blocking dispatch: dismiss modal sheet immediately so user can continue using the app
     Navigator.pop(context);
@@ -108,12 +102,14 @@ class _SmsImportSheetState extends State<SmsImportSheet> {
             children: [
               Icon(Icons.manage_search_rounded, color: colorScheme.primary),
               const SizedBox(width: 8),
-              Text('Advanced SMS Import Options', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
+              Expanded(
+                child: Text('Advanced SMS Import Options', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
+              ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
-            'Quick sync automatically checks for new messages since your last fetch. Select a date range below to scan older history or re-import past transactions.',
+            'Quick sync automatically scans messages from the last 24 hours. Select a custom date range below to scan older history or re-import past transactions.',
             style: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 16),

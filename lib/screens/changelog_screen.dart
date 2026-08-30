@@ -28,9 +28,39 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
+                  version: 'v2.26.0',
+                  date: 'August 30, 2026',
+                  isLatest: true,
+                  changes: [
+                    _ChangelogGroup(
+                      title: "🌟 What's New",
+                      items: [
+                        'Top Bar Transaction Search: Integrated instant search directly into the Finances top action bar, maximizing screen space for transactions.',
+                        'SMS 24-Hour Default Lookback: Quick sync and app launch catch-up now scan the last 24 hours by default, eliminating missed transaction cutoffs.',
+                        'Persistent Real-Time Sync Banner: Live progress indicator beneath the top bar across all financial tabs with scanning counts and an instant Cancel button.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🚀 Improvements',
+                      items: [
+                        'Top Action Bar Symmetry & Ordering: Standardized button sequence (Search → Sync → Tools → Settings) and uniform spacing across Notes, Finances, and Health Tracker.',
+                        'Dynamic Theming Scope Pills: High-contrast tonal container styling with subtle accent borders for folder, date range, and cycle phase pills.',
+                        'Post-Sync Feedback: Floating SnackBar notifications showing exact transaction counts imported from the last 24 hours.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🐛 Fixes',
+                      items: [
+                        'Tombstone Safety & Deduplication: Stamped genuine SMS receipt timestamps to prevent duplicate imports and protect restored transactions.',
+                      ],
+                    ),
+                  ],
+                ),
+                _buildVersionSection(
+                  context,
                   version: 'v2.25.2',
                   date: 'August 28, 2026',
-                  isLatest: true,
+                  isLatest: false,
                   changes: [
                     _ChangelogGroup(
                       title: "🌟 What's New",

@@ -75,6 +75,7 @@ lib/
 * **SMS Timestamp Normalization & Widget Catch-Up**: All SMS ingestion engines must pass message dates through `SmsParser.resolveMessageDate(messageDate)` to normalize 10-digit second and 13-digit millisecond epoch timestamps. App starts and widget interactions trigger debounced (5-min) catch-up sync via `SmsService.performAppLaunchCatchUpSync()`.
 * **Soft-Delete Undo Parity**: All deletion undo handlers must invoke `restoreTransaction(id)` (`UPDATE transactions SET deletedAt = NULL WHERE id = ?`) or `restoreNote(id)` rather than attempting record re-insertion (`createTransaction`/`insertNote`), preventing primary key collisions and tombstone re-import blocks.
 * **Non-Blocking Chunked Sync & Cancellation**: SMS inbox syncing must process messages in non-blocking chunks (yielding every 25 messages), check `_cancelRequested`, and display an instant `Cancel` button on sync progress banners.
+* **SMS 24-Hour Default Lookback & Real-Time Sync Banner**: Quick sync and app-launch catch-up sync MUST default to scanning the **last 24 hours** (`DateTime.now().subtract(const Duration(hours: 24))`) rather than incremental cutoffs, eliminating skipped-message bugs from "fetch only new". A persistent frosted progress banner is rendered directly below the top app bar across all financial tabs (`Ledger`, `Budgets`, `Split Bills`) during sync with a 1-tap `[ Cancel ]` button, followed by exact-count floating SnackBar feedback upon completion.
 
 ### 🔒 Invariant 5: Local-First Security, SQLite WAL Mode & Resilient Backups
 * **SQLCipher Password Contract**: Pass explicit encryption keys to `openDatabase()`. In `DatabaseHelper.onOpen`, execute `PRAGMA journal_mode = WAL;` via `db.rawQuery(...)` for non-blocking concurrent writes.
@@ -121,6 +122,23 @@ lib/
 * **No Legacy M2 Dropdowns**: Never use `DropdownButton` or `DropdownButtonFormField`.
 * **Short Option Sets (2–4 choices)**: Use `SegmentedButton<T>` with compact visual density and haptic feedback.
 * **Large Datasets (Categories)**: Use dynamic `FilterChip` clouds sourced strictly from `TransactionCategory.allNames` with authentic icons (`TransactionCategory.iconFor(c)`) and color backgrounds (`TransactionCategory.colorFor(c)`).
+* **Chevron Modernization**: Standardize all dropdown indicators across forms, date selectors, and scope pills on `Icons.keyboard_arrow_down_rounded`.
+
+### 🏛️ Invariant 14: Top App Bar Symmetry, Tonal Scope Pills, Search Integration & Action Order
+* **Left Header Structure**: Module Title (`titleLarge` 18pt bold) paired with an interactive Tonal Scope Pill directly below:
+  - **Notes**: `Notes` + `[ 📁 Folder • Count ▾ ]` (opens folder picker modal).
+  - **Finances**: `Finances` + `[ 📅 Date Range ▾ ]` (opens preset date range sheet).
+  - **Health Tracker**: `Period Tracker` + `[ 🌸 Day X • Phase ]` (indicates active cycle status).
+* **Tonal Scope Pill Contrast Standard**: Scope pills MUST use M3 Tonal Container styling (`colorScheme.primaryContainer.withValues(alpha: isDark ? 0.35 : 0.45)`) with a subtle `1.0px` primary accent border (`colorScheme.primary.withValues(alpha: 0.28)`), `colorScheme.onSurface` label, and `colorScheme.primary` leading icon & dropdown chevron, guaranteeing 100% legibility across dynamic Material You wallpaper palettes.
+* **Top Action Bar Canonical Order (Muscle Memory)**:
+  - **Primary Contextual Actions**: `[ 🔍 Search ]` (Notes & Finances), `[ 🔄 Sync ]` (P2P Sync in Notes when paired, SMS Sync in Finances), `[ 📅 Today ]` (Health Tracker).
+  - **Penultimate Slot**: `[ ⋮ Tools ]` (Notes Tools, Finances Tools, Health Tools) containing secondary workflows, sorting, and tag management.
+  - **Terminal Anchor**: `[ ⚙️ Settings ]` present consistently as the rightmost anchor across all module tabs.
+* **Top Bar Transaction Search Integration**: Tapping `[ 🔍 Search ]` in Finances transforms the top app bar into full-width search mode (`_isSearching`) with back button, real-time debounced query input, and clear button (matching Notes), auto-switches to the `Ledger` tab, and completely eliminates redundant inline `TextField` search boxes from scroll views.
+* **Edge Margin Symmetry & Compact Hit Constraints**:
+  - Outer horizontal padding MUST be strictly `16dp` left and `16dp` right with ZERO inner edge spacers.
+  - All top bar action icons MUST enforce `constraints: const BoxConstraints(minWidth: 40, minHeight: 40)`, `visualDensity: VisualDensity.compact`, and `padding: EdgeInsets.zero` to maintain uniform inter-button gaps without overlapping hitboxes.
+* **Top Bar Sub-Pixel Headroom**: SliverAppBar headers hosting title + scope pill columns MUST enforce `toolbarHeight: MediaQuery.of(context).padding.top + 72.0` and inner container `height: 60.0` (with vertical padding `top: padding.top + 6.0, bottom: 6.0`) to eliminate sub-pixel layout overflows.
 
 ---
 

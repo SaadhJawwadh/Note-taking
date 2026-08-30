@@ -1,11 +1,14 @@
 
 ### 🌟 What's New
-- **Unified Top App Bar & Scope Pills**: Modernized frosted glass headers across Notes, Finances, and Period Tracker with interactive tonal scope pills for 1-tap folder, date range, and cycle phase switching.
-- **Universal Module Tools (3-Dot Menu)**: Dedicated overflow action menus for each module consolidating view switches, sorting, tag management, SMS automation, and educational guides.
-- **Cycle Phase Guide**: Built-in interactive educational guide explaining cycle phases, symptoms, and self-care recommendations in the Period Tracker.
+- **Top Bar Transaction Search**: Integrated instant search directly into the Finances top action bar, transforming the header into a full-width search input and maximizing screen space for transactions.
+- **SMS 24-Hour Default Lookback**: Quick sync and app launch catch-up now scan the last 24 hours by default, eliminating missed transaction cutoffs.
+- **Persistent Real-Time Sync Banner**: Live progress indicator beneath the top bar across all financial tabs with scanning counts and an instant Cancel button.
 
 ### 🚀 Improvements
-- **Universal Settings Anchor**: Consistent quick-access Settings shortcut button across all primary module headers.
-- **Material 3 Dropdown Modernization**: Refreshed all dropdown icons with rounded Material 3 chevrons.
-- **Layout Precision & Polish**: Cleaned sub-pixel bounds across financial metrics, hero cards, and health dialogs.
+- **Top Action Bar Symmetry & Ordering**: Standardized button sequence (`Search` → `Sync` → `Tools` → `Settings`) and uniform spacing across Notes, Finances, and Health Tracker.
+- **Dynamic Theming Scope Pills**: High-contrast tonal container styling with subtle accent borders for folder, date range, and cycle phase pills across all wallpaper palettes.
+- **Post-Sync Feedback**: Floating SnackBar notifications showing exact transaction counts imported from the last 24 hours.
+
+### 🐛 Fixes
+- **Tombstone Safety & Deduplication**: Stamped genuine SMS receipt timestamps to prevent duplicate imports and protect restored transactions.
 

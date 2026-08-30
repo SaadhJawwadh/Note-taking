@@ -1,22 +1,20 @@
 <en-US>
 🌟 What's New
-• Unified Top Bars: Interactive scope pills for folders & dates.
-• Module Tools Menu: Quick view switches, rules & cycle guides.
-• Custom SMS Training: Teach bank SMS formats & clean titles.
-• Split Bills: Group expenses, friend debts & offline receipt OCR.
+• Top Bar Search: Instant transaction search with 1-tap clear.
+• 24-Hour SMS Sync: Auto-sync scans last 24h with live progress.
+• Unified Scope Pills: High-contrast folder & date pills.
 
 🚀 Improvements
-• Universal Settings shortcut across all headers.
-• Refreshed Material 3 dropdowns & layout polish.
+• Symmetrical action bars across Notes, Finances & Tracker.
+• Exact sync count notifications.
 </en-US>
 <ta-IN>
 🌟 புதிய அம்சங்கள்
-• ஒருங்கிணைந்த தலைப்புகள்: கோப்புகள் மற்றும் தேதிகளுக்கான பில்கள்.
-• தொகுதி கருவிகள் மெனு: விரைவு அமைப்புகள் & சுழற்சி வழிகாட்டிகள்.
-• தனிப்பயன் SMS விதிகள்: வங்கி SMS வடிவங்களை பயிற்றுவிக்கவும்.
-• பில் பகிர்வு: நண்பர்களுடன் செலவு பகிர்வு & ரசீது ஸ்கேனர்.
+• தலைப்பு தேடல்: உடனடி பரிவர்த்தனை தேடல்.
+• 24 மணி நேர SMS ஒத்திசைவு: நேரலை முன்னேற்றத்துடன்.
+• புதிய பில்கள்: கோப்பு மற்றும் தேதிகளுக்கான தெளிவான பில்கள்.
 
 🚀 மேம்பாடுகள்
-• அனைத்து பக்கங்களிலும் விரைவு அமைப்புகள் பொத்தான்.
-• புதிய Material 3 வடிவமைப்பு & மேம்பாடுகள்.
+• சமச்சீர் பொத்தான் அமைப்பு & மேம்பட்ட செயல்திறன்.
 </ta-IN>
+
