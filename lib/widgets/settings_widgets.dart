@@ -14,6 +14,8 @@ class SettingsHeroCard extends StatelessWidget {
   final String? lastAutoBackupTimeFormatted;
   final ThemeMode currentThemeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
+  final VoidCallback? onAppLockTap;
+  final VoidCallback? onBackupTap;
 
   const SettingsHeroCard({
     super.key,
@@ -25,6 +27,8 @@ class SettingsHeroCard extends StatelessWidget {
     this.lastAutoBackupTimeFormatted,
     required this.currentThemeMode,
     required this.onThemeModeChanged,
+    this.onAppLockTap,
+    this.onBackupTap,
   });
 
   @override
@@ -63,13 +67,17 @@ class SettingsHeroCard extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: colorScheme.primaryContainer,
+                            color: colorScheme.primary.withValues(alpha: isDark ? 0.22 : 0.12),
                             shape: BoxShape.circle,
+                            border: Border.all(
+                              color: colorScheme.primary.withValues(alpha: isDark ? 0.40 : 0.25),
+                              width: 1.2,
+                            ),
                           ),
                           child: Icon(
-                            Icons.settings_suggest_rounded,
+                            Icons.tune_rounded,
                             size: 22,
-                            color: colorScheme.onPrimaryContainer,
+                            color: colorScheme.primary,
                           ),
                         ),
                         const SizedBox(width: AppLayout.spaceM),
@@ -85,15 +93,45 @@ class SettingsHeroCard extends StatelessWidget {
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  'Preferences & System Health',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: colorScheme.onSurfaceVariant,
+                              const SizedBox(height: 2),
+                              Wrap(
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: 6,
+                                children: [
+                                  Text(
+                                    'Preferences & Health',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
                                   ),
-                                ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
+                                      borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                                      border: Border.all(
+                                        color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                                        width: 0.8,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.shield_rounded, size: 10, color: colorScheme.primary),
+                                        const SizedBox(width: 3),
+                                        Text(
+                                          'Local Vault',
+                                          style: theme.textTheme.labelSmall?.copyWith(
+                                            fontSize: 9.5,
+                                            fontWeight: FontWeight.w600,
+                                            letterSpacing: 0.3,
+                                            color: colorScheme.primary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -109,6 +147,7 @@ class SettingsHeroCard extends StatelessWidget {
                         : Icons.lock_open_rounded,
                     label: isAppLockEnabled ? 'Protected' : 'Unlocked',
                     isSelected: isAppLockEnabled,
+                    onTap: onAppLockTap,
                     selectedBackgroundColor:
                         colorScheme.primaryContainer.withValues(alpha: 0.8),
                     backgroundColor: colorScheme.surfaceContainerHighest,
@@ -144,8 +183,8 @@ class SettingsHeroCard extends StatelessWidget {
                       label: 'Finances',
                       isSelected: true,
                       selectedBackgroundColor:
-                          colorScheme.secondaryContainer.withValues(alpha: 0.7),
-                      textColor: colorScheme.onSecondaryContainer,
+                          const Color(0xFF10B981).withValues(alpha: isDark ? 0.25 : 0.15),
+                      textColor: isDark ? const Color(0xFF34D399) : const Color(0xFF059669),
                     ),
                   if (isPeriodTrackerEnabled)
                     AppChip(
@@ -154,8 +193,8 @@ class SettingsHeroCard extends StatelessWidget {
                       label: 'Health Tracker',
                       isSelected: true,
                       selectedBackgroundColor:
-                          colorScheme.tertiaryContainer.withValues(alpha: 0.7),
-                      textColor: colorScheme.onTertiaryContainer,
+                          const Color(0xFFF43F5E).withValues(alpha: isDark ? 0.25 : 0.15),
+                      textColor: isDark ? const Color(0xFFFB7185) : const Color(0xFFE11D48),
                     ),
                   if (isAiEnabled)
                     AppChip(
@@ -178,8 +217,13 @@ class SettingsHeroCard extends StatelessWidget {
                             : 'Auto-Backup On')
                         : 'Manual Backup',
                     isSelected: autoBackupEnabled,
+                    onTap: onBackupTap,
+                    selectedBackgroundColor:
+                        const Color(0xFF0EA5E9).withValues(alpha: isDark ? 0.25 : 0.15),
+                    textColor: autoBackupEnabled
+                        ? (isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7))
+                        : colorScheme.onSurfaceVariant,
                     backgroundColor: colorScheme.surfaceContainerHighest,
-                    textColor: colorScheme.onSurfaceVariant,
                   ),
                 ],
               ),
@@ -257,12 +301,17 @@ class SettingsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final effectiveAccent = accentColor ?? colorScheme.primary;
     final containerColor = accentColor != null
-        ? accentColor!.withValues(alpha: 0.12)
-        : colorScheme.surfaceContainerHigh.withValues(alpha: 0.7);
+        ? (isDark
+            ? accentColor!.withValues(alpha: 0.08)
+            : accentColor!.withValues(alpha: 0.04))
+        : (isDark
+            ? colorScheme.surfaceContainerHigh.withValues(alpha: 0.5)
+            : colorScheme.surfaceContainerLow);
     final borderColor = accentColor != null
-        ? accentColor!.withValues(alpha: 0.25)
+        ? accentColor!.withValues(alpha: isDark ? 0.28 : 0.18)
         : colorScheme.outlineVariant.withValues(alpha: 0.35);
 
     return Padding(
@@ -274,18 +323,25 @@ class SettingsSection extends StatelessWidget {
             padding: const EdgeInsets.only(left: 12, bottom: 8, top: 4),
             child: Row(
               children: [
-                Icon(
-                  icon,
-                  size: 18,
-                  color: effectiveAccent,
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: effectiveAccent.withValues(alpha: isDark ? 0.20 : 0.12),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 15,
+                    color: effectiveAccent,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   title.toUpperCase(),
                   style: theme.textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.2,
                     color: effectiveAccent,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.1,
                   ),
                 ),
               ],

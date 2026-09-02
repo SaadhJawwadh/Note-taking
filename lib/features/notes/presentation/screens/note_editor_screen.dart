@@ -197,10 +197,13 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
     _noteUrls = _extractUrls();
 
-    // Initial checklist extraction
-    final initialCompleted = QuillChecklistHelper.extractAndRemoveCheckedLines(_quillController);
-    if (initialCompleted.isNotEmpty) {
-      _completedItems.addAll(initialCompleted);
+    // Initial checklist extraction (only if moveCompletedChecklistsToBottom is enabled)
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
+    if (settings.moveCompletedChecklistsToBottom) {
+      final initialCompleted = QuillChecklistHelper.extractAndRemoveCheckedLines(_quillController);
+      if (initialCompleted.isNotEmpty) {
+        _completedItems.addAll(initialCompleted);
+      }
     }
 
     // Auto-save & change listeners
@@ -218,21 +221,25 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
           (op.data is String && (op.data as String).contains('\n')));
 
       if (hasListOrNewlineChange) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted || _isUpdatingProgrammatically) return;
-          _isUpdatingProgrammatically = true;
-          try {
-            final newlyChecked = QuillChecklistHelper.extractAndRemoveCheckedLines(_quillController);
-            if (newlyChecked.isNotEmpty) {
-              _completedItems.addAll(newlyChecked);
-              if (mounted) setState(() {});
+        if (!mounted) return;
+        final currentSettings = Provider.of<SettingsProvider>(context, listen: false);
+        if (currentSettings.moveCompletedChecklistsToBottom) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted || _isUpdatingProgrammatically) return;
+            _isUpdatingProgrammatically = true;
+            try {
+              final newlyChecked = QuillChecklistHelper.extractAndRemoveCheckedLines(_quillController);
+              if (newlyChecked.isNotEmpty) {
+                _completedItems.addAll(newlyChecked);
+                if (mounted) setState(() {});
+              }
+            } catch (e) {
+              debugPrint('Error syncing checklists: $e');
+            } finally {
+              _isUpdatingProgrammatically = false;
             }
-          } catch (e) {
-            debugPrint('Error syncing checklists: $e');
-          } finally {
-            _isUpdatingProgrammatically = false;
-          }
-        });
+          });
+        }
       }
       if (event.source == ChangeSource.local) {
         _checkCodeBlockAutoExit(event.change);
@@ -1014,9 +1021,16 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
   Future saveNote() async {
     final title = _titleController.text.trim();
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
     var delta = _quillController.document.toDelta();
-    if (_completedItems.isNotEmpty) {
+    if (settings.moveCompletedChecklistsToBottom && _completedItems.isNotEmpty) {
+      if (delta.length == 1 &&
+          delta.first.data == '\n' &&
+          (delta.first.attributes == null || delta.first.attributes!.isEmpty)) {
+        delta = Delta();
+      }
       for (final text in _completedItems) {
+        if (text.trim().isEmpty) continue;
         delta = delta.concat(Delta()
           ..insert(text, {'strike': true})
           ..insert('\n', {'list': 'checked'}));

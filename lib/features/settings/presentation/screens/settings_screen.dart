@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:provider/provider.dart';
 import '../../providers/settings_provider.dart';
 import 'package:note_taking_app/features/notes/presentation/screens/manage_tags_screen.dart';
+import 'package:note_taking_app/features/notes/presentation/widgets/note_migration_sheet.dart';
 import 'package:note_taking_app/features/finances/presentation/screens/category_management_screen.dart';
 import 'package:note_taking_app/features/finances/presentation/screens/sms_rules_screen.dart';
 import 'package:note_taking_app/features/sync/presentation/screens/p2p_sync_screen.dart';
@@ -403,12 +404,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       : null,
                                   currentThemeMode: settings.themeMode,
                                   onThemeModeChanged: settings.setThemeMode,
+                                  onAppLockTap: () {
+                                    HapticFeedback.selectionClick();
+                                    settings.setAppLockEnabled(!settings.appLockEnabled);
+                                  },
+                                  onBackupTap: () {
+                                    HapticFeedback.selectionClick();
+                                    BackupService.exportBackup(context);
+                                  },
                                 ),
 
                                  // 1. Appearance & UI
                                 SettingsSection(
                                   title: 'Appearance & UI',
                                   icon: Icons.palette_outlined,
+                                  accentColor: colorScheme.primary,
                                   children: [
                                     SettingsSwitchTile(
                                       icon: Icons.color_lens_outlined,
@@ -434,19 +444,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ],
                                 ),
 
-                                // 2. Features & Modules
+                                // 2. Notes & Editor
                                 SettingsSection(
-                                  title: 'Features & Modules',
-                                  icon: Icons.apps_outlined,
+                                  title: 'Notes & Editor',
+                                  icon: Icons.edit_note_rounded,
+                                  accentColor: const Color(0xFFF59E0B),
                                   children: [
-                                    // 2.1 Notes & Organization
                                     SettingsTile(
                                       icon: Icons.label_outline,
-                                      iconColor: colorScheme.primary,
+                                      iconColor: const Color(0xFFF59E0B),
                                       title: 'Manage Tags',
                                       subtitle: 'Rename or delete note tags',
                                       showArrow: true,
                                       onTap: () => AppRoute.push(context, const ManageTagsScreen()),
+                                    ),
+                                    const _Divider(),
+                                    SettingsSwitchTile(
+                                      icon: Icons.checklist_rtl_rounded,
+                                      iconColor: colorScheme.secondary,
+                                      title: 'Collapse Completed Checklists',
+                                      subtitle: 'Move finished to-do items to a bottom section',
+                                      value: settings.moveCompletedChecklistsToBottom,
+                                      onChanged: settings.setMoveCompletedChecklistsToBottom,
                                     ),
                                     const _Divider(),
                                     SettingsTile(
@@ -460,6 +479,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       showArrow: true,
                                       onTap: () => _showTrashPurgeDialog(context, settings),
                                     ),
+                                    const _Divider(),
+                                    SettingsTile(
+                                      icon: Icons.import_contacts_rounded,
+                                      iconColor: const Color(0xFFF59E0B),
+                                      title: 'Import & Migrate Notes',
+                                      subtitle: 'Import from Google Keep Takeout, Markdown, or text files',
+                                      showArrow: true,
+                                      onTap: () => NoteMigrationSheet.show(context),
+                                    ),
                                     if (settings.isDeviceAiSupported) ...[
                                       const _Divider(),
                                       SettingsSwitchTile(
@@ -471,23 +499,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         onChanged: settings.setUseOnDeviceAi,
                                       ),
                                     ],
+                                  ],
+                                ),
 
-                                    // 2.2 Financial Manager
-                                    const _Divider(),
+                                // 3. App Modules
+                                SettingsSection(
+                                  title: 'App Modules',
+                                  icon: Icons.apps_rounded,
+                                  accentColor: colorScheme.secondary,
+                                  children: [
                                     SettingsSwitchTile(
                                       icon: Icons.account_balance_wallet_outlined,
-                                      iconColor: colorScheme.primary,
-                                      iconBackgroundColor: colorScheme.primaryContainer.withValues(alpha: 0.5),
+                                      iconColor: const Color(0xFF10B981),
+                                      iconBackgroundColor: const Color(0xFF10B981).withValues(alpha: 0.15),
                                       title: 'Financial Manager',
                                       subtitle: 'Expense tracking, SMS bank ledger & budgets',
                                       value: settings.showFinancialManager,
                                       onChanged: settings.setShowFinancialManager,
                                     ),
-                                    if (settings.showFinancialManager) ...[
-                                      const _Divider(),
+                                    const _Divider(),
+                                    SettingsSwitchTile(
+                                      icon: Icons.calendar_month_outlined,
+                                      iconColor: const Color(0xFFF43F5E),
+                                      iconBackgroundColor: const Color(0xFFF43F5E).withValues(alpha: 0.15),
+                                      title: 'Period Tracker',
+                                      subtitle: 'Optional cycle tracking & predictions',
+                                      value: settings.isPeriodTrackerEnabled,
+                                      onChanged: settings.setIsPeriodTrackerEnabled,
+                                    ),
+                                  ],
+                                ),
+
+                                // 4. Finances & Bank Automation (Configured only when Financial Manager is enabled)
+                                if (settings.showFinancialManager) ...[
+                                  SettingsSection(
+                                    title: 'Finances & Bank Automation',
+                                    icon: Icons.account_balance_wallet_outlined,
+                                    accentColor: const Color(0xFF10B981),
+                                    children: [
                                       SettingsTile(
                                         icon: Icons.currency_exchange_outlined,
-                                        iconColor: colorScheme.primary,
+                                        iconColor: const Color(0xFF10B981),
                                         title: 'Currency',
                                         subtitle: 'Base ledger currency symbol',
                                         valueBadge: settings.currency,
@@ -515,7 +567,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       const _Divider(),
                                       SettingsTile(
                                         icon: Icons.event_repeat_outlined,
-                                        iconColor: colorScheme.primary,
+                                        iconColor: const Color(0xFF10B981),
                                         title: 'Recurring Subscriptions',
                                         subtitle: 'Manage repeating bills, salaries & automated rules',
                                         showArrow: true,
@@ -571,23 +623,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         ),
                                       ],
                                     ],
+                                  ),
+                                ],
 
-                                    // 2.3 Period Tracker
-                                    const _Divider(),
-                                    SettingsSwitchTile(
-                                      icon: Icons.calendar_month_outlined,
-                                      iconColor: colorScheme.secondary,
-                                      iconBackgroundColor: colorScheme.secondaryContainer.withValues(alpha: 0.5),
-                                      title: 'Period Tracker',
-                                      subtitle: 'Optional cycle tracking & predictions',
-                                      value: settings.isPeriodTrackerEnabled,
-                                      onChanged: settings.setIsPeriodTrackerEnabled,
-                                    ),
-                                    if (settings.isPeriodTrackerEnabled) ...[
-                                      const _Divider(),
+                                // 5. Health & Period Tracker (Configured only when Period Tracker is enabled)
+                                if (settings.isPeriodTrackerEnabled) ...[
+                                  SettingsSection(
+                                    title: 'Health & Period Tracker',
+                                    icon: Icons.calendar_month_outlined,
+                                    accentColor: const Color(0xFFF43F5E),
+                                    children: [
                                       SettingsTile(
                                         icon: Icons.notifications_none_outlined,
-                                        iconColor: colorScheme.secondary,
+                                        iconColor: const Color(0xFFF43F5E),
                                         title: 'Discreet Notification Text',
                                         subtitle: 'Text shown in cycle prediction alerts',
                                         valueBadge: settings.discreetNotificationText,
@@ -595,17 +643,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         onTap: () => _showNotificationTextDialog(context, settings),
                                       ),
                                     ],
-                                  ],
-                                ),
+                                  ),
+                                ],
 
-                                // 3. Privacy & Security
+                                // 6. Privacy & Security
                                 SettingsSection(
                                   title: 'Privacy & Security',
                                   icon: Icons.security_outlined,
+                                  accentColor: const Color(0xFF6366F1),
                                   children: [
                                     SettingsSwitchTile(
                                       icon: Icons.lock_outline,
-                                      iconColor: colorScheme.primary,
+                                      iconColor: const Color(0xFF6366F1),
                                       title: 'App Lock',
                                       subtitle: 'Require authentication to open app',
                                       value: settings.appLockEnabled,
@@ -635,14 +684,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ],
                                 ),
 
-                                // 4. Data, Sync & Backups
+                                // 7. Data, Sync & Backups
                                 SettingsSection(
                                   title: 'Data, Sync & Backups',
                                   icon: Icons.cloud_sync_outlined,
+                                  accentColor: const Color(0xFF0EA5E9),
                                   children: [
                                     SettingsTile(
                                       icon: Icons.devices_rounded,
-                                      iconColor: colorScheme.tertiary,
+                                      iconColor: const Color(0xFF0EA5E9),
                                       title: 'P2P Device Sync',
                                       subtitle: 'Sync notes between devices (Local / Relay)',
                                       showArrow: true,
@@ -669,10 +719,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     if (!kIsWeb && Platform.isAndroid) ...[
                                       const _Divider(),
                                       SettingsSwitchTile(
-                                        icon: Icons.backup_outlined,
-                                        iconColor: colorScheme.tertiary,
-                                        title: 'Auto Backup',
-                                        subtitle: 'Schedule automatic backups',
+                                        icon: Icons.cloud_sync_outlined,
+                                        iconColor: const Color(0xFF0EA5E9),
+                                        title: 'Automatic Backups',
+                                        subtitle: 'Schedule regular encrypted local backups',
                                         value: settings.autoBackupEnabled,
                                         onChanged: (value) async {
                                           await settings.setAutoBackupEnabled(value);
@@ -714,10 +764,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ],
                                 ),
 
-                                // 5. About Section
+                                // 8. About Section
                                 SettingsSection(
                                   title: 'About',
                                   icon: Icons.info_outline_rounded,
+                                  accentColor: colorScheme.onSurfaceVariant,
                                   children: [
                                     SettingsTile(
                                       icon: Icons.star_outline_rounded,

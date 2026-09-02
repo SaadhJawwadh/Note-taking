@@ -84,6 +84,8 @@ lib/
 │   ├── notes/                        # Notes & WYSIWYG Editor Feature Module
 │   │   ├── data/
 │   │   │   └── note_repository.dart  # Note database CRUD, tagging, trash rotation
+│   │   ├── services/
+│   │   │   └── note_migration_service.dart# Google Keep JSON & Markdown batch import & parsing
 │   │   ├── presentation/
 │   │   │   ├── screens/
 │   │   │   │   ├── filtered_notes_screen.dart# Dedicated viewer for Archive and Trash notes
@@ -91,6 +93,7 @@ lib/
 │   │   │   │   └── note_editor_screen.dart   # WYSIWYG Quill editor, AI actions, toolbar
 │   │   │   └── widgets/              # Editor modular presentation widgets
 │   │   │       ├── note_color_picker_sheet.dart# Standardized M3 palette seed picker modal
+│   │   │       ├── note_migration_sheet.dart # Google Keep & Markdown file import modal sheet
 │   │   │       ├── note_search_replace_bar.dart# Keyboard-shortcut aware find/replace toolbar
 │   │   │       └── voice_dictation_pill.dart # Floating live speech-to-text recording status pill
 │   │   └── providers/
@@ -187,11 +190,15 @@ Manages note creation, organization, formatting, auto-saving, and viewing modes.
     *   **Decoupled State**: `NoteEditorProvider` manages dirty state tracking, auto-save timers (2s), and content mutations.
     *   **Lossless Storage**: Stored in SQLite as Delta JSON arrays, falling back to raw Markdown for legacy notes via `RichTextUtils`.
     *   **Smart Preview**: Renders checklist states (☐/☑) and formats up to 6 lines of plain text directly on home note cards.
+    *   **Consecutive Checklist Delta Extraction**: `quill_checklist_helper.dart` extracts consecutive checked blocks and truncates trailing empty markers cleanly, preventing ghost empty checkboxes.
+    *   **Google Keep & Markdown Migration**: `NoteMigrationService` parses Google Keep Takeout JSON and Markdown archives in batch with folder and tag extraction.
     *   **Trash Auto-Purge**: Deleted notes are soft-deleted and automatically purged after 7 days via `clearOldTrash()`.
 *   **Key Files**:
     *   Feature Screen: `lib/features/notes/presentation/screens/note_editor_screen.dart`
     *   State Manager: `lib/features/notes/providers/note_editor_provider.dart`
     *   Database CRUD: `lib/features/notes/data/note_repository.dart`
+    *   Migration Service: `lib/features/notes/services/note_migration_service.dart`
+    *   Migration UI Sheet: `lib/features/notes/presentation/widgets/note_migration_sheet.dart`
     *   Entity Model: `lib/data/note_model.dart`
     *   Format Conversions: `lib/utils/rich_text_utils.dart`
 
@@ -231,11 +238,16 @@ A fully offline, privacy-first menstrual cycle tracker.
 ### 4. Settings & App Preferences Module (`lib/features/settings/`)
 Consolidates global app configuration, security timeouts, and data backups.
 *   **Key Features**:
+    *   **Control Center Hero Cockpit**: Interactive `SettingsHeroCard` with `tune_rounded` console badge, `🛡️ Local Vault` offline badge, and 1-tap interactive action pills (`[ 🔓 Unlocked / 🔒 Protected ]`, `[ ☁️ Manual Backup ]`).
+    *   **Domain Themed Sections**: `SettingsSection` applies domain semantic accents (Appearance: Violet, Notes: Amber, Modules: Purple, Finances: Emerald, Health: Rose, Privacy: Indigo, Data: Sky Cyan, About: Slate) with high-contrast subtle container tinting and 1.0px accent borders.
+    *   **Resilient App Lock Graceful Fallback**: `AppLockScreen` traps `PlatformException(NotAvailable)` on un-enrolled devices, rendering an informative M3 card and an instant `[ 🔓 Disable App Lock ]` fallback button to prevent soft lockouts.
     *   **Global Provider**: `SettingsProvider` handles dark/light theme modes, dynamic colors, currency preferences, custom rules, and category budgets.
     *   **Backup & Recovery**: Encrypted JSON backups via `BackupService`. Excludes sensitive biometric settings to prevent override via untrusted files.
 *   **Key Files**:
     *   UI Screen: `lib/features/settings/presentation/screens/settings_screen.dart`
     *   State Manager: `lib/features/settings/providers/settings_provider.dart`
+    *   Dashboard Widgets: `lib/widgets/settings_widgets.dart`
+    *   App Lock Supervisor: `lib/screens/app_lock_screen.dart`
 
 ### 5. Core Design System & UI Components (`lib/core/`)
 *   **Single Source of Truth**: All layout spacing, border radii, animation curves, and colors are defined in `AppLayout` and `AppTheme` (`lib/core/theme/`).
@@ -332,9 +344,39 @@ erDiagram
         text smsId PK
         text deletedAt
     }
+    split_bills {
+        text id PK
+        integer transactionId
+        text title
+        real totalAmount
+        text payerName
+        integer isPayerUser
+        text splitMode
+        text groupTag
+        text date
+        text notes
+        text receiptImagePath
+        text status
+        text deletedAt
+    }
+    split_participants {
+        text id PK
+        text billId FK
+        text contactName
+        real shareAmount
+        integer hasPaid
+        text paidAt
+    }
+    split_contacts {
+        text name PK
+        text phoneNumber
+        integer colorValue
+        text lastUsed
+    }
 
     notes ||--o{ note_tags : "has"
     tags ||--o{ note_tags : "groups"
+    split_bills ||--o{ split_participants : "has"
 ```
 
 ### Hot-Path Database Composite Indexes
@@ -409,6 +451,7 @@ sequenceDiagram
     *   `03_playstore_donut_breakdown.jpg`: Interactive Donut chart and category budgets mockup card.
     *   `04_playstore_offline_privacy_sync.jpg`: Zero-cloud privacy and P2P Wi-Fi sync mockup card.
 *   **Automated Real-World Test Suites**:
+    *   `test/note_migration_and_split_sync_test.dart`: Validates Google Keep JSON & Markdown batch import, empty checklist boundary isolation, and Split Bills 2-way ledger synchronization.
     *   `test/top_bar_search_and_sms_24h_sync_test.dart`: Validates Top Bar transaction search mode, 24-hour default SMS scan engine, persistent real-time sync progress banner, and top app bar action symmetry.
     *   `test/split_bill_features_test.dart`: Validates Split Bills mathematics, OCR offline parsing, settle-up sheet, and WhatsApp reminder generators.
     *   `test/period_tracker_phase4_features_test.dart`: Validates period predictions, regularity scoring, symptom toggles, and cycle phase cards.

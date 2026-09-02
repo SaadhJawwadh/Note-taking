@@ -37,19 +37,19 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.primaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
+            icon: Icons.import_contacts_rounded,
+            title: "Keep & Markdown Import",
+            desc: "Batch import notes, checklists, folders, and tags from Google Keep Takeout JSON and Markdown files in one tap.",
+          ),
+          _WhatsNewItem(
+            icon: Icons.tune_rounded,
+            title: "Settings Control Center",
+            desc: "Interactive cockpit with 1-tap App Lock and backup shortcuts, subtle vault indicator, and domain-themed cards.",
+          ),
+          _WhatsNewItem(
             icon: Icons.sync_lock_rounded,
             title: "Split Bills Backup & Sync",
-            desc: "Group expenses, debt settlements, and friends now back up in encrypted files and sync bi-directionally across your devices.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.format_paint_rounded,
-            title: "Intelligent Rich Text Engine",
-            desc: "Preserves your bold, italic, and underline styling when formatting headers, bullet points, checklists, and tables.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.speed_rounded,
-            title: "High-Performance Indexing",
-            desc: "Faster search and instant loading across transactions, notes, split bills, and menstrual cycle logs.",
+            desc: "Group expenses, debt settlements, and friends back up in encrypted JSON files and sync bi-directionally across devices.",
           ),
         ],
       ),
@@ -59,19 +59,19 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.tertiaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.splitscreen_rounded,
-            title: "Split Bills & Offline Receipt OCR",
-            desc: "Split group expenses with friends, scan paper receipts directly with your camera for instant totals, and send 1-tap WhatsApp reminders.",
+            icon: Icons.checklist_rounded,
+            title: "Smarter Checklist Engine",
+            desc: "Extracts completed items cleanly without empty lines, and restores items with a single tap.",
           ),
           _WhatsNewItem(
-            icon: Icons.tune_rounded,
-            title: "Bank SMS Training & Titles",
-            desc: "Teach the app custom SMS patterns in the sandbox and set clean personalized descriptions for bank alerts.",
+            icon: Icons.security_rounded,
+            title: "Resilient App Lock Fallback",
+            desc: "Automatic safety card and disable button prevent lockouts on devices without screen lock or enrolled biometrics.",
           ),
           _WhatsNewItem(
-            icon: Icons.menu_book_rounded,
-            title: "Cycle Phase Guide & Health Tools",
-            desc: "Built-in educational phase guide with symptoms, wellness recommendations, and rapid cycle preferences access.",
+            icon: Icons.accessibility_new_rounded,
+            title: "Touch Accessibility & Semantics",
+            desc: "Full screen reader accessibility announcements across all interactive tags and filter chips.",
           ),
         ],
       ),
@@ -81,9 +81,9 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.secondaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.notifications_active_outlined,
-            title: "Post-Sync Count Notifications",
-            desc: "Floating status feedback reporting the exact number of new transactions imported from the last 24 hours.",
+            icon: Icons.restore_rounded,
+            title: "Checklist Restore Ordering",
+            desc: "Accurately restores completed items back into the editor with line-ending formatting and correct cursor positioning.",
           ),
           _WhatsNewItem(
             icon: Icons.shield_outlined,

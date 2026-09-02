@@ -179,6 +179,25 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
     });
   }
 
+  void _ensureFriendPayerInParticipants(String friendName) {
+    final clean = friendName.trim();
+    if (clean.isEmpty || clean.toLowerCase() == 'you') return;
+    final pIndex = _participantsData.indexWhere((p) => (p['name'] as String).toLowerCase() == clean.toLowerCase());
+    if (pIndex == -1) {
+      _participantsData.add({
+        'id': const Uuid().v4(),
+        'name': clean,
+        'amount': 0.0,
+        'hasPaid': true,
+      });
+      _exactAmountControllers[clean] = TextEditingController(
+        text: _equalShareAmount.toStringAsFixed(2).replaceAll('.00', ''),
+      );
+    } else {
+      _participantsData[pIndex]['hasPaid'] = true;
+    }
+  }
+
   Future<void> _scanReceipt() async {
     final result = await ReceiptScannerSheet.show(context);
     if (result != null) {
@@ -410,6 +429,13 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
                               border: OutlineInputBorder(),
                             ),
                             onChanged: (_) => setState(() {}),
+                            onSubmitted: (val) {
+                              if (val.trim().isNotEmpty) {
+                                setState(() {
+                                  _ensureFriendPayerInParticipants(val.trim());
+                                });
+                              }
+                            },
                           ),
                           // Quick-select chips from participants & recent contacts
                           Builder(builder: (context) {
@@ -445,6 +471,9 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
                                           HapticFeedback.selectionClick();
                                           setState(() {
                                             _payerFriendController.text = sel ? name : '';
+                                            if (sel) {
+                                              _ensureFriendPayerInParticipants(name);
+                                            }
                                           });
                                         },
                                       );
@@ -642,6 +671,9 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
                                   ),
                                 ),
                                 title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                subtitle: (!_isPayerUser && _payerFriendController.text.trim().toLowerCase() == name.toLowerCase())
+                                    ? const Text('Payer • Settled', style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.w500))
+                                    : null,
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
@@ -751,6 +783,10 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
       final billId = widget.existingBill?.id ?? const Uuid().v4();
       final participantsList = <SplitParticipantModel>[];
 
+      if (!_isPayerUser && _payerFriendController.text.trim().isNotEmpty) {
+        _ensureFriendPayerInParticipants(_payerFriendController.text.trim());
+      }
+
       if (_splitMode == SplitMode.equal) {
         final share = _equalShareAmount;
         if (_includeUserShare) {
@@ -767,13 +803,18 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
         }
 
         for (final p in _participantsData) {
+          final isPayerFriend = !_isPayerUser &&
+              (p['name'] as String).trim().toLowerCase() == _payerFriendController.text.trim().toLowerCase();
+          final hasPaid = isPayerFriend ? true : (p['hasPaid'] as bool? ?? false);
+
           participantsList.add(
             SplitParticipantModel(
               id: p['id'] as String? ?? const Uuid().v4(),
               billId: billId,
               contactName: p['name'] as String,
               shareAmount: share,
-              hasPaid: p['hasPaid'] as bool? ?? false,
+              hasPaid: hasPaid,
+              paidAt: hasPaid ? (p['paidAt'] as DateTime? ?? DateTime.now()) : null,
             ),
           );
         }
@@ -783,6 +824,9 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
           final name = p['name'] as String;
           final ctrl = _exactAmountControllers[name];
           final exactShare = double.tryParse(ctrl?.text.trim() ?? '') ?? 0.0;
+          final isPayerFriend = !_isPayerUser &&
+              name.trim().toLowerCase() == _payerFriendController.text.trim().toLowerCase();
+          final hasPaid = isPayerFriend ? true : (p['hasPaid'] as bool? ?? false);
 
           participantsList.add(
             SplitParticipantModel(
@@ -790,7 +834,8 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
               billId: billId,
               contactName: name,
               shareAmount: exactShare,
-              hasPaid: p['hasPaid'] as bool? ?? false,
+              hasPaid: hasPaid,
+              paidAt: hasPaid ? (p['paidAt'] as DateTime? ?? DateTime.now()) : null,
             ),
           );
         }
@@ -858,20 +903,35 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
   }
 
   Future<void> _confirmDelete() async {
+    final bill = widget.existingBill!;
+    final hasLinkedTx = bill.transactionId != null;
     final confirmed = await AppDialog.showConfirm(
       context: context,
       title: 'Delete Split Bill?',
-      message: 'Are you sure you want to delete "${widget.existingBill!.title}"? This cannot be undone.',
+      message: hasLinkedTx
+          ? 'Are you sure you want to delete "${bill.title}"? The associated ledger expense will also be removed.'
+          : 'Are you sure you want to delete "${bill.title}"?',
       confirmLabel: 'Delete',
       isDestructive: true,
     );
     if (confirmed == true && mounted) {
       final splitProvider = Provider.of<SplitBillProvider>(context, listen: false);
-      await splitProvider.deleteBill(widget.existingBill!.id);
+      await splitProvider.deleteBill(bill.id);
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Split bill deleted.')),
+          SnackBar(
+            content: Text(hasLinkedTx
+                ? 'Split bill and linked expense deleted.'
+                : 'Split bill deleted.'),
+            behavior: SnackBarBehavior.floating,
+            action: SnackBarAction(
+              label: 'UNDO',
+              onPressed: () {
+                splitProvider.restoreBill(bill.id);
+              },
+            ),
+          ),
         );
       }
     }

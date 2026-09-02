@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 import '../../../../data/database_helper.dart';
 import '../../../../data/database_constants.dart';
+import '../../../../data/transaction_model.dart';
 import '../models/split_bill_model.dart';
 
 class SplitBillRepository {
@@ -161,6 +162,20 @@ class SplitBillRepository {
           await _saveContactInternal(txn, p.contactName.trim());
         }
       }
+
+      // Propagate changes to linked ledger transaction if present
+      if (bill.transactionId != null) {
+        await txn.update(
+          TableNames.transactions,
+          {
+            TransactionFields.amount: bill.totalAmount,
+            TransactionFields.description: bill.title,
+            TransactionFields.date: bill.date.toIso8601String(),
+          },
+          where: '${TransactionFields.id} = ?',
+          whereArgs: [bill.transactionId],
+        );
+      }
     });
   }
 
@@ -222,12 +237,22 @@ class SplitBillRepository {
         WHERE LOWER(TRIM(${SplitParticipantFields.contactName})) = ? AND ${SplitParticipantFields.hasPaid} = 0
       ''', [now, contactName.trim().toLowerCase()]);
 
-      // If contact was payer of bills where user owed, mark bill settled
+      // If contact was payer of bills where user owed, mark bill settled and mark user share as paid
       await txn.rawUpdate('''
         UPDATE ${TableNames.splitBills}
         SET ${SplitBillFields.status} = 'settled'
         WHERE LOWER(TRIM(${SplitBillFields.payerName})) = ? AND ${SplitBillFields.isPayerUser} = 0
       ''', [contactName.trim().toLowerCase()]);
+
+      await txn.rawUpdate('''
+        UPDATE ${TableNames.splitParticipants}
+        SET ${SplitParticipantFields.hasPaid} = 1, ${SplitParticipantFields.paidAt} = ?
+        WHERE LOWER(TRIM(${SplitParticipantFields.contactName})) = 'you'
+          AND ${SplitParticipantFields.billId} IN (
+            SELECT ${SplitBillFields.id} FROM ${TableNames.splitBills}
+            WHERE LOWER(TRIM(${SplitBillFields.payerName})) = ? AND ${SplitBillFields.isPayerUser} = 0
+          )
+      ''', [now, contactName.trim().toLowerCase()]);
 
       // Refresh statuses of all bills where this contact was a participant
       final updatedBills = await txn.rawQuery('''
@@ -264,22 +289,59 @@ class SplitBillRepository {
 
   Future<void> softDeleteSplitBill(String id) async {
     final db = await _dbHelper.database;
-    await db.update(
-      TableNames.splitBills,
-      {SplitBillFields.deletedAt: DateTime.now().toIso8601String()},
-      where: '${SplitBillFields.id} = ?',
-      whereArgs: [id],
-    );
+    await db.transaction((txn) async {
+      final now = DateTime.now().toIso8601String();
+      await txn.update(
+        TableNames.splitBills,
+        {SplitBillFields.deletedAt: now},
+        where: '${SplitBillFields.id} = ?',
+        whereArgs: [id],
+      );
+
+      final maps = await txn.query(
+        TableNames.splitBills,
+        columns: [SplitBillFields.transactionId],
+        where: '${SplitBillFields.id} = ?',
+        whereArgs: [id],
+      );
+      if (maps.isNotEmpty && maps.first[SplitBillFields.transactionId] != null) {
+        final txId = maps.first[SplitBillFields.transactionId] as int;
+        await txn.update(
+          TableNames.transactions,
+          {TransactionFields.deletedAt: now},
+          where: '${TransactionFields.id} = ?',
+          whereArgs: [txId],
+        );
+      }
+    });
   }
 
   Future<void> restoreSplitBill(String id) async {
     final db = await _dbHelper.database;
-    await db.update(
-      TableNames.splitBills,
-      {SplitBillFields.deletedAt: null},
-      where: '${SplitBillFields.id} = ?',
-      whereArgs: [id],
-    );
+    await db.transaction((txn) async {
+      await txn.update(
+        TableNames.splitBills,
+        {SplitBillFields.deletedAt: null},
+        where: '${SplitBillFields.id} = ?',
+        whereArgs: [id],
+      );
+
+      final maps = await txn.query(
+        TableNames.splitBills,
+        columns: [SplitBillFields.transactionId],
+        where: '${SplitBillFields.id} = ?',
+        whereArgs: [id],
+      );
+      if (maps.isNotEmpty && maps.first[SplitBillFields.transactionId] != null) {
+        final txId = maps.first[SplitBillFields.transactionId] as int;
+        await txn.update(
+          TableNames.transactions,
+          {TransactionFields.deletedAt: null},
+          where: '${TransactionFields.id} = ?',
+          whereArgs: [txId],
+        );
+      }
+    });
   }
 
   Future<void> permanentlyDeleteSplitBill(String id) async {

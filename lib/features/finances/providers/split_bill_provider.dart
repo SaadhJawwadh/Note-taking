@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/models/split_bill_model.dart';
 import '../data/repositories/split_bill_repository.dart';
+import '../presentation/screens/financial_manager_screen.dart';
 
 class SplitBillProvider extends ChangeNotifier {
   final SplitBillRepository _repository = SplitBillRepository.instance;
@@ -127,6 +128,9 @@ class SplitBillProvider extends ChangeNotifier {
 
     try {
       await _repository.updateSplitBill(bill);
+      if (bill.transactionId != null) {
+        FinancialManagerScreen.refreshNotifier.value++;
+      }
       await loadSplitBills(showLoading: false);
     } catch (e) {
       debugPrint('[SplitBillProvider] Error updating bill: $e');
@@ -142,6 +146,7 @@ class SplitBillProvider extends ChangeNotifier {
 
     try {
       await _repository.softDeleteSplitBill(id);
+      FinancialManagerScreen.refreshNotifier.value++;
       await loadSplitBills(showLoading: false);
     } catch (e) {
       if (deleted.isNotEmpty) {
@@ -149,6 +154,17 @@ class SplitBillProvider extends ChangeNotifier {
         _recalculateMetrics();
         notifyListeners();
       }
+    }
+  }
+
+  Future<void> restoreBill(String id) async {
+    try {
+      await _repository.restoreSplitBill(id);
+      FinancialManagerScreen.refreshNotifier.value++;
+      await loadSplitBills(showLoading: false);
+    } catch (e) {
+      debugPrint('[SplitBillProvider] Error restoring bill: $e');
+      await loadSplitBills(showLoading: false);
     }
   }
 
@@ -200,7 +216,16 @@ class SplitBillProvider extends ChangeNotifier {
           status: b.copyWith(participants: updatedParticipants).computeDerivedStatus(),
         );
       } else if (b.payerName.trim().toLowerCase() == contactName.trim().toLowerCase()) {
-        _bills[i] = b.copyWith(status: SplitStatus.settled);
+        final updatedParticipants = b.participants.map((p) {
+          if (p.contactName.trim().toLowerCase() == 'you') {
+            return p.copyWith(hasPaid: true, paidAt: now);
+          }
+          return p;
+        }).toList();
+        _bills[i] = b.copyWith(
+          participants: updatedParticipants,
+          status: SplitStatus.settled,
+        );
       }
     }
     _contactBalances[contactName] = 0.0;

@@ -10,6 +10,8 @@ import '../../data/models/split_bill_model.dart';
 import '../../data/transaction_repository.dart';
 import '../../providers/financial_manager_provider.dart';
 import '../../providers/split_bill_provider.dart';
+import '../../services/split_share_service.dart';
+import '../../../settings/providers/settings_provider.dart';
 import '../screens/financial_manager_screen.dart';
 
 class SettleUpSheet extends StatefulWidget {
@@ -138,7 +140,31 @@ class _SettleUpSheetState extends State<SettleUpSheet> {
             contentPadding: EdgeInsets.zero,
             dense: true,
           ),
-          const SizedBox(height: AppLayout.spaceL),
+          const SizedBox(height: AppLayout.spaceM),
+          if (widget.netAmount > 0) ...[
+            OutlinedButton.icon(
+              onPressed: _isProcessing
+                  ? null
+                  : () async {
+                      final settings = Provider.of<SettingsProvider>(context, listen: false);
+                      final reminder = SplitShareService.formatPersonReminder(
+                        contactName: widget.contactName,
+                        billTitle: widget.specificBill?.title ?? 'Split Bill',
+                        shareAmount: widget.netAmount,
+                        currencySymbol: settings.currency,
+                        defaultPaymentInfo: settings.defaultPaymentInfo,
+                      );
+                      await SplitShareService.shareText(reminder, subject: 'Split Bill Reminder');
+                    },
+              icon: const Icon(Icons.share_rounded, size: 18),
+              label: const Text('Send WhatsApp Reminder'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusM)),
+              ),
+            ),
+            const SizedBox(height: AppLayout.spaceS),
+          ],
           FilledButton.icon(
             onPressed: _isProcessing ? null : _confirmSettleUp,
             icon: _isProcessing

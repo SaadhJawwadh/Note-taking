@@ -1006,6 +1006,10 @@ class NoteCard extends StatelessWidget {
 
     final searchQuery = context.watch<NoteProvider>().searchQuery;
 
+    final checkedCount = RegExp(r'"list"\s*:\s*"checked"').allMatches(note.content).length;
+    final uncheckedCount = RegExp(r'"list"\s*:\s*"unchecked"').allMatches(note.content).length;
+    final totalChecklistItems = checkedCount + uncheckedCount;
+
     return BouncingWidget(
       onTap: () {
         HapticFeedback.lightImpact();
@@ -1072,6 +1076,21 @@ class NoteCard extends StatelessWidget {
                 if (!note.isLocked && note.imagePath != null) ...[
                   const SizedBox(height: AppLayout.spaceM),
                   ClipRRect(borderRadius: BorderRadius.circular(AppLayout.radiusL), child: Image.file(File(note.imagePath!), cacheWidth: 400, height: 120, width: double.infinity, fit: BoxFit.cover, alignment: Alignment.topCenter, errorBuilder: (c, e, s) => const SizedBox.shrink())),
+                ],
+                if (!note.isLocked && totalChecklistItems > 0) ...[
+                  const SizedBox(height: AppLayout.spaceS),
+                  AppChip(
+                    label: '$checkedCount/$totalChecklistItems Done',
+                    icon: checkedCount == totalChecklistItems
+                        ? Icons.check_circle_outline_rounded
+                        : Icons.checklist_rounded,
+                    backgroundColor: checkedCount == totalChecklistItems
+                        ? Colors.green.withValues(alpha: 0.15)
+                        : theme.colorScheme.secondaryContainer.withValues(alpha: 0.4),
+                    textColor: checkedCount == totalChecklistItems
+                        ? Colors.green
+                        : theme.colorScheme.onSecondaryContainer,
+                  ),
                 ],
                 const SizedBox(height: AppLayout.spaceS),
                 if (!note.isLocked && ((note.previewText?.isNotEmpty ?? false) || note.content.isNotEmpty))

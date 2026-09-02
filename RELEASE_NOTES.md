@@ -1,13 +1,13 @@
 
 ### 🌟 What's New
-- **Split Bills Cloudless Backup & Sync**: Group expenses, debt balances, and friend contacts now automatically back up in encrypted JSON files and sync bi-directionally across your paired devices over local Wi-Fi.
-- **Intelligent Rich Text Formatting**: Upgraded note formatting engine keeps your bold, italic, and underline styling intact when converting headers, bullet points, and checklists.
+- **Google Keep & Markdown Import**: Batch import notes, checklists, folders, and tags from Google Keep Takeout JSON and Markdown archives in one tap.
+- **Redesigned Settings Control Center**: An interactive console featuring a subtle security indicator, quick one-tap shortcuts for App Lock and JSON backups, and domain-themed cards (Notes, Finances, Health, Privacy).
 
 ### 🚀 Improvements
-- **Faster Database Queries**: Added performance indexing across transactions, notes, split bills, and health logs for instant screen loads.
-- **Memory & Storage Optimization**: High-resolution camera photos are safely downsampled and isolated in protected storage to save device battery and memory.
-- **Seamless Screen Navigation**: Smoother transition between system dialogs, file pickers, and WhatsApp sharing without accidental lock screen triggers.
+- **Smarter Checklist Engine**: Smoother item completion without trailing empty lines, plus one-tap unchecking to restore items directly to your note body.
+- **Resilient App Lock**: Automatic safety fallback detects devices without screen locks or enrolled biometrics, preventing accidental lockouts with a safe disable button.
+- **Touch Accessibility**: Standardized screen reader semantics across all interactive tag and filter chips.
 
 ### 🐛 Fixes
-- **Precision Text Selection**: Fixed cursor navigation when tapping near note boundaries and tables.
+- **Checklist Restore Ordering**: Accurately restores completed items back into the editor with line-ending formatting and correct cursor positioning.
 

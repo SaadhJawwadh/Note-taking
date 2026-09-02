@@ -31,12 +31,15 @@ class SplitShareService {
     } else {
       buffer.writeln('• ${bill.payerName} (Paid for bill) ✅');
       for (final p in bill.participants) {
+        if (p.contactName.trim().toLowerCase() == bill.payerName.trim().toLowerCase()) {
+          continue;
+        }
         final statusIcon = p.hasPaid ? '✅ Paid' : '⏳ Pending';
         buffer.writeln('• ${p.contactName}: $currencySymbol ${p.shareAmount.toStringAsFixed(2).replaceAll('.00', '')} $statusIcon');
       }
     }
 
-    if (defaultPaymentInfo != null && defaultPaymentInfo.trim().isNotEmpty) {
+    if (bill.isPayerUser && defaultPaymentInfo != null && defaultPaymentInfo.trim().isNotEmpty) {
       buffer.writeln('');
       buffer.writeln('💳 Payment Details:');
       buffer.writeln(defaultPaymentInfo.trim());
@@ -78,6 +81,14 @@ class SplitShareService {
     await Share.share(
       text,
       subject: 'Split Bill: ${bill.title}',
+    );
+  }
+
+  static Future<void> shareText(String text, {String? subject}) async {
+    AppLockScreen.ignoreNextResumeLock();
+    await Share.share(
+      text,
+      subject: subject,
     );
   }
 

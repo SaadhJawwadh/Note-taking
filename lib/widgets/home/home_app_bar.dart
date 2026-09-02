@@ -10,6 +10,7 @@ import 'package:note_taking_app/features/sync/presentation/screens/p2p_sync_scre
 import 'package:note_taking_app/features/settings/presentation/screens/settings_screen.dart';
 import 'package:note_taking_app/features/notes/presentation/screens/manage_tags_screen.dart';
 import 'package:note_taking_app/features/notes/presentation/screens/filtered_notes_screen.dart';
+import 'package:note_taking_app/features/notes/presentation/widgets/note_migration_sheet.dart';
 import '../../core/theme/app_layout.dart';
 import '../../utils/app_route.dart';
 import '../bouncing_widget.dart';
@@ -602,6 +603,8 @@ class _HomeAppBarState extends State<HomeAppBar> {
               _showFolderPicker(context, noteProvider);
             } else if (action == 'manage_tags') {
               AppRoute.push(context, const ManageTagsScreen());
+            } else if (action == 'import_notes') {
+              NoteMigrationSheet.show(context);
             } else if (action == 'trash') {
               AppRoute.push(context, const FilteredNotesScreen(filterType: FilterType.trash));
             } else {
@@ -701,6 +704,23 @@ class _HomeAppBarState extends State<HomeAppBar> {
                     const SizedBox(width: 12),
                     Text(
                       'Manage Tags',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            color: colorScheme.onSurface,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'import_notes',
+                height: 44,
+                child: Row(
+                  children: [
+                    Icon(Icons.import_contacts_rounded, size: 20, color: colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Import Notes',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w500,
                             color: colorScheme.onSurface,

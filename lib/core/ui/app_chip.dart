@@ -104,7 +104,7 @@ class AppChip extends StatelessWidget {
     final fontSize = isCompact ? 12.0 : 13.0;
     final iconSize = isCompact ? 14.0 : 16.0;
 
-    return Container(
+    final chipWidget = Container(
       decoration: BoxDecoration(
         color: effectiveBg,
         borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
@@ -156,5 +156,15 @@ class AppChip extends StatelessWidget {
         ),
       ),
     );
+
+    if (onTap != null) {
+      return Semantics(
+        button: true,
+        selected: isSelected,
+        label: label,
+        child: chipWidget,
+      );
+    }
+    return chipWidget;
   }
 }

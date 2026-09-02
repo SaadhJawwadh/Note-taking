@@ -15,7 +15,7 @@ class NoteRepository {
   Future<Database> get _db async => await _dbHelper.database;
 
   Future<void> createNote(Note note) async {
-    final enrichedNote = _enrichNoteWithPreview(note);
+    final enrichedNote = enrichNoteWithPreview(note);
     final db = await _db;
     await db.transaction((txn) async {
       await txn.insert(TableNames.notes, enrichedNote.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
@@ -98,7 +98,7 @@ class NoteRepository {
   }
 
   Future<int> updateNote(Note note) async {
-    final enrichedNote = _enrichNoteWithPreview(note);
+    final enrichedNote = enrichNoteWithPreview(note);
     final db = await _db;
     return await db.transaction((txn) async {
       final res = await txn.update(TableNames.notes, enrichedNote.toMap(), where: '${NoteFields.id} = ?', whereArgs: [enrichedNote.id]);
@@ -280,7 +280,7 @@ class NoteRepository {
     return await _populateNotesTags(result.map((json) => Note.fromMap(json)).toList());
   }
 
-  Note _enrichNoteWithPreview(Note note) {
+  Note enrichNoteWithPreview(Note note) {
     final preview = RichTextUtils.contentToPlainText(note.content, maxLines: 6);
     return note.copyWith(previewText: preview);
   }

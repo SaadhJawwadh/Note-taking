@@ -17,6 +17,7 @@ class AppLockScreen extends StatefulWidget {
 
   static final ValueNotifier<bool> sessionAuthenticated = ValueNotifier<bool>(false);
   static bool _ignoreNextResumeLock = false;
+  static int _ignoreLockCount = 0;
 
   /// Media shared into the app that hasn't been turned into a note yet —
   /// either because it arrived while locked, or because it arrived at cold
@@ -37,6 +38,26 @@ class AppLockScreen extends StatefulWidget {
     _ignoreNextResumeLock = true;
   }
 
+  /// Whether external activities or operations are currently active and app lock should be ignored
+  static bool get isLockIgnored => _ignoreLockCount > 0 || _ignoreNextResumeLock;
+
+  /// Run an asynchronous action (such as camera capture, file picker, or system share)
+  /// while completely ignoring app lock lifecycle checks until completion.
+  static Future<T> withLockIgnored<T>(Future<T> Function() action) async {
+    _ignoreLockCount++;
+    _ignoreNextResumeLock = true;
+    try {
+      return await action();
+    } finally {
+      // Allow a brief post-return grace period for the Activity resume lifecycle to settle
+      await Future.delayed(const Duration(milliseconds: 300));
+      _ignoreLockCount = (_ignoreLockCount - 1).clamp(0, 999);
+      if (_ignoreLockCount == 0) {
+        _ignoreNextResumeLock = false;
+      }
+    }
+  }
+
   @override
   AppLockScreenState createState() => AppLockScreenState();
 }
@@ -49,6 +70,8 @@ class AppLockScreenState extends State<AppLockScreen>
   bool _isAuthenticating = false;
   DateTime? _backgroundTime;
   StreamSubscription? _intentDataStreamSubscription;
+  String? _authErrorMessage;
+  bool _canDisableLockFallback = false;
 
   bool get _isSessionAuthenticated => AppLockScreen.sessionAuthenticated.value;
   set _isSessionAuthenticated(bool val) => AppLockScreen.sessionAuthenticated.value = val;
@@ -123,19 +146,25 @@ class AppLockScreenState extends State<AppLockScreen>
     }
 
     final settings = Provider.of<SettingsProvider>(context, listen: false);
+    final shouldIgnoreLock = AppLockScreen._ignoreNextResumeLock || AppLockScreen._ignoreLockCount > 0;
 
     if (isBackground) {
-      // Record when the app went to the background
-      _backgroundTime ??= DateTime.now();
-      // Only lock immediately on true background (paused), NOT on inactive
-      // (notification shade, permission dialogs, split-screen transitions).
-      if (settings.appLockTimeout == 0 && state == AppLifecycleState.paused) {
-        _isSessionAuthenticated = false;
+      if (!shouldIgnoreLock) {
+        // Record when the app went to the background
+        _backgroundTime ??= DateTime.now();
+        // Only lock immediately on true background (paused), NOT on inactive
+        // (notification shade, permission dialogs, split-screen transitions).
+        if (settings.appLockTimeout == 0 && state == AppLifecycleState.paused) {
+          _isSessionAuthenticated = false;
+        }
       }
     } else {
       // App is resuming
-      if (AppLockScreen._ignoreNextResumeLock) {
-        AppLockScreen._ignoreNextResumeLock = false;
+      if (shouldIgnoreLock) {
+        _isSessionAuthenticated = true;
+        if (AppLockScreen._ignoreLockCount == 0) {
+          AppLockScreen._ignoreNextResumeLock = false;
+        }
       } else if (_backgroundTime != null) {
         final elapsed = DateTime.now().difference(_backgroundTime!).inSeconds;
         if (elapsed >= settings.appLockTimeout) {
@@ -145,7 +174,7 @@ class AppLockScreenState extends State<AppLockScreen>
       _backgroundTime = null;
     }
 
-    if (state == AppLifecycleState.resumed) {
+    if (state == AppLifecycleState.resumed && !shouldIgnoreLock) {
       unawaited(_checkAuthOnResume());
     }
   }
@@ -202,10 +231,28 @@ class AppLockScreenState extends State<AppLockScreen>
       if (mounted) {
         setState(() {
           _isSessionAuthenticated = didAuthenticate;
+          if (didAuthenticate) {
+            _authErrorMessage = null;
+            _canDisableLockFallback = false;
+          }
         });
       }
     } catch (e) {
       debugPrint('Authentication error: $e');
+      if (mounted) {
+        setState(() {
+          if (e is PlatformException &&
+              (e.code == 'NotAvailable' ||
+                  e.code == 'PasscodeNotSet' ||
+                  e.code == 'NotEnrolled')) {
+            _authErrorMessage =
+                'No screen lock or biometric credentials enrolled on this device.';
+            _canDisableLockFallback = true;
+          } else {
+            _authErrorMessage = 'Authentication failed. Please try again.';
+          }
+        });
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -291,8 +338,39 @@ class AppLockScreenState extends State<AppLockScreen>
                               ),
                           textAlign: TextAlign.center,
                         ),
+                        if (_authErrorMessage != null) ...[
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.error.withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.info_outline_rounded,
+                                    size: 16,
+                                    color: Theme.of(context).colorScheme.error),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    _authErrorMessage!,
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          color: Theme.of(context).colorScheme.onErrorContainer,
+                                        ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 24),
-                        if (!_isInBackground)
+                        if (!_isInBackground) ...[
                           FilledButton.icon(
                             onPressed: () => _checkAuth(context),
                             icon: const Icon(Icons.fingerprint),
@@ -302,6 +380,22 @@ class AppLockScreenState extends State<AppLockScreen>
                               shape: const StadiumBorder(),
                             ),
                           ),
+                          if (_canDisableLockFallback) ...[
+                            const SizedBox(height: 12),
+                            TextButton.icon(
+                              onPressed: () async {
+                                final s = Provider.of<SettingsProvider>(context, listen: false);
+                                await s.setAppLockEnabled(false);
+                                AppLockScreen.unlockSession();
+                              },
+                              icon: const Icon(Icons.lock_open_rounded, size: 18),
+                              label: const Text('Disable App Lock'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: Theme.of(context).colorScheme.error,
+                              ),
+                            ),
+                          ],
+                        ],
                       ],
                     ),
                   ),

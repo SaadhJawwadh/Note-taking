@@ -695,28 +695,59 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                           runSpacing: AppLayout.spaceS,
                           children: bill.participants.map((p) {
                             final isYou = p.contactName.trim().toLowerCase() == 'you';
+                            final isPayer = !bill.isPayerUser &&
+                                p.contactName.trim().toLowerCase() == bill.payerName.trim().toLowerCase();
+
                             return Semantics(
-                              button: !isYou,
+                              button: !isPayer,
                               label: isYou
-                                  ? 'Your share: Rs. ${p.shareAmount.toStringAsFixed(0)}'
+                                  ? 'Your share: Rs. ${p.shareAmount.toStringAsFixed(0)}, ${p.hasPaid ? 'paid' : 'tap to settle'}'
                                   : 'Mark ${p.contactName} as ${p.hasPaid ? 'unpaid' : 'paid'}',
                               child: InkWell(
-                                onTap: isYou
+                                onTap: isPayer
                                     ? null
                                     : () {
                                         HapticFeedback.selectionClick();
-                                        if (!p.hasPaid) {
-                                          SettleUpSheet.show(
-                                            context,
-                                            contactName: p.contactName,
-                                            netAmount: p.shareAmount,
-                                            specificBill: bill,
-                                            specificParticipant: p,
-                                          );
+                                        if (isYou) {
+                                          if (!p.hasPaid) {
+                                            SettleUpSheet.show(
+                                              context,
+                                              contactName: bill.payerName,
+                                              netAmount: -p.shareAmount,
+                                              specificBill: bill,
+                                              specificParticipant: p,
+                                            );
+                                          } else {
+                                            splitProvider.toggleParticipantPaid(p.id, false);
+                                          }
                                         } else {
-                                          splitProvider.toggleParticipantPaid(p.id, false);
+                                          if (!p.hasPaid) {
+                                            SettleUpSheet.show(
+                                              context,
+                                              contactName: p.contactName,
+                                              netAmount: p.shareAmount,
+                                              specificBill: bill,
+                                              specificParticipant: p,
+                                            );
+                                          } else {
+                                            splitProvider.toggleParticipantPaid(p.id, false);
+                                          }
                                         }
                                       },
+                                onLongPress: (!p.hasPaid && !isYou && !isPayer)
+                                    ? () async {
+                                        final settings = Provider.of<SettingsProvider>(context, listen: false);
+                                        await HapticFeedback.mediumImpact();
+                                        final reminder = SplitShareService.formatPersonReminder(
+                                          contactName: p.contactName,
+                                          billTitle: bill.title,
+                                          shareAmount: p.shareAmount,
+                                          currencySymbol: settings.currency,
+                                          defaultPaymentInfo: settings.defaultPaymentInfo,
+                                        );
+                                        await SplitShareService.shareText(reminder, subject: 'Split Bill Reminder');
+                                      }
+                                    : null,
                                 borderRadius: BorderRadius.circular(AppLayout.radiusS),
                                 child: Container(
                                   constraints: const BoxConstraints(minHeight: 44, minWidth: 48),

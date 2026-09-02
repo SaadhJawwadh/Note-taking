@@ -43,8 +43,7 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
 
   Future<void> _pickAndScan(ImageSource source) async {
     try {
-      AppLockScreen.ignoreNextResumeLock();
-      final XFile? file = await _picker.pickImage(source: source);
+      final XFile? file = await AppLockScreen.withLockIgnored(() => _picker.pickImage(source: source));
       if (file == null) return;
 
       if (!mounted) return;

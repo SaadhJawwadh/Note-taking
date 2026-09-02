@@ -13,6 +13,7 @@ import '../../../sync/presentation/widgets/qr_scanner_dialog.dart';
 import '../../../sync/providers/p2p_sync_provider.dart';
 import '../../../sync/presentation/screens/p2p_sync_screen.dart';
 import '../../../finances/presentation/screens/sms_rules_screen.dart';
+import '../../../notes/presentation/widgets/note_migration_sheet.dart';
 
 /// Full-Screen Interactive Onboarding Wizard
 class OnboardingScreen extends StatefulWidget {
@@ -1002,6 +1003,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const SizedBox(height: AppLayout.spaceM),
           _buildFeatureCard(
             theme,
+            icon: Icons.import_contacts_rounded,
+            title: 'Google Keep & Markdown Import',
+            desc: 'Batch import your notes, checklists, folders, and tags from Google Takeout JSON or Markdown files.',
+            actionLabel: 'Import Notes Now ➔',
+            onAction: () {
+              NoteMigrationSheet.show(context);
+            },
+          ),
+          const SizedBox(height: AppLayout.spaceM),
+          _buildFeatureCard(
+            theme,
             icon: Icons.unfold_more_rounded,
             title: 'Precision Text Editing & Gestures',
             desc: 'Floating symmetrical formatting pill with single-tap character nudges, double-tap word jumps, and line-level navigation.',
@@ -1010,8 +1022,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           _buildFeatureCard(
             theme,
             icon: Icons.lock_outline_rounded,
-            title: 'App Lock & Security',
-            desc: 'Protect private notes, financial ledgers, and health logs with PIN or fingerprint authentication.',
+            title: 'App Lock & Resilient Security',
+            desc: 'Protect private notes, financial ledgers, and health logs with biometric authentication and built-in graceful recovery.',
           ),
           const SizedBox(height: AppLayout.spaceM),
           _buildFeatureCard(

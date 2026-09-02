@@ -35,6 +35,9 @@ class SettingsProvider extends ChangeNotifier {
   
   bool get isGridView => _noteViewMode == NoteViewMode.grid;
 
+  bool _moveCompletedChecklistsToBottom = false;
+  bool get moveCompletedChecklistsToBottom => _moveCompletedChecklistsToBottom;
+
   bool _showFinancialManager = false;
   bool get showFinancialManager => _showFinancialManager;
 
@@ -250,6 +253,7 @@ class SettingsProvider extends ChangeNotifier {
     _smsSyncFrequency = prefs.getString('smsSyncFrequency') ?? '12';
     _lastSeenVersion = prefs.getString('lastSeenVersion') ?? '';
     _trashAutoPurgeDays = prefs.getInt('trashAutoPurgeDays') ?? 30;
+    _moveCompletedChecklistsToBottom = prefs.getBool('moveCompletedChecklistsToBottom') ?? false;
 
     _showProTips = prefs.getBool('showProTips') ?? true;
     _lastTipDismissedTimestamp = prefs.getInt('lastTipDismissedTimestamp') ?? 0;
@@ -310,6 +314,13 @@ class SettingsProvider extends ChangeNotifier {
     _trashAutoPurgeDays = days;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('trashAutoPurgeDays', days);
+    notifyListeners();
+  }
+
+  Future<void> setMoveCompletedChecklistsToBottom(bool value) async {
+    _moveCompletedChecklistsToBottom = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('moveCompletedChecklistsToBottom', value);
     notifyListeners();
   }
 
@@ -640,10 +651,14 @@ class SettingsProvider extends ChangeNotifier {
         'dailySyncTime': _dailySyncTime,
         'smsSyncFrequency': _smsSyncFrequency,
         'showProTips': _showProTips,
+        'moveCompletedChecklistsToBottom': _moveCompletedChecklistsToBottom,
       };
 
   Future<void> restoreFromBackupMap(Map<String, dynamic> map) async {
     try {
+      if (map.containsKey('moveCompletedChecklistsToBottom')) {
+        _moveCompletedChecklistsToBottom = map['moveCompletedChecklistsToBottom'] == true;
+      }
       if (map.containsKey('textSize')) {
         final size = (map['textSize'] as num?)?.toDouble() ?? 16.0;
         if (size >= 8.0 && size <= 32.0) await setTextSize(size);

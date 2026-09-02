@@ -28,9 +28,38 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
+                  version: 'v2.28.0',
+                  date: 'September 2, 2026',
+                  isLatest: true,
+                  changes: [
+                    _ChangelogGroup(
+                      title: "🌟 What's New",
+                      items: [
+                        'Google Keep & Markdown Import: Batch import notes, checklists, folders, and tags from Google Keep Takeout JSON and Markdown archives in one tap.',
+                        'Redesigned Settings Control Center: An interactive console featuring a subtle security indicator, quick one-tap shortcuts for App Lock and JSON backups, and domain-themed cards (Notes, Finances, Health, Privacy).',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🚀 Improvements',
+                      items: [
+                        'Smarter Checklist Engine: Smoother item completion without trailing empty lines, plus one-tap unchecking to restore items directly to your note body.',
+                        'Resilient App Lock: Automatic safety fallback detects devices without screen locks or enrolled biometrics, preventing accidental lockouts with a safe disable button.',
+                        'Touch Accessibility: Standardized screen reader semantics across all interactive tag and filter chips.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🐛 Fixes',
+                      items: [
+                        'Checklist Restore Ordering: Accurately restores completed items back into the editor with line-ending formatting and correct cursor positioning.',
+                      ],
+                    ),
+                  ],
+                ),
+                _buildVersionSection(
+                  context,
                   version: 'v2.27.0',
                   date: 'August 30, 2026',
-                  isLatest: true,
+                  isLatest: false,
                   changes: [
                     _ChangelogGroup(
                       title: "🌟 What's New",
