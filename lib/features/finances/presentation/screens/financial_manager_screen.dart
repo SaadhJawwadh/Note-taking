@@ -635,7 +635,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
     messenger.clearSnackBars();
     messenger.showSnackBar(
       const SnackBar(
-        content: Text('Refining recent transaction titles with Gemini Nano... ✨'),
+        content: Text('Refining recent transaction titles with Gemini Nano...'),
         behavior: SnackBarBehavior.floating,
         duration: Duration(seconds: 3),
       ),
@@ -651,7 +651,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
         content: Text(
           count == 0
               ? 'All recent transaction titles are already refined!'
-              : 'Successfully refined $count transaction title${count == 1 ? '' : 's'} with AI ✨!',
+              : 'Successfully refined $count transaction title${count == 1 ? '' : 's'} with AI!',
         ),
         behavior: SnackBarBehavior.floating,
       ),
@@ -1154,7 +1154,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
         ),
         if (_searchQuery.isNotEmpty)
           IconButton(
-            icon: const Icon(Icons.close, size: 20),
+            icon: const Icon(Icons.close_rounded, size: 20),
             tooltip: 'Clear query',
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
@@ -1319,7 +1319,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
           ),
         ),
         PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert),
+          icon: const Icon(Icons.more_vert_rounded),
           tooltip: 'Finances Tools',
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
@@ -1715,7 +1715,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
                               _applyFilters();
                             });
                           },
-                          child: Icon(Icons.close, size: 14, color: colorScheme.onPrimaryContainer),
+                          child: Icon(Icons.close_rounded, size: 14, color: colorScheme.onPrimaryContainer),
                         ),
                       ],
                     ),

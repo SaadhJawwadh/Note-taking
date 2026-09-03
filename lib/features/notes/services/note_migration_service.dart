@@ -19,12 +19,14 @@ class NoteMigrationResult {
   final int skippedCount;
   final List<String> importedTitles;
   final Set<String> importedTags;
+  final List<String> importedNoteIds;
 
   const NoteMigrationResult({
     required this.totalImported,
     required this.skippedCount,
     required this.importedTitles,
     required this.importedTags,
+    this.importedNoteIds = const [],
   });
 }
 
@@ -200,9 +202,58 @@ class NoteMigrationService {
       if (!hasText && !hasList && !hasTitle && !hasAnnotations) return null;
 
       String title = (data['title'] as String?)?.trim() ?? '';
+
+      // Clean fallback filename (strip folders like 'Takeout/Keep/', extensions, and replace underscores)
+      final cleanBaseName = fallbackFileName
+          .split('/')
+          .last
+          .split('\\')
+          .last
+          .replaceAll(RegExp(r'\.(json|html|md|txt)$', caseSensitive: false), '')
+          .replaceAll('_', ' ')
+          .trim();
+
+      // Check if filename is an ISO timestamp (e.g. "2025-09-21T22 54 57.487+05 30")
+      final isTimestampFilename = RegExp(r'^\d{4}[-_]\d{2}[-_]\d{2}T', caseSensitive: false).hasMatch(cleanBaseName) ||
+          RegExp(r'^\d{4}[-_]\d{2}[-_]\d{2}').hasMatch(cleanBaseName);
+
       if (title.isEmpty) {
-        // Derive title from filename
-        title = fallbackFileName.replaceAll(RegExp(r'\.json$', caseSensitive: false), '').replaceAll('_', ' ');
+        // 1. Check annotations for web bookmark title
+        if (data['annotations'] is List && (data['annotations'] as List).isNotEmpty) {
+          for (final ann in (data['annotations'] as List)) {
+            if (ann is Map && ann['title'] != null) {
+              final annTitle = ann['title'].toString().trim();
+              if (annTitle.isNotEmpty) {
+                title = annTitle;
+                break;
+              }
+            }
+          }
+        }
+
+        // 2. Smart First-Line promotion: check if textContent starts with a short heading line
+        String rawText = (data['textContent'] as String?)?.trim() ?? '';
+        if (title.isEmpty && rawText.isNotEmpty) {
+          final lines = rawText.split('\n');
+          final firstLine = lines.first.trim();
+          if (firstLine.isNotEmpty &&
+              firstLine.length <= 45 &&
+              lines.length > 1 &&
+              !firstLine.endsWith(',') &&
+              !firstLine.endsWith(';') &&
+              !firstLine.endsWith('...')) {
+            title = firstLine;
+            // Remove the promoted first line from textContent to avoid duplicate text
+            data['textContent'] = lines.sublist(1).join('\n').trim();
+          }
+        }
+
+        // 3. Fallback to clean filename ONLY if it was human-named (not an ISO machine timestamp)
+        if (title.isEmpty && !isTimestampFilename && cleanBaseName.isNotEmpty) {
+          title = cleanBaseName;
+        }
+
+        // 4. If still empty, title remains "" (clean titleless note without awkward cutoffs)
       }
 
       final tags = <String>[];
@@ -390,8 +441,13 @@ class NoteMigrationService {
       bodyStartIndex = 1;
     } else {
       title = fallbackFileName
+          .split('/')
+          .last
+          .split('\\')
+          .last
           .replaceAll(RegExp(r'\.(md|txt)$', caseSensitive: false), '')
-          .replaceAll('_', ' ');
+          .replaceAll('_', ' ')
+          .trim();
     }
 
     final body = lines.skip(bodyStartIndex).join('\n').trim();
@@ -419,7 +475,7 @@ class NoteMigrationService {
     );
   }
 
-  /// Batch inserts parsed notes and their tags non-destructively into SQLite.
+  /// Batch inserts parsed notes and their tags non-destructively into SQLite with deduplication.
   static Future<NoteMigrationResult> batchInsertNotes(List<Note> notes) async {
     if (notes.isEmpty) {
       return const NoteMigrationResult(
@@ -427,16 +483,33 @@ class NoteMigrationService {
         skippedCount: 0,
         importedTitles: [],
         importedTags: {},
+        importedNoteIds: [],
       );
     }
 
     final db = await DatabaseHelper.instance.database;
     final importedTitles = <String>[];
     final importedTags = <String>{};
+    final importedNoteIds = <String>[];
     int importedCount = 0;
+    int skippedCount = 0;
 
     await db.transaction((txn) async {
       for (final note in notes) {
+        // Fast deduplication check: skip if identical non-deleted note already exists
+        final existing = await txn.query(
+          TableNames.notes,
+          columns: ['id'],
+          where: 'dateCreated = ? AND title = ? AND content = ? AND deletedAt IS NULL',
+          whereArgs: [note.dateCreated.toIso8601String(), note.title, note.content],
+          limit: 1,
+        );
+
+        if (existing.isNotEmpty) {
+          skippedCount++;
+          continue;
+        }
+
         final enriched = NoteRepository.instance.enrichNoteWithPreview(note);
 
         await txn.insert(
@@ -460,15 +533,31 @@ class NoteMigrationService {
         }
 
         importedTitles.add(note.title.isNotEmpty ? note.title : 'Untitled');
+        importedNoteIds.add(enriched.id);
         importedCount++;
       }
     });
 
     return NoteMigrationResult(
       totalImported: importedCount,
-      skippedCount: notes.length - importedCount,
+      skippedCount: skippedCount,
       importedTitles: importedTitles,
       importedTags: importedTags,
+      importedNoteIds: importedNoteIds,
     );
+  }
+
+  /// Rolls back a recent import batch by soft-deleting the specified note IDs into the Trash.
+  static Future<int> undoImport(List<String> noteIds) async {
+    if (noteIds.isEmpty) return 0;
+    final db = await DatabaseHelper.instance.database;
+    final placeholders = List.filled(noteIds.length, '?').join(',');
+    final nowIso = DateTime.now().toIso8601String();
+
+    final count = await db.rawUpdate(
+      'UPDATE ${TableNames.notes} SET deletedAt = ? WHERE id IN ($placeholders) AND deletedAt IS NULL',
+      [nowIso, ...noteIds],
+    );
+    return count;
   }
 }

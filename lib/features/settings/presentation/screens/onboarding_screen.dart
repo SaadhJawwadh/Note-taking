@@ -390,6 +390,36 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
           ),
+          const SizedBox(height: AppLayout.spaceS),
+          BouncingWidget(
+            onTap: () => NoteMigrationSheet.show(context),
+            child: AppCard(
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(AppLayout.spaceS),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.tertiaryContainer,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.import_contacts_rounded, color: theme.colorScheme.onTertiaryContainer),
+                  ),
+                  const SizedBox(width: AppLayout.spaceM),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Migrate from Google Keep or Markdown', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 2),
+                        Text('Import Takeout ZIPs directly with pre-selected link, clean headings & undo.', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.arrow_forward_ios_rounded, size: 16, color: theme.colorScheme.primary),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: AppLayout.spaceXL),
           _buildFeatureCard(
             theme,
@@ -1005,7 +1035,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             theme,
             icon: Icons.import_contacts_rounded,
             title: 'Google Keep & Markdown Import',
-            desc: 'Batch import your notes, checklists, folders, and tags from Google Takeout JSON or Markdown files.',
+            desc: 'Direct 1-tap Google Takeout link with Keep pre-selected, smart clean headings, duplicate prevention, and undo rollback.',
             actionLabel: 'Import Notes Now ➔',
             onAction: () {
               NoteMigrationSheet.show(context);

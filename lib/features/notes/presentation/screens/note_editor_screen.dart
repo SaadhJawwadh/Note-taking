@@ -37,6 +37,9 @@ import '../../../../widgets/bouncing_widget.dart';
 
 import '../../../../widgets/editor/editor_table_dialog.dart';
 import '../../../../widgets/editor/editor_note_details_sheet.dart';
+import '../widgets/story_card_creator_sheet.dart';
+import '../../../../core/ui/app_bottom_sheet.dart';
+import '../../../../core/ui/app_snack_bar.dart';
 
 
 class NoteEditorScreen extends StatefulWidget {
@@ -1362,107 +1365,125 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     final plainText = _quillController.document.toPlainText().trim();
     final shareContent = title.isEmpty ? plainText : '$title\n\n$plainText';
 
-    showModalBottomSheet(
-      context: context,
-      showDragHandle: true,
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (sheetContext) {
-        final theme = Theme.of(sheetContext);
-        final colorScheme = theme.colorScheme;
+    final colorScheme = Theme.of(context).colorScheme;
 
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.share_outlined, color: colorScheme.primary, size: 24),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Share & Export Note',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  leading: const Icon(Icons.text_snippet_outlined),
-                  title: const Text('Share as Plain Text'),
-                  subtitle: const Text('Send text to other apps or messaging'),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppLayout.radiusM),
-                  ),
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    if (shareContent.isNotEmpty) {
-                      Share.share(shareContent, subject: title.isEmpty ? 'Note' : title);
-                    }
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.code_outlined),
-                  title: const Text('Share as Markdown'),
-                  subtitle: const Text('Preserve bold, lists, and headers formatting'),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppLayout.radiusM),
-                  ),
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    final mdContent = title.isEmpty ? markdown : '# $title\n\n$markdown';
-                    if (mdContent.isNotEmpty) {
-                      Share.share(mdContent, subject: title.isEmpty ? 'Note' : title);
-                    }
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.file_download_outlined),
-                  title: const Text('Export as File (.txt / .md)'),
-                  subtitle: const Text('Save note as markdown file to device or apps'),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppLayout.radiusM),
-                  ),
-                  onTap: () async {
-                    Navigator.pop(sheetContext);
-                    final safeTitle = (title.isEmpty ? 'note' : title).replaceAll(RegExp(r'[^\w\s\-]'), '_');
-                    final mdContent = title.isEmpty ? markdown : '# $title\n\n$markdown';
-                    final tempDir = await getTemporaryDirectory();
-                    final file = File('${tempDir.path}/$safeTitle.md');
-                    await file.writeAsString(mdContent);
-                    await Share.shareXFiles([XFile(file.path)], text: title.isEmpty ? 'Note Export' : title);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.copy_outlined),
-                  title: const Text('Copy to Clipboard'),
-                  subtitle: const Text('Copy note content to clipboard'),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppLayout.radiusM),
-                  ),
-                  onTap: () async {
-                    Navigator.pop(sheetContext);
-                    if (shareContent.isNotEmpty) {
-                      await Clipboard.setData(ClipboardData(text: shareContent));
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Note copied to clipboard')),
-                        );
-                      }
-                    }
-                  },
-                ),
-              ],
+    AppBottomSheet.show(
+      context: context,
+      title: 'Share & Export Note',
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.photo_camera_back_rounded, color: colorScheme.primary),
+              title: const Text('Create Story Card'),
+              subtitle: const Text('Export quote as a stylish image for social stories'),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppLayout.radiusM),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _openStoryCardStudio(selectedOnly: false);
+              },
             ),
-          ),
-        );
-      },
+            ListTile(
+              leading: const Icon(Icons.text_snippet_outlined),
+              title: const Text('Share as Plain Text'),
+              subtitle: const Text('Send text to other apps or messaging'),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppLayout.radiusM),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                if (shareContent.isNotEmpty) {
+                  Share.share(shareContent, subject: title.isEmpty ? 'Note' : title);
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.code_outlined),
+              title: const Text('Share as Markdown'),
+              subtitle: const Text('Preserve bold, lists, and headers formatting'),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppLayout.radiusM),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                final mdContent = title.isEmpty ? markdown : '# $title\n\n$markdown';
+                if (mdContent.isNotEmpty) {
+                  Share.share(mdContent, subject: title.isEmpty ? 'Note' : title);
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.picture_as_pdf_outlined),
+              title: const Text('Export as Text File'),
+              subtitle: const Text('Save note as a .txt document'),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppLayout.radiusM),
+              ),
+              onTap: () async {
+                Navigator.pop(context);
+                final tempDir = await getTemporaryDirectory();
+                final safeTitle = (title.isEmpty ? 'Note' : title).replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+                final file = File('${tempDir.path}/$safeTitle.txt');
+                await file.writeAsString(shareContent);
+                await Share.shareXFiles([XFile(file.path)], text: title.isEmpty ? 'Note Export' : title);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.copy_outlined),
+              title: const Text('Copy to Clipboard'),
+              subtitle: const Text('Copy note content to clipboard'),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppLayout.radiusM),
+              ),
+              onTap: () async {
+                Navigator.pop(context);
+                if (shareContent.isNotEmpty) {
+                  await Clipboard.setData(ClipboardData(text: shareContent));
+                  if (mounted) {
+                    AppSnackBar.show(context, message: 'Note copied to clipboard');
+                  }
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openStoryCardStudio({bool selectedOnly = false}) {
+    HapticFeedback.lightImpact();
+    final title = _titleController.text.trim();
+    String textToExport = '';
+
+    if (selectedOnly && !_quillController.selection.isCollapsed) {
+      final sel = _quillController.selection;
+      final start = sel.start;
+      final len = sel.end - sel.start;
+      textToExport = _quillController.document.getPlainText(start, len).trim();
+    }
+
+    if (textToExport.isEmpty) {
+      if (!_quillController.selection.isCollapsed) {
+        final sel = _quillController.selection;
+        final start = sel.start;
+        final len = sel.end - sel.start;
+        textToExport = _quillController.document.getPlainText(start, len).trim();
+      }
+      if (textToExport.isEmpty) {
+        textToExport = _quillController.document.toPlainText().trim();
+      }
+    }
+
+    StoryCardCreatorSheet.show(
+      context: context,
+      initialText: textToExport,
+      noteTitle: title,
+      noteColorValue: color,
+      noteDate: _dateCreated,
     );
   }
 
@@ -2771,7 +2792,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                           IconButton(
                                             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                                             padding: EdgeInsets.zero,
-                                            icon: const Icon(Icons.keyboard_arrow_up, size: 20),
+                                            icon: const Icon(Icons.keyboard_arrow_up_rounded, size: 20),
                                             color: theme.colorScheme.onSurfaceVariant,
                                             tooltip: 'Previous match',
                                             onPressed: _previousSearchMatch,
@@ -2779,7 +2800,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                           IconButton(
                                             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                                             padding: EdgeInsets.zero,
-                                            icon: const Icon(Icons.keyboard_arrow_down, size: 20),
+                                            icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
                                             color: theme.colorScheme.onSurfaceVariant,
                                             tooltip: 'Next match',
                                             onPressed: _nextSearchMatch,
@@ -2789,7 +2810,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                           IconButton(
                                             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                                             padding: EdgeInsets.zero,
-                                            icon: const Icon(Icons.close, size: 20),
+                                            icon: const Icon(Icons.close_rounded, size: 20),
                                             color: theme.colorScheme.onSurfaceVariant,
                                             tooltip: 'Clear search text',
                                             onPressed: () {
@@ -2860,7 +2881,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                       ),
                                     ),
                                     PopupMenuButton<String>(
-                                      icon: Icon(Icons.more_vert, color: textColor),
+                                      icon: Icon(Icons.more_vert_rounded, color: textColor),
                                       tooltip: 'More',
                                       elevation: 3,
                                       shadowColor: theme.colorScheme.shadow.withValues(alpha: 0.15),
@@ -2909,10 +2930,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                         return [
                                           PopupMenuItem(
                                             value: 'search',
-                                            height: 44,
+                                            height: 48,
                                             child: Row(
                                               children: [
-                                                Icon(Icons.search, size: 20, color: colorScheme.onSurfaceVariant),
+                                                Icon(Icons.search_rounded, size: 20, color: colorScheme.onSurfaceVariant),
                                                 const SizedBox(width: 12),
                                                 Text('Find in Note', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
                                               ],
@@ -2920,10 +2941,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                           ),
                                           PopupMenuItem(
                                             value: 'reminder',
-                                            height: 44,
+                                            height: 48,
                                             child: Row(
                                               children: [
-                                                Icon(_reminderAt != null ? Icons.alarm_on : Icons.alarm_add_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                                                Icon(_reminderAt != null ? Icons.alarm_on_rounded : Icons.alarm_add_rounded, size: 20, color: colorScheme.onSurfaceVariant),
                                                 const SizedBox(width: 12),
                                                 Text(_reminderAt != null ? 'Change reminder' : 'Set reminder', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
                                               ],
@@ -2932,10 +2953,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                           if (_reminderAt != null)
                                             PopupMenuItem(
                                               value: 'clear_reminder',
-                                              height: 44,
+                                              height: 48,
                                               child: Row(
                                                 children: [
-                                                  Icon(Icons.alarm_off_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                                                  Icon(Icons.alarm_off_rounded, size: 20, color: colorScheme.onSurfaceVariant),
                                                   const SizedBox(width: 12),
                                                   Text('Remove reminder', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
                                                 ],
@@ -2943,10 +2964,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                             ),
                                           PopupMenuItem(
                                             value: 'folder',
-                                            height: 44,
+                                            height: 48,
                                             child: Row(
                                               children: [
-                                                Icon(Icons.folder_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                                                Icon(Icons.folder_rounded, size: 20, color: colorScheme.onSurfaceVariant),
                                                 const SizedBox(width: 12),
                                                 Text('Move to folder', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
                                               ],
@@ -2954,10 +2975,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                           ),
                                           PopupMenuItem(
                                             value: 'details',
-                                            height: 44,
+                                            height: 48,
                                             child: Row(
                                               children: [
-                                                Icon(Icons.info_outline, size: 20, color: colorScheme.onSurfaceVariant),
+                                                Icon(Icons.info_outline_rounded, size: 20, color: colorScheme.onSurfaceVariant),
                                                 const SizedBox(width: 12),
                                                 Text('Note Details & Stats', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
                                               ],
@@ -2965,10 +2986,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                           ),
                                           PopupMenuItem(
                                             value: 'share',
-                                            height: 44,
+                                            height: 48,
                                             child: Row(
                                               children: [
-                                                Icon(Icons.share_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                                                Icon(Icons.share_rounded, size: 20, color: colorScheme.onSurfaceVariant),
                                                 const SizedBox(width: 12),
                                                 Text('Share & Export', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
                                               ],
@@ -2976,10 +2997,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                           ),
                                           PopupMenuItem(
                                             value: 'lock',
-                                            height: 44,
+                                            height: 48,
                                             child: Row(
                                               children: [
-                                                Icon(_isNoteLocked ? Icons.lock_open_outlined : Icons.lock_outline, size: 20, color: colorScheme.onSurfaceVariant),
+                                                Icon(_isNoteLocked ? Icons.lock_open_rounded : Icons.lock_outline_rounded, size: 20, color: colorScheme.onSurfaceVariant),
                                                 const SizedBox(width: 12),
                                                 Text(_isNoteLocked ? 'Unlock note' : 'Lock note', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
                                               ],
@@ -2987,10 +3008,10 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                           ),
                                           PopupMenuItem(
                                             value: 'delete',
-                                            height: 44,
+                                            height: 48,
                                             child: Row(
                                               children: [
-                                                Icon(Icons.delete_outline, size: 20, color: colorScheme.error),
+                                                Icon(Icons.delete_outline_rounded, size: 20, color: colorScheme.error),
                                                 const SizedBox(width: 12),
                                                 Text('Move to Trash', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.error, fontWeight: FontWeight.w500)),
                                               ],
@@ -3350,6 +3371,22 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                             showCursor: !_isEditingTableCell,
                                             enableInteractiveSelection: true,
                                             enableSelectionToolbar: true,
+                                            contextMenuBuilder: (context, rawEditorState) {
+                                              final buttonItems = rawEditorState.contextMenuButtonItems;
+                                              return AdaptiveTextSelectionToolbar.buttonItems(
+                                                anchors: rawEditorState.contextMenuAnchors,
+                                                buttonItems: [
+                                                  ...buttonItems,
+                                                  ContextMenuButtonItem(
+                                                    onPressed: () {
+                                                      rawEditorState.hideToolbar();
+                                                      _openStoryCardStudio(selectedOnly: true);
+                                                    },
+                                                    label: 'Story Card',
+                                                  ),
+                                                ],
+                                              );
+                                            },
                                             // ignore: experimental_member_use
                                             characterShortcutEvents: standardCharactersShortcutEvents,
                                             // ignore: experimental_member_use

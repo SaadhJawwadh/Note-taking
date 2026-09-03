@@ -166,5 +166,34 @@ void main() {
       await tester.pump();
       expect(disabled, isTrue);
     });
+
+    testWidgets('HomeTipCard renders action button and executes onAction', (tester) async {
+      var actionTriggered = false;
+
+      final tip = ProTipItem(
+        icon: Icons.import_contacts_rounded,
+        title: 'Migrate from Google Keep',
+        description: 'Import your Google Keep notes & checklists.',
+        actionLabel: 'Import Notes',
+        onAction: () => actionTriggered = true,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: HomeTipCard(
+              tip: tip,
+              onDismiss: () {},
+              onDisable: () {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Import Notes'), findsOneWidget);
+      await tester.tap(find.text('Import Notes'));
+      await tester.pump();
+      expect(actionTriggered, isTrue);
+    });
   });
 }

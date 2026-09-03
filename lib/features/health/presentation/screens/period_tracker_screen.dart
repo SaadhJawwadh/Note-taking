@@ -350,7 +350,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> with WidgetsB
                                 },
                               ),
                               PopupMenuButton<String>(
-                                icon: const Icon(Icons.more_vert),
+                                icon: const Icon(Icons.more_vert_rounded),
                                 tooltip: 'Health Tools',
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(minWidth: 40, minHeight: 40),

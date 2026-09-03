@@ -79,6 +79,8 @@ class AppTheme {
   // Font Family Single Source of Truth Constants
   static const String fontGoogleSansFlex = 'Google Sans Flex';
   static const String fontInter = 'Inter';
+  static const String fontNotoSansTamil = 'Noto Sans Tamil';
+  static const String fontNotoSerifTamil = 'Noto Serif Tamil';
 
   // Note Color Seeds (Material 3 Expressive Curated Palette)
   static const List<Color> noteColors = [
@@ -345,13 +347,23 @@ class AppTheme {
         labelStyle: textTheme.labelLarge,
         side: BorderSide.none,
       ),
-      bottomSheetTheme: const BottomSheetThemeData(
-        constraints: BoxConstraints(maxWidth: AppLayout.maxContentWidth),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: scheme.surfaceContainerHigh,
+        elevation: 1,
+        showDragHandle: true,
+        dragHandleColor: scheme.onSurfaceVariant.withValues(alpha: 0.4),
+        dragHandleSize: const Size(36, 4),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppLayout.radiusXXL),
+          ),
+        ),
+        constraints: const BoxConstraints(maxWidth: AppLayout.maxContentWidth),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: scheme.surfaceContainerHigh,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(AppLayout.radiusXXL),
         ),
       ),
       textSelectionTheme: TextSelectionThemeData(
@@ -361,6 +373,13 @@ class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
+        elevation: 4,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentTextStyle: textTheme.bodyMedium?.copyWith(
+          color: scheme.onInverseSurface,
+          fontWeight: FontWeight.w500,
+        ),
+        actionTextColor: scheme.inversePrimary,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppLayout.radiusM),
         ),

@@ -142,6 +142,12 @@ lib/
   - All top bar action icons MUST enforce `constraints: const BoxConstraints(minWidth: 40, minHeight: 40)`, `visualDensity: VisualDensity.compact`, and `padding: EdgeInsets.zero` to maintain uniform inter-button gaps without overlapping hitboxes.
 * **Top Bar Sub-Pixel Headroom**: SliverAppBar headers hosting title + scope pill columns MUST enforce `toolbarHeight: MediaQuery.of(context).padding.top + 72.0` and inner container `height: 60.0` (with vertical padding `top: padding.top + 6.0, bottom: 6.0`) to eliminate sub-pixel layout overflows.
 
+### 📥 Invariant 15: Google Takeout & Note Migration Standards
+* **ZIP Directory Path Invariant**: Never filter ZIP entries on broad substrings like `!name.contains('takeout')`, as Google Takeout stores all Keep notes under `Takeout/Keep/<note>.json`. Only exclude the top-level index file (`baseName != 'takeout.json'`).
+* **Keep Bookmark Annotations Invariant**: In Google Keep, web bookmarks shared from browsers set `textContent: ""` and place the URL, title, and description inside `data['annotations']`. Importers MUST extract `annotations` into formatted markdown links, preventing notes from importing as blank bodies with only labels.
+* **Companion Image Resolution**: When importing from extracted folders or ZIPs, companion image attachments (e.g. `1961dd5...jpg`) must be resolved relative to the note's source directory (`file.parent` or ZIP entry path) and copied to protected sandboxed storage (`getApplicationDocumentsDirectory()`).
+* **Archived Notes Parity & Discoverability**: Google Keep notes with `"isArchived": true` MUST be saved with `isArchived = 1` and remain immediately discoverable via the top Folder Scope Pill (`[ 📁 Notes ▾ ] -> Archived Notes`) and Tools menu (`⋮ -> Archived Notes`).
+
 ---
 
 ## 4. Token & Command Economy (LLM OS Principles)
@@ -163,3 +169,4 @@ Activate deep procedural skills in [.agent/skills/](file:///Users/saadhjawwadh/D
 * **[Tester](file:///.agent/skills/Tester/SKILL.md)**: Comprehensive QA verification, viewport setups for full-screen widget tests, path provider mocks, SQLCipher & Workmanager isolate validation.
 * **[skill-trainer](file:///.agent/skills/skill-trainer/SKILL.md)**: Protocol for extracting session learnings, updating skills, and maintaining the developer map.
 * **[Loop-Engineer](file:///.agent/skills/Loop-Engineer/SKILL.md)**: Universal 4-tier autonomous loop engineering harness grounded in Flow Engineering, TDD self-healing, monotonic zero-regression verifiers, live UI/UX research with interactive grilling, and Small-to-Mighty roadmaps.
+* **[Product-Design-Engineering](file:///.agent/skills/Product-Design-Engineering/SKILL.md)**: Interaction psychology and design engineering heuristics distilled from Enrico Tartarotti: 7 Levels of Tech Design, 100ms touch disambiguation, kinetic latency masking, intentional friction, direct manipulation, and high-trust choice architecture.

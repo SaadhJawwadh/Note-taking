@@ -1,13 +1,13 @@
 
 ### 🌟 What's New
-- **Friend-Paid Split Bills**: Track group bills paid by friends with clear personal liability. Settle your own share with one tap into your daily ledger, while keeping friends' mutual debts cleanly separated in the split tracker.
-- **Archived Notes Dropdown Access**: Quickly access all your archived notes with note counts directly from the folder picker sheet and the Notes tools menu.
-- **Vibrant Settings Dashboard**: An upgraded hero dashboard with rich multi-tone gradients, luminous ambient glow, a pulsing Local Vault security badge, and bold module indicators.
+- **Story Card Studio**: Transform notes or selected text into high-resolution social media cards formatted for 9:16 Stories, 1:1 Squares, and 4:5 Portraits with direct 1-tap sharing.
+- **Packaged Offline Fonts**: Fully offline Noto Sans and Noto Serif Tamil variable typography with automatic language detection, line-height balancing, and font style switcher.
+- **Word Limits & Safe Heatmap**: 25, 50, and 80-word selection limits with live word count stats and Instagram/WhatsApp story safe margins.
 
 ### 🚀 Improvements
-- **Streamlined SMS Sync**: Eliminated unsolicited background resume polling, focusing SMS imports on scheduled daily sync, one-tap manual refresh, and real-time live message detection.
-- **Interactive Settlement Feedback**: Clear visual badges and instant status updates when settling bills or recording participant repayments.
+- **Centered App Logo Watermark**: Replaced generic text watermark with an authentic, centered micro-pill badge featuring the monochrome app emblem.
+- **Seamless Theme Presets**: Editorial Serif warm paper theme, OLED Pitch Black, Note Tint, and Material You Dynamic themes.
 
 ### 🐛 Fixes
-- **Personal Ledger Isolation**: Third-party debt repayments between friends are strictly isolated within the split tracker and never create unwanted entries in your personal account ledger.
+- **Resilient Sheet Layout**: Wrapped bottom sheet and control groups in fluid scrolling to completely eliminate layout overflows during text editing or word limits.
 

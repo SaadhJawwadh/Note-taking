@@ -1,20 +1,22 @@
 <en-US>
 🌟 What's New
-• Friend-Paid Split Bills: 1-tap settle your share without cluttering your ledger with friends' debts.
-• Archived Notes Access: Direct entry point with note counts in folder picker & tools.
-• Vibrant Settings Dashboard: Refreshed hero card with radiant glow & vault status.
+• Story Card Studio: Turn notes or selected text into high-res social cards (9:16 Story, 1:1, 4:5) with 1-tap share.
+• Offline Fonts: Packaged Noto Sans & Serif Tamil with auto language detection.
+• Word Limit & Safe Heatmap: 25/50/80 word limit selectors with Instagram safe margins.
 
 🚀 Improvements
-• Streamlined SMS Sync: Battery-friendly scheduled & on-demand sync.
+• Centered micro-pill watermark with app logo.
+• Resilient zero-overflow layout.
 </en-US>
 <ta-IN>
 🌟 புதிய அம்சங்கள்
-• நண்பர் கட்டிய பில் பிரிப்பு: உங்கள் பங்கை மட்டும் எளிதாகச் செலுத்தி கணக்கில் பதியுங்கள்.
-• காப்பகப்படுத்திய குறிப்புகள்: கோப்புத் தெரிவு மற்றும் மெனுவில் எளிதான அணுகல்.
-• புதிய அமைப்புகள் திரை: நவீன வடிவமைப்பு மற்றும் பாதுகாப்பு விவரங்கள்.
+• சோஷியல் ஸ்டோரி கார்டு: குறிப்புகளை அழகான படங்களாக (9:16, 1:1, 4:5) மாற்றி பகிருங்கள்.
+• தமிழ் எழுத்துருக்கள்: Noto Serif மற்றும் Sans தமிழ் எழுத்துருக்கள் உள்ளமைக்கப்பட்டுள்ளன.
+• சொல் வரம்பு: 25/50/80 சொல் வரம்பு மற்றும் பாதுகாப்பான காட்சி வடிவமைப்பு.
 
 🚀 மேம்பாடுகள்
-• சீரான SMS தானியங்கி புதுப்பித்தல்.
+• செயலி முத்திரையுடன் மையப்படுத்திய வாட்டர்மார்க்.
+• சீரான திரை வடிவமைப்பு.
 </ta-IN>
 
 

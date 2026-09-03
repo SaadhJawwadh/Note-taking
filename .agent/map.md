@@ -191,7 +191,7 @@ Manages note creation, organization, formatting, auto-saving, and viewing modes.
     *   **Lossless Storage**: Stored in SQLite as Delta JSON arrays, falling back to raw Markdown for legacy notes via `RichTextUtils`.
     *   **Smart Preview**: Renders checklist states (☐/☑) and formats up to 6 lines of plain text directly on home note cards.
     *   **Consecutive Checklist Delta Extraction**: `quill_checklist_helper.dart` extracts consecutive checked blocks and truncates trailing empty markers cleanly, preventing ghost empty checkboxes.
-    *   **Google Keep & Markdown Migration**: `NoteMigrationService` parses Google Keep Takeout JSON and Markdown archives in batch with folder and tag extraction.
+    *   **Google Keep & Markdown Migration**: `NoteMigrationService` parses Google Keep Takeout JSON and Markdown archives in batch with `annotations` web bookmark extraction, companion image resolution, tag preservation, and `Takeout/Keep/` path support.
     *   **Trash Auto-Purge**: Deleted notes are soft-deleted and automatically purged after 7 days via `clearOldTrash()`.
 *   **Key Files**:
     *   Feature Screen: `lib/features/notes/presentation/screens/note_editor_screen.dart`

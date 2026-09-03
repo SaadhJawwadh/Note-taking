@@ -37,19 +37,19 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.primaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.call_split_rounded,
-            title: "Friend-Paid Split Bills",
-            desc: "Track group bills paid by friends, settle your share in 1 tap, and keep friends' mutual debts cleanly separated.",
+            icon: Icons.photo_library_outlined,
+            title: "Story Card Studio",
+            desc: "Turn notes or selected quotes into high-res social media story cards (9:16, 1:1, 4:5) with 1-tap sharing.",
           ),
           _WhatsNewItem(
-            icon: Icons.archive_outlined,
-            title: "Archived Notes Dropdown",
-            desc: "Instant access to your archived notes with note counts directly in the folder picker and tools menu.",
+            icon: Icons.text_fields_rounded,
+            title: "Packaged Offline Fonts",
+            desc: "Offline Noto Sans and Noto Serif Tamil fonts with automatic language detection and elegant line heights.",
           ),
           _WhatsNewItem(
-            icon: Icons.tune_rounded,
-            title: "Vibrant Settings Dashboard",
-            desc: "Refreshed hero card with rich gradients, radiant ambient glow, and live Local Vault security indicator.",
+            icon: Icons.crop_free_rounded,
+            title: "Word Limits & Safe Heatmap",
+            desc: "Optimized safe zones for Instagram and WhatsApp stories, plus 25/50/80 word limit selectors.",
           ),
         ],
       ),
@@ -59,19 +59,19 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.tertiaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.sync_rounded,
-            title: "Streamlined SMS Sync",
-            desc: "Eliminated battery-draining background loops; scheduled daily sync, 1-tap manual refresh, and live alerts.",
+            icon: Icons.branding_watermark_outlined,
+            title: "Centered App Logo Watermark",
+            desc: "Tonal micro-pill watermark with the authentic monochrome app emblem and clean typography.",
           ),
           _WhatsNewItem(
-            icon: Icons.import_contacts_rounded,
-            title: "Keep & Markdown Import",
-            desc: "Batch import notes, checklists, and tags from Google Keep and Markdown in one tap.",
+            icon: Icons.call_split_rounded,
+            title: "Friend-Paid Split Bills",
+            desc: "Track group bills paid by friends, settle your share in 1 tap, and keep debts separated.",
           ),
           _WhatsNewItem(
-            icon: Icons.security_rounded,
-            title: "Resilient App Lock Fallback",
-            desc: "Safety detection prevents lockouts on devices without screen lock or biometrics.",
+            icon: Icons.archive_outlined,
+            title: "Archived Notes Dropdown",
+            desc: "Instant access to your archived notes with note counts directly in the folder picker and tools.",
           ),
         ],
       ),
@@ -81,18 +81,18 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.secondaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
+            icon: Icons.phone_android_rounded,
+            title: "Resilient Sheet Layout",
+            desc: "Fluid scrolling across word limits and quick edit modes eliminates all layout overflows.",
+          ),
+          _WhatsNewItem(
             icon: Icons.account_balance_wallet_outlined,
             title: "Personal Ledger Isolation",
             desc: "Settling third-party debts between friends strictly stays in the split tracker without altering your personal ledger.",
           ),
           _WhatsNewItem(
-            icon: Icons.restore_rounded,
-            title: "Checklist Restore Ordering",
-            desc: "Accurately restores completed items back into the editor with line-ending formatting and correct cursor positioning.",
-          ),
-          _WhatsNewItem(
             icon: Icons.shield_outlined,
-            title: "Tombstone Safety & Order",
+            title: "Tombstone Order & Ingestion",
             desc: "Preserves genuine message arrival timestamps for exact historical ordering and duplicate prevention.",
           ),
         ],

@@ -160,7 +160,7 @@ class _HomeAppBarState extends State<HomeAppBar> {
       children: [
         const SizedBox(width: 8),
         IconButton(
-          icon: const Icon(Icons.close),
+          icon: const Icon(Icons.close_rounded),
           onPressed: () {
             HapticFeedback.selectionClick();
             widget.onClearSelection();
@@ -286,7 +286,7 @@ class _HomeAppBarState extends State<HomeAppBar> {
         ),
         if (_searchController.text.isNotEmpty)
           IconButton(
-            icon: const Icon(Icons.close, size: 20),
+            icon: const Icon(Icons.close_rounded, size: 20),
             tooltip: 'Clear query',
             onPressed: () {
               HapticFeedback.selectionClick();
@@ -296,7 +296,7 @@ class _HomeAppBarState extends State<HomeAppBar> {
             },
           ),
         IconButton(
-          icon: const Icon(Icons.search),
+          icon: const Icon(Icons.search_rounded),
           tooltip: 'Search',
           onPressed: () {
             HapticFeedback.selectionClick();
@@ -629,7 +629,7 @@ class _HomeAppBarState extends State<HomeAppBar> {
           },
         ),
         PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert),
+          icon: const Icon(Icons.more_vert_rounded),
           tooltip: 'Notes Tools',
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
@@ -668,7 +668,7 @@ class _HomeAppBarState extends State<HomeAppBar> {
             return [
               PopupMenuItem<String>(
                 value: 'view_mode',
-                height: 44,
+                height: 48,
                 child: Row(
                   children: [
                     Icon(
@@ -699,7 +699,7 @@ class _HomeAppBarState extends State<HomeAppBar> {
                 final isSelected = currentSort == item.$1;
                 return PopupMenuItem<String>(
                   value: item.$1,
-                  height: 44,
+                  height: 48,
                   child: Row(
                     children: [
                       Icon(
@@ -730,7 +730,7 @@ class _HomeAppBarState extends State<HomeAppBar> {
               const PopupMenuDivider(height: 1),
               PopupMenuItem<String>(
                 value: 'manage_folders',
-                height: 44,
+                height: 48,
                 child: Row(
                   children: [
                     Icon(Icons.create_new_folder_outlined, size: 20, color: colorScheme.onSurfaceVariant),
@@ -747,7 +747,7 @@ class _HomeAppBarState extends State<HomeAppBar> {
               ),
               PopupMenuItem<String>(
                 value: 'manage_tags',
-                height: 44,
+                height: 48,
                 child: Row(
                   children: [
                     Icon(Icons.label_outline_rounded, size: 20, color: colorScheme.onSurfaceVariant),
@@ -764,7 +764,7 @@ class _HomeAppBarState extends State<HomeAppBar> {
               ),
               PopupMenuItem<String>(
                 value: 'import_notes',
-                height: 44,
+                height: 48,
                 child: Row(
                   children: [
                     Icon(Icons.import_contacts_rounded, size: 20, color: colorScheme.onSurfaceVariant),
@@ -781,7 +781,7 @@ class _HomeAppBarState extends State<HomeAppBar> {
               ),
               PopupMenuItem<String>(
                 value: 'archived',
-                height: 44,
+                height: 48,
                 child: Row(
                   children: [
                     Icon(Icons.archive_outlined, size: 20, color: colorScheme.onSurfaceVariant),
@@ -798,7 +798,7 @@ class _HomeAppBarState extends State<HomeAppBar> {
               ),
               PopupMenuItem<String>(
                 value: 'trash',
-                height: 44,
+                height: 48,
                 child: Row(
                   children: [
                     Icon(Icons.delete_outline_rounded, size: 20, color: colorScheme.error),

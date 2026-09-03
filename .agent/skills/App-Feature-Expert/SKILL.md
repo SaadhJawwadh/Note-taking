@@ -70,6 +70,18 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
   - Never render a manual `[ ✕ ]` close button on the floating pill. Tapping in the text collapses selection naturally.
   - Bottom toolbar stays permanently clean without mode-swapping glitches: `[Formatting] [AI Assist] | [Table] [Checklist] [Image] [Dictate] [Hide Keyboard]`.
 
+### 📥 Google Keep & Markdown Migration Standards
+* **JSON Structured Schema Handling**:
+  - `textContent`: Plain text note body.
+  - `annotations`: Bookmark notes with empty `textContent`. Format as rich markdown links (`[Title](url)` and summary description) rather than discarding them as blank notes.
+  - `listContent`: Checklist items with `{"text": "...", "isChecked": bool}` converted to Quill Delta checklist block attributes (`list: checked` / `list: unchecked`).
+  - `labels`: Extracted as note tags and preserved in `note.tags`.
+  - `color`: Mapped to genuine app note color palette (`GREEN`, `BLUE`, `YELLOW`, `RED`, `PURPLE`, etc.).
+  - `createdTimestampUsec` / `userEditedTimestampUsec`: 16-digit microsecond timestamps normalized to `DateTime.fromMicrosecondsSinceEpoch()`.
+  - `isArchived`: Mapped to `note.isArchived = 1`.
+* **Takeout Directory Hierarchy**: Google Takeout ZIP files place note JSON files inside `Takeout/Keep/`. Importers must inspect `baseName != 'takeout.json'` rather than checking `!name.contains('takeout')` to avoid rejecting all Keep notes.
+* **Resilient Path Resolution**: Always wrap `getApplicationDocumentsDirectory()` in a try-catch falling back to `Directory.systemTemp` to ensure isolated unit tests and background sync workers run cleanly without plugin channel dependencies.
+
 ---
 
 ## 3. Financial Manager & SMS Ledger (`lib/features/finances/`)

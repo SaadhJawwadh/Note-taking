@@ -25,7 +25,13 @@ class UpdateRatingService {
             SnackBar(
               duration: const Duration(minutes: 30),
               behavior: SnackBarBehavior.floating,
-              content: const Text('✨ New update downloaded and ready.'),
+              content: const Row(
+                children: [
+                  Icon(Icons.system_update_rounded, size: 20),
+                  SizedBox(width: 12),
+                  Expanded(child: Text('New update downloaded and ready.')),
+                ],
+              ),
               action: SnackBarAction(
                 label: 'RESTART NOW',
                 onPressed: () {

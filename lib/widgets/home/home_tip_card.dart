@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/theme/app_layout.dart';
 import '../../core/ui/app_card.dart';
+import '../../features/notes/presentation/widgets/note_migration_sheet.dart';
 
 class ProTipItem {
   final IconData icon;
@@ -33,6 +34,14 @@ class HomeTipCard extends StatelessWidget {
 
   static List<ProTipItem> getCatalog(BuildContext context) {
     return [
+      ProTipItem(
+        icon: Icons.import_contacts_rounded,
+        title: 'Migrate from Google Keep',
+        description:
+            'Import your Google Keep notes & checklists with 1-tap Google Takeout pre-selection, smart clean headings, and undo safety.',
+        actionLabel: 'Import Notes',
+        onAction: () => NoteMigrationSheet.show(context),
+      ),
       const ProTipItem(
         icon: Icons.sync_rounded,
         title: 'Zero-Cloud P2P Device Sync',
@@ -193,16 +202,42 @@ class HomeTipCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                FilledButton.tonal(
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  onPressed: () {
-                    HapticFeedback.lightImpact();
-                    onDismiss();
-                  },
-                  child: const Text('Got it', style: TextStyle(fontSize: 12)),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (tip.actionLabel != null && tip.onAction != null) ...[
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        onPressed: () {
+                          HapticFeedback.lightImpact();
+                          tip.onAction!();
+                        },
+                        icon: const Icon(Icons.arrow_forward_rounded, size: 14),
+                        label: Text(
+                          tip.actionLabel!,
+                          style: textTheme.labelSmall?.copyWith(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    FilledButton.tonal(
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        onDismiss();
+                      },
+                      child: const Text('Got it', style: TextStyle(fontSize: 12)),
+                    ),
+                  ],
                 ),
               ],
             ),

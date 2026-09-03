@@ -144,7 +144,7 @@ class AppChip extends StatelessWidget {
                   GestureDetector(
                     onTap: onDelete,
                     child: Icon(
-                      Icons.close,
+                      Icons.close_rounded,
                       size: iconSize,
                       color: effectiveFg,
                     ),

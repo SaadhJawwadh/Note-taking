@@ -33,7 +33,7 @@ void main() {
     expect(find.textContaining('SMS'), findsWidgets);
 
     // Clear search query
-    await tester.tap(find.byIcon(Icons.close));
+    await tester.tap(find.byIcon(Icons.close_rounded));
     await tester.pumpAndSettle();
 
     // Verify search query cleared

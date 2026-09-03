@@ -12,6 +12,10 @@ import 'package:flutter_quill/quill_delta.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:note_taking_app/utils/quill_checklist_helper.dart';
 import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:note_taking_app/data/database_helper.dart';
+import 'package:note_taking_app/data/database_constants.dart';
+import 'package:note_taking_app/data/note_model.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -133,6 +137,45 @@ void main() {
       }
     });
 
+    test('Smart Hybrid Heading promotes short first line and decouples from body', () async {
+      final keepJson = jsonEncode({
+        "color": "DEFAULT",
+        "title": "",
+        "textContent": "Viva Requirements\nIf chair is putting 3rd marking they should have a must comment..\n",
+      });
+
+      final note = await NoteMigrationService.parseKeepJsonForTesting(
+        keepJson,
+        'Takeout/Keep/2025-09-21T22_54_57.487+05_30.json',
+      );
+
+      expect(note, isNotNull);
+      expect(note!.title, 'Viva Requirements');
+      expect(note.content.contains('If chair is putting 3rd marking'), isTrue);
+      expect(note.title.contains('2025-09-21'), isFalse);
+      expect(note.title.contains('Takeout/Keep/'), isFalse);
+    });
+
+    test('Smart Hybrid Heading preserves empty title for continuous prose without stutter', () async {
+      final keepJson = jsonEncode({
+        "color": "DEFAULT",
+        "title": "",
+        "textContent": "After viva form if chair is putting 3rd marking they should have a must comment..",
+      });
+
+      final note = await NoteMigrationService.parseKeepJsonForTesting(
+        keepJson,
+        'Takeout/Keep/2025-09-21T22_54_57.487+05_30.json',
+      );
+
+      expect(note, isNotNull);
+      // Continuous prose with no line break should stay a titleless note!
+      expect(note!.title, '');
+      expect(note.title.contains('Takeout/Keep/'), isFalse);
+      expect(note.title.contains('2025-09-21'), isFalse);
+      expect(note.content.contains('After viva form if chair is putting'), isTrue);
+    });
+
     test('SettingsProvider moveCompletedChecklistsToBottom toggle persistence', () async {
       SharedPreferences.setMockInitialValues({
         'moveCompletedChecklistsToBottom': false,
@@ -147,6 +190,91 @@ void main() {
 
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getBool('moveCompletedChecklistsToBottom'), isTrue);
+    });
+  });
+
+  group('Note Migration Deduplication & Undo Tests', () {
+    late Database db;
+
+    setUpAll(() {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    });
+
+    setUp(() async {
+      db = await databaseFactoryFfi.openDatabase(inMemoryDatabasePath);
+      await DatabaseHelper.instance.createTestDatabase(db);
+      DatabaseHelper.setMockDatabase(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+      DatabaseHelper.setMockDatabase(null);
+    });
+
+    test('batchInsertNotes deduplicates against existing active notes and skips duplicates', () async {
+      final now = DateTime(2026, 9, 3, 10, 0);
+      final note1 = Note(
+        id: 'n1',
+        title: 'Meeting Notes',
+        content: jsonEncode([
+          {'insert': 'Discussed goals\n'}
+        ]),
+        dateCreated: now,
+        dateModified: now,
+        tags: ['Work'],
+      );
+
+      // First insert
+      final result1 = await NoteMigrationService.batchInsertNotes([note1]);
+      expect(result1.totalImported, 1);
+      expect(result1.skippedCount, 0);
+      expect(result1.importedNoteIds.length, 1);
+
+      // Second insert with exact same content & dateCreated (e.g. user re-imports same archive)
+      final noteDuplicate = Note(
+        id: 'n1_duplicate',
+        title: 'Meeting Notes',
+        content: jsonEncode([
+          {'insert': 'Discussed goals\n'}
+        ]),
+        dateCreated: now,
+        dateModified: now,
+        tags: ['Work'],
+      );
+
+      final result2 = await NoteMigrationService.batchInsertNotes([noteDuplicate]);
+      expect(result2.totalImported, 0);
+      expect(result2.skippedCount, 1);
+      expect(result2.importedNoteIds.isEmpty, isTrue);
+    });
+
+    test('undoImport soft-deletes the newly imported notes into trash', () async {
+      final now = DateTime(2026, 9, 3, 11, 0);
+      final note = Note(
+        id: 'n_undo',
+        title: 'Accidental Import',
+        content: jsonEncode([
+          {'insert': 'Oops wrong file\n'}
+        ]),
+        dateCreated: now,
+        dateModified: now,
+      );
+
+      final result = await NoteMigrationService.batchInsertNotes([note]);
+      expect(result.totalImported, 1);
+      expect(result.importedNoteIds.length, 1);
+
+      // Undo the import
+      final revertedCount = await NoteMigrationService.undoImport(result.importedNoteIds);
+      expect(revertedCount, 1);
+
+      // Verify note is marked deleted (in trash)
+      final activeNotes = await db.query(TableNames.notes, where: 'deletedAt IS NULL');
+      expect(activeNotes.isEmpty, isTrue);
+
+      final trashedNotes = await db.query(TableNames.notes, where: 'deletedAt IS NOT NULL');
+      expect(trashedNotes.length, 1);
     });
   });
 

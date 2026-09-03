@@ -284,7 +284,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         if (_searchQuery.isNotEmpty)
                           IconButton(
-                            icon: const Icon(Icons.close, size: 18),
+                            icon: const Icon(Icons.close_rounded, size: 18),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                             visualDensity: VisualDensity.compact,

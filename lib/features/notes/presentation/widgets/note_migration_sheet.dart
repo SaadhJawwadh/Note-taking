@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_layout.dart';
 import '../../../../core/ui/app_bottom_sheet.dart';
 import '../../../../core/ui/app_card.dart';
 import '../../../../core/ui/app_chip.dart';
 import '../../../../data/note_model.dart';
 import '../../../../providers/note_provider.dart';
+import '../../../../screens/app_lock_screen.dart';
 import '../../services/note_migration_service.dart';
 
 class NoteMigrationSheet extends StatefulWidget {
@@ -58,6 +60,32 @@ class _NoteMigrationSheetState extends State<NoteMigrationSheet> {
     }
   }
 
+  Future<void> _launchGoogleTakeout() async {
+    await HapticFeedback.lightImpact();
+    AppLockScreen.ignoreNextResumeLock();
+    final uri = Uri.parse('https://takeout.google.com/settings/takeout/custom/keep');
+    try {
+      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!launched && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open browser. Please visit takeout.google.com manually.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open browser. Please visit takeout.google.com manually.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _performImport() async {
     if (_parsedNotes == null || _parsedNotes!.isEmpty) return;
     setState(() => _isLoading = true);
@@ -72,12 +100,34 @@ class _NoteMigrationSheetState extends State<NoteMigrationSheet> {
 
       if (mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
+        final messenger = ScaffoldMessenger.of(context);
+        final theme = Theme.of(context);
+        messenger.showSnackBar(
           SnackBar(
             content: Text(
-              'Successfully imported ${result.totalImported} notes${result.importedTags.isNotEmpty ? ' with ${result.importedTags.length} tags' : ''}.',
+              result.skippedCount > 0
+                  ? 'Imported ${result.totalImported} notes (${result.skippedCount} duplicates skipped).'
+                  : 'Successfully imported ${result.totalImported} notes${result.importedTags.isNotEmpty ? ' with ${result.importedTags.length} tags' : ''}.',
             ),
             behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 8),
+            action: result.importedNoteIds.isNotEmpty
+                ? SnackBarAction(
+                    label: 'UNDO',
+                    textColor: theme.colorScheme.inversePrimary,
+                    onPressed: () async {
+                      await HapticFeedback.mediumImpact();
+                      final count = await NoteMigrationService.undoImport(result.importedNoteIds);
+                      await noteProvider.refreshNotes();
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text('Reverted import ($count notes moved to trash).'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                  )
+                : null,
           ),
         );
       }
@@ -135,19 +185,50 @@ class _NoteMigrationSheetState extends State<NoteMigrationSheet> {
                   ),
                   const SizedBox(height: AppLayout.spaceM),
                   Container(
-                    padding: const EdgeInsets.all(AppLayout.spaceS),
+                    padding: const EdgeInsets.all(AppLayout.spaceM),
                     decoration: BoxDecoration(
-                      color: colorScheme.surface.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                      color: colorScheme.surface.withValues(alpha: 0.65),
+                      borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                      border: Border.all(
+                        color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+                      ),
                     ),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.info_outline_rounded, size: 18, color: colorScheme.primary),
-                        const SizedBox(width: AppLayout.spaceS),
-                        Expanded(
-                          child: Text(
-                            'To export from Google Keep: takeout.google.com → Select Keep → Download ZIP.',
-                            style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                        Row(
+                          children: [
+                            Icon(Icons.lightbulb_outline_rounded, size: 20, color: colorScheme.primary),
+                            const SizedBox(width: AppLayout.spaceS),
+                            Text(
+                              'How to export from Google Keep',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppLayout.spaceS),
+                        Text(
+                          '1. Tap below to open Google Takeout with Keep pre-selected.\n'
+                          '2. Scroll down and tap "Next step" → "Create export".\n'
+                          '3. Once downloaded, return here and select the ZIP file.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            height: 1.5,
+                          ),
+                        ),
+                        const SizedBox(height: AppLayout.spaceM),
+                        OutlinedButton.icon(
+                          onPressed: _launchGoogleTakeout,
+                          icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                          label: const Text('Open Google Takeout'),
+                          style: OutlinedButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                            ),
                           ),
                         ),
                       ],

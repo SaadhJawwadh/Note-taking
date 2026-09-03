@@ -56,7 +56,7 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
       showDragHandle: true,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(AppLayout.radiusXXL))),
       builder: (context) {
         final onSurface = Theme.of(context).colorScheme.onSurface;
         final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
@@ -127,7 +127,7 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
                 ),
                 ListTile(
                   leading:
-                      Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.error),
+                      Icon(Icons.delete_outline_rounded, color: Theme.of(context).colorScheme.error),
                   title: Text('Move to Trash',
                       style: TextStyle(color: Theme.of(context).colorScheme.error)),
                   onTap: () async {
