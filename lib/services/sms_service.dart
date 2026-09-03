@@ -704,7 +704,12 @@ class SmsService {
     return success;
   }
 
+  /// Deprecated: Streamlined to Scheduled Daily Auto-Sync, Live Listener, and Manual Triggers only.
+  /// Unsolicited background polling on app launch and resume has been removed to conserve battery and CPU.
+  @Deprecated('Use performDailySyncManualTrigger or scheduled daily auto-sync instead')
   static Future<void> performAppLaunchCatchUpSync({bool force = false}) async {
+    // Only execute if explicitly forced by a direct caller
+    if (!force) return;
     try {
       final prefs = await SharedPreferences.getInstance();
       final fmEnabled = prefs.getBool('showFinancialManager') ?? false;
@@ -712,25 +717,13 @@ class SmsService {
       if (!fmEnabled && !dailySyncEnabled) return;
       if (!await hasPermission()) return;
 
-      final lastSyncStr = prefs.getString('lastSmsSyncTime');
-      DateTime lastRun = DateTime.fromMillisecondsSinceEpoch(0);
-      if (lastSyncStr != null) {
-        final parsed = DateTime.tryParse(lastSyncStr);
-        if (parsed != null) {
-          lastRun = parsed;
-        }
-      }
-
-      final minutesSinceLast = DateTime.now().difference(lastRun).inMinutes;
-      if (force || minutesSinceLast >= 5) {
-        final count = await performSmsSync(
-          trigger: SmsSyncTrigger.catchUp,
-          fromTime: DateTime.now().subtract(const Duration(hours: 24)),
-        );
-        debugPrint('App-launch catch-up sync completed: $count transactions imported');
-      }
+      final count = await performSmsSync(
+        trigger: SmsSyncTrigger.catchUp,
+        fromTime: DateTime.now().subtract(const Duration(hours: 24)),
+      );
+      debugPrint('Forced catch-up sync completed: $count transactions imported');
     } catch (e) {
-      debugPrint('App-launch catch-up sync error: $e');
+      debugPrint('Forced catch-up sync error: $e');
     }
   }
 

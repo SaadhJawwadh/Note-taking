@@ -12,6 +12,7 @@ import 'package:note_taking_app/features/notes/presentation/screens/manage_tags_
 import 'package:note_taking_app/features/notes/presentation/screens/filtered_notes_screen.dart';
 import 'package:note_taking_app/features/notes/presentation/widgets/note_migration_sheet.dart';
 import '../../core/theme/app_layout.dart';
+import '../../core/ui/app_chip.dart';
 import '../../utils/app_route.dart';
 import '../bouncing_widget.dart';
 
@@ -389,38 +390,85 @@ class _HomeAppBarState extends State<HomeAppBar> {
               ),
               const Divider(),
               Flexible(
-                child: ListView.builder(
+                child: ListView(
                   shrinkWrap: true,
-                  itemCount: folders.length,
-                  itemBuilder: (context, index) {
-                    final folder = folders[index];
-                    final isSelected = folder == currentFolder;
-                    return ListTile(
-                      leading: Icon(
-                        folder == 'Notes'
-                            ? Icons.folder_open_outlined
-                            : folder == 'All Notes'
-                                ? Icons.folder_copy_outlined
-                                : Icons.folder,
-                        color: isSelected ? Theme.of(context).colorScheme.primary : null,
-                      ),
-                      title: Text(
-                        folder,
-                        style: TextStyle(
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  children: [
+                    ...folders.map((folder) {
+                      final isSelected = folder == currentFolder;
+                      final count = noteProvider.folderCounts[folder];
+                      return ListTile(
+                        leading: Icon(
+                          folder == 'Notes'
+                              ? Icons.folder_open_outlined
+                              : folder == 'All Notes'
+                                  ? Icons.folder_copy_outlined
+                                  : Icons.folder,
                           color: isSelected ? Theme.of(context).colorScheme.primary : null,
                         ),
-                      ),
-                      trailing: isSelected
-                          ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
+                        title: Text(
+                          folder,
+                          style: TextStyle(
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            color: isSelected ? Theme.of(context).colorScheme.primary : null,
+                          ),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (count != null)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: Text(
+                                  '$count',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                      ),
+                                ),
+                              ),
+                            if (isSelected)
+                              Icon(Icons.check, color: Theme.of(context).colorScheme.primary),
+                          ],
+                        ),
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          noteProvider.setFolder(folder);
+                          Navigator.pop(context);
+                        },
+                      );
+                    }),
+                    const Divider(height: 16),
+                    ListTile(
+                      leading: Icon(Icons.archive_outlined, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      title: const Text('Archived Notes'),
+                      trailing: noteProvider.archivedCount > 0
+                          ? AppChip(
+                              label: '${noteProvider.archivedCount}',
+                              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                            )
                           : null,
                       onTap: () {
                         HapticFeedback.selectionClick();
-                        noteProvider.setFolder(folder);
                         Navigator.pop(context);
+                        AppRoute.push(context, const FilteredNotesScreen(filterType: FilterType.archived));
                       },
-                    );
-                  },
+                    ),
+                    ListTile(
+                      leading: Icon(Icons.delete_outline_rounded, color: Theme.of(context).colorScheme.error),
+                      title: Text('Trash Bin', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                      trailing: noteProvider.trashCount > 0
+                          ? AppChip(
+                              label: '${noteProvider.trashCount}',
+                              backgroundColor: Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.4),
+                              textColor: Theme.of(context).colorScheme.error,
+                            )
+                          : null,
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        Navigator.pop(context);
+                        AppRoute.push(context, const FilteredNotesScreen(filterType: FilterType.trash));
+                      },
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -605,6 +653,8 @@ class _HomeAppBarState extends State<HomeAppBar> {
               AppRoute.push(context, const ManageTagsScreen());
             } else if (action == 'import_notes') {
               NoteMigrationSheet.show(context);
+            } else if (action == 'archived') {
+              AppRoute.push(context, const FilteredNotesScreen(filterType: FilterType.archived));
             } else if (action == 'trash') {
               AppRoute.push(context, const FilteredNotesScreen(filterType: FilterType.trash));
             } else {
@@ -721,6 +771,23 @@ class _HomeAppBarState extends State<HomeAppBar> {
                     const SizedBox(width: 12),
                     Text(
                       'Import Notes',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            color: colorScheme.onSurface,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'archived',
+                height: 44,
+                child: Row(
+                  children: [
+                    Icon(Icons.archive_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Archived Notes',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w500,
                             color: colorScheme.onSurface,

@@ -645,24 +645,110 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                                   style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                                 ),
                                 const SizedBox(height: 2),
-                                AppChip(
-                                  label: isSettled ? 'Settled' : (bill.totalReceived > 0 ? 'Partial' : 'Unsettled'),
-                                  icon: isSettled
-                                      ? Icons.check_circle_rounded
-                                      : (bill.totalReceived > 0 ? Icons.timelapse_rounded : Icons.hourglass_top_rounded),
-                                  backgroundColor: isSettled
-                                      ? Colors.green.withValues(alpha: 0.15)
-                                      : (bill.totalReceived > 0
-                                          ? Colors.blue.withValues(alpha: 0.15)
-                                          : Colors.amber.withValues(alpha: 0.15)),
-                                  textColor: isSettled
-                                      ? Colors.green
-                                      : (bill.totalReceived > 0 ? Colors.blue : Colors.amber.shade800),
+                                Builder(
+                                  builder: (context) {
+                                    final String statusLabel;
+                                    final IconData statusIcon;
+                                    final Color statusColor;
+                                    if (!bill.isPayerUser) {
+                                      if (bill.isUserSharePaid) {
+                                        statusLabel = 'Settled for You';
+                                        statusIcon = Icons.check_circle_rounded;
+                                        statusColor = Colors.green;
+                                      } else {
+                                        statusLabel = 'You Owe Rs. ${bill.userShare.toStringAsFixed(2).replaceAll('.00', '')}';
+                                        statusIcon = Icons.hourglass_top_rounded;
+                                        statusColor = Colors.red;
+                                      }
+                                    } else {
+                                      if (isSettled) {
+                                        statusLabel = 'Settled';
+                                        statusIcon = Icons.check_circle_rounded;
+                                        statusColor = Colors.green;
+                                      } else if (bill.totalReceived > 0) {
+                                        statusLabel = 'Partial';
+                                        statusIcon = Icons.timelapse_rounded;
+                                        statusColor = Colors.blue;
+                                      } else {
+                                        statusLabel = 'Unsettled';
+                                        statusIcon = Icons.hourglass_top_rounded;
+                                        statusColor = Colors.amber.shade800;
+                                      }
+                                    }
+
+                                    return AppChip(
+                                      label: statusLabel,
+                                      icon: statusIcon,
+                                      backgroundColor: statusColor.withValues(alpha: 0.15),
+                                      textColor: statusColor,
+                                    );
+                                  },
                                 ),
                               ],
                             ),
                           ],
                         ),
+
+                        // Interactive Status Banner when Someone Else Paid
+                        if (!bill.isPayerUser) ...[
+                          const SizedBox(height: AppLayout.spaceM),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: bill.isUserSharePaid
+                                  ? Colors.green.withValues(alpha: 0.1)
+                                  : colorScheme.errorContainer.withValues(alpha: 0.25),
+                              borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                              border: Border.all(
+                                color: bill.isUserSharePaid
+                                    ? Colors.green.withValues(alpha: 0.3)
+                                    : colorScheme.error.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  bill.isUserSharePaid ? Icons.check_circle_outline_rounded : Icons.pending_actions_rounded,
+                                  size: 18,
+                                  color: bill.isUserSharePaid ? Colors.green : colorScheme.error,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    bill.isUserSharePaid
+                                        ? 'Your share of Rs. ${bill.userShare.toStringAsFixed(2).replaceAll('.00', '')} is settled with ${bill.payerName}'
+                                        : 'You owe ${bill.payerName}: Rs. ${bill.userShare.toStringAsFixed(2).replaceAll('.00', '')}',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: bill.isUserSharePaid ? Colors.green : colorScheme.error,
+                                    ),
+                                  ),
+                                ),
+                                if (!bill.isUserSharePaid) ...[
+                                  const SizedBox(width: 8),
+                                  FilledButton.tonal(
+                                    onPressed: () {
+                                      final userPart = bill.participants.where((p) => p.contactName.trim().toLowerCase() == 'you').firstOrNull;
+                                      SettleUpSheet.show(
+                                        context,
+                                        contactName: bill.payerName,
+                                        netAmount: -bill.userShare,
+                                        specificBill: bill,
+                                        specificParticipant: userPart,
+                                      );
+                                    },
+                                    style: FilledButton.styleFrom(
+                                      visualDensity: VisualDensity.compact,
+                                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusS)),
+                                    ),
+                                    child: const Text('Settle My Share', style: TextStyle(fontSize: 12)),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
 
                         // Progress Bar for Payers
                         if (bill.isPayerUser && totalExpected > 0) ...[
@@ -702,7 +788,9 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                               button: !isPayer,
                               label: isYou
                                   ? 'Your share: Rs. ${p.shareAmount.toStringAsFixed(0)}, ${p.hasPaid ? 'paid' : 'tap to settle'}'
-                                  : 'Mark ${p.contactName} as ${p.hasPaid ? 'unpaid' : 'paid'}',
+                                  : (bill.isPayerUser
+                                      ? 'Mark ${p.contactName} as ${p.hasPaid ? 'unpaid' : 'paid'}'
+                                      : '${p.contactName} owes ${bill.payerName}: Rs. ${p.shareAmount.toStringAsFixed(0)}, ${p.hasPaid ? 'paid' : 'unpaid'}'),
                               child: InkWell(
                                 onTap: isPayer
                                     ? null
@@ -720,7 +808,8 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                                           } else {
                                             splitProvider.toggleParticipantPaid(p.id, false);
                                           }
-                                        } else {
+                                        } else if (bill.isPayerUser) {
+                                          // You paid the bill -> other participants pay YOU back
                                           if (!p.hasPaid) {
                                             SettleUpSheet.show(
                                               context,
@@ -732,6 +821,19 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                                           } else {
                                             splitProvider.toggleParticipantPaid(p.id, false);
                                           }
+                                        } else {
+                                          // Friend paid the bill -> other friends owe the payer, NOT you!
+                                          // Toggling marks it in the split record only; NO ledger transaction.
+                                          splitProvider.toggleParticipantPaid(p.id, !p.hasPaid);
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text(p.hasPaid
+                                                  ? 'Marked ${p.contactName} as unpaid to ${bill.payerName}'
+                                                  : 'Marked ${p.contactName} as paid to ${bill.payerName} (split record only)'),
+                                              behavior: SnackBarBehavior.floating,
+                                              duration: const Duration(seconds: 2),
+                                            ),
+                                          );
                                         }
                                       },
                                 onLongPress: (!p.hasPaid && !isYou && !isPayer)
@@ -771,7 +873,11 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                                       ),
                                       const SizedBox(width: 6),
                                       Text(
-                                        '${p.contactName}: Rs. ${p.shareAmount.toStringAsFixed(0)}',
+                                        isYou
+                                            ? 'You: Rs. ${p.shareAmount.toStringAsFixed(0)}'
+                                            : (bill.isPayerUser
+                                                ? '${p.contactName}: Rs. ${p.shareAmount.toStringAsFixed(0)}'
+                                                : '${p.contactName}: Rs. ${p.shareAmount.toStringAsFixed(0)} (owes ${bill.payerName})'),
                                         style: theme.textTheme.labelSmall?.copyWith(
                                           color: p.hasPaid ? Colors.green : colorScheme.onSurface,
                                           fontWeight: p.hasPaid ? FontWeight.bold : FontWeight.normal,

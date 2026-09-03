@@ -37,19 +37,19 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.primaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.import_contacts_rounded,
-            title: "Keep & Markdown Import",
-            desc: "Batch import notes, checklists, folders, and tags from Google Keep Takeout JSON and Markdown files in one tap.",
+            icon: Icons.call_split_rounded,
+            title: "Friend-Paid Split Bills",
+            desc: "Track group bills paid by friends, settle your share in 1 tap, and keep friends' mutual debts cleanly separated.",
+          ),
+          _WhatsNewItem(
+            icon: Icons.archive_outlined,
+            title: "Archived Notes Dropdown",
+            desc: "Instant access to your archived notes with note counts directly in the folder picker and tools menu.",
           ),
           _WhatsNewItem(
             icon: Icons.tune_rounded,
-            title: "Settings Control Center",
-            desc: "Interactive cockpit with 1-tap App Lock and backup shortcuts, subtle vault indicator, and domain-themed cards.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.sync_lock_rounded,
-            title: "Split Bills Backup & Sync",
-            desc: "Group expenses, debt settlements, and friends back up in encrypted JSON files and sync bi-directionally across devices.",
+            title: "Vibrant Settings Dashboard",
+            desc: "Refreshed hero card with rich gradients, radiant ambient glow, and live Local Vault security indicator.",
           ),
         ],
       ),
@@ -59,19 +59,19 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.tertiaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.checklist_rounded,
-            title: "Smarter Checklist Engine",
-            desc: "Extracts completed items cleanly without empty lines, and restores items with a single tap.",
+            icon: Icons.sync_rounded,
+            title: "Streamlined SMS Sync",
+            desc: "Eliminated battery-draining background loops; scheduled daily sync, 1-tap manual refresh, and live alerts.",
+          ),
+          _WhatsNewItem(
+            icon: Icons.import_contacts_rounded,
+            title: "Keep & Markdown Import",
+            desc: "Batch import notes, checklists, and tags from Google Keep and Markdown in one tap.",
           ),
           _WhatsNewItem(
             icon: Icons.security_rounded,
             title: "Resilient App Lock Fallback",
-            desc: "Automatic safety card and disable button prevent lockouts on devices without screen lock or enrolled biometrics.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.accessibility_new_rounded,
-            title: "Touch Accessibility & Semantics",
-            desc: "Full screen reader accessibility announcements across all interactive tags and filter chips.",
+            desc: "Safety detection prevents lockouts on devices without screen lock or biometrics.",
           ),
         ],
       ),
@@ -81,19 +81,19 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.secondaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
+            icon: Icons.account_balance_wallet_outlined,
+            title: "Personal Ledger Isolation",
+            desc: "Settling third-party debts between friends strictly stays in the split tracker without altering your personal ledger.",
+          ),
+          _WhatsNewItem(
             icon: Icons.restore_rounded,
             title: "Checklist Restore Ordering",
             desc: "Accurately restores completed items back into the editor with line-ending formatting and correct cursor positioning.",
           ),
           _WhatsNewItem(
             icon: Icons.shield_outlined,
-            title: "Tombstone Safety & Timestamp Order",
+            title: "Tombstone Safety & Order",
             desc: "Preserves genuine message arrival timestamps for exact historical ordering and duplicate prevention.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.aspect_ratio_rounded,
-            title: "Edge Margin Symmetry",
-            desc: "Exact 16dp horizontal edge margins and uniform action button hit bounds across all screen sizes.",
           ),
         ],
       ),

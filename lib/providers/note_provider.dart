@@ -28,6 +28,8 @@ class NoteProvider extends ChangeNotifier {
   final List<String> _emptyFolders = [];
 
   Map<String, int> _folderCounts = {};
+  int _archivedCount = 0;
+  int _trashCount = 0;
 
   // Getters
   List<Note> get notes => _notes;
@@ -45,6 +47,8 @@ class NoteProvider extends ChangeNotifier {
   String? get selectedFolder => _selectedFolder;
   List<String> get folders => [..._folders, ..._emptyFolders]..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
   Map<String, int> get folderCounts => _folderCounts;
+  int get archivedCount => _archivedCount;
+  int get trashCount => _trashCount;
 
   void setFolder(String? folder) {
     _selectedFolder = folder;
@@ -135,6 +139,8 @@ class NoteProvider extends ChangeNotifier {
       );
       _tagCounts = await _noteRepository.getTagCounts();
       _folderCounts = await _noteRepository.getFolderCounts();
+      _archivedCount = await _noteRepository.getArchivedCount();
+      _trashCount = await _noteRepository.getTrashCount();
       _folders = await _noteRepository.getAllFolders();
       _emptyFolders.removeWhere((f) => _folders.contains(f));
       if (_selectedFolder != null &&

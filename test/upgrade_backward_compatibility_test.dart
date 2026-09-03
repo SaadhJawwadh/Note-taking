@@ -1,8 +1,11 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:note_taking_app/data/database_helper.dart';
 import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
+import 'package:note_taking_app/widgets/whats_new_sheet.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -114,6 +117,52 @@ void main() {
       expect(settings.showProTips, isTrue);
       expect(settings.categoryBudgets, isEmpty);
       expect(settings.trashAutoPurgeDays, 30);
+    });
+
+    testWidgets('WhatsNewSheet renders v2.29.0 cards and records version on dismiss', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      SharedPreferences.setMockInitialValues({
+        'lastSeenVersion': '2.28.0',
+      });
+      final settings = SettingsProvider();
+      await settings.loadSettings();
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<SettingsProvider>.value(
+          value: settings,
+          child: const MaterialApp(
+            home: Scaffold(
+              body: WhatsNewSheet(currentVersion: '2.29.0'),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Check categories
+      expect(find.text("🌟 What's New"), findsOneWidget);
+      expect(find.text("🚀 Improvements"), findsOneWidget);
+      expect(find.text("🐛 Fixes"), findsOneWidget);
+
+      // Check marquee items
+      expect(find.text("Friend-Paid Split Bills"), findsOneWidget);
+      expect(find.text("Archived Notes Dropdown"), findsOneWidget);
+      expect(find.text("Vibrant Settings Dashboard"), findsOneWidget);
+      expect(find.text("Streamlined SMS Sync"), findsOneWidget);
+      expect(find.text("Personal Ledger Isolation"), findsOneWidget);
+
+      // Tap "Awesome, Got It!" to finish
+      await tester.runAsync(() async {
+        await tester.tap(find.text('Awesome, Got It!'));
+        await Future.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pumpAndSettle();
+
+      expect(settings.lastSeenVersion, '2.29.0');
     });
   });
 }

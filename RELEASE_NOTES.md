@@ -1,13 +1,13 @@
 
 ### 🌟 What's New
-- **Google Keep & Markdown Import**: Batch import notes, checklists, folders, and tags from Google Keep Takeout JSON and Markdown archives in one tap.
-- **Redesigned Settings Control Center**: An interactive console featuring a subtle security indicator, quick one-tap shortcuts for App Lock and JSON backups, and domain-themed cards (Notes, Finances, Health, Privacy).
+- **Friend-Paid Split Bills**: Track group bills paid by friends with clear personal liability. Settle your own share with one tap into your daily ledger, while keeping friends' mutual debts cleanly separated in the split tracker.
+- **Archived Notes Dropdown Access**: Quickly access all your archived notes with note counts directly from the folder picker sheet and the Notes tools menu.
+- **Vibrant Settings Dashboard**: An upgraded hero dashboard with rich multi-tone gradients, luminous ambient glow, a pulsing Local Vault security badge, and bold module indicators.
 
 ### 🚀 Improvements
-- **Smarter Checklist Engine**: Smoother item completion without trailing empty lines, plus one-tap unchecking to restore items directly to your note body.
-- **Resilient App Lock**: Automatic safety fallback detects devices without screen locks or enrolled biometrics, preventing accidental lockouts with a safe disable button.
-- **Touch Accessibility**: Standardized screen reader semantics across all interactive tag and filter chips.
+- **Streamlined SMS Sync**: Eliminated unsolicited background resume polling, focusing SMS imports on scheduled daily sync, one-tap manual refresh, and real-time live message detection.
+- **Interactive Settlement Feedback**: Clear visual badges and instant status updates when settling bills or recording participant repayments.
 
 ### 🐛 Fixes
-- **Checklist Restore Ordering**: Accurately restores completed items back into the editor with line-ending formatting and correct cursor positioning.
+- **Personal Ledger Isolation**: Third-party debt repayments between friends are strictly isolated within the split tracker and never create unwanted entries in your personal account ledger.
 

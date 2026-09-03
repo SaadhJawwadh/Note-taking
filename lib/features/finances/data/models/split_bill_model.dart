@@ -97,14 +97,27 @@ class SplitBillModel {
 
   /// The user's personal share of the bill
   double get userShare {
-    final userParticipant = participants.where((p) => p.contactName.trim().toLowerCase() == 'you' || p.contactName.trim().toLowerCase() == payerName.trim().toLowerCase()).toList();
+    final userParticipant = participants.where((p) => p.contactName.trim().toLowerCase() == 'you').toList();
     if (userParticipant.isNotEmpty) {
       return userParticipant.first.shareAmount;
     }
-    // If not listed as explicit participant and user paid, user share is remainder
-    final othersTotal = participants.where((p) => p.contactName.trim().toLowerCase() != 'you').fold<double>(0.0, (sum, p) => sum + p.shareAmount);
-    final remainder = totalAmount - othersTotal;
-    return remainder > 0 ? remainder : 0.0;
+    if (isPayerUser) {
+      // If not listed as explicit participant and user paid, user share is remainder
+      final othersTotal = participants.where((p) => p.contactName.trim().toLowerCase() != 'you').fold<double>(0.0, (sum, p) => sum + p.shareAmount);
+      final remainder = totalAmount - othersTotal;
+      return remainder > 0 ? remainder : 0.0;
+    }
+    return 0.0;
+  }
+
+  /// Whether the user has settled their personal share (always true if user was the payer)
+  bool get isUserSharePaid {
+    if (isPayerUser) return true;
+    final userPart = participants.where((p) => p.contactName.trim().toLowerCase() == 'you').toList();
+    if (userPart.isNotEmpty) {
+      return userPart.first.hasPaid;
+    }
+    return status == SplitStatus.settled;
   }
 
   /// Total amount other people still owe to the user for this bill
@@ -118,13 +131,7 @@ class SplitBillModel {
   /// Total amount the user still owes to a friend for this bill
   double get totalUserOwes {
     if (isPayerUser) return 0.0;
-    // Look for user participant or user share
-    final userPart = participants.where((p) => p.contactName.trim().toLowerCase() == 'you').toList();
-    if (userPart.isNotEmpty) {
-      return userPart.first.hasPaid ? 0.0 : userPart.first.shareAmount;
-    }
-    // If user is not listed as explicit participant, user owes their computed share if status != settled
-    return status == SplitStatus.settled ? 0.0 : userShare;
+    return isUserSharePaid ? 0.0 : userShare;
   }
 
   /// Total amount already received back by the user
@@ -147,24 +154,21 @@ class SplitBillModel {
     return participants.where((p) => !p.hasPaid && p.contactName.trim().toLowerCase() != 'you').length;
   }
 
-  /// Whether all participants (or user liability) have been settled
+  /// Whether the bill is fully settled from the user's perspective
+  /// (If you paid: all participants paid you back; If someone else paid: you paid your share)
   bool get isFullySettled {
     if (isPayerUser) {
       final others = participants.where((p) => p.contactName.trim().toLowerCase() != 'you');
       if (others.isEmpty) return true;
       return others.every((p) => p.hasPaid);
     } else {
-      final userPart = participants.where((p) => p.contactName.trim().toLowerCase() == 'you').toList();
-      if (userPart.isNotEmpty) {
-        return userPart.first.hasPaid;
-      }
-      return status == SplitStatus.settled;
+      return isUserSharePaid;
     }
   }
 
   SplitStatus computeDerivedStatus() {
     if (isFullySettled) return SplitStatus.settled;
-    if (totalReceived > 0) return SplitStatus.partial;
+    if (isPayerUser && totalReceived > 0) return SplitStatus.partial;
     return SplitStatus.unsettled;
   }
 

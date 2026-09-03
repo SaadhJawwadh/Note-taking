@@ -39,244 +39,324 @@ class SettingsHeroCard extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
-      child: Material(
-        color: isDark
-            ? colorScheme.primaryContainer.withValues(alpha: 0.22)
-            : colorScheme.primaryContainer.withValues(alpha: 0.55),
-        shape: RoundedRectangleBorder(
+      child: Container(
+        decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppLayout.radiusXXL),
-          side: BorderSide(
-            color: colorScheme.primary.withValues(alpha: isDark ? 0.35 : 0.45),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDark
+                ? [
+                    colorScheme.primaryContainer.withValues(alpha: 0.35),
+                    colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
+                    colorScheme.surfaceContainerHigh.withValues(alpha: 0.60),
+                  ]
+                : [
+                    colorScheme.primaryContainer.withValues(alpha: 0.50),
+                    colorScheme.surfaceContainerLow.withValues(alpha: 0.75),
+                    colorScheme.surfaceContainerLowest,
+                  ],
+          ),
+          border: Border.all(
+            color: colorScheme.primary.withValues(alpha: isDark ? 0.40 : 0.35),
             width: 1.2,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: colorScheme.primary.withValues(alpha: isDark ? 0.12 : 0.06),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
         clipBehavior: Clip.antiAlias,
-        elevation: 1,
-        child: Padding(
-          padding: const EdgeInsets.all(AppLayout.spaceL),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 1. Header & Security Badge
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Stack(
+          children: [
+            // Ambient aura glow in top-right
+            Positioned(
+              top: -35,
+              right: -35,
+              child: Container(
+                width: 130,
+                height: 130,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      colorScheme.primary.withValues(alpha: isDark ? 0.22 : 0.15),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(AppLayout.spaceL),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: colorScheme.primary.withValues(alpha: isDark ? 0.22 : 0.12),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: colorScheme.primary.withValues(alpha: isDark ? 0.40 : 0.25),
-                              width: 1.2,
-                            ),
-                          ),
-                          child: Icon(
-                            Icons.tune_rounded,
-                            size: 22,
-                            color: colorScheme.primary,
-                          ),
-                        ),
-                        const SizedBox(width: AppLayout.spaceM),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Control Center',
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: colorScheme.onSurface,
+                  // 1. Header & Security Badge
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    colorScheme.primary,
+                                    colorScheme.tertiary,
+                                  ],
                                 ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 2),
-                              Wrap(
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                spacing: 6,
-                                children: [
-                                  Text(
-                                    'Preferences & Health',
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                                    decoration: BoxDecoration(
-                                      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
-                                      borderRadius: BorderRadius.circular(AppLayout.radiusS),
-                                      border: Border.all(
-                                        color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-                                        width: 0.8,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.shield_rounded, size: 10, color: colorScheme.primary),
-                                        const SizedBox(width: 3),
-                                        Text(
-                                          'Local Vault',
-                                          style: theme.textTheme.labelSmall?.copyWith(
-                                            fontSize: 9.5,
-                                            fontWeight: FontWeight.w600,
-                                            letterSpacing: 0.3,
-                                            color: colorScheme.primary,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: colorScheme.primary.withValues(alpha: isDark ? 0.40 : 0.25),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 3),
                                   ),
                                 ],
                               ),
-                            ],
-                          ),
+                              child: Icon(
+                                Icons.tune_rounded,
+                                size: 22,
+                                color: colorScheme.onPrimary,
+                              ),
+                            ),
+                            const SizedBox(width: AppLayout.spaceM),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Control Center',
+                                    style: theme.textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: colorScheme.onSurface,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Wrap(
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    spacing: 6,
+                                    children: [
+                                      Text(
+                                        'Preferences & Health',
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                          color: colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                        decoration: BoxDecoration(
+                                          color: (isDark ? const Color(0xFF10B981) : const Color(0xFF059669)).withValues(alpha: isDark ? 0.18 : 0.10),
+                                          borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                                          border: Border.all(
+                                            color: (isDark ? const Color(0xFF34D399) : const Color(0xFF10B981)).withValues(alpha: 0.35),
+                                            width: 0.8,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              width: 5,
+                                              height: 5,
+                                              decoration: const BoxDecoration(
+                                                color: Color(0xFF10B981),
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              'Local Vault',
+                                              style: theme.textTheme.labelSmall?.copyWith(
+                                                fontSize: 9.5,
+                                                fontWeight: FontWeight.w600,
+                                                letterSpacing: 0.2,
+                                                color: isDark ? const Color(0xFF6EE7B7) : const Color(0xFF047857),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: AppLayout.spaceS),
+                      AppChip(
+                        isCompact: true,
+                        icon: isAppLockEnabled
+                            ? Icons.lock_rounded
+                            : Icons.lock_open_rounded,
+                        label: isAppLockEnabled ? 'Protected' : 'Unlocked',
+                        isSelected: isAppLockEnabled,
+                        onTap: onAppLockTap,
+                        selectedBackgroundColor: isAppLockEnabled
+                            ? colorScheme.primary.withValues(alpha: isDark ? 0.25 : 0.15)
+                            : colorScheme.surfaceContainerHighest,
+                        backgroundColor: colorScheme.surfaceContainerHighest,
+                        textColor: isAppLockEnabled
+                            ? colorScheme.primary
+                            : colorScheme.onSurfaceVariant,
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: AppLayout.spaceS),
-                  AppChip(
-                    isCompact: true,
-                    icon: isAppLockEnabled
-                        ? Icons.lock_rounded
-                        : Icons.lock_open_rounded,
-                    label: isAppLockEnabled ? 'Protected' : 'Unlocked',
-                    isSelected: isAppLockEnabled,
-                    onTap: onAppLockTap,
-                    selectedBackgroundColor:
-                        colorScheme.primaryContainer.withValues(alpha: 0.8),
-                    backgroundColor: colorScheme.surfaceContainerHighest,
-                    textColor: isAppLockEnabled
-                        ? colorScheme.onPrimaryContainer
-                        : colorScheme.onSurfaceVariant,
+
+                  const SizedBox(height: AppLayout.spaceL),
+                  Divider(
+                    height: 1,
+                    color: colorScheme.outlineVariant.withValues(alpha: isDark ? 0.30 : 0.40),
                   ),
-                ],
-              ),
+                  const SizedBox(height: AppLayout.spaceM),
 
-              const SizedBox(height: AppLayout.spaceL),
-              const Divider(height: 1),
-              const SizedBox(height: AppLayout.spaceM),
-
-              // 2. Active Feature Module Badges
-              Text(
-                'ACTIVE MODULES & SYSTEM STATUS',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.1,
-                  color: colorScheme.primary.withValues(alpha: 0.9),
-                ),
-              ),
-              const SizedBox(height: AppLayout.spaceS),
-              Wrap(
-                spacing: AppLayout.spaceXS,
-                runSpacing: AppLayout.spaceXS,
-                children: [
-                  if (isFinancialManagerEnabled)
-                    AppChip(
-                      isCompact: true,
-                      icon: Icons.account_balance_wallet_outlined,
-                      label: 'Finances',
-                      isSelected: true,
-                      selectedBackgroundColor:
-                          const Color(0xFF10B981).withValues(alpha: isDark ? 0.25 : 0.15),
-                      textColor: isDark ? const Color(0xFF34D399) : const Color(0xFF059669),
-                    ),
-                  if (isPeriodTrackerEnabled)
-                    AppChip(
-                      isCompact: true,
-                      icon: Icons.favorite_outline,
-                      label: 'Health Tracker',
-                      isSelected: true,
-                      selectedBackgroundColor:
-                          const Color(0xFFF43F5E).withValues(alpha: isDark ? 0.25 : 0.15),
-                      textColor: isDark ? const Color(0xFFFB7185) : const Color(0xFFE11D48),
-                    ),
-                  if (isAiEnabled)
-                    AppChip(
-                      isCompact: true,
-                      icon: Icons.auto_awesome_outlined,
-                      label: 'Gemini AI',
-                      isSelected: true,
-                      selectedBackgroundColor:
-                          colorScheme.primaryContainer.withValues(alpha: 0.7),
-                      textColor: colorScheme.onPrimaryContainer,
-                    ),
-                  AppChip(
-                    isCompact: true,
-                    icon: autoBackupEnabled
-                        ? Icons.cloud_done_outlined
-                        : Icons.cloud_off_outlined,
-                    label: autoBackupEnabled
-                        ? (lastAutoBackupTimeFormatted != null
-                            ? 'Backup: $lastAutoBackupTimeFormatted'
-                            : 'Auto-Backup On')
-                        : 'Manual Backup',
-                    isSelected: autoBackupEnabled,
-                    onTap: onBackupTap,
-                    selectedBackgroundColor:
-                        const Color(0xFF0EA5E9).withValues(alpha: isDark ? 0.25 : 0.15),
-                    textColor: autoBackupEnabled
-                        ? (isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7))
-                        : colorScheme.onSurfaceVariant,
-                    backgroundColor: colorScheme.surfaceContainerHighest,
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: AppLayout.spaceL),
-
-              // 3. Quick Theme Toggle
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+                  // 2. Active Feature Module Badges
                   Text(
-                    'App Theme Mode',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: colorScheme.onSurface,
+                    'ACTIVE MODULES & SYSTEM STATUS',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.1,
+                      color: colorScheme.primary.withValues(alpha: 0.9),
                     ),
                   ),
                   const SizedBox(height: AppLayout.spaceS),
-                  SizedBox(
-                    width: double.infinity,
-                    child: SegmentedButton<ThemeMode>(
-                      segments: const [
-                        ButtonSegment(
-                          value: ThemeMode.system,
-                          icon: Icon(Icons.brightness_auto_rounded, size: 16),
-                          label: Text('Auto'),
+                  Wrap(
+                    spacing: AppLayout.spaceXS,
+                    runSpacing: AppLayout.spaceXS,
+                    children: [
+                      if (isFinancialManagerEnabled)
+                        AppChip(
+                          isCompact: true,
+                          icon: Icons.account_balance_wallet_rounded,
+                          label: 'Finances',
+                          isSelected: true,
+                          selectedBackgroundColor:
+                              const Color(0xFF10B981).withValues(alpha: isDark ? 0.22 : 0.14),
+                          textColor: isDark ? const Color(0xFF6EE7B7) : const Color(0xFF047857),
                         ),
-                        ButtonSegment(
-                          value: ThemeMode.light,
-                          icon: Icon(Icons.light_mode_rounded, size: 16),
-                          label: Text('Light'),
+                      if (isPeriodTrackerEnabled)
+                        AppChip(
+                          isCompact: true,
+                          icon: Icons.favorite_rounded,
+                          label: 'Health Tracker',
+                          isSelected: true,
+                          selectedBackgroundColor:
+                              const Color(0xFFF43F5E).withValues(alpha: isDark ? 0.22 : 0.14),
+                          textColor: isDark ? const Color(0xFFFDA4AF) : const Color(0xFFBE123C),
                         ),
-                        ButtonSegment(
-                          value: ThemeMode.dark,
-                          icon: Icon(Icons.dark_mode_rounded, size: 16),
-                          label: Text('Dark'),
+                      if (isAiEnabled)
+                        AppChip(
+                          isCompact: true,
+                          icon: Icons.auto_awesome_rounded,
+                          label: 'Gemini AI',
+                          isSelected: true,
+                          selectedBackgroundColor:
+                              colorScheme.primary.withValues(alpha: isDark ? 0.22 : 0.14),
+                          textColor: colorScheme.primary,
                         ),
-                      ],
-                      selected: {currentThemeMode},
-                      onSelectionChanged: (Set<ThemeMode> newSelection) {
-                        HapticFeedback.selectionClick();
-                        onThemeModeChanged(newSelection.first);
-                      },
-                      style: const ButtonStyle(
-                        visualDensity: VisualDensity.compact,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      AppChip(
+                        isCompact: true,
+                        icon: autoBackupEnabled
+                            ? Icons.cloud_done_rounded
+                            : Icons.cloud_off_rounded,
+                        label: autoBackupEnabled
+                            ? (lastAutoBackupTimeFormatted != null
+                                ? 'Backup: $lastAutoBackupTimeFormatted'
+                                : 'Auto-Backup On')
+                            : 'Manual Backup',
+                        isSelected: autoBackupEnabled,
+                        onTap: onBackupTap,
+                        selectedBackgroundColor:
+                            const Color(0xFF0EA5E9).withValues(alpha: isDark ? 0.22 : 0.14),
+                        textColor: autoBackupEnabled
+                            ? (isDark ? const Color(0xFF7DD3FC) : const Color(0xFF0369A1))
+                            : colorScheme.onSurfaceVariant,
+                        backgroundColor: colorScheme.surfaceContainerHighest,
                       ),
-                    ),
+                    ],
+                  ),
+
+                  const SizedBox(height: AppLayout.spaceL),
+
+                  // 3. Quick Theme Toggle
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'App Theme Mode',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: AppLayout.spaceS),
+                      SizedBox(
+                        width: double.infinity,
+                        child: SegmentedButton<ThemeMode>(
+                          segments: const [
+                            ButtonSegment(
+                              value: ThemeMode.system,
+                              icon: Icon(Icons.brightness_auto_rounded, size: 16),
+                              label: Text('Auto'),
+                            ),
+                            ButtonSegment(
+                              value: ThemeMode.light,
+                              icon: Icon(Icons.light_mode_rounded, size: 16),
+                              label: Text('Light'),
+                            ),
+                            ButtonSegment(
+                              value: ThemeMode.dark,
+                              icon: Icon(Icons.dark_mode_rounded, size: 16),
+                              label: Text('Dark'),
+                            ),
+                          ],
+                          selected: {currentThemeMode},
+                          onSelectionChanged: (Set<ThemeMode> newSelection) {
+                            HapticFeedback.selectionClick();
+                            onThemeModeChanged(newSelection.first);
+                          },
+                          style: ButtonStyle(
+                            visualDensity: VisualDensity.compact,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            backgroundColor: WidgetStateProperty.resolveWith<Color?>((states) {
+                              if (states.contains(WidgetState.selected)) {
+                                return colorScheme.primary.withValues(alpha: isDark ? 0.30 : 0.20);
+                              }
+                              return Colors.transparent;
+                            }),
+                            foregroundColor: WidgetStateProperty.resolveWith<Color?>((states) {
+                              if (states.contains(WidgetState.selected)) {
+                                return colorScheme.primary;
+                              }
+                              return colorScheme.onSurfaceVariant;
+                            }),
+                            side: WidgetStateProperty.all(
+                              BorderSide(
+                                color: colorScheme.outlineVariant.withValues(alpha: isDark ? 0.40 : 0.50),
+                                width: 1.0,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

@@ -87,6 +87,20 @@ void main() {
       expect(bill.totalUserOwes, 3000.0);
       expect(bill.totalOwedToUser, 0.0);
       expect(bill.computeDerivedStatus(), SplitStatus.unsettled);
+      expect(bill.isFullySettled, isFalse);
+
+      // When user settles their share, the bill is settled for the user regardless of Sarah's status
+      final settledForUserBill = bill.copyWith(
+        participants: [
+          bill.participants[0].copyWith(hasPaid: true),
+          bill.participants[1], // Sarah is still unpaid to Alex
+        ],
+      );
+      expect(settledForUserBill.userShare, 3000.0);
+      expect(settledForUserBill.isUserSharePaid, isTrue);
+      expect(settledForUserBill.totalUserOwes, 0.0);
+      expect(settledForUserBill.isFullySettled, isTrue);
+      expect(settledForUserBill.computeDerivedStatus(), SplitStatus.settled);
     });
 
     test('Handles custom exact splits correctly', () {

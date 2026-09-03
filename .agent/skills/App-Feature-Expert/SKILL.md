@@ -89,8 +89,11 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
     1. CSV export with pre-loaded AI prompt.
     2. 1-tap clipboard copying of the AI prompt text.
     3. Clean RFC 4180 CSV export with the `Account` column.
-- **Widget Launch & App Start SMS Catch-Up Sync**:
-  - `SmsService.performAppLaunchCatchUpSync()` executes a 5-minute debounced background check for missed SMS notifications whenever the app is opened directly or via home screen widgets.
+- **Streamlined SMS Ingestion Model (Scheduled Daily + Manual + Live Listener)**:
+  - Eliminates unsolicited launch and resume polling loops. Ingestion strictly relies on:
+    1. Real-time Android broadcast listener (`telephony.listenIncomingSms`) when an SMS arrives.
+    2. Scheduled Daily Auto-Sync via WorkManager at user-configured time (e.g. 20:00).
+    3. Manual 1-tap quick sync (`[ 🔄 Sync ]`) in Finances header and custom historical imports in `SmsImportSheet`.
 - **SMS Auto-Import & Sandbox Pipeline**: Decoupled regex parsing (`SmsParser` + `sms_constants.dart`) and `SmsService`. 5-minute transaction deduplication window. Reversals purge target transaction within 7 days. `SmsParser` allows long merchant descriptions up to 60 characters and recognizes sandbox test identifiers (`'BANK_SMS'`, `'CARD'`, `'ALERTS'`, `'BANK'`) alongside major banks. PII reference cleaners MUST use digit lookaheads (`\b(?=[A-Za-z0-9]*\d)[A-Za-z0-9]{10,}\b`) to avoid truncating legitimate 10+ character English words.
 - **Currencies & Multi-Currency Extraction**: Curated currency metadata (`CurrencyInfo` in `AppConstants`) provides authentic symbols and supports custom currency codes. `SmsConstants.buildPreferredAmountRegex(currency)` prioritizes matching against the user's active preferred currency before general currency fallbacks.
 - **One-Tap Category Learning**: When editing transactions, wrap category suggestions in a scoped `ListenableBuilder` tied to `_descriptionController` with stopword protection (`_stopwords`) to let users persist clean merchant keywords directly into `CategoryDefinition`.
@@ -135,6 +138,8 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 - **Ledger Interop & Settle-Up Protocol (`SettleUpSheet`)**:
   - Settling a debt where a friend owes the user creates an `Income` transaction (`AccountType.daily`, category: `Income`, tag: `[Split Settlement]`).
   - Settling a debt where the user owes a friend creates an `Expense` transaction (`AccountType.daily`, category: `Split Settlement`).
+  - When a friend paid for a bill, other participants settling with that friend are strictly informational inside the Split tab (toggling `hasPaid` in the split record only) and NEVER create ledger transactions in the user's personal accounts.
+  - From the user's perspective, once the user pays their own share, the split is marked as `Settled for You`.
   - All settlements execute with 0ms optimistic UI feedback.
 - **100% Offline Receipt OCR (`ReceiptScannerService`)**:
   - On-device text recognition using Google ML Kit.

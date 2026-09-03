@@ -137,7 +137,6 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && mounted) {
       _refreshTransactions();
-      SmsService.performAppLaunchCatchUpSync();
     }
   }
 

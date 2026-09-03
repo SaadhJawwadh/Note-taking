@@ -441,7 +441,7 @@ class SplitBillRepository {
         }
       } else {
         // User owes payer
-        if (bill.status != SplitStatus.settled) {
+        if (!bill.isUserSharePaid) {
           final key = bill.payerName.trim();
           balances[key] = (balances[key] ?? 0.0) - bill.userShare;
         }

@@ -121,25 +121,50 @@ class _SettleUpSheetState extends State<SettleUpSheet> {
             ),
           ),
           const SizedBox(height: AppLayout.spaceM),
-          CheckboxListTile(
-            value: _recordInLedger,
-            onChanged: (val) => setState(() => _recordInLedger = val ?? false),
-            title: Text(
-              isContactOwingUser
-                  ? 'Record as Income in Daily Operating Account'
-                  : 'Record as Expense in Daily Operating Account',
-              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+          if (widget.specificBill != null &&
+              !widget.specificBill!.isPayerUser &&
+              widget.specificParticipant != null &&
+              widget.specificParticipant!.contactName.trim().toLowerCase() != 'you') ...[
+            Container(
+              padding: const EdgeInsets.all(AppLayout.spaceS),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(AppLayout.radiusS),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline_rounded, size: 16, color: colorScheme.onSurfaceVariant),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Settlement between ${widget.contactName} and ${widget.specificBill!.payerName}. Recorded in Split tab only (no personal ledger entry).',
+                      style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            subtitle: Text(
-              isContactOwingUser
-                  ? 'Adds a +Rs. ${absAmount.toStringAsFixed(2).replaceAll('.00', '')} deposit entry to your ledger'
-                  : 'Adds a -Rs. ${absAmount.toStringAsFixed(2).replaceAll('.00', '')} payment entry to your ledger',
-              style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+          ] else ...[
+            CheckboxListTile(
+              value: _recordInLedger,
+              onChanged: (val) => setState(() => _recordInLedger = val ?? false),
+              title: Text(
+                isContactOwingUser
+                    ? 'Record as Income in Daily Operating Account'
+                    : 'Record as Expense in Daily Operating Account',
+                style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+              ),
+              subtitle: Text(
+                isContactOwingUser
+                    ? 'Adds a +Rs. ${absAmount.toStringAsFixed(2).replaceAll('.00', '')} deposit entry to your ledger'
+                    : 'Adds a -Rs. ${absAmount.toStringAsFixed(2).replaceAll('.00', '')} payment entry to your ledger',
+                style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+              ),
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
+              dense: true,
             ),
-            controlAffinity: ListTileControlAffinity.leading,
-            contentPadding: EdgeInsets.zero,
-            dense: true,
-          ),
+          ],
           const SizedBox(height: AppLayout.spaceM),
           if (widget.netAmount > 0) ...[
             OutlinedButton.icon(
@@ -203,8 +228,13 @@ class _SettleUpSheetState extends State<SettleUpSheet> {
         await splitProvider.settleAllForContact(widget.contactName);
       }
 
-      // 2. Optionally record in Daily Financial Ledger
-      if (_recordInLedger && absAmount > 0 && mounted) {
+      // 2. Optionally record in Daily Financial Ledger (only if involving user)
+      final isFriendSettlingWithFriend = widget.specificBill != null &&
+          !widget.specificBill!.isPayerUser &&
+          widget.specificParticipant != null &&
+          widget.specificParticipant!.contactName.trim().toLowerCase() != 'you';
+
+      if (!isFriendSettlingWithFriend && _recordInLedger && absAmount > 0 && mounted) {
         final txRepo = TransactionRepository.instance;
         final description = isContactOwingUser
             ? '${widget.contactName} - Split settlement'

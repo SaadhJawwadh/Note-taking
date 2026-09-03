@@ -79,6 +79,13 @@ class NoteMigrationService {
     return parsedNotes;
   }
 
+  @visibleForTesting
+  static Future<Note?> parseKeepJsonForTesting(String jsonStr, String fallbackFileName) =>
+      _parseKeepJsonString(jsonStr, fallbackFileName);
+
+  @visibleForTesting
+  static Future<List<Note>> parseZipForTesting(File file) => _parseZipFile(file);
+
   /// Extracts and parses notes from a Google Takeout or backup ZIP file,
   /// including any attached photos or images.
   static Future<List<Note>> _parseZipFile(File file) async {
@@ -86,7 +93,12 @@ class NoteMigrationService {
     try {
       final bytes = await file.readAsBytes();
       final archive = ZipDecoder().decodeBytes(bytes);
-      final targetDir = await getApplicationDocumentsDirectory();
+      Directory? targetDir;
+      try {
+        targetDir = await getApplicationDocumentsDirectory();
+      } catch (_) {
+        targetDir = Directory.systemTemp;
+      }
 
       // Index all image files in the ZIP archive
       final imageFiles = <String, ArchiveFile>{};
@@ -101,9 +113,10 @@ class NoteMigrationService {
 
       for (final archiveFile in archive) {
         if (!archiveFile.isFile) continue;
-        final name = archiveFile.name.toLowerCase();
+        final rawName = archiveFile.name;
+        final baseName = rawName.split('/').last.split('\\').last.toLowerCase();
 
-        if (name.endsWith('.json') && !name.contains('manifest') && !name.contains('takeout')) {
+        if (baseName.endsWith('.json') && !baseName.contains('manifest') && baseName != 'takeout.json') {
           try {
             final content = utf8.decode(archiveFile.content as List<int>);
             final note = await _parseKeepJsonString(
@@ -114,7 +127,7 @@ class NoteMigrationService {
             );
             if (note != null) notes.add(note);
           } catch (_) {}
-        } else if (name.endsWith('.md') || name.endsWith('.txt')) {
+        } else if (baseName.endsWith('.md') || baseName.endsWith('.txt')) {
           try {
             final content = utf8.decode(archiveFile.content as List<int>);
             final note = _parseMarkdownString(content, archiveFile.name);
@@ -132,7 +145,18 @@ class NoteMigrationService {
     try {
       final content = await file.readAsString();
       final fileName = file.uri.pathSegments.last;
-      return await _parseKeepJsonString(content, fileName);
+      Directory? targetDir;
+      try {
+        targetDir = await getApplicationDocumentsDirectory();
+      } catch (_) {
+        targetDir = Directory.systemTemp;
+      }
+      return await _parseKeepJsonString(
+        content,
+        fileName,
+        sourceDir: file.parent,
+        targetDir: targetDir,
+      );
     } catch (e) {
       debugPrint('[NoteMigrationService] Error parsing JSON file: $e');
       return null;
@@ -161,6 +185,7 @@ class NoteMigrationService {
     String jsonStr,
     String fallbackFileName, {
     Map<String, ArchiveFile>? imageFiles,
+    Directory? sourceDir,
     Directory? targetDir,
   }) async {
     try {
@@ -171,7 +196,8 @@ class NoteMigrationService {
       final hasText = data.containsKey('textContent');
       final hasList = data.containsKey('listContent');
       final hasTitle = data.containsKey('title');
-      if (!hasText && !hasList && !hasTitle) return null;
+      final hasAnnotations = data.containsKey('annotations');
+      if (!hasText && !hasList && !hasTitle && !hasAnnotations) return null;
 
       String title = (data['title'] as String?)?.trim() ?? '';
       if (title.isEmpty) {
@@ -213,21 +239,36 @@ class NoteMigrationService {
         noteColor = _keepColorMap[colorKey] ?? 0xFF252529;
       }
 
-      // Extract image attachment if present in ZIP archive
+      // Extract image attachment if present in ZIP archive or local extracted folder
       String? savedImagePath;
-      if (data['attachments'] is List && imageFiles != null && targetDir != null) {
+      if (data['attachments'] is List && targetDir != null) {
         for (final att in (data['attachments'] as List)) {
           if (att is Map && att['filePath'] != null) {
             final rawPath = att['filePath'].toString();
-            final attName = rawPath.split('/').last.split('\\').last.toLowerCase();
-            final matchedFile = imageFiles[attName];
-            if (matchedFile != null) {
-              final ext = attName.contains('.') ? '.${attName.split('.').last}' : '.jpg';
-              final outPath = '${targetDir.path}/keep_att_${const Uuid().v4()}$ext';
-              final outFile = File(outPath);
-              await outFile.writeAsBytes(matchedFile.content as List<int>);
-              savedImagePath = outPath;
-              break;
+            final attName = rawPath.split('/').last.split('\\').last;
+            final ext = attName.contains('.') ? '.${attName.split('.').last}' : '.jpg';
+
+            // 1. Check ZIP archive entries first
+            if (imageFiles != null) {
+              final matchedFile = imageFiles[attName.toLowerCase()];
+              if (matchedFile != null) {
+                final outPath = '${targetDir.path}/keep_att_${const Uuid().v4()}$ext';
+                final outFile = File(outPath);
+                await outFile.writeAsBytes(matchedFile.content as List<int>);
+                savedImagePath = outPath;
+                break;
+              }
+            }
+
+            // 2. Check local source directory from extracted Takeout folder
+            if (sourceDir != null) {
+              final localFile = File('${sourceDir.path}/$attName');
+              if (await localFile.exists()) {
+                final outPath = '${targetDir.path}/keep_att_${const Uuid().v4()}$ext';
+                await localFile.copy(outPath);
+                savedImagePath = outPath;
+                break;
+              }
             }
           }
         }
@@ -258,9 +299,51 @@ class NoteMigrationService {
             }
           }
         }
+
+        // Also append annotations (web links) if present on checklist note
+        if (data['annotations'] is List && (data['annotations'] as List).isNotEmpty) {
+          for (final ann in (data['annotations'] as List)) {
+            if (ann is Map) {
+              final url = (ann['url'] as String?)?.trim() ?? '';
+              final annTitle = (ann['title'] as String?)?.trim() ?? '';
+              if (url.isNotEmpty) {
+                final label = annTitle.isNotEmpty ? annTitle : url;
+                delta.insert('\n$label: $url\n');
+              }
+            }
+          }
+        }
       } else {
-        // Plain text note
-        final textContent = (data['textContent'] as String?) ?? '';
+        // Plain text note / Web Bookmark
+        String textContent = (data['textContent'] as String?) ?? '';
+
+        // Extract web links / bookmarks from Keep annotations if present
+        if (data['annotations'] is List && (data['annotations'] as List).isNotEmpty) {
+          final buffer = StringBuffer();
+          for (final ann in (data['annotations'] as List)) {
+            if (ann is Map) {
+              final url = (ann['url'] as String?)?.trim() ?? '';
+              final annTitle = (ann['title'] as String?)?.trim() ?? '';
+              final description = (ann['description'] as String?)?.trim() ?? '';
+              if (url.isNotEmpty) {
+                if (buffer.isNotEmpty) buffer.writeln();
+                final displayTitle = annTitle.isNotEmpty ? annTitle : url;
+                buffer.writeln('[$displayTitle]($url)');
+                if (description.isNotEmpty && description != annTitle) {
+                  buffer.writeln(description);
+                }
+              }
+            }
+          }
+          if (buffer.isNotEmpty) {
+            if (textContent.trim().isNotEmpty) {
+              textContent = '$textContent\n\n$buffer';
+            } else {
+              textContent = buffer.toString();
+            }
+          }
+        }
+
         if (textContent.isNotEmpty) {
           delta = RichTextUtils.markdownToDelta(textContent);
         } else {

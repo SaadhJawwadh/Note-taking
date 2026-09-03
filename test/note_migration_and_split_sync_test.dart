@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:archive/archive.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:note_taking_app/features/notes/services/note_migration_service.dart';
 import 'package:note_taking_app/features/finances/data/models/split_bill_model.dart';
 import 'package:note_taking_app/features/finances/services/split_share_service.dart';
 import 'package:note_taking_app/screens/app_lock_screen.dart';
@@ -70,6 +72,65 @@ void main() {
       // Verify NoteMigrationService Keep color map mapping
       expect(keepJson.contains('"color":"GREEN"'), isTrue);
       expect(keepJson.contains('Organic Apples'), isTrue);
+    });
+
+    test('Parses Keep note with annotations web link and tags without textContent', () async {
+      final keepJson = jsonEncode({
+        "color": "DEFAULT",
+        "isTrashed": false,
+        "isPinned": false,
+        "isArchived": false,
+        "textContent": "",
+        "title": "#Reads",
+        "labels": [
+          {"name": "Reads"}
+        ],
+        "annotations": [
+          {
+            "description": "Essential reading for product designers",
+            "source": "WEBLINK",
+            "title": "Design Systems Handbook",
+            "url": "https://designbetter.co/design-systems-handbook"
+          }
+        ]
+      });
+
+      final note = await NoteMigrationService.parseKeepJsonForTesting(keepJson, 'Reads.json');
+      expect(note, isNotNull);
+      expect(note!.title, '#Reads');
+      expect(note.tags, contains('Reads'));
+      expect(note.content.contains('Design Systems Handbook'), isTrue);
+      expect(note.content.contains('https://designbetter.co'), isTrue);
+    });
+
+    test('Parses Keep notes inside Takeout/Keep/ directory from ZIP archive', () async {
+      final keepJson = jsonEncode({
+        "color": "YELLOW",
+        "title": "Quick Idea",
+        "textContent": "Remember to buy milk",
+        "labels": [
+          {"name": "Tasks"}
+        ]
+      });
+
+      final archive = Archive();
+      final bytes = utf8.encode(keepJson);
+      // Simulating genuine Google Takeout folder hierarchy
+      archive.addFile(ArchiveFile('Takeout/Keep/Quick Idea.json', bytes.length, bytes));
+      archive.addFile(ArchiveFile('Takeout/archive_browser.html', 10, [1, 2, 3]));
+
+      final zipData = ZipEncoder().encode(archive);
+      final tempFile = File('${Directory.systemTemp.path}/takeout_test_${DateTime.now().millisecondsSinceEpoch}.zip');
+      await tempFile.writeAsBytes(zipData);
+
+      final notes = await NoteMigrationService.parseZipForTesting(tempFile);
+      expect(notes.length, 1);
+      expect(notes.first.title, 'Quick Idea');
+      expect(notes.first.tags, contains('Tasks'));
+
+      if (await tempFile.exists()) {
+        await tempFile.delete();
+      }
     });
 
     test('SettingsProvider moveCompletedChecklistsToBottom toggle persistence', () async {

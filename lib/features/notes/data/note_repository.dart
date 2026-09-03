@@ -218,6 +218,22 @@ class NoteRepository {
     return map;
   }
 
+  Future<int> getArchivedCount() async {
+    final db = await _db;
+    final count = Sqflite.firstIntValue(await db.rawQuery(
+      'SELECT COUNT(*) FROM ${TableNames.notes} WHERE ${NoteFields.deletedAt} IS NULL AND ${NoteFields.isArchived} = 1',
+    ));
+    return count ?? 0;
+  }
+
+  Future<int> getTrashCount() async {
+    final db = await _db;
+    final count = Sqflite.firstIntValue(await db.rawQuery(
+      'SELECT COUNT(*) FROM ${TableNames.notes} WHERE ${NoteFields.deletedAt} IS NOT NULL',
+    ));
+    return count ?? 0;
+  }
+
   Future<void> bulkSetPinned(List<String> ids, bool pinned) async {
     final db = await _db;
     final batch = db.batch();
