@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.30.0 - 2026-09-04
+## 2.30.1 - 2026-09-05
 
 ### 🌟 What's New
 - **Story Card Studio**: Transform notes or selected text into high-resolution social media cards formatted for 9:16 Stories, 1:1 Squares, and 4:5 Portraits with direct 1-tap sharing.

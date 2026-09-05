@@ -28,8 +28,8 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
-                  version: 'v2.30.0',
-                  date: 'September 4, 2026',
+                  version: 'v2.30.1',
+                  date: 'September 5, 2026',
                   isLatest: true,
                   changes: [
                     _ChangelogGroup(
