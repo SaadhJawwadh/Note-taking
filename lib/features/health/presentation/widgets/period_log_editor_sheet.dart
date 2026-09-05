@@ -229,6 +229,7 @@ class _PeriodLogEditorSheetState extends State<PeriodLogEditorSheet> {
             Text('Flow Intensity', style: theme.textTheme.titleMedium),
             const SizedBox(height: 12),
             SegmentedButton<String>(
+              showSelectedIcon: false,
               segments: const [
                 ButtonSegment(value: 'Spotting', label: Text('Spotting')),
                 ButtonSegment(value: 'Light', label: Text('Light')),
@@ -258,6 +259,7 @@ class _PeriodLogEditorSheetState extends State<PeriodLogEditorSheet> {
               children: _predefinedSymptoms.map((symptom) {
                 final isSelected = _tempSymptoms.contains(symptom);
                 return FilterChip(
+                  showCheckmark: false,
                   label: Text(symptom),
                   selected: isSelected,
                   onSelected: (selected) {

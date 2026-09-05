@@ -759,6 +759,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                   children: [
                     // Transaction Type Segmented Button
                     SegmentedButton<bool>(
+                      showSelectedIcon: false,
                       segments: const [
                         ButtonSegment(
                           value: true,
@@ -874,8 +875,15 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                       children: [
                         ...TransactionCategory.allNames.map((cat) {
                           final catColor = TransactionCategory.colorFor(cat);
+                          final catIcon = TransactionCategory.iconFor(cat);
                           final selected = _category == cat;
                           return FilterChip(
+                            showCheckmark: false,
+                            avatar: Icon(
+                              catIcon,
+                              size: 16,
+                              color: selected ? catColor : colorScheme.onSurfaceVariant,
+                            ),
                             label: Text(cat),
                             selected: selected,
                             onSelected: (_) {
@@ -883,14 +891,13 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                               setState(() => _category = cat);
                             },
                             selectedColor: catColor.withValues(alpha: 0.2),
-                            checkmarkColor: catColor,
                             labelStyle: TextStyle(
                               color: selected ? catColor : colorScheme.onSurfaceVariant,
                               fontWeight:
                                   selected ? FontWeight.w600 : FontWeight.normal,
                             ),
                             side: BorderSide(
-                              color: selected ? catColor : colorScheme.outline,
+                              color: selected ? catColor : colorScheme.outline.withValues(alpha: 0.5),
                               width: selected ? 1.5 : 0.5,
                             ),
                             shape: RoundedRectangleBorder(
@@ -948,6 +955,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                       ),
                       const SizedBox(height: 8),
                       SegmentedButton<String>(
+                        showSelectedIcon: false,
                         segments: [
                           ButtonSegment(
                             value: AccountType.daily,
@@ -1008,6 +1016,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                     ),
                     const SizedBox(height: 8),
                     SegmentedButton<RecurringFrequency?>(
+                      showSelectedIcon: false,
                       segments: const [
                         ButtonSegment(value: null, label: Text('Once')),
                         ButtonSegment(

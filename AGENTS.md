@@ -124,6 +124,7 @@ lib/
 * **No Legacy M2 Dropdowns**: Never use `DropdownButton` or `DropdownButtonFormField`.
 * **Short Option Sets (2–4 choices)**: Use `SegmentedButton<T>` with compact visual density and haptic feedback.
 * **Large Datasets (Categories)**: Use dynamic `FilterChip` clouds sourced strictly from `TransactionCategory.allNames` with authentic icons (`TransactionCategory.iconFor(c)`) and color backgrounds (`TransactionCategory.colorFor(c)`).
+* **Unblocked Chip Avatars**: All selection chips (`FilterChip`, `ChoiceChip`) with leading avatars or icons MUST set `showCheckmark: false`. Never allow Flutter's default checkmark to overlay, squash, or conceal category, account, or studio icons. Highlight active selections cleanly with dynamic theme container fills, prominent borders, and `colorScheme.primary` icon tints.
 * **Chevron Modernization**: Standardize all dropdown indicators across forms, date selectors, and scope pills on `Icons.keyboard_arrow_down_rounded`.
 
 ### 🏛️ Invariant 14: Top App Bar Symmetry, Tonal Scope Pills, Search Integration & Action Order

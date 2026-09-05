@@ -82,6 +82,8 @@ class PeriodCalendarCard extends StatelessWidget {
           titleCentered: true,
           formatButtonVisible: false,
           titleTextStyle: theme.textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold),
+          leftChevronIcon: Icon(Icons.chevron_left_rounded, color: colorScheme.onSurfaceVariant),
+          rightChevronIcon: Icon(Icons.chevron_right_rounded, color: colorScheme.onSurfaceVariant),
         ),
         calendarBuilders: CalendarBuilders(
           defaultBuilder: (context, day, focused) {

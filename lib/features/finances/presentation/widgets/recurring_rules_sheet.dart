@@ -117,6 +117,7 @@ class _RecurringRulesSheetState extends State<RecurringRulesSheet> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   SegmentedButton<bool>(
+                    showSelectedIcon: false,
                     segments: const [
                       ButtonSegment(value: true, label: Text('Expense'), icon: Icon(Icons.arrow_upward)),
                       ButtonSegment(value: false, label: Text('Income'), icon: Icon(Icons.arrow_downward)),
@@ -302,6 +303,7 @@ class _RecurringRulesSheetState extends State<RecurringRulesSheet> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   SegmentedButton<bool>(
+                    showSelectedIcon: false,
                     segments: const [
                       ButtonSegment(value: true, label: Text('Expense'), icon: Icon(Icons.arrow_upward)),
                       ButtonSegment(value: false, label: Text('Income'), icon: Icon(Icons.arrow_downward)),

@@ -38,6 +38,7 @@ import '../../../../widgets/bouncing_widget.dart';
 import '../../../../widgets/editor/editor_table_dialog.dart';
 import '../../../../widgets/editor/editor_note_details_sheet.dart';
 import '../widgets/story_card_creator_sheet.dart';
+import '../../../story_cards/story_cards.dart';
 import '../../../../core/ui/app_bottom_sheet.dart';
 import '../../../../core/ui/app_snack_bar.dart';
 
@@ -1478,10 +1479,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       }
     }
 
-    StoryCardCreatorSheet.show(
+    final category = _isCustomFolder
+        ? _folder
+        : (widget.note?.tags.isNotEmpty == true ? widget.note!.tags.first : 'Note');
+
+    StoryCardStudioSheet.show(
       context: context,
       initialText: textToExport,
       noteTitle: title,
+      category: category,
       noteColorValue: color,
       noteDate: _dateCreated,
     );
@@ -2790,7 +2796,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                           ),
                                         if (_searchOffsets.isNotEmpty) ...[
                                           IconButton(
-                                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                                            visualDensity: VisualDensity.compact,
                                             padding: EdgeInsets.zero,
                                             icon: const Icon(Icons.keyboard_arrow_up_rounded, size: 20),
                                             color: theme.colorScheme.onSurfaceVariant,
@@ -2798,7 +2805,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                             onPressed: _previousSearchMatch,
                                           ),
                                           IconButton(
-                                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                                            visualDensity: VisualDensity.compact,
                                             padding: EdgeInsets.zero,
                                             icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
                                             color: theme.colorScheme.onSurfaceVariant,
@@ -2808,7 +2816,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                         ],
                                         if (_searchController.text.isNotEmpty)
                                           IconButton(
-                                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                                            visualDensity: VisualDensity.compact,
                                             padding: EdgeInsets.zero,
                                             icon: const Icon(Icons.close_rounded, size: 20),
                                             color: theme.colorScheme.onSurfaceVariant,
@@ -3217,7 +3226,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                                           child: IconButton(
                                                             icon: const Icon(Icons.restart_alt_rounded, size: 18),
                                                             padding: EdgeInsets.zero,
-                                                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                                            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                                                            visualDensity: VisualDensity.compact,
                                                             color: noteScheme.onSurfaceVariant,
                                                             onPressed: () async {
                                                               await HapticFeedback.mediumImpact();
@@ -3247,7 +3257,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                                           child: IconButton(
                                                             icon: const Icon(Icons.delete_sweep_outlined, size: 18),
                                                             padding: EdgeInsets.zero,
-                                                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                                            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                                                            visualDensity: VisualDensity.compact,
                                                             color: theme.colorScheme.error,
                                                             onPressed: () async {
                                                               await HapticFeedback.mediumImpact();

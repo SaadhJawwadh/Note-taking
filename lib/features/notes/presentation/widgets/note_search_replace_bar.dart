@@ -129,7 +129,8 @@ class NoteSearchReplaceBar extends StatelessWidget {
               ),
             if (searchOffsets.isNotEmpty) ...[
               IconButton(
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
                 icon: const Icon(Icons.keyboard_arrow_up_rounded, size: 20),
                 color: colorScheme.onSurfaceVariant,
@@ -137,7 +138,8 @@ class NoteSearchReplaceBar extends StatelessWidget {
                 onPressed: onPreviousMatch,
               ),
               IconButton(
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
                 icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
                 color: colorScheme.onSurfaceVariant,
@@ -147,7 +149,8 @@ class NoteSearchReplaceBar extends StatelessWidget {
             ],
             if (searchController.text.isNotEmpty)
               IconButton(
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
                 icon: const Icon(Icons.close_rounded, size: 20),
                 color: colorScheme.onSurfaceVariant,

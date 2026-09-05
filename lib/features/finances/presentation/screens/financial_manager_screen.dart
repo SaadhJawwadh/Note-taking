@@ -1608,24 +1608,24 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
                 child: _buildSmsSyncProgressBanner(colorScheme, textTheme, isDark),
               ),
 
-      // ── Hero summary card (net + income/expense breakdown) ────────
             // ── Hero summary card (net + income/expense breakdown) ────────
-            SliverToBoxAdapter(
-              child: AnimationConfiguration.staggeredList(
-                position: 2,
-                duration: const Duration(milliseconds: 220),
-                child: SlideAnimation(
-                  verticalOffset: 24.0,
-                  child: FadeInAnimation(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                      child: _buildHeroSummaryCard(
-                          colorScheme, textTheme, currency),
+            if (_selectedTab != 'Split Bills')
+              SliverToBoxAdapter(
+                child: AnimationConfiguration.staggeredList(
+                  position: 2,
+                  duration: const Duration(milliseconds: 220),
+                  child: SlideAnimation(
+                    verticalOffset: 24.0,
+                    child: FadeInAnimation(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                        child: _buildHeroSummaryCard(
+                            colorScheme, textTheme, currency),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
 
             // ── Tab selector ──────────────────────────────────────────────
             SliverToBoxAdapter(
@@ -1660,12 +1660,14 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
                           currency: currency,
                           forecast: forecast,
                           onTapDetailsWithPage: (page) {
+                            HapticFeedback.lightImpact();
                             setState(() {
                               _selectedTab = 'Budgets';
                               _analyticsSubView = (page == 2) ? 1 : 0;
                             });
                           },
                           onTapDetails: () {
+                            HapticFeedback.lightImpact();
                             setState(() {
                               _selectedTab = 'Budgets';
                               _analyticsSubView = 0;

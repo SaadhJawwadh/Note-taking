@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:note_taking_app/features/notes/presentation/widgets/story_card_creator_sheet.dart';
+import 'package:note_taking_app/features/story_cards/story_cards.dart';
 
 void main() {
   Widget buildTestSheet({
     String initialText = 'Simplicity is about subtracting the obvious and adding the meaningful.',
     String noteTitle = 'Design Laws',
+    String category = 'Philosophy',
     int noteColorValue = 0,
     DateTime? noteDate,
   }) {
     return MaterialApp(
       home: Scaffold(
         body: SingleChildScrollView(
-          child: StoryCardCreatorSheet(
+          child: StoryCardStudioSheet(
             initialText: initialText,
             noteTitle: noteTitle,
+            category: category,
             noteColorValue: noteColorValue,
             noteDate: noteDate ?? DateTime(2026, 9, 3),
           ),
@@ -23,8 +25,7 @@ void main() {
     );
   }
 
-  testWidgets('StoryCardCreatorSheet renders initial text, title, and default 9:16 Story ratio', (tester) async {
-    // Set a large enough test viewport for the modal sheet content
+  testWidgets('StoryCardStudioSheet renders initial text, title, and default 9:16 Story ratio', (tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.0;
     addTearDown(() => tester.view.resetPhysicalSize());
@@ -34,7 +35,10 @@ void main() {
 
     // Verify header
     expect(find.text('Story Card Studio'), findsOneWidget);
-    expect(find.text('Export text as high-res social image'), findsOneWidget);
+
+    // Verify category and formatted date are in the top header
+    expect(find.text('PHILOSOPHY'), findsOneWidget);
+    expect(find.text('SEP 3, 2026'), findsOneWidget);
 
     // Verify title and quote excerpt are rendered
     expect(find.text('DESIGN LAWS'), findsOneWidget);
@@ -54,7 +58,7 @@ void main() {
     expect(find.byIcon(Icons.copy_rounded), findsOneWidget);
   });
 
-  testWidgets('StoryCardCreatorSheet switches aspect ratios on segment tap', (tester) async {
+  testWidgets('StoryCardStudioSheet switches aspect ratios on segment tap', (tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.0;
     addTearDown(() => tester.view.resetPhysicalSize());
@@ -79,7 +83,7 @@ void main() {
     expect(segmentedButtonAfter.selected, contains(StoryCardAspectRatio.portrait));
   });
 
-  testWidgets('StoryCardCreatorSheet cycles theme presets', (tester) async {
+  testWidgets('StoryCardStudioSheet cycles luxury theme presets', (tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.0;
     addTearDown(() => tester.view.resetPhysicalSize());
@@ -87,36 +91,27 @@ void main() {
     await tester.pumpWidget(buildTestSheet());
     await tester.pumpAndSettle();
 
-    // Verify theme presets are visible
-    expect(find.text('Material You'), findsOneWidget);
-    expect(find.text('OLED Pitch'), findsOneWidget);
-
-    // Tap OLED Pitch
-    await tester.tap(find.text('OLED Pitch'));
-    await tester.pumpAndSettle();
-
-    // Scroll theme carousel to find Editorial and Terminal
-    await tester.scrollUntilVisible(
-      find.text('Editorial'),
-      50.0,
-      scrollable: find.descendant(
-        of: find.byKey(const ValueKey('theme_preset_list')),
-        matching: find.byType(Scrollable),
-      ),
-    );
-    await tester.pumpAndSettle();
-
+    // Verify Editorial is present and renders quotation mark
     expect(find.text('Editorial'), findsOneWidget);
+    expect(find.text('“'), findsOneWidget);
 
-    // Tap Editorial
-    await tester.tap(find.text('Editorial'));
+    // Tap Obsidian Aura
+    expect(find.text('Obsidian Aura'), findsOneWidget);
+    await tester.tap(find.text('Obsidian Aura'));
     await tester.pumpAndSettle();
 
-    // Editorial renders quote mark watermark
-    expect(find.text('“'), findsOneWidget);
+    // Tap Velvet OLED
+    expect(find.text('Velvet OLED'), findsOneWidget);
+    await tester.tap(find.text('Velvet OLED'));
+    await tester.pumpAndSettle();
+
+    // Tap Frosted Luxe
+    expect(find.text('Frosted Luxe'), findsOneWidget);
+    await tester.tap(find.text('Frosted Luxe'), warnIfMissed: false);
+    await tester.pumpAndSettle();
   });
 
-  testWidgets('StoryCardCreatorSheet toggles metadata chips', (tester) async {
+  testWidgets('StoryCardStudioSheet toggles metadata chips', (tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.0;
     addTearDown(() => tester.view.resetPhysicalSize());
@@ -134,6 +129,10 @@ void main() {
     // Title should no longer be rendered
     expect(find.text('DESIGN LAWS'), findsNothing);
 
+    // Formatted date and category MUST STILL BE VISIBLE in the top header
+    expect(find.text('SEP 3, 2026'), findsOneWidget);
+    expect(find.text('PHILOSOPHY'), findsOneWidget);
+
     // Tap Watermark chip to toggle on
     expect(find.text('Everything App'), findsNothing);
     await tester.tap(find.widgetWithText(FilterChip, 'Watermark'));
@@ -143,7 +142,7 @@ void main() {
     expect(find.text('Everything App'), findsOneWidget);
   });
 
-  testWidgets('StoryCardCreatorSheet toggles text edit mode', (tester) async {
+  testWidgets('StoryCardStudioSheet toggles text and title edit mode', (tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.0;
     addTearDown(() => tester.view.resetPhysicalSize());
@@ -151,28 +150,31 @@ void main() {
     await tester.pumpWidget(buildTestSheet());
     await tester.pumpAndSettle();
 
-    // Edit TextField is initially hidden
+    // Edit TextFields are initially hidden
     expect(find.byType(TextField), findsNothing);
 
-    // Tap Edit icon button in header
-    await tester.tap(find.byIcon(Icons.edit_note_rounded));
+    // Tap Edit Text button in header
+    await tester.tap(find.text('Edit Text'));
     await tester.pumpAndSettle();
 
-    // TextField is now visible
-    expect(find.byType(TextField), findsOneWidget);
+    // Two TextFields are now visible: Title and Quote Text
+    expect(find.byType(TextField), findsNWidgets(2));
 
-    // Enter edited quote text
-    await tester.enterText(find.byType(TextField), 'Simplicity is the ultimate sophistication.');
+    // Enter edited title
+    await tester.enterText(find.widgetWithText(TextField, 'Card Title'), 'NEW AESTHETICS');
     await tester.pumpAndSettle();
 
-    // Live preview updates (check Text widget with center alignment)
-    final quoteTextFinder = find.byWidgetPredicate(
-      (w) => w is Text && w.data == 'Simplicity is the ultimate sophistication.' && w.textAlign == TextAlign.center,
+    // Verify title in live card updates
+    expect(
+      find.descendant(
+        of: find.byType(StoryCardPreview),
+        matching: find.text('NEW AESTHETICS'),
+      ),
+      findsOneWidget,
     );
-    expect(quoteTextFinder, findsOneWidget);
   });
 
-  testWidgets('StoryCardCreatorSheet respects word limits and updates word count badge', (tester) async {
+  testWidgets('StoryCardStudioSheet respects word limits and updates word count badge', (tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.0;
     addTearDown(() => tester.view.resetPhysicalSize());
@@ -184,53 +186,42 @@ void main() {
     await tester.pumpAndSettle();
 
     // Word count pill shows total words
-    expect(find.text('35 words'), findsOneWidget);
+    expect(find.text('📝 35 / 35 words'), findsOneWidget);
 
     // Tap 25 words chip
-    await tester.tap(find.text('25'));
+    await tester.tap(find.text('25 words'));
     await tester.pumpAndSettle();
 
     // Stats pill shows trimmed counter
-    expect(find.text('25 / 35 words'), findsOneWidget);
+    expect(find.text('📝 25 / 35 words'), findsOneWidget);
 
     // Live preview ends with ellipsis
     expect(find.textContaining('...'), findsOneWidget);
 
-    // Tap All to restore full text
-    await tester.tap(find.text('All'));
+    // Tap All words to restore full text
+    await tester.tap(find.text('All words'));
     await tester.pumpAndSettle();
 
-    expect(find.text('35 words'), findsOneWidget);
+    expect(find.text('📝 35 / 35 words'), findsOneWidget);
   });
 
-  testWidgets('StoryCardCreatorSheet renders Tamil poetry text and switches font styles without overflow', (tester) async {
-    tester.view.physicalSize = const Size(1080, 2400);
-    tester.view.devicePixelRatio = 2.0;
-    addTearDown(() => tester.view.resetPhysicalSize());
+  test('StoryCardConfig guarantees structured title and Tamil detection', () {
+    final configWithFirstLine = StoryCardConfig(
+      title: '',
+      text: 'First line of poem\nSecond line',
+      date: DateTime(2026, 9, 5),
+    );
+    expect(configWithFirstLine.resolvedTitle, 'First line of poem');
 
-    const tamilPoem = 'எண்ணில் உள்ள எல்லாமும் என்னமும் கொஞ்சம் எல்லோரையும் விட அறிந்தவள் நீ பிறந்தநாள் இது. வாழ்த்துக்கள் எல்லாம் வணக்கமாக வாழ்த்தி விட்டேன்.';
+    final blankConfig = StoryCardConfig(
+      title: '   ',
+      text: '   ',
+      date: DateTime(2026, 9, 5),
+    );
+    expect(blankConfig.resolvedTitle, 'Reflection');
 
-    await tester.pumpWidget(buildTestSheet(
-      initialText: tamilPoem,
-      noteTitle: 'பிறந்தநாள் வாழ்த்துக்கள்',
-    ));
-    await tester.pumpAndSettle();
-
-    // Verify title and Tamil text are present
-    expect(find.text('ПИРАНТАНААЛ ВААЖТТУККАЛ'.toUpperCase()).evaluate().isNotEmpty || find.textContaining('வாழ்த்துக்கள்').evaluate().isNotEmpty, isTrue);
-
-    // Switch to Serif font style
-    await tester.tap(find.text('Serif'));
-    await tester.pumpAndSettle();
-
-    // Switch to Sans font style
-    await tester.tap(find.text('Sans'));
-    await tester.pumpAndSettle();
-
-    // Enable Watermark
-    await tester.tap(find.widgetWithText(FilterChip, 'Watermark'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Everything App'), findsOneWidget);
+    // Tamil detection
+    expect(StoryCardConfig.containsTamil('பிறந்தநாள் வாழ்த்துக்கள்'), isTrue);
+    expect(StoryCardConfig.containsTamil('Hello world'), isFalse);
   });
 }

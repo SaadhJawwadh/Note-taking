@@ -43,6 +43,8 @@ class _MinimalChartDeckState extends State<MinimalChartDeck> {
   late final PageController _pageController;
   Timer? _autoCycleTimer;
   bool _userInteracted = false;
+  int? _lastTouchedSpotIndex;
+  int? _lastTouchedPieIndex;
 
   bool get _hasBudget =>
       widget.forecast != null && widget.forecast!.totalBudget > 0;
@@ -479,6 +481,20 @@ class _MinimalChartDeckState extends State<MinimalChartDeck> {
           LineChartData(
             lineTouchData: LineTouchData(
               enabled: true,
+              touchCallback: (FlTouchEvent event, LineTouchResponse? touchResponse) {
+                if (!event.isInterestedForInteractions ||
+                    touchResponse == null ||
+                    touchResponse.lineBarSpots == null ||
+                    touchResponse.lineBarSpots!.isEmpty) {
+                  _lastTouchedSpotIndex = null;
+                  return;
+                }
+                final spotIndex = touchResponse.lineBarSpots!.first.spotIndex;
+                if (_lastTouchedSpotIndex != spotIndex) {
+                  _lastTouchedSpotIndex = spotIndex;
+                  HapticFeedback.selectionClick();
+                }
+              },
               touchTooltipData: LineTouchTooltipData(
                 showOnTopOfTheChartBoxArea: true,
                 getTooltipColor: (_) => colorScheme.surfaceContainerHighest,
@@ -670,6 +686,25 @@ class _MinimalChartDeckState extends State<MinimalChartDeck> {
               children: [
                 PieChart(
                   PieChartData(
+                    pieTouchData: PieTouchData(
+                      touchCallback: (FlTouchEvent event, pieTouchResponse) {
+                        if (!event.isInterestedForInteractions ||
+                            pieTouchResponse == null ||
+                            pieTouchResponse.touchedSection == null) {
+                          _lastTouchedPieIndex = null;
+                          return;
+                        }
+                        final idx = pieTouchResponse.touchedSection!.touchedSectionIndex;
+                        if (idx >= 0 && idx < sorted.length) {
+                          if (_lastTouchedPieIndex != idx) {
+                            _lastTouchedPieIndex = idx;
+                            HapticFeedback.selectionClick();
+                          }
+                        } else {
+                          _lastTouchedPieIndex = null;
+                        }
+                      },
+                    ),
                     sectionsSpace: 2,
                     centerSpaceRadius: 30,
                     sections: sorted.map((entry) {

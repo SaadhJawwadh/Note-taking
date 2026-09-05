@@ -305,6 +305,7 @@ class SettingsHeroCard extends StatelessWidget {
                       SizedBox(
                         width: double.infinity,
                         child: SegmentedButton<ThemeMode>(
+                          showSelectedIcon: false,
                           segments: const [
                             ButtonSegment(
                               value: ThemeMode.system,
@@ -705,6 +706,7 @@ class SettingsSegmentedTile<T> extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: SegmentedButton<T>(
+              showSelectedIcon: false,
               segments: segments,
               selected: {selectedValue},
               onSelectionChanged: (Set<T> newSelection) {

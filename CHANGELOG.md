@@ -10,9 +10,13 @@
 ### 🚀 Improvements
 - **Centered App Logo Watermark**: Replaced generic text watermark with an authentic, centered micro-pill badge featuring the monochrome app emblem.
 - **Seamless Theme Presets**: Editorial Serif warm paper theme, OLED Pitch Black, Note Tint, and Material You Dynamic themes.
+- **Tactile Chart & Calendar Scrubbing**: Haptic clicks when scrubbing spend trend points, category donut slices, and selecting cycle calendar days.
+- **Universal Selection Controls**: Cleaned up checkmark glyphs across Theme Mode, Transaction Type, and Account Buckets to preserve authentic icons.
 
 ### 🐛 Fixes
 - **Resilient Sheet Layout**: Wrapped bottom sheet and control groups in fluid scrolling to completely eliminate layout overflows during text editing or word limits.
+- **Split Bills View Clutter**: Unified hero cards on the Split Bills tab, removing redundant personal cash flow card stacking.
+- **Touch Target Bounds**: Upgraded P2P sync and note editor navigation micro-buttons to standard 48x48dp hit targets.
 
 ## 2.29.0 - 2026-09-03
 

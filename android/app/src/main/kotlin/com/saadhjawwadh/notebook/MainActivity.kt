@@ -14,6 +14,13 @@ import android.content.BroadcastReceiver
 import android.os.Bundle
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
+import android.content.ContentValues
+import android.provider.MediaStore
+import android.content.ClipboardManager
+import android.content.ClipData
+import androidx.core.content.FileProvider
+import java.io.File
+import java.io.FileOutputStream
 
 class MainActivity: FlutterFragmentActivity() {
     private val CHANNEL = "com.saadhjawwadh.notebook/device_lock"
@@ -109,6 +116,83 @@ class MainActivity: FlutterFragmentActivity() {
                 "getPendingSharedText" -> {
                     result.success(pendingSharedText)
                     pendingSharedText = null
+                }
+                else -> {
+                    result.notImplemented()
+                }
+            }
+        }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.saadhjawwadh.notebook/story_media").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "saveImageToGallery" -> {
+                    val bytes = call.argument<ByteArray>("bytes")
+                    val filename = call.argument<String>("filename") ?: "story_${System.currentTimeMillis()}.png"
+                    if (bytes == null) {
+                        result.error("INVALID_ARGS", "Image bytes cannot be null", null)
+                        return@setMethodCallHandler
+                    }
+                    try {
+                        val resolver = contentResolver
+                        val contentValues = ContentValues().apply {
+                            put(MediaStore.Images.Media.DISPLAY_NAME, filename)
+                            put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/EverythingApp")
+                                put(MediaStore.Images.Media.IS_PENDING, 1)
+                            }
+                        }
+                        val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+                        if (uri != null) {
+                            resolver.openOutputStream(uri)?.use { os ->
+                                os.write(bytes)
+                                os.flush()
+                            }
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                contentValues.clear()
+                                contentValues.put(MediaStore.Images.Media.IS_PENDING, 0)
+                                resolver.update(uri, contentValues, null, null)
+                            }
+                            result.success(mapOf(
+                                "success" to true,
+                                "uri" to uri.toString(),
+                                "path" to "Pictures/EverythingApp/$filename"
+                            ))
+                        } else {
+                            result.error("SAVE_FAILED", "Failed to create MediaStore entry", null)
+                        }
+                    } catch (e: Exception) {
+                        result.error("SAVE_FAILED", e.localizedMessage, null)
+                    }
+                }
+                "copyImageToClipboard" -> {
+                    val bytes = call.argument<ByteArray>("bytes")
+                    val filename = call.argument<String>("filename") ?: "story_clip_${System.currentTimeMillis()}.png"
+                    if (bytes == null) {
+                        result.error("INVALID_ARGS", "Image bytes cannot be null", null)
+                        return@setMethodCallHandler
+                    }
+                    try {
+                        val cardDir = File(cacheDir, "story_cards")
+                        if (!cardDir.exists()) cardDir.mkdirs()
+                        val file = File(cardDir, filename)
+                        FileOutputStream(file).use { fos ->
+                            fos.write(bytes)
+                            fos.flush()
+                        }
+                        val uri = FileProvider.getUriForFile(
+                            this@MainActivity,
+                            "${applicationContext.packageName}.story_provider",
+                            file
+                        )
+                        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val clip = ClipData.newUri(contentResolver, "Story Card", uri)
+                        grantUriPermission(packageName, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        clipboard.setPrimaryClip(clip)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.error("COPY_FAILED", e.localizedMessage, null)
+                    }
                 }
                 else -> {
                     result.notImplemented()

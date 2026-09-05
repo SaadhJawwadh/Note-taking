@@ -514,12 +514,14 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> with WidgetsB
                             selectedDay: _selectedDay,
                             provider: provider,
                             onDaySelected: (selected, focused) {
+                              HapticFeedback.selectionClick();
                               setState(() {
                                 _selectedDay = selected;
                                 _focusedDay = focused;
                               });
                             },
                             onPageChanged: (focused) {
+                              HapticFeedback.selectionClick();
                               setState(() {
                                 _focusedDay = focused;
                               });

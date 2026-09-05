@@ -207,6 +207,7 @@ class _TeachSmsRuleSheetState extends State<TeachSmsRuleSheet> {
           Text('Transaction Type', style: tt.labelLarge?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: AppLayout.spaceS),
           SegmentedButton<RuleTransactionType>(
+            showSelectedIcon: false,
             segments: const [
               ButtonSegment(
                 value: RuleTransactionType.expense,
@@ -246,6 +247,7 @@ class _TeachSmsRuleSheetState extends State<TeachSmsRuleSheet> {
               final catIcon = TransactionCategory.iconFor(categoryName);
 
               return FilterChip(
+                showCheckmark: false,
                 label: Text(categoryName),
                 avatar: Icon(
                   catIcon,
@@ -287,6 +289,7 @@ class _TeachSmsRuleSheetState extends State<TeachSmsRuleSheet> {
                     spacing: 8,
                     children: [
                       ChoiceChip(
+                        showCheckmark: false,
                         label: const Text('Auto / Default'),
                         selected: _targetAccount == null,
                         onSelected: (selected) {
@@ -297,6 +300,7 @@ class _TeachSmsRuleSheetState extends State<TeachSmsRuleSheet> {
                         },
                       ),
                       ChoiceChip(
+                        showCheckmark: false,
                         avatar: const Icon(Icons.account_balance_wallet_outlined, size: 16),
                         label: Text(settings.account1Name),
                         selected: _targetAccount == 'daily',
@@ -306,6 +310,7 @@ class _TeachSmsRuleSheetState extends State<TeachSmsRuleSheet> {
                         },
                       ),
                       ChoiceChip(
+                        showCheckmark: false,
                         avatar: const Icon(Icons.savings_outlined, size: 16),
                         label: Text(settings.account2Name),
                         selected: _targetAccount == 'savings',

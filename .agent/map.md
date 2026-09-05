@@ -105,6 +105,18 @@ lib/
 │   │   │       └── settings_screen.dart      # App options, backup/restore, security controls
 │   │   └── providers/
 │   │       └── settings_provider.dart        # SharedPreferences state & global app options
+│   ├── story_cards/                  # Social Quote & Story Card Studio Module
+│   │   ├── models/
+│   │   │   ├── story_card_aspect_ratio.dart # Aspect ratios (9:16, 1:1, 4:5) and typography presets
+│   │   │   ├── story_card_config.dart       # Live configuration, word limits, title resolution
+│   │   │   └── story_card_theme.dart        # Luxury presets (Editorial, Obsidian Aura, Velvet OLED, etc.)
+│   │   ├── services/
+│   │   │   ├── story_card_media_service.dart# MediaStore Gallery and Clipboard image saving channels
+│   │   │   └── story_card_render_service.dart# High-DPI 3.5x rasterization PNG exporter
+│   │   └── presentation/
+│   │       └── widgets/
+│   │           ├── story_card_preview.dart  # 3-zone publication card layout & canvas
+│   │           └── story_card_studio_sheet.dart# Studio customization modal, live preview, export actions
 │   └── sync/                         # Master P2P Device Sync Feature Module
 │       ├── data/
 │       │   └── p2p_pairing_model.dart# Stable peer records and multi-network endpoints

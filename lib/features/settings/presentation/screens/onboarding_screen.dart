@@ -431,8 +431,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           _buildFeatureCard(
             theme,
             icon: Icons.edit_note_rounded,
-            title: 'Rich WYSIWYG Notes',
-            desc: 'Format text with bold, italic, code blocks, checklists, and voice notes.',
+            title: 'Rich WYSIWYG Notes & Story Studio',
+            desc: 'Format text with bold, italic, code blocks, checklists, voice notes, and export high-res social Story Cards.',
           ),
           const SizedBox(height: AppLayout.spaceM),
           _buildFeatureCard(
@@ -1017,6 +1017,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppLayout.spaceXL),
+          _buildFeatureCard(
+            theme,
+            icon: Icons.photo_library_outlined,
+            title: 'Story Card Studio & Social Share',
+            desc: 'Turn any note or selected quote into high-resolution social media cards (9:16 Story, 1:1 Square, 4:5 Portrait) with offline typography and 1-tap sharing.',
+          ),
+          const SizedBox(height: AppLayout.spaceM),
           _buildFeatureCard(
             theme,
             icon: Icons.sync_lock_rounded,

@@ -577,9 +577,11 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                                         IconButton(
                                           icon: const Icon(Icons.copy_rounded, size: 18),
                                           padding: EdgeInsets.zero,
-                                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                          constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                                          visualDensity: VisualDensity.compact,
                                           tooltip: 'Copy Pair Code',
                                           onPressed: () {
+                                            HapticFeedback.selectionClick();
                                             Clipboard.setData(ClipboardData(text: syncProvider.currentPairCode));
                                             ScaffoldMessenger.of(context).showSnackBar(
                                               const SnackBar(
@@ -624,9 +626,11 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                                           IconButton(
                                             icon: const Icon(Icons.copy_rounded, size: 18),
                                             padding: EdgeInsets.zero,
-                                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                                            visualDensity: VisualDensity.compact,
                                             tooltip: 'Copy IP Address',
                                             onPressed: () {
+                                              HapticFeedback.selectionClick();
                                               Clipboard.setData(ClipboardData(text: syncProvider.localIpAddress!));
                                               ScaffoldMessenger.of(context).showSnackBar(
                                                 const SnackBar(

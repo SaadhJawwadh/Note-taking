@@ -39,7 +39,7 @@ class WhatsNewSheet extends StatelessWidget {
           _WhatsNewItem(
             icon: Icons.photo_library_outlined,
             title: "Story Card Studio",
-            desc: "Turn notes or selected quotes into high-res social media story cards (9:16, 1:1, 4:5) with 1-tap sharing.",
+            desc: "Turn notes or quotes into high-res social media story cards (9:16, 1:1, 4:5) with offline fonts and 1-tap sharing.",
           ),
           _WhatsNewItem(
             icon: Icons.text_fields_rounded,
@@ -51,6 +51,16 @@ class WhatsNewSheet extends StatelessWidget {
             title: "Word Limits & Safe Heatmap",
             desc: "Optimized safe zones for Instagram and WhatsApp stories, plus 25/50/80 word limit selectors.",
           ),
+          _WhatsNewItem(
+            icon: Icons.import_contacts_rounded,
+            title: "Google Keep & Markdown Import",
+            desc: "Batch import notes, checklists, folders, and tags from Google Keep Takeout JSON and Markdown archives in one tap.",
+          ),
+          _WhatsNewItem(
+            icon: Icons.call_split_rounded,
+            title: "Friend-Paid Split Bills",
+            desc: "Track group bills paid by friends, settle your personal share in 1 tap, and keep mutual debts cleanly separated.",
+          ),
         ],
       ),
       _WhatsNewCategory(
@@ -61,17 +71,22 @@ class WhatsNewSheet extends StatelessWidget {
           _WhatsNewItem(
             icon: Icons.branding_watermark_outlined,
             title: "Centered App Logo Watermark",
-            desc: "Tonal micro-pill watermark with the authentic monochrome app emblem and clean typography.",
+            desc: "Tonal micro-pill watermark with authentic monochrome app emblem and clean typography.",
           ),
           _WhatsNewItem(
-            icon: Icons.call_split_rounded,
-            title: "Friend-Paid Split Bills",
-            desc: "Track group bills paid by friends, settle your share in 1 tap, and keep debts separated.",
+            icon: Icons.dashboard_customize_outlined,
+            title: "Redesigned Settings Control Center",
+            desc: "Interactive console with security badge, quick App Lock & JSON backup shortcuts, and domain-themed cards.",
           ),
           _WhatsNewItem(
             icon: Icons.archive_outlined,
-            title: "Archived Notes Dropdown",
-            desc: "Instant access to your archived notes with note counts directly in the folder picker and tools.",
+            title: "Archived Notes Dropdown Access",
+            desc: "Instant access to your archived notes with note counts directly in the folder picker and tools menu.",
+          ),
+          _WhatsNewItem(
+            icon: Icons.sync_rounded,
+            title: "Streamlined SMS Sync",
+            desc: "Optimized daily auto-sync, 1-tap manual refresh, and real-time live message detection without battery drain.",
           ),
         ],
       ),
@@ -86,14 +101,14 @@ class WhatsNewSheet extends StatelessWidget {
             desc: "Fluid scrolling across word limits and quick edit modes eliminates all layout overflows.",
           ),
           _WhatsNewItem(
+            icon: Icons.checklist_rounded,
+            title: "Smarter Checklist Engine",
+            desc: "Accurate item restore ordering back into the editor with line-ending formatting and correct cursor positioning.",
+          ),
+          _WhatsNewItem(
             icon: Icons.account_balance_wallet_outlined,
             title: "Personal Ledger Isolation",
             desc: "Settling third-party debts between friends strictly stays in the split tracker without altering your personal ledger.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.shield_outlined,
-            title: "Tombstone Order & Ingestion",
-            desc: "Preserves genuine message arrival timestamps for exact historical ordering and duplicate prevention.",
           ),
         ],
       ),

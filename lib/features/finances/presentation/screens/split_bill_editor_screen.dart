@@ -358,8 +358,15 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
                           children: [
                             ...TransactionCategory.allNames.map((cat) {
                               final catColor = TransactionCategory.colorFor(cat);
+                              final catIcon = TransactionCategory.iconFor(cat);
                               final isSelected = _selectedCategory == cat;
                               return FilterChip(
+                                showCheckmark: false,
+                                avatar: Icon(
+                                  catIcon,
+                                  size: 16,
+                                  color: isSelected ? catColor : colorScheme.onSurfaceVariant,
+                                ),
                                 label: Text(cat),
                                 selected: isSelected,
                                 onSelected: (_) {
@@ -367,7 +374,6 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
                                   setState(() => _selectedCategory = cat);
                                 },
                                 selectedColor: catColor.withValues(alpha: 0.2),
-                                checkmarkColor: catColor,
                                 labelStyle: TextStyle(
                                   color: isSelected ? catColor : colorScheme.onSurfaceVariant,
                                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
@@ -465,6 +471,7 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
                                     children: suggestions.map((name) {
                                       final isPayer = _payerFriendController.text.trim().toLowerCase() == name.toLowerCase();
                                       return ChoiceChip(
+                                        showCheckmark: false,
                                         label: Text(name),
                                         selected: isPayer,
                                         onSelected: (sel) {

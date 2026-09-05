@@ -536,6 +536,7 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: FilterChip(
+        showCheckmark: false,
         selected: isSelected,
         label: Text('$label ($count)'),
         labelStyle: TextStyle(

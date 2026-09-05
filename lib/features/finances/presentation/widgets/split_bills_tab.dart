@@ -342,6 +342,7 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
             return Padding(
               padding: const EdgeInsets.only(right: AppLayout.spaceS),
               child: FilterChip(
+                showCheckmark: false,
                 label: Text('# $tag'),
                 selected: isSelected,
                 onSelected: (sel) {
