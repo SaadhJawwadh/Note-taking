@@ -446,14 +446,30 @@ class _SmsRulesScreenState extends State<SmsRulesScreen> {
                                     ],
                                   ),
                                   const SizedBox(height: 6),
-                                  Text(
-                                    '🏷️ Title: ${parsed.description}',
-                                    style: tt.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.label_outline_rounded, size: 14, color: cs.onSurfaceVariant),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          'Title: ${parsed.description}',
+                                          style: tt.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '📂 Category: ${parsed.category}',
-                                    style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                                  const SizedBox(height: 3),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.category_outlined, size: 14, color: cs.onSurfaceVariant),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          'Category: ${parsed.category}',
+                                          style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),

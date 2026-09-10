@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/theme/app_layout.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/app_card.dart';
 import '../../../../core/ui/app_dialog.dart';
 import '../../../../core/ui/app_morphing_fab.dart';
@@ -17,6 +18,9 @@ import '../../../../widgets/frosted_glass_sliver_app_bar.dart';
 import '../../data/models/split_bill_model.dart';
 import '../../providers/split_bill_provider.dart';
 import '../widgets/receipt_scanner_sheet.dart';
+import '../../../../data/transaction_model.dart';
+import '../../data/transaction_repository.dart';
+import 'financial_manager_screen.dart';
 
 class SplitBillEditorScreen extends StatefulWidget {
   final SplitBillModel? existingBill;
@@ -44,6 +48,7 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
   final _newParticipantController = TextEditingController();
   final _payerFriendController = TextEditingController();
   final _notesController = TextEditingController();
+  final _userExactAmountController = TextEditingController();
 
   DateTime _selectedDate = DateTime.now();
   bool _isPayerUser = true;
@@ -79,6 +84,7 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
       for (final p in b.participants) {
         if (p.contactName.trim().toLowerCase() == 'you') {
           foundUser = true;
+          _userExactAmountController.text = p.shareAmount.toStringAsFixed(2).replaceAll('.00', '');
         } else {
           _participantsData.add({
             'id': p.id,
@@ -108,6 +114,7 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
     _newParticipantController.dispose();
     _payerFriendController.dispose();
     _notesController.dispose();
+    _userExactAmountController.dispose();
     for (final c in _exactAmountControllers.values) {
       c.dispose();
     }
@@ -134,6 +141,12 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
       final ctrl = _exactAmountControllers[name];
       if (ctrl != null) {
         sum += double.tryParse(ctrl.text.trim()) ?? 0.0;
+      }
+    }
+    if (_includeUserShare) {
+      final userText = _userExactAmountController.text.trim();
+      if (userText.isNotEmpty) {
+        sum += double.tryParse(userText) ?? 0.0;
       }
     }
     return sum;
@@ -257,7 +270,7 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
     final colorScheme = theme.colorScheme;
     final splitProvider = Provider.of<SplitBillProvider>(context);
     final settings = Provider.of<SettingsProvider>(context, listen: false);
-    final currency = settings.currency;
+    final currency = settings.currencySymbol;
 
     return Scaffold(
       floatingActionButton: AppMorphingFab(
@@ -560,7 +573,7 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
                             ),
                             if (_splitMode == SplitMode.equal && _totalSplitCount > 0 && _totalAmount > 0)
                               Text(
-                                'Rs. ${_equalShareAmount.toStringAsFixed(2)} / person',
+                                '$currency ${_equalShareAmount.toStringAsFixed(2)} / person',
                                 style: theme.textTheme.labelMedium?.copyWith(
                                   color: colorScheme.primary,
                                   fontWeight: FontWeight.bold,
@@ -634,14 +647,50 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
                               backgroundColor: colorScheme.primaryContainer,
                               child: Text('You', style: TextStyle(color: colorScheme.onPrimaryContainer, fontWeight: FontWeight.bold)),
                             ),
-                            title: const Text('You (Your Share)'),
+                            title: const Text('You (Your Share)', style: TextStyle(fontWeight: FontWeight.w600)),
                             subtitle: Text(_isPayerUser ? 'Payer • Already paid' : 'Owed to friend'),
-                            trailing: Text(
-                              _splitMode == SplitMode.equal
-                                  ? 'Rs. ${_equalShareAmount.toStringAsFixed(2)}'
-                                  : 'Rs. ${_remainingToAllocate.toStringAsFixed(2)}',
-                              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                            ),
+                            trailing: _splitMode == SplitMode.equal
+                                ? Text(
+                                    '$currency ${_equalShareAmount.toStringAsFixed(2)}',
+                                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                                  )
+                                : SizedBox(
+                                    width: 130,
+                                    child: TextField(
+                                      controller: _userExactAmountController,
+                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                      textAlign: TextAlign.end,
+                                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                      decoration: InputDecoration(
+                                        hintText: _remainingToAllocate > 0
+                                            ? _remainingToAllocate.toStringAsFixed(2)
+                                            : '0.00',
+                                        isDense: true,
+                                        prefixText: '$currency ',
+                                        prefixStyle: TextStyle(
+                                          color: colorScheme.onSurfaceVariant,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                        filled: true,
+                                        fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                                          borderSide: BorderSide(color: colorScheme.outline.withValues(alpha: 0.3)),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                                          borderSide: BorderSide(color: colorScheme.outline.withValues(alpha: 0.3)),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                                          borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
+                                        ),
+                                      ),
+                                      onChanged: (_) => setState(() {}),
+                                    ),
+                                  ),
                             contentPadding: EdgeInsets.zero,
                           ),
                           const Divider(),
@@ -679,7 +728,7 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
                                 ),
                                 title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
                                 subtitle: (!_isPayerUser && _payerFriendController.text.trim().toLowerCase() == name.toLowerCase())
-                                    ? const Text('Payer • Settled', style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.w500))
+                                    ? Text('Payer • Settled', style: TextStyle(color: theme.extension<AppSemanticColors>()?.success ?? colorScheme.primary, fontSize: 12, fontWeight: FontWeight.w500))
                                     : null,
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -848,7 +897,10 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
         }
 
         if (_includeUserShare) {
-          final userShare = _remainingToAllocate;
+          final userText = _userExactAmountController.text.trim();
+          final userShare = userText.isNotEmpty
+              ? (double.tryParse(userText) ?? 0.0)
+              : _remainingToAllocate;
           participantsList.add(
             SplitParticipantModel(
               id: const Uuid().v4(),
@@ -863,9 +915,44 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
       }
 
       final payer = _isPayerUser ? 'You' : _payerFriendController.text.trim();
+      int? linkedTxId = widget.existingBill?.transactionId ?? widget.prelinkedTransactionId;
+
+      // Invariant 12 & User Requirement:
+      // When the user pays for a group bill, automatically record full receipt total in personal ledger.
+      // When someone else pays, do NOT record in user's ledger (only debts settled via Settle Up appear).
+      if (_isPayerUser) {
+        if (linkedTxId != null) {
+          // Update existing linked transaction if amount, title, date or category changed
+          final existingTx = await TransactionRepository.instance.readTransaction(linkedTxId);
+          if (existingTx != null) {
+            final updatedTx = existingTx.copy(
+              amount: total,
+              description: '$title (Split: You paid)',
+              date: _selectedDate,
+              category: _selectedCategory,
+            );
+            await TransactionRepository.instance.updateTransaction(updatedTx);
+            FinancialManagerScreen.refreshNotifier.value = DateTime.now().millisecondsSinceEpoch;
+          }
+        } else {
+          // Create new ledger expense for user payment
+          final newTx = TransactionModel(
+            amount: total,
+            description: '$title (Split: You paid)',
+            date: _selectedDate,
+            isExpense: true,
+            category: _selectedCategory,
+            account: AccountType.daily,
+          );
+          final createdTx = await TransactionRepository.instance.createTransaction(newTx);
+          linkedTxId = createdTx.id;
+          FinancialManagerScreen.refreshNotifier.value = DateTime.now().millisecondsSinceEpoch;
+        }
+      }
+
       final newBill = SplitBillModel(
         id: billId,
-        transactionId: widget.existingBill?.transactionId ?? widget.prelinkedTransactionId,
+        transactionId: linkedTxId,
         title: title,
         totalAmount: total,
         payerName: payer,

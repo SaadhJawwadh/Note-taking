@@ -28,7 +28,7 @@ Before bumping the version or running deployment, ensure all of the following ar
   * 🚀 **Improvements** (UI polish, performance, usability enhancements)
   * 🐛 **Fixes** (Bug fixes and stability improvements)
 * **Changelog Screen (MANDATORY for every release)**: Update `lib/screens/changelog_screen.dart` by adding a new `_buildVersionSection(context, version: 'vX.Y.Z', date: '...', isLatest: true, changes: [...])` entry at the top of the list.
-* **What's New Sheet (MANDATORY — must match pubspec version)**: Update `lib/widgets/whats_new_sheet.dart` cards for THIS release's features (3–5 cards max). The version string passed to `WhatsNewSheet(currentVersion: ...)` in `home_screen.dart` must match the version in `pubspec.yaml` exactly, otherwise the sheet will not show on first launch of the new version. Verify by grepping `WhatsNewSheet` in `home_screen.dart` and confirming the version string is updated. Both `changelog_screen.dart` and `whats_new_sheet.dart` must ALWAYS be updated together as a single atomic step.
+* **What's New Sheet & Compatibility Test (MANDATORY — must match pubspec version)**: Update `lib/widgets/whats_new_sheet.dart` cards for THIS release's features (3–5 cards max). The version string passed to `WhatsNewSheet(currentVersion: ...)` in `home_screen.dart` must match the version in `pubspec.yaml` exactly, otherwise the sheet will not show on first launch of the new version. Verify by grepping `WhatsNewSheet` in `home_screen.dart` and confirming the version string is updated. Also update the exact version assertion in `test/upgrade_backward_compatibility_test.dart`. All 5 release points (`CHANGELOG.md`, `changelog_screen.dart`, `whats_new_sheet.dart`, `PLAY_STORE_NOTES.md`, and `upgrade_backward_compatibility_test.dart`) must ALWAYS be updated together atomically.
 * **Onboarding Wizard Sync (`onboarding_screen.dart`) (MANDATORY)**: Update `lib/features/settings/presentation/screens/onboarding_screen.dart` feature summaries (e.g. Page 3 Modular Powerups) whenever new core features or UI dashboards are added so first-time users and replaying users see accurate descriptions.
 * **Play Console Listing Notes (`PLAY_STORE_NOTES.md`) (MANDATORY BEFORE DEPLOYMENT)**:
   * Update `PLAY_STORE_NOTES.md` at project root with current bilingual release notes in English (`<en-US>`) and Tamil (`<ta-IN>`).
@@ -49,6 +49,8 @@ Before bumping the version or running deployment, ensure all of the following ar
   * **Minor bump**: `X.Y.0+Z` where `Z = X * 10000 + Y * 100` (e.g. `2.21.0+22100`)
   * **Patch bump**: `X.Y.Z+W` where `W = X * 10000 + Y * 100 + Z` (e.g. `2.21.1+22101`)
   * Keep `minor` and `patch` numbers strictly under `100` to prevent version code overlaps.
+* **Google Play VersionCode Immutability & Re-upload Protection**:
+  Google Play Developer Console strictly disallows re-uploading an existing `versionCode` (even if an earlier run failed at a later step or only partially completed). Never attempt to re-deploy or re-run a release workflow with the same version code. If a release run fails after or during the upload step, the patch version MUST be bumped (e.g. `2.30.0+23000` $\rightarrow$ `2.30.1+23001`). Also ensure `test/upgrade_backward_compatibility_test.dart` is updated atomically to match the new version string.
 
 ### Step 2: Build Local Release APK & On-Device Smoke Test
 Verify the release build succeeds locally:

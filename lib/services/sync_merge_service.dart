@@ -74,6 +74,27 @@ class SyncMergeService {
         }
       } catch (_) {}
 
+      final Set<String> tombstonePeriodLogIds = {};
+      try {
+        final existingPeriodTombstones = await txn.query('deleted_period_logs');
+        for (final row in existingPeriodTombstones) {
+          final pid = row['id'] as String?;
+          if (pid != null) tombstonePeriodLogIds.add(pid);
+        }
+
+        if (remoteData.containsKey('deletedPeriodLogs') && remoteData['deletedPeriodLogs'] is List) {
+          final batch = txn.batch();
+          for (final item in remoteData['deletedPeriodLogs'] as List) {
+            if (item is Map && item['id'] != null) {
+              final pid = item['id'].toString();
+              tombstonePeriodLogIds.add(pid);
+              batch.insert('deleted_period_logs', Map<String, Object?>.from(item), conflictAlgorithm: ConflictAlgorithm.ignore);
+            }
+          }
+          await batch.commit(noResult: true);
+        }
+      } catch (_) {}
+
       // 1. Merge Notes
       if (remoteData.containsKey('notes') && remoteData['notes'] is List) {
         final List remoteNotes = remoteData['notes'] as List;
@@ -292,10 +313,20 @@ class SyncMergeService {
       }
 
       // 6. Merge Period Logs
+      if (tombstonePeriodLogIds.isNotEmpty) {
+        for (final tid in tombstonePeriodLogIds) {
+          await txn.delete('period_logs', where: 'id = ?', whereArgs: [tid]);
+        }
+      }
+
       if (remoteData.containsKey('periodLogs') && remoteData['periodLogs'] is List) {
         final batch = txn.batch();
         for (final item in remoteData['periodLogs'] as List) {
           if (item is Map) {
+            final logId = item['id']?.toString();
+            if (logId != null && tombstonePeriodLogIds.contains(logId)) {
+              continue; // Skip resurrecting deleted period log
+            }
             batch.insert('period_logs', Map<String, Object?>.from(item), conflictAlgorithm: ConflictAlgorithm.replace);
             periodLogsMerged++;
           }

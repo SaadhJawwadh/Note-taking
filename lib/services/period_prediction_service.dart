@@ -36,10 +36,15 @@ class PeriodPredictionService {
   static const int normalCycleLengthDays = 28;
   static const int lutealPhaseLengthDays = 14; // Typical days from ovulation to next period
 
+  static List<PeriodLog> _sortLogs(List<PeriodLog> logs) {
+    return List<PeriodLog>.from(logs)..sort((a, b) => b.startDate.compareTo(a.startDate));
+  }
+
   /// Calculates the average cycle length based on the last 3-6 logs.
   /// A cycle is the number of days between the start date of one period and the start date of the next.
   static Future<int> calculateAverageCycleLength([List<PeriodLog>? customLogs]) async {
-    final logs = customLogs ?? await PeriodRepository.instance.readAllPeriodLogs();
+    final rawLogs = customLogs ?? await PeriodRepository.instance.readAllPeriodLogs();
+    final logs = _sortLogs(rawLogs);
 
     if (logs.length < 2) {
       return normalCycleLengthDays;
@@ -73,7 +78,8 @@ class PeriodPredictionService {
 
   /// Calculates average period duration (days bleeding from start to end date).
   static Future<int> calculateAveragePeriodDuration([List<PeriodLog>? customLogs]) async {
-    final logs = customLogs ?? await PeriodRepository.instance.readAllPeriodLogs();
+    final rawLogs = customLogs ?? await PeriodRepository.instance.readAllPeriodLogs();
+    final logs = _sortLogs(rawLogs);
     final finishedLogs = logs.where((l) => l.endDate != null).toList();
 
     if (finishedLogs.isEmpty) return 5;
@@ -96,8 +102,13 @@ class PeriodPredictionService {
   }
 
   /// Calculates comprehensive cycle statistics including standard deviation regularity scoring.
-  static Future<CycleStats> calculateCycleStats([List<PeriodLog>? customLogs]) async {
-    final logs = customLogs ?? await PeriodRepository.instance.readAllPeriodLogs();
+  static Future<CycleStats> calculateCycleStats([
+    List<PeriodLog>? customLogs,
+    int? precomputedAvgCycleLength,
+    int? precomputedAvgPeriodDuration,
+  ]) async {
+    final rawLogs = customLogs ?? await PeriodRepository.instance.readAllPeriodLogs();
+    final logs = _sortLogs(rawLogs);
 
     if (logs.length < 2) {
       return CycleStats.initial();
@@ -123,8 +134,10 @@ class PeriodPredictionService {
       return CycleStats.initial();
     }
 
-    final avgLength = (cycleLengths.reduce((a, b) => a + b) / cycleLengths.length).round();
-    final avgDuration = await calculateAveragePeriodDuration(logs);
+    final avgLength = precomputedAvgCycleLength ??
+        (cycleLengths.reduce((a, b) => a + b) / cycleLengths.length).round();
+    final avgDuration = precomputedAvgPeriodDuration ??
+        await calculateAveragePeriodDuration(logs);
 
     if (cycleLengths.length < 2) {
       return CycleStats(
@@ -175,14 +188,18 @@ class PeriodPredictionService {
 
   /// Calculates the estimated start date of the next period based on the most recent log
   /// and the average cycle length.
-  static Future<DateTime?> estimateNextPeriod([List<PeriodLog>? customLogs]) async {
-    final logs = customLogs ?? await PeriodRepository.instance.readAllPeriodLogs();
+  static Future<DateTime?> estimateNextPeriod([
+    List<PeriodLog>? customLogs,
+    int? precomputedAvgCycleLength,
+  ]) async {
+    final rawLogs = customLogs ?? await PeriodRepository.instance.readAllPeriodLogs();
+    final logs = _sortLogs(rawLogs);
     if (logs.isEmpty) {
       return null;
     }
 
     final latestLog = logs.first; // newest first
-    final avgCycleLength = await calculateAverageCycleLength(logs);
+    final avgCycleLength = precomputedAvgCycleLength ?? await calculateAverageCycleLength(logs);
 
     return DateTime.utc(latestLog.startDate.year, latestLog.startDate.month, latestLog.startDate.day)
         .add(Duration(days: avgCycleLength));
@@ -190,8 +207,12 @@ class PeriodPredictionService {
 
   /// Calculates the estimated ovulation date for the *current* cycle.
   /// Ovulation typically occurs 14 days before the start of the NEXT period.
-  static Future<DateTime?> estimateOvulationDate([List<PeriodLog>? customLogs]) async {
-    final nextPeriod = await estimateNextPeriod(customLogs);
+  static Future<DateTime?> estimateOvulationDate([
+    List<PeriodLog>? customLogs,
+    DateTime? precomputedNextPeriod,
+    int? precomputedAvgCycleLength,
+  ]) async {
+    final nextPeriod = precomputedNextPeriod ?? await estimateNextPeriod(customLogs, precomputedAvgCycleLength);
     if (nextPeriod == null) return null;
 
     return nextPeriod.subtract(const Duration(days: lutealPhaseLengthDays));
@@ -199,8 +220,12 @@ class PeriodPredictionService {
 
   /// Returns the number of days until the next predicted period.
   /// Negative means it's overdue.
-  static Future<int?> daysUntilNextPeriod([List<PeriodLog>? customLogs]) async {
-    final nextPeriod = await estimateNextPeriod(customLogs);
+  static Future<int?> daysUntilNextPeriod([
+    List<PeriodLog>? customLogs,
+    DateTime? precomputedNextPeriod,
+    int? precomputedAvgCycleLength,
+  ]) async {
+    final nextPeriod = precomputedNextPeriod ?? await estimateNextPeriod(customLogs, precomputedAvgCycleLength);
     if (nextPeriod == null) return null;
 
     final now = DateTime.now();

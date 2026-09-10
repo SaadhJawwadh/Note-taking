@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../../../data/settings_provider.dart';
 import '../../../../data/transaction_category.dart';
 import '../../../../core/theme/app_layout.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/app_card.dart';
 
 /// Modular Material 3 Card displaying category budget progress and over-budget warnings.
@@ -122,23 +123,26 @@ class CategoryBudgetsCard extends StatelessWidget {
               final String? paceTag;
               final Color? paceTagColor;
 
+              final semantic = theme.extension<AppSemanticColors>();
+              final successColor = semantic?.success ?? colorScheme.primary;
+
               if (isOverBudget) {
                 progressColor = colorScheme.error;
                 paceTag = 'Exceeded';
                 paceTagColor = colorScheme.error;
               } else if (hasBudget) {
                 if (paceRatio > 1.15) {
-                  progressColor = Colors.orange;
+                  progressColor = colorScheme.error.withValues(alpha: 0.85);
                   paceTag = 'Fast Burn';
-                  paceTagColor = Colors.orange;
+                  paceTagColor = colorScheme.error.withValues(alpha: 0.85);
                 } else if (paceRatio <= 0.85) {
-                  progressColor = Colors.teal;
+                  progressColor = colorScheme.tertiary;
                   paceTag = 'Safe';
-                  paceTagColor = Colors.teal;
+                  paceTagColor = colorScheme.tertiary;
                 } else {
                   progressColor = colorScheme.primary;
                   paceTag = 'On Track';
-                  paceTagColor = Colors.green;
+                  paceTagColor = successColor;
                 }
               } else {
                 progressColor = colorScheme.primary;

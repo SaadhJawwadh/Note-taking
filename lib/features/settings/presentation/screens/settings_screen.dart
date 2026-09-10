@@ -17,6 +17,7 @@ import '../../../../utils/app_constants.dart';
 import '../../../../utils/widget_helper.dart';
 import '../../../../utils/app_route.dart';
 import '../../../../core/theme/app_layout.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/frosted_sliver_app_bar.dart';
 import '../../../../core/ui/app_bottom_sheet.dart';
 import '../../../../core/ui/app_chip.dart';
@@ -631,11 +632,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   SettingsSection(
                                     title: 'Health & Period Tracker',
                                     icon: Icons.calendar_month_outlined,
-                                    accentColor: const Color(0xFFF43F5E),
+                                    accentColor: theme.extension<AppSemanticColors>()?.phaseMenstrual ?? colorScheme.tertiary,
                                     children: [
                                       SettingsTile(
                                         icon: Icons.notifications_none_outlined,
-                                        iconColor: const Color(0xFFF43F5E),
+                                        iconColor: theme.extension<AppSemanticColors>()?.phaseMenstrual ?? colorScheme.tertiary,
                                         title: 'Discreet Notification Text',
                                         subtitle: 'Text shown in cycle prediction alerts',
                                         valueBadge: settings.discreetNotificationText,
@@ -650,11 +651,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 SettingsSection(
                                   title: 'Privacy & Security',
                                   icon: Icons.security_outlined,
-                                  accentColor: const Color(0xFF6366F1),
+                                  accentColor: colorScheme.primary,
                                   children: [
                                     SettingsSwitchTile(
                                       icon: Icons.lock_outline,
-                                      iconColor: const Color(0xFF6366F1),
+                                      iconColor: colorScheme.primary,
                                       title: 'App Lock',
                                       subtitle: 'Require authentication to open app',
                                       value: settings.appLockEnabled,

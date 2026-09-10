@@ -38,11 +38,11 @@ class CyclePhaseHeroCard extends StatelessWidget {
     }
 
     return AppCard.tonal(
-      color: phaseColor.withValues(alpha: isDark ? 0.20 : 0.45),
+      color: phaseColor.withValues(alpha: isDark ? 0.20 : 0.52),
       borderColor: phaseColor.withValues(alpha: isDark ? 0.35 : 0.45),
       borderRadius: AppLayout.radiusXL,
       child: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(AppLayout.spaceL),
         child: Row(
           children: [
             MoonPhaseWidget(
@@ -50,7 +50,7 @@ class CyclePhaseHeroCard extends StatelessWidget {
               size: 80,
               moonColor: phaseColor,
             ),
-            const SizedBox(width: 20),
+            const SizedBox(width: AppLayout.spaceL),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

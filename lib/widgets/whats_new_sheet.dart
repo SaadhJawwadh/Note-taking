@@ -37,6 +37,16 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.primaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
+            icon: Icons.pie_chart_outline_rounded,
+            title: "Contextual Split Bill Action",
+            desc: "Add button on the Split Bills tab immediately launches the full split bill creator.",
+          ),
+          _WhatsNewItem(
+            icon: Icons.category_outlined,
+            title: "Rich Category Icons",
+            desc: "54 expressive Material 3 icons for finance categories including subscriptions, utilities, and transit.",
+          ),
+          _WhatsNewItem(
             icon: Icons.photo_library_outlined,
             title: "Story Card Studio",
             desc: "Turn notes or quotes into high-res social media story cards (9:16, 1:1, 4:5) with offline fonts and 1-tap sharing.",
@@ -51,16 +61,6 @@ class WhatsNewSheet extends StatelessWidget {
             title: "Word Limits & Safe Heatmap",
             desc: "Optimized safe zones for Instagram and WhatsApp stories, plus 25/50/80 word limit selectors.",
           ),
-          _WhatsNewItem(
-            icon: Icons.import_contacts_rounded,
-            title: "Google Keep & Markdown Import",
-            desc: "Batch import notes, checklists, folders, and tags from Google Keep Takeout JSON and Markdown archives in one tap.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.call_split_rounded,
-            title: "Friend-Paid Split Bills",
-            desc: "Track group bills paid by friends, settle your personal share in 1 tap, and keep mutual debts cleanly separated.",
-          ),
         ],
       ),
       _WhatsNewCategory(
@@ -69,24 +69,24 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.tertiaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
+            icon: Icons.account_balance_wallet_outlined,
+            title: "Dual-Mode Split Ledger Contract",
+            desc: "Master expenses record to your daily ledger when you pay; friend-paid splits stay isolated without ledger noise.",
+          ),
+          _WhatsNewItem(
+            icon: Icons.rate_review_outlined,
+            title: "Smart App Review Reminders",
+            desc: "Milestone-based rating prompts (at 5, 15, and 30 items) with a 7-day cooldown to ensure zero disruption.",
+          ),
+          _WhatsNewItem(
+            icon: Icons.restore_rounded,
+            title: "Instant Backup Refresh",
+            desc: "Restoring an encrypted JSON backup refreshes all finance, split bill, and note views in real time.",
+          ),
+          _WhatsNewItem(
             icon: Icons.branding_watermark_outlined,
             title: "Centered App Logo Watermark",
             desc: "Tonal micro-pill watermark with authentic monochrome app emblem and clean typography.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.dashboard_customize_outlined,
-            title: "Redesigned Settings Control Center",
-            desc: "Interactive console with security badge, quick App Lock & JSON backup shortcuts, and domain-themed cards.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.archive_outlined,
-            title: "Archived Notes Dropdown Access",
-            desc: "Instant access to your archived notes with note counts directly in the folder picker and tools menu.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.sync_rounded,
-            title: "Streamlined SMS Sync",
-            desc: "Optimized daily auto-sync, 1-tap manual refresh, and real-time live message detection without battery drain.",
           ),
         ],
       ),
@@ -96,19 +96,24 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.secondaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
+            icon: Icons.format_indent_increase_rounded,
+            title: "Note Indentation Preservation",
+            desc: "Multi-level bullet and list indents are safely preserved across note saves and restarts.",
+          ),
+          _WhatsNewItem(
+            icon: Icons.swipe_left_rounded,
+            title: "Swipe-to-Delete Split Bills",
+            desc: "Smooth swipe dismissal for group bills with a confirmation dialog and instant Undo.",
+          ),
+          _WhatsNewItem(
+            icon: Icons.edit_note_rounded,
+            title: "Friend-Paid Custom Amounts",
+            desc: "Customize your exact share easily when friends cover a bill.",
+          ),
+          _WhatsNewItem(
             icon: Icons.phone_android_rounded,
             title: "Resilient Sheet Layout",
             desc: "Fluid scrolling across word limits and quick edit modes eliminates all layout overflows.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.checklist_rounded,
-            title: "Smarter Checklist Engine",
-            desc: "Accurate item restore ordering back into the editor with line-ending formatting and correct cursor positioning.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.account_balance_wallet_outlined,
-            title: "Personal Ledger Isolation",
-            desc: "Settling third-party debts between friends strictly stays in the split tracker without altering your personal ledger.",
           ),
         ],
       ),

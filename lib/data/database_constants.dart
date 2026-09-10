@@ -10,6 +10,7 @@ class TableNames {
   static const String splitBills = 'split_bills';
   static const String splitParticipants = 'split_participants';
   static const String splitContacts = 'split_contacts';
+  static const String deletedPeriodLogs = 'deleted_period_logs';
 }
 
 class SplitBillFields {

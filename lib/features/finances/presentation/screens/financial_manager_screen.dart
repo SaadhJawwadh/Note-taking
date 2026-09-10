@@ -21,6 +21,7 @@ import '../../../../utils/app_route.dart';
 import 'package:note_taking_app/features/finances/providers/financial_manager_provider.dart';
 
 import '../../../../core/theme/app_layout.dart';
+import '../../../../core/ui/app_card.dart';
 
 import '../../../../widgets/bouncing_widget.dart';
 import '../../../../widgets/sms_import_sheet.dart';
@@ -37,6 +38,7 @@ import '../../services/spending_forecast_service.dart';
 class FinancialManagerScreen extends StatefulWidget {
   static final ValueNotifier<String?> tabRedirectNotifier = ValueNotifier<String?>(null);
   static final ValueNotifier<int> refreshNotifier = ValueNotifier<int>(0);
+  static final ValueNotifier<String> activeTabNotifier = ValueNotifier<String>('Ledger');
 
   const FinancialManagerScreen({super.key});
 
@@ -86,6 +88,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
     } else {
       _selectedTab = 'Ledger';
     }
+    FinancialManagerScreen.activeTabNotifier.value = _selectedTab;
     FinancialManagerScreen.tabRedirectNotifier.addListener(_handleTabRedirect);
     FinancialManagerScreen.refreshNotifier.addListener(_handleExternalRefresh);
     _refreshTransactions(showLoading: true);
@@ -184,6 +187,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
           _selectedTab = 'Budgets';
         }
       });
+      FinancialManagerScreen.activeTabNotifier.value = _selectedTab;
       FinancialManagerScreen.tabRedirectNotifier.value = null; // consume
     }
   }
@@ -685,25 +689,21 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
     );
     final numberFormat = NumberFormat('#,##0');
 
-    return Card(
-      elevation: 0,
-      color: isPositive
+    return AppCard(
+      backgroundColor: isPositive
           ? cs.tertiaryContainer.withValues(alpha: isDark ? 0.22 : 0.55)
           : cs.errorContainer.withValues(alpha: isDark ? 0.22 : 0.45),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppLayout.radiusXL),
-        side: BorderSide(
-          color: isPositive
-              ? cs.tertiary.withValues(alpha: isDark ? 0.35 : 0.45)
-              : cs.error.withValues(alpha: isDark ? 0.35 : 0.45),
-          width: 1.2,
-        ),
+      borderRadius: AppLayout.radiusXL,
+      border: BorderSide(
+        color: isPositive
+            ? cs.tertiary.withValues(alpha: isDark ? 0.35 : 0.45)
+            : cs.error.withValues(alpha: isDark ? 0.35 : 0.45),
+        width: 1.2,
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
             // Top Bar: Range Label + Mode Switcher Dots + Trend Icon
             Row(
               children: [
@@ -971,7 +971,6 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
             ],
           ],
         ),
-      ),
     );
   }
 
@@ -1520,19 +1519,25 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
                   ),
                 ),
                 const SizedBox(width: 8),
-                InkWell(
-                  borderRadius: BorderRadius.circular(AppLayout.radiusS),
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    SmsService.cancelSync();
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    child: Text(
-                      'Cancel',
-                      style: textTheme.labelSmall?.copyWith(
-                        color: colorScheme.error,
-                        fontWeight: FontWeight.bold,
+                Semantics(
+                  button: true,
+                  label: 'Cancel sync',
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      SmsService.cancelSync();
+                    },
+                    child: Container(
+                      constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      child: Text(
+                        'Cancel',
+                        style: textTheme.labelSmall?.copyWith(
+                          color: colorScheme.error,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -2016,6 +2021,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
           setState(() {
             _selectedTab = newSelection.first;
           });
+          FinancialManagerScreen.activeTabNotifier.value = newSelection.first;
         },
         style: SegmentedButton.styleFrom(
           visualDensity: VisualDensity.compact,

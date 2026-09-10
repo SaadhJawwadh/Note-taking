@@ -18,6 +18,9 @@ import '../data/transaction_model.dart';
 import '../features/finances/data/transaction_repository.dart';
 import '../data/repositories/recurring_rule_repository.dart';
 import '../providers/note_provider.dart';
+import '../features/finances/presentation/screens/financial_manager_screen.dart';
+import '../features/finances/providers/split_bill_provider.dart';
+import '../features/finances/providers/financial_manager_provider.dart';
 import '../utils/rich_text_utils.dart';
 import '../utils/widget_helper.dart';
 import 'package:intl/intl.dart';
@@ -89,6 +92,10 @@ Future<String> generateBackupJson({Map<String, dynamic>? settingsOverride}) asyn
   try {
     deletedTransactionSmsIds = await db.query('deleted_transaction_sms_ids');
   } catch (_) {}
+  List<Map<String, dynamic>> deletedPeriodLogs = [];
+  try {
+    deletedPeriodLogs = await db.query('deleted_period_logs');
+  } catch (_) {}
 
   final Map<String, dynamic> settingsMap;
   if (settingsOverride != null) {
@@ -128,6 +135,7 @@ Future<String> generateBackupJson({Map<String, dynamic>? settingsOverride}) asyn
     'splitContacts': splitContacts,
     'deletedNotes': deletedNotes,
     'deletedTransactionSmsIds': deletedTransactionSmsIds,
+    'deletedPeriodLogs': deletedPeriodLogs,
     'settings': settingsMap,
     'version': 10,
     'exportedAt': DateTime.now().toIso8601String(),
@@ -387,6 +395,11 @@ class BackupService {
           batch.insert('deleted_transaction_sms_ids', Map<String, Object?>.from(row), conflictAlgorithm: ConflictAlgorithm.replace);
         }
       }
+      if (data.containsKey('deletedPeriodLogs')) {
+        for (final row in data['deletedPeriodLogs']) {
+          batch.insert('deleted_period_logs', Map<String, Object?>.from(row), conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+      }
 
       if (data.containsKey('notes')) {
         for (final row in data['notes']) {
@@ -516,15 +529,36 @@ class BackupService {
     await WidgetHelper.updateWidgetData();
 
     if (context != null && context.mounted) {
+      final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+      final financeProvider = Provider.of<FinancialManagerProvider>(context, listen: false);
+      final splitProvider = Provider.of<SplitBillProvider>(context, listen: false);
+      final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
+
       try {
-        await Provider.of<NoteProvider>(context, listen: false).refreshNotes();
+        await noteProvider.refreshNotes();
       } catch (e) {
         debugPrint('NoteProvider refresh error: $e');
       }
 
-      if (context.mounted && data.containsKey('settings')) {
-        await Provider.of<SettingsProvider>(context, listen: false).restoreFromBackupMap(Map<String, dynamic>.from(data['settings'] as Map));
+      try {
+        await financeProvider.refresh();
+      } catch (e) {
+        debugPrint('FinancialManagerProvider refresh error: $e');
       }
+
+      try {
+        await splitProvider.loadSplitBills(showLoading: false);
+      } catch (e) {
+        debugPrint('SplitBillProvider refresh error: $e');
+      }
+
+      FinancialManagerScreen.refreshNotifier.value = DateTime.now().millisecondsSinceEpoch;
+
+      if (data.containsKey('settings')) {
+        await settingsProvider.restoreFromBackupMap(Map<String, dynamic>.from(data['settings'] as Map));
+      }
+    } else {
+      FinancialManagerScreen.refreshNotifier.value = DateTime.now().millisecondsSinceEpoch;
     }
   }
 

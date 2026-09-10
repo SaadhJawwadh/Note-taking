@@ -560,7 +560,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
         messenger.clearSnackBars();
         messenger.showSnackBar(
           const SnackBar(
-            content: Text('Refined title & category with Gemini Nano ✨'),
+            content: Text('Refined title & category with Gemini Nano'),
             behavior: SnackBarBehavior.floating,
           ),
         );

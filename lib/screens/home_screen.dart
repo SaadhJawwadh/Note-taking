@@ -28,6 +28,7 @@ import 'package:note_taking_app/features/health/presentation/screens/period_trac
 import 'app_lock_screen.dart';
 import 'package:note_taking_app/features/finances/presentation/screens/category_management_screen.dart';
 import 'package:note_taking_app/features/finances/presentation/screens/transaction_editor_screen.dart';
+import 'package:note_taking_app/features/finances/presentation/screens/split_bill_editor_screen.dart';
 import '../utils/app_route.dart';
 import '../features/notes/data/note_repository.dart';
 import '../widgets/bouncing_widget.dart';
@@ -853,23 +854,37 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildFinancesFAB(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return AppMorphingFab(
-      isExpanded: _isFabExpanded,
-      icon: Icons.add,
-      label: 'New Transaction',
-      onPressed: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (context) => const TransactionEditorScreen()),
+    return ValueListenableBuilder<String>(
+      valueListenable: FinancialManagerScreen.activeTabNotifier,
+      builder: (context, activeTab, _) {
+        final isSplitTab = activeTab == 'Split Bills';
+        return AppMorphingFab(
+          isExpanded: _isFabExpanded,
+          icon: isSplitTab ? Icons.pie_chart_outline_rounded : Icons.add,
+          label: isSplitTab ? 'New Split Bill' : 'New Transaction',
+          onPressed: () {
+            if (isSplitTab) {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const SplitBillEditorScreen()),
+              );
+            } else {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const TransactionEditorScreen()),
+              );
+            }
+          },
+          secondaryAction: isSplitTab
+              ? null
+              : IconButton(
+                  tooltip: 'Categories',
+                  icon: Icon(Icons.category_outlined, color: colorScheme.onPrimaryContainer, size: 20),
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    AppRoute.push(context, const CategoryManagementScreen());
+                  },
+                ),
         );
       },
-      secondaryAction: IconButton(
-        tooltip: 'Categories',
-        icon: Icon(Icons.category_outlined, color: colorScheme.onPrimaryContainer, size: 20),
-        onPressed: () {
-          HapticFeedback.lightImpact();
-          AppRoute.push(context, const CategoryManagementScreen());
-        },
-      ),
     );
   }
 
@@ -889,6 +904,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         icon: Icon(Icons.today, color: colorScheme.onTertiaryContainer, size: 20),
         onPressed: () async {
           await HapticFeedback.lightImpact();
+          PeriodTrackerScreen.selectTodayNotifier.value++;
         },
       ),
     );

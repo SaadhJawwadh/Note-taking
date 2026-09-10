@@ -9,6 +9,7 @@ import '../../../screens/app_lock_screen.dart';
 import '../../../utils/widget_helper.dart';
 import '../../../data/custom_sms_rule.dart';
 import '../../../data/transaction_model.dart';
+import '../../../utils/app_constants.dart';
 import 'dart:convert';
 
 enum NoteViewMode { list, grid }
@@ -68,6 +69,7 @@ class SettingsProvider extends ChangeNotifier {
 
   String _currency = 'LKR';
   String get currency => _currency;
+  String get currencySymbol => AppConstants.getCurrencyInfo(_currency).symbol;
 
   bool _autoBackupEnabled = false;
   bool get autoBackupEnabled => _autoBackupEnabled;

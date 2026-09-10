@@ -142,15 +142,15 @@ class _PeriodLogDashboardCardState extends State<PeriodLogDashboardCard> {
                       provider: widget.provider,
                     );
                   },
-                  icon: Icon(Icons.edit_outlined, size: 18, color: colorScheme.onSurfaceVariant),
+                  constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                  icon: Icon(Icons.edit_outlined, size: 20, color: colorScheme.onSurfaceVariant),
                   tooltip: 'Edit Dates',
-                  visualDensity: VisualDensity.compact,
                 ),
                 IconButton(
                   onPressed: () => _handleDeleteLog(selectedLog.id),
-                  icon: Icon(Icons.delete_outline, size: 18, color: colorScheme.error),
+                  constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                  icon: Icon(Icons.delete_outline, size: 20, color: colorScheme.error),
                   tooltip: 'Delete Log',
-                  visualDensity: VisualDensity.compact,
                 ),
               ],
             ],
@@ -230,38 +230,47 @@ class _PeriodLogDashboardCardState extends State<PeriodLogDashboardCard> {
                 final icon = _intensityIcons[i];
                 final isChosen = selectedLog.intensity == label;
                 return Expanded(
-                  child: GestureDetector(
-                    onTap: () async {
-                      await HapticFeedback.lightImpact();
-                      await widget.provider.updateIntensity(selectedLog, label);
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      margin: const EdgeInsets.symmetric(horizontal: 3),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        color: isChosen
-                            ? colorScheme.primaryContainer
-                            : colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(AppLayout.radiusM),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            icon,
-                            size: 20,
-                            color: isChosen ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant,
+                  child: Semantics(
+                    button: true,
+                    label: '$label flow',
+                    selected: isChosen,
+                    child: GestureDetector(
+                      onTap: () async {
+                        await HapticFeedback.lightImpact();
+                        await widget.provider.updateIntensity(selectedLog, label);
+                      },
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 48),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          margin: const EdgeInsets.symmetric(horizontal: 3),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isChosen
+                                ? colorScheme.primaryContainer
+                                : colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(AppLayout.radiusM),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            label,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: isChosen ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant,
-                              fontWeight: isChosen ? FontWeight.bold : FontWeight.normal,
-                            ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                icon,
+                                size: 20,
+                                color: isChosen ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                label,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: isChosen ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant,
+                                  fontWeight: isChosen ? FontWeight.bold : FontWeight.normal,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ),

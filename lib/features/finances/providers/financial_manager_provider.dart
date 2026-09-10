@@ -84,6 +84,8 @@ class FinancialManagerProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> refresh() => loadTransactions();
+
   void setSearchQuery(String query) {
     _searchQuery = query;
     _applyFilters();

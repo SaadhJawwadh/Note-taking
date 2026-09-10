@@ -196,59 +196,72 @@ class _FinancialTrashSheetState extends State<FinancialTrashSheet> {
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            InkWell(
-                              borderRadius: BorderRadius.circular(20),
-                              onTap: () async {
-                                if (txn.id != null) {
-                                  // 1. Instant optimistic UI removal (0ms)
-                                  setState(() {
-                                    _trashed.removeWhere((t) => t.id == txn.id);
-                                  });
-                                  // 2. Persist in background
-                                  await TransactionRepository.instance.restoreTransaction(txn.id!);
-                                  await _loadTrashed(showLoading: false);
-                                }
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.restore_rounded,
-                                        size: 16, color: colorScheme.primary),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Restore',
-                                      style: textTheme.labelSmall?.copyWith(
-                                        color: colorScheme.primary,
-                                        fontWeight: FontWeight.w600,
+                            Semantics(
+                              button: true,
+                              label: 'Restore transaction',
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(20),
+                                onTap: () async {
+                                  if (txn.id != null) {
+                                    // 1. Instant optimistic UI removal (0ms)
+                                    setState(() {
+                                      _trashed.removeWhere((t) => t.id == txn.id);
+                                    });
+                                    // 2. Persist in background
+                                    await TransactionRepository.instance.restoreTransaction(txn.id!);
+                                    await _loadTrashed(showLoading: false);
+                                  }
+                                },
+                                child: Container(
+                                  constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                                  alignment: Alignment.center,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.restore_rounded,
+                                          size: 16, color: colorScheme.primary),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Restore',
+                                        style: textTheme.labelSmall?.copyWith(
+                                          color: colorScheme.primary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                             const SizedBox(width: 4),
-                            InkWell(
-                              borderRadius: BorderRadius.circular(20),
-                              onTap: () async {
-                                if (txn.id != null) {
-                                  // 1. Instant optimistic UI removal (0ms)
-                                  setState(() {
-                                    _trashed.removeWhere((t) => t.id == txn.id);
-                                  });
-                                  // 2. Persist in background
-                                  await TransactionRepository.instance.permanentlyDeleteTransaction(txn.id!);
-                                  await _loadTrashed(showLoading: false);
-                                }
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 4),
-                                child: Icon(
-                                  Icons.close_rounded,
-                                  size: 16,
-                                  color: colorScheme.error,
+                            Semantics(
+                              button: true,
+                              label: 'Permanently delete transaction',
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(20),
+                                onTap: () async {
+                                  if (txn.id != null) {
+                                    // 1. Instant optimistic UI removal (0ms)
+                                    setState(() {
+                                      _trashed.removeWhere((t) => t.id == txn.id);
+                                    });
+                                    // 2. Persist in background
+                                    await TransactionRepository.instance.permanentlyDeleteTransaction(txn.id!);
+                                    await _loadTrashed(showLoading: false);
+                                  }
+                                },
+                                child: Container(
+                                  constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                                  alignment: Alignment.center,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 4),
+                                  child: Icon(
+                                    Icons.close_rounded,
+                                    size: 18,
+                                    color: colorScheme.error,
+                                  ),
                                 ),
                               ),
                             ),

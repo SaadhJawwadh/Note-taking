@@ -1,17 +1,15 @@
 
 ### 🌟 What's New
-- **Story Card Studio**: Transform notes or selected text into high-resolution social media cards formatted for 9:16 Stories, 1:1 Squares, and 4:5 Portraits with direct 1-tap sharing.
-- **Packaged Offline Fonts**: Fully offline Noto Sans and Noto Serif Tamil variable typography with automatic language detection, line-height balancing, and font style switcher.
-- **Word Limits & Safe Heatmap**: 25, 50, and 80-word selection limits with live word count stats and Instagram/WhatsApp story safe margins.
+- **Contextual Split Bill Action**: Tapping the Add button on the Split Bills tab now seamlessly opens the Split Bill creator with full splitting options.
+- **Rich Category Icons**: Expanded transaction categories with 54 expressive Material 3 icons covering subscriptions, utilities, hobbies, pet care, transit, and medical needs.
 
 ### 🚀 Improvements
-- **Centered App Logo Watermark**: Replaced generic text watermark with an authentic, centered micro-pill badge featuring the monochrome app emblem.
-- **Seamless Theme Presets**: Editorial Serif warm paper theme, OLED Pitch Black, Note Tint, and Material You Dynamic themes.
-- **Tactile Chart & Calendar Scrubbing**: Haptic clicks when scrubbing spend trend points, category donut slices, and selecting cycle calendar days.
-- **Universal Selection Controls**: Cleaned up checkmark glyphs across Theme Mode, Transaction Type, and Account Buckets to preserve authentic icons.
+- **Dual-Mode Split Bill Ledger Contract**: Group bills you pay record directly to your master expense ledger, while friend-paid bills stay organized in the split tracker without cluttering your personal accounts.
+- **Smart App Review Reminders**: Pleasant, milestone-based rating prompts (at 5, 15, and 30 items) with a 7-day cooldown to ensure an uninterrupted experience.
+- **Instant Backup Refresh**: Restoring an encrypted backup now immediately updates all finance, split bill, and note views in real time.
 
 ### 🐛 Fixes
-- **Resilient Sheet Layout**: Wrapped bottom sheet and control groups in fluid scrolling to completely eliminate layout overflows during text editing or word limits.
-- **Split Bills View Clutter**: Unified hero cards on the Split Bills tab, removing redundant personal cash flow card stacking.
-- **Touch Target Bounds**: Upgraded P2P sync and note editor navigation micro-buttons to standard 48x48dp hit targets.
+- **Note Indentation Preservation**: Multi-level list indents and formatting are now accurately saved and restored without disappearing.
+- **Swipe-to-Delete Split Bills**: Added smooth swipe dismissal for group bills with a confirmation dialog and instant Undo option.
+- **Friend-Paid Custom Amounts**: Easily enter and adjust your exact personal share when friends cover a group bill.
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_layout.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/app_card.dart';
 import '../../../../core/ui/app_chip.dart';
 import '../../../../services/period_prediction_service.dart';
@@ -14,10 +15,14 @@ class CycleInsightsCard extends StatelessWidget {
     required this.stats,
   });
 
-  Color _getRegularityColor(ColorScheme colorScheme) {
-    if (stats.regularityScore >= 88.0) return Colors.green;
-    if (stats.regularityScore >= 75.0) return Colors.teal;
-    if (stats.regularityScore >= 60.0) return Colors.orange;
+  Color _getRegularityColor(ThemeData theme) {
+    final colorScheme = theme.colorScheme;
+    final semantic = theme.extension<AppSemanticColors>();
+    final successColor = semantic?.success ?? colorScheme.primary;
+
+    if (stats.regularityScore >= 88.0) return successColor;
+    if (stats.regularityScore >= 75.0) return colorScheme.tertiary;
+    if (stats.regularityScore >= 60.0) return colorScheme.error.withValues(alpha: 0.85);
     return colorScheme.error;
   }
 
@@ -25,7 +30,8 @@ class CycleInsightsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final regularityColor = _getRegularityColor(colorScheme);
+    final semantic = theme.extension<AppSemanticColors>();
+    final regularityColor = _getRegularityColor(theme);
 
     return AppCard(
       backgroundColor: colorScheme.surfaceContainerHigh,
@@ -88,7 +94,7 @@ class CycleInsightsCard extends StatelessWidget {
                   value: '${stats.avgPeriodDuration}',
                   unit: 'days',
                   icon: Icons.water_drop_outlined,
-                  color: Colors.pinkAccent,
+                  color: semantic?.phaseMenstrual ?? colorScheme.primary,
                 ),
               ),
               const SizedBox(width: 8),

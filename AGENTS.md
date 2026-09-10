@@ -92,7 +92,8 @@ lib/
 * **Major vs. Minor Documentation Strategy**:
   - **Major Releases (`X.0.0`)**: Review `OnboardingScreen` slides; optionally bump onboarding key (`hasSeenOnboarding_v2`) if core workflows changed.
   - **Minor/Patch Releases (`X.Y.Z`)**: Existing users bypass onboarding. `PLAY_STORE_NOTES.md` and `WhatsNewSheet` present the **cumulative headline features from the current minor cycle (`X.Y.x`)** alongside the latest patch fixes.
-* **4-File Parity**: Update `PLAY_STORE_NOTES.md` (`<en-US>` and `<ta-IN>`, < 450 characters each), `lib/screens/changelog_screen.dart`, `lib/widgets/whats_new_sheet.dart`, and `CHANGELOG.md` atomically before compiling release APKs or running `./deploy.sh`.
+* **5-Point Release Parity & Test Guardrail**: Atomically update `PLAY_STORE_NOTES.md` (`<en-US>` and `<ta-IN>`, < 450 characters each), `lib/screens/changelog_screen.dart`, `lib/widgets/whats_new_sheet.dart`, `CHANGELOG.md`, and the version assertion in `test/upgrade_backward_compatibility_test.dart` before compiling release APKs or running `./deploy.sh`.
+* **Play Store VersionCode Immutability**: Google Play Developer Console strictly disallows re-uploading an existing `versionCode` (even if an earlier run failed at a later step or only partially completed). Never attempt to re-deploy or re-tag with an existing version code. If a release fails at or after upload, the patch version MUST be incremented (`X.Y.Z+W` where $W = X \times 10000 + Y \times 100 + Z$).
 
 ### 🔘 Invariant 8: Standard FAB Bottom Clearance & Universal Morphing Protocol
 * **No Obscured Content**: Bottom scrollable content must never be clipped or obscured by floating buttons or bottom navigation chrome. Always apply `AppLayout.fabBottomPadding = 96.0` to sliver lists or bottom padding containers.

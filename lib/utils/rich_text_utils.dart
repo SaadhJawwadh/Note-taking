@@ -154,12 +154,12 @@ class RichTextUtils {
           final line = lines[i];
           if (line.isNotEmpty) {
             final inlineAttrs = Map<String, dynamic>.from(attrs);
-            inlineAttrs.removeWhere((k, v) => k == 'header' || k == 'list' || k == 'blockquote' || k == 'code-block' || k == 'align');
+            inlineAttrs.removeWhere((k, v) => k == 'header' || k == 'list' || k == 'blockquote' || k == 'code-block' || k == 'align' || k == 'indent');
             sanitized.insert(line, inlineAttrs.isEmpty ? null : inlineAttrs);
           }
           if (i < lines.length - 1) {
             final blockAttrs = Map<String, dynamic>.from(attrs);
-            blockAttrs.removeWhere((k, v) => k != 'header' && k != 'list' && k != 'blockquote' && k != 'code-block' && k != 'align');
+            blockAttrs.removeWhere((k, v) => k != 'header' && k != 'list' && k != 'blockquote' && k != 'code-block' && k != 'align' && k != 'indent');
             sanitized.insert('\n', blockAttrs.isEmpty ? null : blockAttrs);
           }
         }

@@ -5,8 +5,10 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_layout.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/app_card.dart';
 import '../../../../core/ui/app_chip.dart';
+import '../../../../core/ui/app_dialog.dart';
 import '../../../../data/settings_provider.dart';
 import '../../../../data/transaction_category.dart';
 import '../../data/models/split_bill_model.dart';
@@ -47,6 +49,7 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
     final isDark = theme.brightness == Brightness.dark;
     final splitProvider = Provider.of<SplitBillProvider>(context);
     final settings = Provider.of<SettingsProvider>(context);
+    final currency = settings.currencySymbol;
 
     final bills = splitProvider.filteredBills.where((b) {
       if (_searchQuery.isEmpty) return true;
@@ -60,10 +63,10 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
       onRefresh: () => splitProvider.loadSplitBills(showLoading: false),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: AppLayout.spaceM, vertical: AppLayout.spaceS),
+        padding: const EdgeInsets.fromLTRB(AppLayout.spaceM, AppLayout.spaceS, AppLayout.spaceM, AppLayout.fabBottomPadding),
         children: [
           // 1. Dynamic Split Summary Hero Card
-          _buildHeroSummaryCard(context, splitProvider, isDark),
+          _buildHeroSummaryCard(context, splitProvider, isDark, currency),
 
           const SizedBox(height: AppLayout.spaceM),
 
@@ -149,9 +152,12 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
     );
   }
 
-  Widget _buildHeroSummaryCard(BuildContext context, SplitBillProvider splitProvider, bool isDark) {
+  Widget _buildHeroSummaryCard(BuildContext context, SplitBillProvider splitProvider, bool isDark, String currency) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final semantic = theme.extension<AppSemanticColors>();
+    final successColor = semantic?.success ?? colorScheme.primary;
+    final debtColor = colorScheme.error;
     final owedToUser = splitProvider.totalOwedToUser;
     final userOwes = splitProvider.totalUserOwes;
     final net = splitProvider.netBalance;
@@ -188,12 +194,10 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
               // Net Position Pill
               AppChip(
                 label: net >= 0
-                    ? '+Rs. ${net.toStringAsFixed(2).replaceAll('.00', '')} (Net Owed)'
-                    : '-Rs. ${net.abs().toStringAsFixed(2).replaceAll('.00', '')} (Net You Owe)',
-                backgroundColor: net >= 0
-                    ? Colors.green.withValues(alpha: 0.18)
-                    : Colors.red.withValues(alpha: 0.18),
-                textColor: net >= 0 ? Colors.green : Colors.red,
+                    ? '+$currency ${net.toStringAsFixed(2).replaceAll('.00', '')} (Net Owed)'
+                    : '-$currency ${net.abs().toStringAsFixed(2).replaceAll('.00', '')} (Net You Owe)',
+                backgroundColor: (net >= 0 ? successColor : debtColor).withValues(alpha: 0.18),
+                textColor: net >= 0 ? successColor : debtColor,
               ),
             ],
           ),
@@ -211,21 +215,21 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                   child: Container(
                     padding: const EdgeInsets.all(AppLayout.spaceM),
                     decoration: BoxDecoration(
-                      color: Colors.green.withValues(alpha: isDark ? 0.12 : 0.10),
+                      color: successColor.withValues(alpha: isDark ? 0.12 : 0.10),
                       borderRadius: BorderRadius.circular(AppLayout.radiusM),
-                      border: Border.all(color: Colors.green.withValues(alpha: 0.25)),
+                      border: Border.all(color: successColor.withValues(alpha: 0.25)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.arrow_downward_rounded, color: Colors.green, size: 16),
+                            Icon(Icons.arrow_downward_rounded, color: successColor, size: 16),
                             const SizedBox(width: AppLayout.spaceXS),
                             Text(
                               'You are owed',
                               style: theme.textTheme.labelMedium?.copyWith(
-                                color: Colors.green,
+                                color: successColor,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -235,10 +239,10 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                         FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Text(
-                            'Rs. ${owedToUser.toStringAsFixed(2).replaceAll('.00', '')}',
+                            '$currency ${owedToUser.toStringAsFixed(2).replaceAll('.00', '')}',
                             style: theme.textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: Colors.green,
+                              color: successColor,
                             ),
                           ),
                         ),
@@ -259,21 +263,21 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                   child: Container(
                     padding: const EdgeInsets.all(AppLayout.spaceM),
                     decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: isDark ? 0.12 : 0.10),
+                      color: debtColor.withValues(alpha: isDark ? 0.12 : 0.10),
                       borderRadius: BorderRadius.circular(AppLayout.radiusM),
-                      border: Border.all(color: Colors.red.withValues(alpha: 0.25)),
+                      border: Border.all(color: debtColor.withValues(alpha: 0.25)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.arrow_upward_rounded, color: Colors.red, size: 16),
+                            Icon(Icons.arrow_upward_rounded, color: debtColor, size: 16),
                             const SizedBox(width: AppLayout.spaceXS),
                             Text(
                               'You owe',
                               style: theme.textTheme.labelMedium?.copyWith(
-                                color: Colors.red,
+                                color: debtColor,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -283,10 +287,10 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                         FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Text(
-                            'Rs. ${userOwes.toStringAsFixed(2).replaceAll('.00', '')}',
+                            '$currency ${userOwes.toStringAsFixed(2).replaceAll('.00', '')}',
                             style: theme.textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: Colors.red,
+                              color: debtColor,
                             ),
                           ),
                         ),
@@ -404,6 +408,11 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
       }
     }
 
+    final semantic = theme.extension<AppSemanticColors>();
+    final successColor = semantic?.success ?? colorScheme.primary;
+    final debtColor = colorScheme.error;
+    final currency = Provider.of<SettingsProvider>(context, listen: false).currencySymbol;
+
     return AnimationLimiter(
       child: ListView.separated(
         shrinkWrap: true,
@@ -440,13 +449,13 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                       CircleAvatar(
                         radius: 22,
                         backgroundColor: isOwed
-                            ? Colors.green.withValues(alpha: 0.2)
-                            : (owes ? Colors.red.withValues(alpha: 0.2) : colorScheme.surfaceContainerHighest),
+                            ? successColor.withValues(alpha: 0.2)
+                            : (owes ? debtColor.withValues(alpha: 0.2) : colorScheme.surfaceContainerHighest),
                         child: Text(
                           name.isNotEmpty ? name[0].toUpperCase() : '?',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: isOwed ? Colors.green : (owes ? Colors.red : colorScheme.onSurfaceVariant),
+                            color: isOwed ? successColor : (owes ? debtColor : colorScheme.onSurfaceVariant),
                           ),
                         ),
                       ),
@@ -473,13 +482,13 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                         children: [
                           Text(
                             isSettled
-                                ? 'Rs. 0'
+                                ? '$currency 0'
                                 : (isOwed
-                                    ? '+Rs. ${netBalance.toStringAsFixed(2).replaceAll('.00', '')}'
-                                    : '-Rs. ${netBalance.abs().toStringAsFixed(2).replaceAll('.00', '')}'),
+                                    ? '+$currency ${netBalance.toStringAsFixed(2).replaceAll('.00', '')}'
+                                    : '-$currency ${netBalance.abs().toStringAsFixed(2).replaceAll('.00', '')}'),
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: isOwed ? Colors.green : (owes ? Colors.red : colorScheme.onSurfaceVariant),
+                              color: isOwed ? successColor : (owes ? debtColor : colorScheme.onSurfaceVariant),
                             ),
                           ),
                           if (!isSettled) ...[
@@ -498,6 +507,7 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                                         SplitShareService.shareToWhatsAppOrSystem(
                                           firstBill,
                                           defaultPaymentInfo: Provider.of<SettingsProvider>(context, listen: false).defaultPaymentInfo,
+                                          currencySymbol: currency,
                                         );
                                       }
                                     },
@@ -541,6 +551,10 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
   ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final semantic = theme.extension<AppSemanticColors>();
+    final successColor = semantic?.success ?? colorScheme.primary;
+    final debtColor = colorScheme.error;
+    final currency = Provider.of<SettingsProvider>(context, listen: false).currencySymbol;
 
     if (bills.isEmpty) {
       return Padding(
@@ -589,16 +603,70 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
             child: SlideAnimation(
               verticalOffset: 20.0,
               child: FadeInAnimation(
-                child: InkWell(
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => SplitBillEditorScreen(existingBill: bill)),
+                child: Dismissible(
+                  key: ValueKey('split_bill_${bill.id}'),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    margin: const EdgeInsets.only(bottom: AppLayout.spaceS),
+                    decoration: BoxDecoration(
+                      color: colorScheme.errorContainer,
+                      borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                    ),
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(right: 20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          'Delete',
+                          style: TextStyle(
+                            color: colorScheme.onErrorContainer,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(Icons.delete_outline, color: colorScheme.onErrorContainer),
+                      ],
+                    ),
+                  ),
+                  confirmDismiss: (direction) async {
+                    return await AppDialog.showConfirm(
+                      context: context,
+                      title: 'Delete Split Bill?',
+                      message: 'Are you sure you want to delete "${bill.title}"?',
+                      confirmLabel: 'Delete',
+                      isDestructive: true,
                     );
                   },
-                  borderRadius: BorderRadius.circular(AppLayout.radiusM),
-                  child: AppCard(
-                    padding: const EdgeInsets.all(AppLayout.spaceM),
-                    child: Column(
+                  onDismissed: (direction) async {
+                    await splitProvider.deleteBill(bill.id);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).clearSnackBars();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Deleted "${bill.title}"'),
+                          behavior: SnackBarBehavior.floating,
+                          action: SnackBarAction(
+                            label: 'UNDO',
+                            onPressed: () {
+                              splitProvider.restoreBill(bill.id);
+                            },
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  child: InkWell(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => SplitBillEditorScreen(existingBill: bill)),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                    child: AppCard(
+                      padding: const EdgeInsets.all(AppLayout.spaceM),
+                      child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Title & Status
@@ -642,7 +710,7 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  'Rs. ${bill.totalAmount.toStringAsFixed(2).replaceAll('.00', '')}',
+                                  '$currency ${bill.totalAmount.toStringAsFixed(2).replaceAll('.00', '')}',
                                   style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                                 ),
                                 const SizedBox(height: 2),
@@ -655,25 +723,25 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                                       if (bill.isUserSharePaid) {
                                         statusLabel = 'Settled for You';
                                         statusIcon = Icons.check_circle_rounded;
-                                        statusColor = Colors.green;
+                                        statusColor = successColor;
                                       } else {
-                                        statusLabel = 'You Owe Rs. ${bill.userShare.toStringAsFixed(2).replaceAll('.00', '')}';
+                                        statusLabel = 'You Owe $currency ${bill.userShare.toStringAsFixed(2).replaceAll('.00', '')}';
                                         statusIcon = Icons.hourglass_top_rounded;
-                                        statusColor = Colors.red;
+                                        statusColor = debtColor;
                                       }
                                     } else {
                                       if (isSettled) {
                                         statusLabel = 'Settled';
                                         statusIcon = Icons.check_circle_rounded;
-                                        statusColor = Colors.green;
+                                        statusColor = successColor;
                                       } else if (bill.totalReceived > 0) {
                                         statusLabel = 'Partial';
                                         statusIcon = Icons.timelapse_rounded;
-                                        statusColor = Colors.blue;
+                                        statusColor = colorScheme.primary;
                                       } else {
                                         statusLabel = 'Unsettled';
                                         statusIcon = Icons.hourglass_top_rounded;
-                                        statusColor = Colors.amber.shade800;
+                                        statusColor = colorScheme.tertiary;
                                       }
                                     }
 
@@ -697,12 +765,12 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             decoration: BoxDecoration(
                               color: bill.isUserSharePaid
-                                  ? Colors.green.withValues(alpha: 0.1)
+                                  ? successColor.withValues(alpha: 0.1)
                                   : colorScheme.errorContainer.withValues(alpha: 0.25),
                               borderRadius: BorderRadius.circular(AppLayout.radiusS),
                               border: Border.all(
                                 color: bill.isUserSharePaid
-                                    ? Colors.green.withValues(alpha: 0.3)
+                                    ? successColor.withValues(alpha: 0.3)
                                     : colorScheme.error.withValues(alpha: 0.3),
                               ),
                             ),
@@ -711,17 +779,17 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                                 Icon(
                                   bill.isUserSharePaid ? Icons.check_circle_outline_rounded : Icons.pending_actions_rounded,
                                   size: 18,
-                                  color: bill.isUserSharePaid ? Colors.green : colorScheme.error,
+                                  color: bill.isUserSharePaid ? successColor : colorScheme.error,
                                 ),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     bill.isUserSharePaid
-                                        ? 'Your share of Rs. ${bill.userShare.toStringAsFixed(2).replaceAll('.00', '')} is settled with ${bill.payerName}'
-                                        : 'You owe ${bill.payerName}: Rs. ${bill.userShare.toStringAsFixed(2).replaceAll('.00', '')}',
+                                        ? 'Your share of $currency ${bill.userShare.toStringAsFixed(2).replaceAll('.00', '')} is settled with ${bill.payerName}'
+                                        : 'You owe ${bill.payerName}: $currency ${bill.userShare.toStringAsFixed(2).replaceAll('.00', '')}',
                                     style: theme.textTheme.bodySmall?.copyWith(
                                       fontWeight: FontWeight.w600,
-                                      color: bill.isUserSharePaid ? Colors.green : colorScheme.error,
+                                      color: bill.isUserSharePaid ? successColor : colorScheme.error,
                                     ),
                                   ),
                                 ),
@@ -764,7 +832,7 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                'Received Rs. ${totalReceived.toStringAsFixed(2).replaceAll('.00', '')} of ${totalExpected.toStringAsFixed(2).replaceAll('.00', '')}',
+                                'Received $currency ${totalReceived.toStringAsFixed(2).replaceAll('.00', '')} of ${totalExpected.toStringAsFixed(2).replaceAll('.00', '')}',
                                 style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
                               ),
                               Text(
@@ -788,10 +856,10 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                             return Semantics(
                               button: !isPayer,
                               label: isYou
-                                  ? 'Your share: Rs. ${p.shareAmount.toStringAsFixed(0)}, ${p.hasPaid ? 'paid' : 'tap to settle'}'
+                                  ? 'Your share: $currency ${p.shareAmount.toStringAsFixed(0)}, ${p.hasPaid ? 'paid' : 'tap to settle'}'
                                   : (bill.isPayerUser
                                       ? 'Mark ${p.contactName} as ${p.hasPaid ? 'unpaid' : 'paid'}'
-                                      : '${p.contactName} owes ${bill.payerName}: Rs. ${p.shareAmount.toStringAsFixed(0)}, ${p.hasPaid ? 'paid' : 'unpaid'}'),
+                                      : '${p.contactName} owes ${bill.payerName}: $currency ${p.shareAmount.toStringAsFixed(0)}, ${p.hasPaid ? 'paid' : 'unpaid'}'),
                               child: InkWell(
                                 onTap: isPayer
                                     ? null
@@ -845,7 +913,7 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                                           contactName: p.contactName,
                                           billTitle: bill.title,
                                           shareAmount: p.shareAmount,
-                                          currencySymbol: settings.currency,
+                                          currencySymbol: currency,
                                           defaultPaymentInfo: settings.defaultPaymentInfo,
                                         );
                                         await SplitShareService.shareText(reminder, subject: 'Split Bill Reminder');
@@ -853,15 +921,15 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                                     : null,
                                 borderRadius: BorderRadius.circular(AppLayout.radiusS),
                                 child: Container(
-                                  constraints: const BoxConstraints(minHeight: 44, minWidth: 48),
+                                  constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                                   decoration: BoxDecoration(
                                     color: p.hasPaid
-                                        ? Colors.green.withValues(alpha: 0.12)
+                                        ? successColor.withValues(alpha: 0.12)
                                         : colorScheme.surfaceContainerHighest,
                                     borderRadius: BorderRadius.circular(AppLayout.radiusS),
                                     border: Border.all(
-                                      color: p.hasPaid ? Colors.green.withValues(alpha: 0.3) : Colors.transparent,
+                                      color: p.hasPaid ? successColor.withValues(alpha: 0.3) : Colors.transparent,
                                     ),
                                   ),
                                   child: Row(
@@ -870,17 +938,17 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                                       Icon(
                                         p.hasPaid ? Icons.check_circle_rounded : Icons.circle_outlined,
                                         size: 16,
-                                        color: p.hasPaid ? Colors.green : colorScheme.onSurfaceVariant,
+                                        color: p.hasPaid ? successColor : colorScheme.onSurfaceVariant,
                                       ),
                                       const SizedBox(width: 6),
                                       Text(
                                         isYou
-                                            ? 'You: Rs. ${p.shareAmount.toStringAsFixed(0)}'
+                                            ? 'You: $currency ${p.shareAmount.toStringAsFixed(0)}'
                                             : (bill.isPayerUser
-                                                ? '${p.contactName}: Rs. ${p.shareAmount.toStringAsFixed(0)}'
-                                                : '${p.contactName}: Rs. ${p.shareAmount.toStringAsFixed(0)} (owes ${bill.payerName})'),
+                                                ? '${p.contactName}: $currency ${p.shareAmount.toStringAsFixed(0)}'
+                                                : '${p.contactName}: $currency ${p.shareAmount.toStringAsFixed(0)} (owes ${bill.payerName})'),
                                         style: theme.textTheme.labelSmall?.copyWith(
-                                          color: p.hasPaid ? Colors.green : colorScheme.onSurface,
+                                          color: p.hasPaid ? successColor : colorScheme.onSurface,
                                           fontWeight: p.hasPaid ? FontWeight.bold : FontWeight.normal,
                                         ),
                                       ),
@@ -908,6 +976,7 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                                   onPressed: () => SplitShareService.shareToWhatsAppOrSystem(
                                     bill,
                                     defaultPaymentInfo: settings.defaultPaymentInfo,
+                                    currencySymbol: currency,
                                   ),
                                 ),
                               ),
@@ -924,6 +993,7 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                                     final summary = SplitShareService.formatBillSummary(
                                       bill,
                                       defaultPaymentInfo: settings.defaultPaymentInfo,
+                                      currencySymbol: currency,
                                     );
                                     SplitShareService.copyToClipboard(summary);
                                     ScaffoldMessenger.of(context).showSnackBar(
@@ -941,9 +1011,10 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                 ),
               ),
             ),
-          );
-        },
-      ),
-    );
-  }
+          ),
+        );
+      },
+    ),
+  );
+}
 }

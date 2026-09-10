@@ -10,6 +10,8 @@ import 'database_constants.dart';
 import 'database_seed.dart';
 
 class DatabaseHelper {
+  static const int _databaseVersion = 23;
+  static const String _dbName = 'notes.db';
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
   static Future<Database>? _databaseFuture;
@@ -30,7 +32,7 @@ class DatabaseHelper {
 
   @visibleForTesting
   Future<void> createTestDatabase(Database db) async {
-    await _createDB(db, 22);
+    await _createDB(db, _databaseVersion);
   }
 
   @visibleForTesting
@@ -41,7 +43,7 @@ class DatabaseHelper {
   Future<Database> get database {
     if (_database != null) return Future.value(_database!);
     
-    _databaseFuture ??= _initDB('notes.db').then((db) {
+    _databaseFuture ??= _initDB(_dbName).then((db) {
       _database = db;
       return db;
     }).catchError((error) {
@@ -319,6 +321,7 @@ class DatabaseHelper {
 
     // tombstone table — must match the _upgradeDB < 18 migration
     await db.execute('CREATE TABLE IF NOT EXISTS deleted_notes (id TEXT PRIMARY KEY, deletedAt TEXT NOT NULL)');
+    await db.execute('CREATE TABLE IF NOT EXISTS ${TableNames.deletedPeriodLogs} (id TEXT PRIMARY KEY, deletedAt TEXT NOT NULL)');
 
     await db.execute('''
       CREATE TABLE IF NOT EXISTS ${TableNames.splitBills} (
@@ -508,6 +511,9 @@ class DatabaseHelper {
       if (!hasAiRefinedCol) {
         await db.execute("ALTER TABLE ${TableNames.transactions} ADD COLUMN isAiRefined INTEGER NOT NULL DEFAULT 0");
       }
+    }
+    if (oldVersion < 23) {
+      await db.execute('CREATE TABLE IF NOT EXISTS ${TableNames.deletedPeriodLogs} (id TEXT PRIMARY KEY, deletedAt TEXT NOT NULL)');
     }
   }
 }

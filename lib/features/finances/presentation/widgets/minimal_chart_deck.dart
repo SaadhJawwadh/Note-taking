@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/theme/app_layout.dart';
 import '../../../../core/ui/app_card.dart';
 import '../../../../data/transaction_category.dart';
 import '../../../../services/financial_regression_engine.dart';
@@ -498,7 +499,7 @@ class _MinimalChartDeckState extends State<MinimalChartDeck> {
               touchTooltipData: LineTouchTooltipData(
                 showOnTopOfTheChartBoxArea: true,
                 getTooltipColor: (_) => colorScheme.surfaceContainerHighest,
-                tooltipRoundedRadius: 10,
+                tooltipRoundedRadius: AppLayout.radiusM,
                 tooltipBorder: BorderSide(
                   color: colorScheme.primary.withValues(alpha: 0.3),
                   width: 1.0,

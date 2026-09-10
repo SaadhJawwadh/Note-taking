@@ -74,29 +74,70 @@ class TransactionCategory {
   }
 
   static const List<IconData> swatches = [
-    Icons.directions_car_outlined,
+    // Food & Dining
     Icons.restaurant_outlined,
-    Icons.subscriptions_outlined,
+    Icons.local_cafe_outlined,
+    Icons.fastfood_outlined,
+    Icons.local_bar_outlined,
+    Icons.bakery_dining_outlined,
+    Icons.local_pizza_outlined,
+
+    // Groceries & Shopping
+    Icons.local_grocery_store_outlined,
     Icons.shopping_bag_outlined,
+    Icons.shopping_cart_outlined,
+    Icons.card_giftcard_outlined,
+    Icons.storefront_outlined,
+
+    // Transportation & Travel
+    Icons.directions_car_outlined,
+    Icons.local_gas_station_outlined,
+    Icons.directions_bus_outlined,
+    Icons.subway_outlined,
+    Icons.local_taxi_outlined,
+    Icons.flight_outlined,
+    Icons.commute_outlined,
+
+    // Bills, Utilities & Living
+    Icons.home_outlined,
     Icons.power_outlined,
-    Icons.medical_services_outlined,
-    Icons.sports_esports_outlined,
+    Icons.water_drop_outlined,
+    Icons.wifi_outlined,
+    Icons.phone_android_outlined,
+    Icons.tv_outlined,
+    Icons.build_outlined,
+
+    // Finance & Wealth
     Icons.payment_outlined,
     Icons.savings_outlined,
-    Icons.school_outlined,
-    Icons.flight_outlined,
-    Icons.home_outlined,
+    Icons.account_balance_outlined,
+    Icons.currency_exchange_outlined,
+    Icons.trending_up_outlined,
+    Icons.receipt_long_outlined,
+    Icons.credit_card_outlined,
+
+    // Health, Wellness & Personal Care
+    Icons.medical_services_outlined,
+    Icons.medication_outlined,
     Icons.fitness_center_outlined,
-    Icons.local_grocery_store_outlined,
-    Icons.card_giftcard_outlined,
-    Icons.pets_outlined,
-    Icons.computer_outlined,
-    Icons.work_outlined,
-    Icons.child_friendly_outlined,
-    Icons.build_outlined,
-    Icons.local_gas_station_outlined,
+    Icons.spa_outlined,
+    Icons.content_cut_outlined,
+
+    // Entertainment & Leisure
+    Icons.subscriptions_outlined,
+    Icons.sports_esports_outlined,
     Icons.movie_outlined,
-    Icons.phone_android_outlined,
+    Icons.music_note_outlined,
+    Icons.theater_comedy_outlined,
+
+    // Family, Education & Work
+    Icons.school_outlined,
+    Icons.work_outlined,
+    Icons.laptop_mac_outlined,
+    Icons.computer_outlined,
+    Icons.child_friendly_outlined,
+    Icons.pets_outlined,
+    Icons.volunteer_activism_outlined,
     Icons.category_outlined,
   ];
 

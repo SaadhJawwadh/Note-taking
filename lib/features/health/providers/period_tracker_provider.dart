@@ -43,11 +43,12 @@ class PeriodTrackerProvider extends ChangeNotifier {
     }
 
     _logs = await PeriodRepository.instance.readAllPeriodLogs();
-    _predictedNextPeriod = await PeriodPredictionService.estimateNextPeriod(_logs);
-    _predictedOvulation = await PeriodPredictionService.estimateOvulationDate(_logs);
-    _daysUntilNext = await PeriodPredictionService.daysUntilNextPeriod(_logs);
-    _cycleStats = await PeriodPredictionService.calculateCycleStats(_logs);
-    await _calculateCyclePhase();
+    _avgCycleLength = await PeriodPredictionService.calculateAverageCycleLength(_logs);
+    _predictedNextPeriod = await PeriodPredictionService.estimateNextPeriod(_logs, _avgCycleLength);
+    _predictedOvulation = await PeriodPredictionService.estimateOvulationDate(_logs, _predictedNextPeriod, _avgCycleLength);
+    _daysUntilNext = await PeriodPredictionService.daysUntilNextPeriod(_logs, _predictedNextPeriod, _avgCycleLength);
+    _cycleStats = await PeriodPredictionService.calculateCycleStats(_logs, _avgCycleLength);
+    _calculateCyclePhase();
 
     if (!kIsWeb) {
       await NotificationService.schedulePeriodNotifications();
@@ -57,8 +58,7 @@ class PeriodTrackerProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _calculateCyclePhase() async {
-    _avgCycleLength = await PeriodPredictionService.calculateAverageCycleLength(_logs);
+  void _calculateCyclePhase() {
     if (_logs.isEmpty) {
       _currentCycleDay = null;
       _currentPhase = 'No Logs';
@@ -72,16 +72,39 @@ class PeriodTrackerProvider extends ChangeNotifier {
     final startUtc = DateTime.utc(latestLog.startDate.year, latestLog.startDate.month, latestLog.startDate.day);
 
     final diff = todayUtc.difference(startUtc).inDays;
-    final cycleDay = (diff % _avgCycleLength) + 1;
+
+    if (diff < 0) {
+      _currentCycleDay = 1;
+      _currentPhase = 'Menstrual Phase';
+      _phaseDescription = 'Period logged for future date. Cycle tracking will begin automatically.';
+      return;
+    }
+
+    // Dynamic ovulation calculation based on average cycle length
+    final ovulationDay = (_avgCycleLength - PeriodPredictionService.lutealPhaseLengthDays).clamp(8, _avgCycleLength - 4);
+    final follicularEnd = ovulationDay - 1;
+    final ovulatoryEnd = (ovulationDay + 2).clamp(ovulationDay, _avgCycleLength - 1);
+
+    if (diff >= _avgCycleLength) {
+      // Overdue cycle: preserve actual elapsed day count without modulo reset
+      final cycleDay = diff + 1;
+      _currentCycleDay = cycleDay;
+      _currentPhase = 'Late / Overdue';
+      final overdueDays = diff - _avgCycleLength + 1;
+      _phaseDescription = 'Period expected. Delayed by $overdueDays day${overdueDays == 1 ? '' : 's'}. Prioritize gentle rest.';
+      return;
+    }
+
+    final cycleDay = diff + 1;
     _currentCycleDay = cycleDay;
 
     if (cycleDay >= 1 && cycleDay <= 5) {
       _currentPhase = 'Menstrual Phase';
       _phaseDescription = 'Flow begins. Progesterone and estrogen levels drop. Rest and nurture yourself.';
-    } else if (cycleDay >= 6 && cycleDay <= 11) {
+    } else if (cycleDay >= 6 && cycleDay <= follicularEnd) {
       _currentPhase = 'Follicular Phase';
       _phaseDescription = 'Estrogen rises, boosting energy, mood, and focus. Great time for planning.';
-    } else if (cycleDay >= 12 && cycleDay <= 16) {
+    } else if (cycleDay >= ovulationDay && cycleDay <= ovulatoryEnd) {
       _currentPhase = 'Ovulatory Phase';
       _phaseDescription = 'Estrogen peaks, triggering ovulation. High energy and social openness.';
     } else {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_layout.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/app_bottom_sheet.dart';
 import '../../../../core/ui/app_card.dart';
 import '../../../../data/category_constants.dart';
@@ -59,8 +60,14 @@ class _SettleUpSheetState extends State<SettleUpSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final semantic = theme.extension<AppSemanticColors>();
+    final successColor = semantic?.success ?? colorScheme.primary;
+    final debtColor = colorScheme.error;
+    final currency = context.select<SettingsProvider, String>((s) => s.currencySymbol);
+
     final isContactOwingUser = widget.netAmount >= 0;
     final absAmount = widget.netAmount.abs();
+    final cardAccentColor = isContactOwingUser ? successColor : debtColor;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppLayout.spaceM, vertical: AppLayout.spaceS),
@@ -70,25 +77,19 @@ class _SettleUpSheetState extends State<SettleUpSheet> {
         children: [
           AppCard(
             padding: const EdgeInsets.all(AppLayout.spaceL),
-            backgroundColor: isContactOwingUser
-                ? Colors.green.withValues(alpha: 0.12)
-                : Colors.red.withValues(alpha: 0.12),
+            backgroundColor: cardAccentColor.withValues(alpha: 0.12),
             border: BorderSide(
-              color: isContactOwingUser
-                  ? Colors.green.withValues(alpha: 0.35)
-                  : Colors.red.withValues(alpha: 0.35),
+              color: cardAccentColor.withValues(alpha: 0.35),
             ),
             child: Column(
               children: [
                 CircleAvatar(
                   radius: 28,
-                  backgroundColor: isContactOwingUser
-                      ? Colors.green.withValues(alpha: 0.2)
-                      : Colors.red.withValues(alpha: 0.2),
+                  backgroundColor: cardAccentColor.withValues(alpha: 0.2),
                   child: Icon(
                     isContactOwingUser ? Icons.call_received_rounded : Icons.call_made_rounded,
                     size: 28,
-                    color: isContactOwingUser ? Colors.green : Colors.red,
+                    color: cardAccentColor,
                   ),
                 ),
                 const SizedBox(height: AppLayout.spaceM),
@@ -102,10 +103,10 @@ class _SettleUpSheetState extends State<SettleUpSheet> {
                 ),
                 const SizedBox(height: AppLayout.spaceXS),
                 Text(
-                  'Rs. ${absAmount.toStringAsFixed(2).replaceAll('.00', '')}',
+                  '$currency ${absAmount.toStringAsFixed(2).replaceAll('.00', '')}',
                   style: theme.textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: isContactOwingUser ? Colors.green : Colors.red,
+                    color: cardAccentColor,
                   ),
                 ),
                 if (widget.specificBill != null) ...[
@@ -156,8 +157,8 @@ class _SettleUpSheetState extends State<SettleUpSheet> {
               ),
               subtitle: Text(
                 isContactOwingUser
-                    ? 'Adds a +Rs. ${absAmount.toStringAsFixed(2).replaceAll('.00', '')} deposit entry to your ledger'
-                    : 'Adds a -Rs. ${absAmount.toStringAsFixed(2).replaceAll('.00', '')} payment entry to your ledger',
+                    ? 'Adds a +$currency ${absAmount.toStringAsFixed(2).replaceAll('.00', '')} deposit entry to your ledger'
+                    : 'Adds a -$currency ${absAmount.toStringAsFixed(2).replaceAll('.00', '')} payment entry to your ledger',
                 style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
               ),
               controlAffinity: ListTileControlAffinity.leading,
@@ -176,7 +177,7 @@ class _SettleUpSheetState extends State<SettleUpSheet> {
                         contactName: widget.contactName,
                         billTitle: widget.specificBill?.title ?? 'Split Bill',
                         shareAmount: widget.netAmount,
-                        currencySymbol: settings.currency,
+                        currencySymbol: settings.currencySymbol,
                         defaultPaymentInfo: settings.defaultPaymentInfo,
                       );
                       await SplitShareService.shareText(reminder, subject: 'Split Bill Reminder');

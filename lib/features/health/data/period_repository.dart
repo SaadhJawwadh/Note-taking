@@ -16,6 +16,7 @@ class PeriodRepository {
 
   Future<PeriodLog> createPeriodLog(PeriodLog log) async {
     final db = await _db;
+    await db.delete(TableNames.deletedPeriodLogs, where: 'id = ?', whereArgs: [log.id]);
     await db.insert(TableNames.periodLogs, log.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
     if (!kIsWeb) {
       try {
@@ -50,6 +51,11 @@ class PeriodRepository {
 
   Future<int> deletePeriodLog(String id) async {
     final db = await _db;
+    await db.insert(
+      TableNames.deletedPeriodLogs,
+      {'id': id, 'deletedAt': DateTime.now().toIso8601String()},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
     final res = await db.delete(TableNames.periodLogs, where: '${PeriodLogFields.id} = ?', whereArgs: [id]);
     if (!kIsWeb) {
       try {

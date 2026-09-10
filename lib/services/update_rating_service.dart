@@ -47,25 +47,34 @@ class UpdateRatingService {
     }
   }
 
-  /// Increments launch counter or action counter, and triggers rating if eligible.
-  static Future<void> incrementMilestoneAndCheckRating() async {
+  /// Increments milestone counter (e.g. note created, transaction logged, split settled)
+  /// and prompts for rating when appropriate with cooldown support.
+  static Future<void> incrementMilestoneAndCheckRating({bool forceMilestone = false}) async {
     if (kIsWeb || !(Platform.isAndroid || Platform.isIOS)) return;
     try {
       final prefs = await SharedPreferences.getInstance();
       
-      // Increment app use count
-      final useCount = (prefs.getInt('app_use_count') ?? 0) + 1;
-      await prefs.setInt('app_use_count', useCount);
+      final hasRated = prefs.getBool('has_completed_rating') ?? false;
+      if (hasRated) return;
 
-      final hasPrompted = prefs.getBool('has_prompted_rating') ?? false;
-      if (hasPrompted) return;
+      final lastRemindedStr = prefs.getString('last_rating_remind_time');
+      if (lastRemindedStr != null) {
+        final lastReminded = DateTime.tryParse(lastRemindedStr);
+        if (lastReminded != null && DateTime.now().difference(lastReminded).inDays < 7) {
+          return; // Respect 7-day cooldown
+        }
+      }
 
-      // We only prompt after at least 5 launches/milestones
-      if (useCount >= 5) {
+      // Increment milestone counter
+      final milestoneCount = (prefs.getInt('app_milestone_count') ?? 0) + 1;
+      await prefs.setInt('app_milestone_count', milestoneCount);
+
+      // Prompt on positive milestones (e.g. 5, 15, 30 actions)
+      if (forceMilestone || milestoneCount == 5 || milestoneCount == 15 || milestoneCount == 30) {
         if (await _inAppReview.isAvailable()) {
           await _inAppReview.requestReview();
-          await prefs.setBool('has_prompted_rating', true);
-          debugPrint('In-app review requested successfully.');
+          await prefs.setString('last_rating_remind_time', DateTime.now().toIso8601String());
+          debugPrint('In-app review requested successfully at milestone $milestoneCount.');
         } else {
           debugPrint('In-app review API is not available.');
         }

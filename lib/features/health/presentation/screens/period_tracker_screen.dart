@@ -17,6 +17,7 @@ import '../widgets/period_log_editor_sheet.dart';
 
 class PeriodTrackerScreen extends StatefulWidget {
   static final ValueNotifier<DateTime?> openLogEditorNotifier = ValueNotifier<DateTime?>(null);
+  static final ValueNotifier<int> selectTodayNotifier = ValueNotifier<int>(0);
 
   const PeriodTrackerScreen({super.key});
 
@@ -34,6 +35,22 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> with WidgetsB
     super.initState();
     _selectedDay = _focusedDay;
     PeriodTrackerScreen.openLogEditorNotifier.addListener(_handleLogEditorNotifier);
+    PeriodTrackerScreen.selectTodayNotifier.addListener(_handleSelectTodayNotifier);
+  }
+
+  void _handleSelectTodayNotifier() {
+    if (!mounted) return;
+    setState(() {
+      _focusedDay = DateTime.now();
+      _selectedDay = DateTime.now();
+    });
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: AppLayout.animDefault,
+        curve: AppLayout.curveExpressive,
+      );
+    }
   }
 
   void _handleLogEditorNotifier() {
@@ -52,6 +69,7 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> with WidgetsB
   @override
   void dispose() {
     PeriodTrackerScreen.openLogEditorNotifier.removeListener(_handleLogEditorNotifier);
+    PeriodTrackerScreen.selectTodayNotifier.removeListener(_handleSelectTodayNotifier);
     _scrollController.dispose();
     super.dispose();
   }
@@ -289,40 +307,57 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> with WidgetsB
                                       ),
                                     ),
                                     const SizedBox(height: 3),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                                      decoration: BoxDecoration(
-                                        color: phaseColor.withValues(alpha: isDark ? 0.22 : 0.16),
+                                    Semantics(
+                                      button: true,
+                                      label: 'View cycle phase guide and details',
+                                      child: InkWell(
                                         borderRadius: BorderRadius.circular(AppLayout.radiusS),
-                                        border: Border.all(
-                                          color: phaseColor.withValues(alpha: 0.35),
-                                          width: 1.0,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.spa_rounded,
-                                            size: 13,
-                                            color: phaseColor,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Flexible(
-                                            child: Text(
-                                              provider.currentCycleDay != null
-                                                  ? 'Day ${provider.currentCycleDay} • ${provider.currentPhase}'
-                                                  : provider.currentPhase,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: theme.textTheme.bodySmall?.copyWith(
-                                                color: phaseColor,
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w600,
-                                              ),
+                                        onTap: () {
+                                          HapticFeedback.selectionClick();
+                                          _showPhaseGuideDialog(context);
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                          decoration: BoxDecoration(
+                                            color: phaseColor.withValues(alpha: isDark ? 0.22 : 0.16),
+                                            borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                                            border: Border.all(
+                                              color: phaseColor.withValues(alpha: 0.35),
+                                              width: 1.0,
                                             ),
                                           ),
-                                        ],
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.spa_rounded,
+                                                size: 13,
+                                                color: phaseColor,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Flexible(
+                                                child: Text(
+                                                  provider.currentCycleDay != null
+                                                      ? 'Day ${provider.currentCycleDay} • ${provider.currentPhase}'
+                                                      : provider.currentPhase,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: theme.textTheme.bodySmall?.copyWith(
+                                                    color: phaseColor,
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 2),
+                                              Icon(
+                                                Icons.keyboard_arrow_down_rounded,
+                                                size: 13,
+                                                color: phaseColor,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ],

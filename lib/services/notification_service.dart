@@ -161,8 +161,18 @@ class NotificationService {
       importance: Importance.max,
       priority: Priority.high,
     );
+    const DarwinNotificationDetails darwinPlatformChannelSpecifics =
+        DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
     const NotificationDetails platformChannelSpecifics =
-        NotificationDetails(android: androidPlatformChannelSpecifics);
+        NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+      iOS: darwinPlatformChannelSpecifics,
+      macOS: darwinPlatformChannelSpecifics,
+    );
 
     await _notificationsPlugin.zonedSchedule(
       id,
@@ -171,6 +181,7 @@ class NotificationService {
       tz.TZDateTime.from(scheduledDate, tz.local),
       platformChannelSpecifics,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      payload: 'period_tracker',
     );
   }
 

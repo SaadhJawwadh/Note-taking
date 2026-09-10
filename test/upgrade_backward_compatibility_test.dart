@@ -136,7 +136,7 @@ void main() {
           value: settings,
           child: const MaterialApp(
             home: Scaffold(
-              body: WhatsNewSheet(currentVersion: '2.30.1'),
+              body: WhatsNewSheet(currentVersion: '2.30.2'),
             ),
           ),
         ),
@@ -149,11 +149,11 @@ void main() {
       expect(find.text("🐛 Fixes"), findsOneWidget);
 
       // Check marquee items
-      expect(find.text("Story Card Studio"), findsOneWidget);
-      expect(find.text("Packaged Offline Fonts"), findsOneWidget);
-      expect(find.text("Word Limits & Safe Heatmap"), findsOneWidget);
-      expect(find.text("Centered App Logo Watermark"), findsOneWidget);
-      expect(find.text("Resilient Sheet Layout"), findsOneWidget);
+      expect(find.text("Contextual Split Bill Action"), findsOneWidget);
+      expect(find.text("Rich Category Icons"), findsOneWidget);
+      expect(find.text("Dual-Mode Split Ledger Contract"), findsOneWidget);
+      expect(find.text("Smart App Review Reminders"), findsOneWidget);
+      expect(find.text("Note Indentation Preservation"), findsOneWidget);
 
       // Tap "Awesome, Got It!" to finish
       await tester.runAsync(() async {
@@ -162,7 +162,7 @@ void main() {
       });
       await tester.pumpAndSettle();
 
-      expect(settings.lastSeenVersion, '2.30.1');
+      expect(settings.lastSeenVersion, '2.30.2');
     });
   });
 }

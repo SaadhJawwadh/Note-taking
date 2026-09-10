@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_layout.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/app_card.dart';
 import '../../../../core/ui/app_chip.dart';
 import '../../services/spending_forecast_service.dart';
@@ -18,14 +19,18 @@ class BurnRateForecastCard extends StatelessWidget {
     this.onAdjustBudgets,
   });
 
-  Color _getStatusColor(ColorScheme colorScheme, SpendingPaceStatus status) {
+  Color _getStatusColor(ThemeData theme, SpendingPaceStatus status) {
+    final colorScheme = theme.colorScheme;
+    final semantic = theme.extension<AppSemanticColors>();
+    final successColor = semantic?.success ?? colorScheme.primary;
+
     switch (status) {
       case SpendingPaceStatus.underPace:
-        return Colors.teal;
+        return colorScheme.tertiary;
       case SpendingPaceStatus.onTrack:
-        return Colors.green;
+        return successColor;
       case SpendingPaceStatus.overPace:
-        return Colors.orange;
+        return colorScheme.error.withValues(alpha: 0.85);
       case SpendingPaceStatus.exhausted:
         return colorScheme.error;
       case SpendingPaceStatus.noBudget:
@@ -68,7 +73,7 @@ class BurnRateForecastCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
-    final statusColor = _getStatusColor(colorScheme, forecast.status);
+    final statusColor = _getStatusColor(theme, forecast.status);
 
     return AppCard(
       child: Column(

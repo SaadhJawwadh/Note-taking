@@ -35,12 +35,14 @@ class MoonPhaseWidget extends StatelessWidget {
             ),
           ],
         ),
-        child: CustomPaint(
-          size: Size(size, size),
-          painter: MoonPhasePainter(
-            phase: phase.clamp(0.0, 1.0),
-            moonColor: resolvedMoonColor,
-            shadowColor: resolvedShadowColor,
+        child: RepaintBoundary(
+          child: CustomPaint(
+            size: Size(size, size),
+            painter: MoonPhasePainter(
+              phase: phase.clamp(0.0, 1.0),
+              moonColor: resolvedMoonColor,
+              shadowColor: resolvedShadowColor,
+            ),
           ),
         ),
       ),

@@ -4,6 +4,8 @@ import 'package:note_taking_app/services/notification_service.dart';
 import 'package:note_taking_app/data/recurring_rule_model.dart';
 import 'package:note_taking_app/data/transaction_model.dart';
 import 'package:note_taking_app/features/finances/services/financial_export_service.dart';
+import 'package:note_taking_app/utils/rich_text_utils.dart';
+import 'package:flutter_quill/quill_delta.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -158,6 +160,23 @@ void main() {
 
       final restored = TransactionModel.fromJson(json);
       expect(restored.account, equals(AccountType.savings));
+    });
+
+    test('RichTextUtils.sanitizeDelta preserves indent attribute across serialization', () {
+      // Create delta with bullet list and indent level 2
+      final delta = Delta()
+        ..insert('Nested bullet item')
+        ..insert('\n', {'list': 'bullet', 'indent': 2});
+
+      final sanitized = RichTextUtils.sanitizeDelta(delta);
+      expect(sanitized.length, equals(2));
+      final newlineOp = sanitized.last;
+      expect(newlineOp.attributes?['indent'], equals(2));
+      expect(newlineOp.attributes?['list'], equals('bullet'));
+
+      final jsonStr = RichTextUtils.deltaToJson(delta);
+      final reloaded = RichTextUtils.contentToDelta(jsonStr);
+      expect(reloaded.last.attributes?['indent'], equals(2));
     });
   });
 }
