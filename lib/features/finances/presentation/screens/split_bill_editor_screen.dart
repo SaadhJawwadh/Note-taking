@@ -478,26 +478,31 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
                                     style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
                                   ),
                                   const SizedBox(height: AppLayout.spaceXS),
-                                  Wrap(
-                                    spacing: AppLayout.spaceXS,
-                                    runSpacing: AppLayout.spaceXS,
-                                    children: suggestions.map((name) {
-                                      final isPayer = _payerFriendController.text.trim().toLowerCase() == name.toLowerCase();
-                                      return ChoiceChip(
-                                        showCheckmark: false,
-                                        label: Text(name),
-                                        selected: isPayer,
-                                        onSelected: (sel) {
-                                          HapticFeedback.selectionClick();
-                                          setState(() {
-                                            _payerFriendController.text = sel ? name : '';
-                                            if (sel) {
-                                              _ensureFriendPayerInParticipants(name);
-                                            }
-                                          });
-                                        },
-                                      );
-                                    }).toList(),
+                                  ConstrainedBox(
+                                    constraints: const BoxConstraints(maxHeight: 110),
+                                    child: SingleChildScrollView(
+                                      child: Wrap(
+                                        spacing: AppLayout.spaceXS,
+                                        runSpacing: AppLayout.spaceXS,
+                                        children: suggestions.map((name) {
+                                          final isPayer = _payerFriendController.text.trim().toLowerCase() == name.toLowerCase();
+                                          return ChoiceChip(
+                                            showCheckmark: false,
+                                            label: Text(name),
+                                            selected: isPayer,
+                                            onSelected: (sel) {
+                                              HapticFeedback.selectionClick();
+                                              setState(() {
+                                                _payerFriendController.text = sel ? name : '';
+                                                if (sel) {
+                                                  _ensureFriendPayerInParticipants(name);
+                                                }
+                                              });
+                                            },
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -590,25 +595,30 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
                             style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                           const SizedBox(height: AppLayout.spaceXS),
-                          Wrap(
-                            spacing: AppLayout.spaceXS,
-                            runSpacing: AppLayout.spaceXS,
-                            children: splitProvider.recentContacts.map((c) {
-                              final isAdded = _participantsData.any((p) => (p['name'] as String).toLowerCase() == c.name.toLowerCase());
-                              if (isAdded) return const SizedBox.shrink();
-                              return ActionChip(
-                                avatar: CircleAvatar(
-                                  radius: 10,
-                                  backgroundColor: Color(c.colorValue),
-                                  child: Text(
-                                    c.name.isNotEmpty ? c.name[0].toUpperCase() : '?',
-                                    style: const TextStyle(fontSize: 10, color: Colors.white),
-                                  ),
-                                ),
-                                label: Text(c.name),
-                                onPressed: () => _addParticipant(c.name),
-                              );
-                            }).toList(),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxHeight: 110),
+                            child: SingleChildScrollView(
+                              child: Wrap(
+                                spacing: AppLayout.spaceXS,
+                                runSpacing: AppLayout.spaceXS,
+                                children: splitProvider.recentContacts.map((c) {
+                                  final isAdded = _participantsData.any((p) => (p['name'] as String).toLowerCase() == c.name.toLowerCase());
+                                  if (isAdded) return const SizedBox.shrink();
+                                  return ActionChip(
+                                    avatar: CircleAvatar(
+                                      radius: 10,
+                                      backgroundColor: Color(c.colorValue),
+                                      child: Text(
+                                        c.name.isNotEmpty ? c.name[0].toUpperCase() : '?',
+                                        style: const TextStyle(fontSize: 10, color: Colors.white),
+                                      ),
+                                    ),
+                                    label: Text(c.name),
+                                    onPressed: () => _addParticipant(c.name),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
                           ),
                           const SizedBox(height: AppLayout.spaceM),
                         ],

@@ -403,9 +403,9 @@ class P2pSyncService {
     final str = e.toString();
     final ipSuffix = (targetIp != null && targetIp.isNotEmpty) ? ' ($targetIp)' : '';
     if (str.contains('SocketException') || str.contains('Connection refused') || str.contains('No route to host')) {
-      return 'Peer unreachable$ipSuffix. Make sure both devices are on the same Wi-Fi.';
+      return 'Peer device unreachable$ipSuffix. Please open Note Taking on the other device and ensure both are on the same Wi-Fi.';
     } else if (str.contains('TimeoutException') || str.contains('timed out')) {
-      return 'Connection timed out$ipSuffix. Open Note Taking on your peer device.';
+      return 'Connection timed out$ipSuffix. Ensure Note Taking is open and active on your peer device.';
     } else if (str.contains('HandshakeException') || str.contains('Pair Code mismatch')) {
       return 'Pair code mismatch. Re-scan QR code or check 6-digit pair code.';
     } else if (str.contains('FormatException')) {

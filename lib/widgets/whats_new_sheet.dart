@@ -37,6 +37,11 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.primaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
+            icon: Icons.play_arrow_rounded,
+            title: "Instant Auto-Backup Trigger",
+            desc: "Run and verify scheduled encrypted backups on-demand with instant feedback directly in Settings.",
+          ),
+          _WhatsNewItem(
             icon: Icons.pie_chart_outline_rounded,
             title: "Contextual Split Bill Action",
             desc: "Add button on the Split Bills tab immediately launches the full split bill creator.",
@@ -51,16 +56,6 @@ class WhatsNewSheet extends StatelessWidget {
             title: "Story Card Studio",
             desc: "Turn notes or quotes into high-res social media story cards (9:16, 1:1, 4:5) with offline fonts and 1-tap sharing.",
           ),
-          _WhatsNewItem(
-            icon: Icons.text_fields_rounded,
-            title: "Packaged Offline Fonts",
-            desc: "Offline Noto Sans and Noto Serif Tamil fonts with automatic language detection and elegant line heights.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.crop_free_rounded,
-            title: "Word Limits & Safe Heatmap",
-            desc: "Optimized safe zones for Instagram and WhatsApp stories, plus 25/50/80 word limit selectors.",
-          ),
         ],
       ),
       _WhatsNewCategory(
@@ -68,6 +63,16 @@ class WhatsNewSheet extends StatelessWidget {
         categoryColor: theme.colorScheme.tertiary,
         bgColor: theme.colorScheme.tertiaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
+          _WhatsNewItem(
+            icon: Icons.schedule_outlined,
+            title: "Reliable Auto-Backup Scheduling",
+            desc: "Preserved 24-hour backup timers across app launches for consistent background backups.",
+          ),
+          _WhatsNewItem(
+            icon: Icons.wifi_tethering_error_rounded,
+            title: "Helpful P2P Offline Guidance",
+            desc: "Clear instructions when attempting Wi-Fi sync if the app is closed on the paired device.",
+          ),
           _WhatsNewItem(
             icon: Icons.account_balance_wallet_outlined,
             title: "Dual-Mode Split Ledger Contract",
@@ -78,16 +83,6 @@ class WhatsNewSheet extends StatelessWidget {
             title: "Smart App Review Reminders",
             desc: "Milestone-based rating prompts (at 5, 15, and 30 items) with a 7-day cooldown to ensure zero disruption.",
           ),
-          _WhatsNewItem(
-            icon: Icons.restore_rounded,
-            title: "Instant Backup Refresh",
-            desc: "Restoring an encrypted JSON backup refreshes all finance, split bill, and note views in real time.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.branding_watermark_outlined,
-            title: "Centered App Logo Watermark",
-            desc: "Tonal micro-pill watermark with authentic monochrome app emblem and clean typography.",
-          ),
         ],
       ),
       _WhatsNewCategory(
@@ -95,6 +90,11 @@ class WhatsNewSheet extends StatelessWidget {
         categoryColor: theme.colorScheme.secondary,
         bgColor: theme.colorScheme.secondaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
+          _WhatsNewItem(
+            icon: Icons.label_outline_rounded,
+            title: "Tag Manager & Card Scrollability",
+            desc: "Fluid scrolling in tag manager modal, note import preview, and category pickers on all screen sizes.",
+          ),
           _WhatsNewItem(
             icon: Icons.format_indent_increase_rounded,
             title: "Note Indentation Preservation",
@@ -104,16 +104,6 @@ class WhatsNewSheet extends StatelessWidget {
             icon: Icons.swipe_left_rounded,
             title: "Swipe-to-Delete Split Bills",
             desc: "Smooth swipe dismissal for group bills with a confirmation dialog and instant Undo.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.edit_note_rounded,
-            title: "Friend-Paid Custom Amounts",
-            desc: "Customize your exact share easily when friends cover a bill.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.phone_android_rounded,
-            title: "Resilient Sheet Layout",
-            desc: "Fluid scrolling across word limits and quick edit modes eliminates all layout overflows.",
           ),
         ],
       ),

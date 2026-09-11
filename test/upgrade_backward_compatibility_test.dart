@@ -119,14 +119,14 @@ void main() {
       expect(settings.trashAutoPurgeDays, 30);
     });
 
-    testWidgets('WhatsNewSheet renders v2.30.0 cards and records version on dismiss', (tester) async {
+    testWidgets('WhatsNewSheet renders v2.30.3 cards and records version on dismiss', (tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
       SharedPreferences.setMockInitialValues({
-        'lastSeenVersion': '2.29.0',
+        'lastSeenVersion': '2.30.2',
       });
       final settings = SettingsProvider();
       await settings.loadSettings();
@@ -136,7 +136,7 @@ void main() {
           value: settings,
           child: const MaterialApp(
             home: Scaffold(
-              body: WhatsNewSheet(currentVersion: '2.30.2'),
+              body: WhatsNewSheet(currentVersion: '2.30.3'),
             ),
           ),
         ),
@@ -149,10 +149,10 @@ void main() {
       expect(find.text("🐛 Fixes"), findsOneWidget);
 
       // Check marquee items
+      expect(find.text("Instant Auto-Backup Trigger"), findsOneWidget);
       expect(find.text("Contextual Split Bill Action"), findsOneWidget);
-      expect(find.text("Rich Category Icons"), findsOneWidget);
-      expect(find.text("Dual-Mode Split Ledger Contract"), findsOneWidget);
-      expect(find.text("Smart App Review Reminders"), findsOneWidget);
+      expect(find.text("Reliable Auto-Backup Scheduling"), findsOneWidget);
+      expect(find.text("Tag Manager & Card Scrollability"), findsOneWidget);
       expect(find.text("Note Indentation Preservation"), findsOneWidget);
 
       // Tap "Awesome, Got It!" to finish
@@ -162,7 +162,7 @@ void main() {
       });
       await tester.pumpAndSettle();
 
-      expect(settings.lastSeenVersion, '2.30.2');
+      expect(settings.lastSeenVersion, '2.30.3');
     });
   });
 }

@@ -785,136 +785,56 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return Container(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-                left: 16,
-                right: 16,
-                top: 8,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text('Manage Tags',
-                      style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 16),
-                  TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Create new tag',
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.add),
-                        onPressed: () async {
-                          if (enteredTag.isNotEmpty) {
-                            if (newTagColor != 0) {
-                              await NoteRepository.instance
-                                  .setTagColor(enteredTag, newTagColor);
-                              _tagColors[enteredTag] = newTagColor;
+            final mediaQuery = MediaQuery.of(context);
+            final maxHeight = mediaQuery.size.height * 0.75;
+
+            return ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxHeight),
+              child: SingleChildScrollView(
+                padding: EdgeInsets.only(
+                  bottom: mediaQuery.viewInsets.bottom + 16,
+                  left: 16,
+                  right: 16,
+                  top: 8,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('Manage Tags',
+                        style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 16),
+                    TextField(
+                      decoration: InputDecoration(
+                        hintText: 'Create new tag',
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.add),
+                          onPressed: () async {
+                            if (enteredTag.isNotEmpty) {
+                              if (newTagColor != 0) {
+                                await NoteRepository.instance
+                                    .setTagColor(enteredTag, newTagColor);
+                                _tagColors[enteredTag] = newTagColor;
+                              }
+                              setState(() {
+                                if (!tags.contains(enteredTag)) {
+                                  tags.add(enteredTag);
+                                  _updateColorFromTags();
+                                }
+                                if (!_allTags.contains(enteredTag)) {
+                                  _allTags.add(enteredTag);
+                                }
+                              });
+                              if (context.mounted) Navigator.pop(context);
                             }
-                            setState(() {
-                              if (!tags.contains(enteredTag)) {
-                                tags.add(enteredTag);
-                                _updateColorFromTags();
-                              }
-                              if (!_allTags.contains(enteredTag)) {
-                                _allTags.add(enteredTag);
-                              }
-                            });
-                            if (context.mounted) Navigator.pop(context);
-                          }
-                        },
-                      ),
-                    ),
-                    onChanged: (v) => enteredTag = v.trim(),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'TAG COLOR',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
+                          },
                         ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    alignment: WrapAlignment.center,
-                    children: [
-                      ...AppTheme.noteColors.map((c) {
-                        final bool isSystem = c.toARGB32() == 0;
-                        final bool isSelected =
-                            !isSystem && newTagColor == c.toARGB32();
-                        return Semantics(
-                          label: isSystem ? 'Random Color' : 'Color option',
-                          selected: isSelected,
-                          button: true,
-                          child: GestureDetector(
-                            onTap: () {
-                              if (isSystem) {
-                                final nonZeroColors = AppTheme.noteColors
-                                    .where((color) => color.toARGB32() != 0)
-                                    .toList();
-                                final randomColor =
-                                    (nonZeroColors..shuffle()).first;
-                                setModalState(
-                                    () => newTagColor = randomColor.toARGB32());
-                              } else {
-                                setModalState(() => newTagColor = c.toARGB32());
-                              }
-                            },
-                            child: SizedBox(
-                              width: 44,
-                              height: 44,
-                              child: Center(
-                                child: Container(
-                                  width: isSelected ? 34 : 30,
-                                  height: isSelected ? 34 : 30,
-                                  decoration: BoxDecoration(
-                                    color: isSystem
-                                        ? Theme.of(context).colorScheme.surfaceContainerHigh
-                                        : c,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: isSelected
-                                          ? Theme.of(context).colorScheme.primary
-                                          : Theme.of(context)
-                                              .colorScheme
-                                              .outlineVariant,
-                                      width: isSelected ? 3 : 1,
-                                    ),
-                                    boxShadow: isSelected
-                                        ? [
-                                            BoxShadow(
-                                              color: c.withValues(alpha: 0.4),
-                                              blurRadius: 6,
-                                              spreadRadius: 1,
-                                            ),
-                                          ]
-                                        : null,
-                                  ),
-                                  child: isSystem
-                                      ? const Icon(Icons.shuffle, size: 16)
-                                      : (isSelected
-                                          ? Icon(Icons.check,
-                                              size: 16,
-                                              color: c.computeLuminance() > 0.5
-                                                  ? Colors.black
-                                                  : Colors.white)
-                                          : null),
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  if (_allTags.isNotEmpty) ...[
+                      ),
+                      onChanged: (v) => enteredTag = v.trim(),
+                    ),
+                    const SizedBox(height: 16),
                     Text(
-                      'SELECT TAGS',
+                      'TAG COLOR',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             color: Theme.of(context).colorScheme.primary,
                             fontWeight: FontWeight.bold,
@@ -925,36 +845,127 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: _allTags.map((t) {
-                        final isSelected = tags.contains(t);
-                        final tagColorVal = _tagColors[t];
-                        final colors = AppChip.getTagColors(context, tagColorVal,
-                            isSelected: isSelected);
-
-                        return AppChip(
-                          label: t,
-                          icon: isSelected ? Icons.check : null,
-                          isSelected: isSelected,
-                          backgroundColor: colors.bg,
-                          selectedBackgroundColor: colors.bg,
-                          textColor: colors.fg,
-                          border: colors.border,
-                          onTap: () {
-                            setState(() {
-                              if (isSelected) {
-                                tags.remove(t);
-                              } else {
-                                tags.add(t);
-                              }
-                              _updateColorFromTags();
-                            });
-                            setModalState(() {});
-                          },
-                        );
-                      }).toList(),
+                      alignment: WrapAlignment.center,
+                      children: [
+                        ...AppTheme.noteColors.map((c) {
+                          final bool isSystem = c.toARGB32() == 0;
+                          final bool isSelected =
+                              !isSystem && newTagColor == c.toARGB32();
+                          return Semantics(
+                            label: isSystem ? 'Random Color' : 'Color option',
+                            selected: isSelected,
+                            button: true,
+                            child: GestureDetector(
+                              onTap: () {
+                                if (isSystem) {
+                                  final nonZeroColors = AppTheme.noteColors
+                                      .where((color) => color.toARGB32() != 0)
+                                      .toList();
+                                  final randomColor =
+                                      (nonZeroColors..shuffle()).first;
+                                  setModalState(
+                                      () => newTagColor = randomColor.toARGB32());
+                                } else {
+                                  setModalState(() => newTagColor = c.toARGB32());
+                                }
+                              },
+                              child: SizedBox(
+                                width: 44,
+                                height: 44,
+                                child: Center(
+                                  child: Container(
+                                    width: isSelected ? 34 : 30,
+                                    height: isSelected ? 34 : 30,
+                                    decoration: BoxDecoration(
+                                      color: isSystem
+                                          ? Theme.of(context).colorScheme.surfaceContainerHigh
+                                          : c,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? Theme.of(context).colorScheme.primary
+                                            : Theme.of(context)
+                                                .colorScheme
+                                                .outlineVariant,
+                                        width: isSelected ? 3 : 1,
+                                      ),
+                                      boxShadow: isSelected
+                                          ? [
+                                              BoxShadow(
+                                                color: c.withValues(alpha: 0.4),
+                                                blurRadius: 6,
+                                                spreadRadius: 1,
+                                              ),
+                                            ]
+                                          : null,
+                                    ),
+                                    child: isSystem
+                                        ? const Icon(Icons.shuffle, size: 16)
+                                        : (isSelected
+                                            ? Icon(Icons.check,
+                                                size: 16,
+                                                color: c.computeLuminance() > 0.5
+                                                    ? Colors.black
+                                                    : Colors.white)
+                                            : null),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ],
                     ),
-                  ]
-                ],
+                    const SizedBox(height: 16),
+                    if (_allTags.isNotEmpty) ...[
+                      Text(
+                        'SELECT TAGS',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.2,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 220),
+                        child: SingleChildScrollView(
+                          child: Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: _allTags.map((t) {
+                              final isSelected = tags.contains(t);
+                              final tagColorVal = _tagColors[t];
+                              final colors = AppChip.getTagColors(context, tagColorVal,
+                                  isSelected: isSelected);
+
+                              return AppChip(
+                                label: t,
+                                icon: isSelected ? Icons.check : null,
+                                isSelected: isSelected,
+                                backgroundColor: colors.bg,
+                                selectedBackgroundColor: colors.bg,
+                                textColor: colors.fg,
+                                border: colors.border,
+                                onTap: () {
+                                  setState(() {
+                                    if (isSelected) {
+                                      tags.remove(t);
+                                    } else {
+                                      tags.add(t);
+                                    }
+                                    _updateColorFromTags();
+                                  });
+                                  setModalState(() {});
+                                },
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             );
           },

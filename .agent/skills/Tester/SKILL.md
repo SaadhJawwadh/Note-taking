@@ -60,6 +60,8 @@ Use this skill to execute QA verifications, unit/widget tests, security audits, 
 * **Drive the UI, don't assume**: a FAB `tooltip` swallowed the long-press that opened the template sheet — only caught by actually long-pressing on the emulator. Screenshot each new surface and LOOK at it.
 * **Test-data parity**: `createTestDatabase` pins the CURRENT schema version (v19) — bump it together with `_initDB`'s `version:` and add the `onUpgrade` branch, or tests diverge from production schema.
 * **Flutter↔Kotlin prefs types**: Dart `prefs.setInt` stores a Long — Kotlin must read `getLong(...)`, not `getInt(...)`, or widget code silently falls back to defaults.
+* **SegmentedButton UI Tap Coordinates in Mobile Emulator**: When driving UI taps on `SegmentedButton` controls via `adb shell input tap <x> <y>`, ensure vertical Y coordinates target the *actual* segment pill row (e.g. `y=970` on $1080 \times 2400$ display below the top hero card), avoiding upper header/scope pill areas (e.g. `y=395`). Inspect dumped UI bounds (`uiautomator dump`) or captured screenshots to verify segment state toggling.
+* **Release-Mode Cold Launch Verification**: Always verify that `WhatsNewSheet` fires with the bumped version number, that `_buildFinancesFAB` dynamically updates to "New Split Bill" upon switching tabs, and that no R8/ProGuard class-stripping occurs.
 
 ## 6. R8 Optimization & ProGuard Verification
 * **R8 Full Mode Enforced**: Verify `android.enableR8.fullMode=true` is set in `android/gradle.properties`. Avoid broad wildcards like `-keep class io.flutter.** { *; }` in `proguard-rules.pro` that disable dead code elimination and method inlining.

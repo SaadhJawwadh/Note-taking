@@ -226,8 +226,13 @@ A private ledger to track expenses, earnings, and financial habits.
     *   **Inline Calculator**: Accessible during expense creation inside `CalculatorDialog`.
     *   **Trend Visuals & Regression**: Exponentially-weighted linear regression with Huber-style outlier dampening.
     *   **Double-Level Categorization**: Auto-categorization matches transaction descriptions using keyword rules.
+    *   **Contextual Dynamic Action Routing**: `FinancialManagerScreen.activeTabNotifier` synchronizes the active tab with the root FAB to morph into "New Split Bill" when switching to Split Bills.
+    *   **Split Bills & Shared Debts**: Full peer-to-peer expense splitting with `SplitBillRepository`, dual-mode ledger routing (master expense recorded when user pays; no personal debit when friend pays), 100% local ML Kit OCR receipt scanning, and swipe-to-delete with undo.
 *   **Key Files**:
     *   Main UI: `lib/features/finances/presentation/screens/financial_manager_screen.dart`
+    *   Split Bills Tab & Views: `lib/features/finances/presentation/widgets/split_bills_tab.dart`
+    *   Split Bill Editor: `lib/features/finances/presentation/screens/split_bill_editor_screen.dart`
+    *   Split Bill State & Provider: `lib/features/finances/providers/split_bill_provider.dart`
     *   Rules & Test Sandbox: `lib/features/finances/presentation/screens/sms_rules_screen.dart`
     *   State Manager: `lib/features/finances/providers/financial_manager_provider.dart`
     *   Database CRUD: `lib/features/finances/data/transaction_repository.dart`

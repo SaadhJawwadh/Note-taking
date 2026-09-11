@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
+export 'package:workmanager/workmanager.dart' show ExistingPeriodicWorkPolicy;
 import '../data/database_helper.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:share_plus/share_plus.dart';
@@ -223,7 +224,9 @@ Future<void> _rotateBackups(String directoryPath) async {
   } catch (_) {}
 }
 
-Future<void> syncAutoBackupSchedule() async {
+Future<void> syncAutoBackupSchedule({
+  ExistingPeriodicWorkPolicy existingWorkPolicy = ExistingPeriodicWorkPolicy.keep,
+}) async {
   if (kIsWeb || !(Platform.isAndroid || Platform.isIOS)) return;
   try {
     final prefs = await SharedPreferences.getInstance();
@@ -241,7 +244,7 @@ Future<void> syncAutoBackupSchedule() async {
         networkType: NetworkType.notRequired,
         requiresBatteryNotLow: true,
       ),
-      existingWorkPolicy: ExistingPeriodicWorkPolicy.replace,
+      existingWorkPolicy: existingWorkPolicy,
     );
   } catch (e) {
     debugPrint('Workmanager syncAutoBackupSchedule error: $e');
@@ -776,5 +779,46 @@ class BackupService {
     }
     result.add(buffer.toString());
     return result;
+  }
+
+  /// Triggers an immediate auto-backup run on demand and updates SettingsProvider state.
+  static Future<bool> performAutoBackupNow(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.primary;
+    final errorColor = theme.colorScheme.error;
+
+    try {
+      final success = await performAutoBackup();
+      if (context.mounted) {
+        final settings = Provider.of<SettingsProvider>(context, listen: false);
+        final prefs = await SharedPreferences.getInstance();
+        final lastBackupStr = prefs.getString('lastAutoBackupTime');
+        if (lastBackupStr != null) {
+          settings.updateLastAutoBackupTime(DateTime.tryParse(lastBackupStr));
+        }
+      }
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            success
+                ? 'Auto-backup completed and safely saved'
+                : 'Auto-backup failed. Check storage permissions.',
+          ),
+          backgroundColor: success ? primaryColor : errorColor,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return success;
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Auto-backup error: $e'),
+          backgroundColor: errorColor,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return false;
+    }
   }
 }

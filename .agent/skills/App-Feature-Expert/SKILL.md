@@ -56,6 +56,7 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 - **Delta Serialization & Sanitization**:
   - Separate text insertions from newline block insertions when building Deltas for database persistence.
   - Sanitize loaded Deltas before `Document.fromDelta()` with `RichTextUtils.sanitizeDelta(Delta delta)` to split text runs from `\n` boundaries without stripping inline text formatting (`bold`, `italic`, `underline`).
+  - Retain block attributes (`'list'`, `'header'`, and `'indent'`) on `\n` line endings while stripping invalid inline formatting from newlines to guarantee multi-level list indents and formatting survive note save and reloads.
 - **Normalized Selection Range & Embed Insertions**:
   - Use `_getNormalizedSelectionRange()` (`(min(base, extent), abs(base - extent))`) for embed insertions (tables, images) to prevent negative range exceptions on right-to-left cursor drags.
 - **Protected Image Directory**:
@@ -153,6 +154,14 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
   - When a friend paid for a bill, other participants settling with that friend are strictly informational inside the Split tab (toggling `hasPaid` in the split record only) and NEVER create ledger transactions in the user's personal accounts.
   - From the user's perspective, once the user pays their own share, the split is marked as `Settled for You`.
   - All settlements execute with 0ms optimistic UI feedback.
+- **Contextual Dynamic FAB & Active Tab Routing**:
+  - `FinancialManagerScreen.activeTabNotifier` broadcasts the active tab segment (`'Ledger'`, `'Budgets'`, `'Split Bills'`).
+  - The root floating action button in `home_screen.dart` listens to this notifier and dynamically morphs into "New Split Bill" (`Icons.pie_chart_outline_rounded`), routing directly to `SplitBillEditorScreen`.
+- **Dual-Mode Ledger Cash Flow Contract**:
+  - **User Paid (`PayerType.userPaid`)**: Master expense is recorded in `AccountType.daily` reflecting the full receipt total (matching bank SMS debits).
+  - **Friend Paid (`PayerType.friendPaid`)**: Initial bill creation produces NO ledger entry in personal accounts. Personal liability is recorded as an `Expense` ONLY when the user settles their share with the friend via `SettleUpSheet`.
+- **Swipe-to-Delete with Undo**:
+  - Split bills support swipe-to-delete with `AppDialog.showConfirm` guard and instant floating SnackBar `UNDO`.
 - **100% Offline Receipt OCR (`ReceiptScannerService`)**:
   - On-device text recognition using Google ML Kit.
   - Regex parser extracts grand total (`TOTAL`, `GRAND TOTAL`, `AMOUNT PAID`), subtotal, taxes, and merchant name.
@@ -179,6 +188,8 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 - **Hardware-Aware AI Support State**: `checkAiCoreSupport(LocalAiService)` checks Android AICore on launch, setting `_isDeviceAiSupported`. `isAiActive` provides a single source of truth for both hardware capability and user preference.
 - **Schedule Sync On Preference Changes**: Setter methods (`setAutoBackupEnabled`, `setAutoBackupFrequency`, `setAutoBackupPath`, `setDailySyncEnabled`) MUST invoke their respective schedule sync helpers (`syncAutoBackupSchedule`, `syncDailySyncSchedule`) to guarantee Workmanager tasks stay in sync with stored preferences.
 - **Backup & Restore**: Encryption-guarded backup JSON via `BackupService`. Excludes sensitive biometric settings to prevent override via untrusted files.
+- **Real-Time Backup Restore Event Broadcaster**:
+  - `BackupService.restoreFromBackupData()` triggers real-time refresh notifications across all domain providers (`NoteProvider`, `FinancialManagerProvider`, `SplitBillProvider`, `PeriodTrackerProvider`), immediately updating the UI without requiring an app restart.
 
 ---
 

@@ -281,12 +281,17 @@ class _NoteMigrationSheetState extends State<NoteMigrationSheet> {
                       style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
                     ),
                     const SizedBox(height: AppLayout.spaceXS),
-                    Wrap(
-                      spacing: AppLayout.spaceXS,
-                      runSpacing: AppLayout.spaceXS,
-                      children: _detectedTags.take(8).map((tag) {
-                        return AppChip(label: '#$tag');
-                      }).toList(),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 110),
+                      child: SingleChildScrollView(
+                        child: Wrap(
+                          spacing: AppLayout.spaceXS,
+                          runSpacing: AppLayout.spaceXS,
+                          children: _detectedTags.map((tag) {
+                            return AppChip(label: '#$tag');
+                          }).toList(),
+                        ),
+                      ),
                     ),
                   ],
                   const SizedBox(height: AppLayout.spaceM),

@@ -5,6 +5,8 @@ import 'package:note_taking_app/data/recurring_rule_model.dart';
 import 'package:note_taking_app/data/transaction_model.dart';
 import 'package:note_taking_app/features/finances/services/financial_export_service.dart';
 import 'package:note_taking_app/utils/rich_text_utils.dart';
+import 'package:note_taking_app/services/p2p_sync_service.dart';
+import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import 'package:flutter_quill/quill_delta.dart';
 
 void main() {
@@ -177,6 +179,30 @@ void main() {
       final jsonStr = RichTextUtils.deltaToJson(delta);
       final reloaded = RichTextUtils.contentToDelta(jsonStr);
       expect(reloaded.last.attributes?['indent'], equals(2));
+    });
+
+    test('P2pSyncService formats clear peer offline guidance on socket exceptions', () {
+      final socketErr = P2pSyncService.formatUserFriendlyErrorMessage(
+        'SocketException: Connection refused (OS Error: Connection refused, errno = 111)',
+        '192.168.1.50',
+      );
+      expect(socketErr, contains('Peer device unreachable'));
+      expect(socketErr, contains('192.168.1.50'));
+      expect(socketErr, contains('Please open Note Taking on the other device'));
+
+      final timeoutErr = P2pSyncService.formatUserFriendlyErrorMessage(
+        'TimeoutException after 0:00:04.000000',
+        '192.168.1.50',
+      );
+      expect(timeoutErr, contains('Connection timed out'));
+      expect(timeoutErr, contains('Ensure Note Taking is open and active on your peer device'));
+    });
+
+    test('SettingsProvider.updateLastAutoBackupTime updates state correctly', () {
+      final provider = SettingsProvider();
+      final now = DateTime.now();
+      provider.updateLastAutoBackupTime(now);
+      expect(provider.lastAutoBackupTime, equals(now.toIso8601String()));
     });
   });
 }

@@ -760,6 +760,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                             valueBadge: _formatLastBackupTime(settings.lastAutoBackupTime!),
                                           ),
                                         ],
+                                        const _Divider(),
+                                        SettingsTile(
+                                          icon: Icons.play_arrow_rounded,
+                                          iconColor: colorScheme.primary,
+                                          title: 'Run Auto-Backup Now',
+                                          subtitle: 'Trigger and verify background auto-backup immediately',
+                                          showArrow: true,
+                                          onTap: () async {
+                                            await HapticFeedback.selectionClick();
+                                            if (context.mounted) {
+                                              await BackupService.performAutoBackupNow(context);
+                                            }
+                                          },
+                                        ),
                                       ],
                                     ],
                                   ],

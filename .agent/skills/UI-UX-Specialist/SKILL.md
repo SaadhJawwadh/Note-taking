@@ -55,7 +55,9 @@ Refer to [design.md](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/.ag
 * **Hardware-Aware AI UI Gating**: Never render AI sparkle icons, refine menu items, or assist floating buttons unless `settings.isAiActive` is true. This prevents dead interactive elements on emulators and non-NPU devices.
 * **AI Action Iconography & Phrasing Standards**:
   - Always use canonical Material 3 `Icons.auto_fix_high_rounded` (for AI title/text refinement and formatting actions) or `Icons.auto_awesome_rounded` (for generative creation).
-  - Never clutter action labels with temporal brackets or internal time windows (e.g., use `'Refine Titles with AI'` instead of `'Refine Titles with AI (48h)'`). Keep action titles clean, imperative, and action-oriented.
+* **Contextual Morphing Action Buttons in Sub-Tab Views**:
+  - In screens featuring nested `SegmentedButton` tabs or view modes (`FinancialManagerScreen`), expose a `ValueNotifier<String>` indicating the active sub-tab.
+  - The hosting screen's floating action button (`AppMorphingFab`) must reactively listen to this notifier via `ValueListenableBuilder` to dynamically adapt its icon, label, and `onPressed` route destination (e.g. morphing from "New Transaction" to "New Split Bill" when switching to Split Bills).
 
 ## 2. Material 3 Official Components Catalog ([m3.material.io](https://m3.material.io/components))
 When implementing UI components, strictly follow the M3 guidelines codified in [design.md Section 9](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/.agent/skills/UI-UX-Specialist/design.md#9-comprehensive-material-3-component-specifications--guidance-catalog-m3materialio):

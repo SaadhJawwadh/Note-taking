@@ -427,7 +427,7 @@ class SettingsProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('autoBackupFrequency', freq);
     notifyListeners();
-    await syncAutoBackupSchedule();
+    await syncAutoBackupSchedule(existingWorkPolicy: ExistingPeriodicWorkPolicy.replace);
   }
 
   Future<void> setAutoBackupPath(String? path) async {
@@ -439,7 +439,7 @@ class SettingsProvider extends ChangeNotifier {
       await prefs.remove('autoBackupPath');
     }
     notifyListeners();
-    await syncAutoBackupSchedule();
+    await syncAutoBackupSchedule(existingWorkPolicy: ExistingPeriodicWorkPolicy.replace);
   }
 
   Future<void> setLastAutoBackupTime(String? time) async {
@@ -451,6 +451,13 @@ class SettingsProvider extends ChangeNotifier {
       await prefs.remove('lastAutoBackupTime');
     }
     notifyListeners();
+  }
+
+  void updateLastAutoBackupTime(DateTime? time) {
+    if (time != null) {
+      _lastAutoBackupTime = time.toIso8601String();
+      notifyListeners();
+    }
   }
 
   Future<void> setTextSize(double size) async {

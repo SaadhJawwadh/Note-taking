@@ -869,51 +869,56 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        ...TransactionCategory.allNames.map((cat) {
-                          final catColor = TransactionCategory.colorFor(cat);
-                          final catIcon = TransactionCategory.iconFor(cat);
-                          final selected = _category == cat;
-                          return FilterChip(
-                            showCheckmark: false,
-                            avatar: Icon(
-                              catIcon,
-                              size: 16,
-                              color: selected ? catColor : colorScheme.onSurfaceVariant,
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 180),
+                      child: SingleChildScrollView(
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            ...TransactionCategory.allNames.map((cat) {
+                              final catColor = TransactionCategory.colorFor(cat);
+                              final catIcon = TransactionCategory.iconFor(cat);
+                              final selected = _category == cat;
+                              return FilterChip(
+                                showCheckmark: false,
+                                avatar: Icon(
+                                  catIcon,
+                                  size: 16,
+                                  color: selected ? catColor : colorScheme.onSurfaceVariant,
+                                ),
+                                label: Text(cat),
+                                selected: selected,
+                                onSelected: (_) {
+                                  HapticFeedback.lightImpact();
+                                  setState(() => _category = cat);
+                                },
+                                selectedColor: catColor.withValues(alpha: 0.2),
+                                labelStyle: TextStyle(
+                                  color: selected ? catColor : colorScheme.onSurfaceVariant,
+                                  fontWeight:
+                                      selected ? FontWeight.w600 : FontWeight.normal,
+                                ),
+                                side: BorderSide(
+                                  color: selected ? catColor : colorScheme.outline.withValues(alpha: 0.5),
+                                  width: selected ? 1.5 : 0.5,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(AppLayout.radiusS)),
+                              );
+                            }),
+                            ActionChip(
+                              avatar: Icon(Icons.add, size: 18, color: colorScheme.primary),
+                              label:
+                                  Text('New', style: TextStyle(color: colorScheme.primary)),
+                              onPressed: _showNewCategoryDialog,
+                              side: BorderSide(color: colorScheme.primary, width: 0.5),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(AppLayout.radiusS)),
                             ),
-                            label: Text(cat),
-                            selected: selected,
-                            onSelected: (_) {
-                              HapticFeedback.lightImpact();
-                              setState(() => _category = cat);
-                            },
-                            selectedColor: catColor.withValues(alpha: 0.2),
-                            labelStyle: TextStyle(
-                              color: selected ? catColor : colorScheme.onSurfaceVariant,
-                              fontWeight:
-                                  selected ? FontWeight.w600 : FontWeight.normal,
-                            ),
-                            side: BorderSide(
-                              color: selected ? catColor : colorScheme.outline.withValues(alpha: 0.5),
-                              width: selected ? 1.5 : 0.5,
-                            ),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(AppLayout.radiusS)),
-                          );
-                        }),
-                        ActionChip(
-                          avatar: Icon(Icons.add, size: 18, color: colorScheme.primary),
-                          label:
-                              Text('New', style: TextStyle(color: colorScheme.primary)),
-                          onPressed: _showNewCategoryDialog,
-                          side: BorderSide(color: colorScheme.primary, width: 0.5),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppLayout.radiusS)),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                     ListenableBuilder(
                       listenable: _descriptionController,

@@ -28,9 +28,36 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
+                  version: 'v2.30.3',
+                  date: 'September 12, 2026',
+                  isLatest: true,
+                  changes: [
+                    _ChangelogGroup(
+                      title: "🌟 What's New",
+                      items: [
+                        'Instant Auto-Backup Trigger: Run and verify scheduled encrypted backups on-demand with real-time feedback directly in Settings.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🚀 Improvements',
+                      items: [
+                        'Reliable Auto-Backup Scheduling: Fixed the background timer reset bug on app startup, ensuring daily automatic backups run consistently.',
+                        'Helpful P2P Offline Guidance: Clear, friendly instructions appear when attempting Wi-Fi sync if the app is closed on the paired device.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🐛 Fixes',
+                      items: [
+                        'Tag Manager & Card Scrollability: Completely eliminated layout overflow crashes in the tag manager modal, note import preview, and category pickers on compact or older screens.',
+                      ],
+                    ),
+                  ],
+                ),
+                _buildVersionSection(
+                  context,
                   version: 'v2.30.2',
                   date: 'September 10, 2026',
-                  isLatest: true,
+                  isLatest: false,
                   changes: [
                     _ChangelogGroup(
                       title: "🌟 What's New",
