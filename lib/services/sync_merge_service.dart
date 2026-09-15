@@ -377,6 +377,17 @@ class SyncMergeService {
         }
         await batch.commit(noResult: true);
       }
+      // 9. Merge Savings Goals
+      final savingsList = remoteData['savingsGoals'] ?? remoteData['savings_goals'];
+      if (savingsList is List) {
+        final batch = txn.batch();
+        for (final item in savingsList) {
+          if (item is Map) {
+            batch.insert('savings_goals', Map<String, Object?>.from(item), conflictAlgorithm: ConflictAlgorithm.replace);
+          }
+        }
+        await batch.commit(noResult: true);
+      }
     });
 
     return SyncMergeResult(

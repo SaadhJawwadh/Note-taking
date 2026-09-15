@@ -17,6 +17,7 @@ import 'providers/note_provider.dart';
 import 'features/sync/providers/p2p_sync_provider.dart';
 import 'package:note_taking_app/features/finances/providers/financial_manager_provider.dart';
 import 'package:note_taking_app/features/finances/providers/split_bill_provider.dart';
+import 'package:note_taking_app/features/finances/providers/savings_goal_provider.dart';
 import 'package:note_taking_app/features/health/providers/period_tracker_provider.dart';
 import 'l10n/app_localizations.dart';
 
@@ -110,6 +111,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => P2pSyncProvider()),
         ChangeNotifierProvider(create: (_) => FinancialManagerProvider()),
         ChangeNotifierProvider(create: (_) => SplitBillProvider()),
+        ChangeNotifierProvider(create: (_) => SavingsGoalProvider()..loadGoals()),
         ChangeNotifierProvider(create: (_) => PeriodTrackerProvider()),
       ],
       child: const NoteApp(),

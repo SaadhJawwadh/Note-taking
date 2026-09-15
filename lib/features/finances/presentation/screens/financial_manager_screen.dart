@@ -30,6 +30,7 @@ import '../widgets/financial_ledger_tab.dart';
 import '../widgets/financial_analytics_tab.dart';
 import '../widgets/minimal_chart_deck.dart';
 import '../widgets/recurring_rules_sheet.dart';
+import '../widgets/savings_goal_editor_sheet.dart';
 import '../widgets/split_bills_tab.dart';
 import '../../services/financial_export_service.dart';
 import '../../services/spending_forecast_service.dart';
@@ -1336,6 +1337,9 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
             HapticFeedback.selectionClick();
             if (value == 'ai_refine') {
               _bulkRefineRecentTransactionsWithAi();
+            } else if (value == 'savings_goals') {
+              setState(() => _selectedTab = 'Budgets');
+              SavingsGoalEditorSheet.show(context);
             } else if (value == 'sms_rules') {
               AppRoute.push(context, const SmsRulesScreen());
             } else if (value == 'recurring') {
@@ -1385,6 +1389,17 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
                     Icon(Icons.flash_on_rounded, size: 20, color: colorScheme.primary),
                     const SizedBox(width: 12),
                     Text('SMS & Bank Automation', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'savings_goals',
+                height: 48,
+                child: Row(
+                  children: [
+                    Icon(Icons.flag_rounded, size: 20, color: colorScheme.primary),
+                    const SizedBox(width: 12),
+                    Text('Savings Goals & Pockets', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
                   ],
                 ),
               ),

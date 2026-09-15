@@ -10,21 +10,25 @@ Refer to [design.md](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/.ag
 ## 1. Master Design System Rules
 * **Single Source of Truth**: All layout spacing, border radii, animation curves, and component tokens MUST be referenced from `AppLayout` and `AppTheme` (`lib/core/theme/`).
 * **Core Shared UI Components**: Always use standard UI primitives from `lib/core/ui/`:
-  - `AppCard`: Standardized surface card container.
-  - `AppBottomSheet`: Standardized drag-handled modal sheet.
-  - `AppChip`: Standardized pill/chip widget for tags, categories, and phase badges.
-  - `AppDialog`: Standardized M3 responsive dialog.
-  - `FrostedGlassSliverAppBar`: Standardized glassmorphic top header.
+  - `AppCard`: Standardized surface card container (supports standard, tonal, and squircle).
+  - `AppBottomSheet`: Standardized drag-handled modal sheet with responsive width bounds.
+  - `AppChip`: Standardized 8–12dp squircle pill for tags, categories, and phase badges.
+  - `AppDialog`: Standardized M3 responsive dialog with 28dp squircle corners.
+  - `ExpressiveSliverAppBar`: Standardized borderless solid surface header (zero blur).
+  - `ExpressiveSplitButton`: Standardized dual-action split CTA (action button + dropdown trigger).
+  - `ExpressiveWavySlider`: Tactile sinusoidal wavy slider for values, scales, and audio.
+  - `ExpressiveWavyProgress`: Animated wavy progress indicator for budgets and ongoing tasks.
+  - `ExpressiveShapeMorphIndicator`: Shape-morphing loading indicator across 35+ M3 shapes.
 * **Component Standards**: Use M3 **FAB Menu**, **Split Buttons**, **Floating Toolbars**, **SegmentedButton**, `SearchBar`, and `Badge.count`.
 * **Zero Hardcoded Colors**: Always use `Theme.of(context).colorScheme.<token>` — never hardcode static `Color(...)` values in UI components.
 * **A11y Touch Targets**: All clickable icons must meet the minimum $48 \times 48\text{ dp}$ tap target.
 * **Unambiguous Master Overwrite Warning Modal**: Before executing actions that replace local state 100% (such as Secondary P2P master sync), display an explicit M3 Warning Modal (`_showOverwriteWarningDialog`) outlining role mechanics and requiring tapping **"I Understand & Overwrite"**.
 * **Tactile Haptic Feedback**: Wrap action controls and segment tiles in `BouncingWidget` with `HapticFeedback.lightImpact()` / `mediumImpact()`.
-* **Tactile Spring Physics**: Micro-interactions and press states must use `bouncing_widget.dart` or `AppLayout.curveExpressive` / `AppLayout.curveSpring`.
+* **Velocity-Aware Spring Physics**: Micro-interactions and press states must use `AppLayout.springFast` / `AppLayout.springSpatial` tokens and `AppLayout.curveEmphasizedDecelerate`, reacting naturally to gesture momentum.
 * **TextField Container Transparency**: When embedding `TextField` inside custom-styled containers, set `filled: false`, `fillColor: Colors.transparent`, and borderless `InputBorder` properties on `InputDecoration` to prevent global theme fill artifacts.
-* **Symmetric Frosted Glass Navigation**: Pair frosted glass top app bars with matching frosted glass bottom navigation bars (`ClipRect` + `BackdropFilter` `16px` blur) and `extendBody: true` on `Scaffold` for edge-to-edge content depth.
-* **Seamless Borderless Frosted Glass Bars**: Frosted glass top app bars (`FrostedGlassSliverAppBar`) and bottom navigation bars MUST be 100% borderless (`border: null`), combining backdrop blur (`sigma 16.0`) and translucent `surfaceContainerLow` fill so content scrolls underneath seamlessly without stroke line dividers.
-* **App Lock Frosted Overlay**: Use live `BackdropFilter` (sigma 24.0) over theme-aware surface container cards with M3 stadium action buttons (`StadiumBorder()`), excluding sensitive child widgets from the active tree when locked.
+* **Symmetric Solid Surface Navigation**: Pair solid `surfaceContainerLow` top app bars with matching `surfaceContainerLow` bottom navigation bars and `extendBody: true` on `Scaffold` for edge-to-edge content depth with ZERO GPU backdrop blur lag.
+* **Seamless Borderless Surface Bars**: Top app bars (`ExpressiveSliverAppBar`) and bottom navigation bars MUST be 100% borderless (`border: null`), relying on pure solid `surfaceContainerLow` / `surfaceContainer` fill with subtle tonal elevation so content scrolls underneath cleanly.
+* **App Lock Privacy Shield Overlay**: Use solid theme-aware surface container cards (`surfaceContainerHigh`) with M3 stadium action buttons (`StadiumBorder()`), excluding sensitive child widgets from the active tree when locked.
 * **Global InkSparkle & Ripple Shape Bounds**: Configure `splashFactory: InkSparkle.splashFactory` globally in `AppTheme`, and enforce matching `borderRadius` across `ListTileThemeData` (`AppLayout.radiusL`) and `IconButtonThemeData` (`CircleBorder`) so ripples conform to rounded surface bounds.
 * **Shortcut Search Integration**: Route external search shortcuts (`com.saadhjawwadh.notebook.SEARCH`) through `HomeAppBar.searchRequestedNotifier` to launch the inline stadium search pill and `UniversalSearchOverlay`.
 * **Google Material Icons & Symbols Standard**: Icon references must align with official [Google Material Icons / Symbols](https://fonts.google.com/icons). Prefer outlined/rounded variants (`Icons.<icon_name>_outlined` or `Icons.<icon_name>_rounded`) over filled variants for secondary controls and list tiles to maintain clean visual weights across light and dark themes.
@@ -33,10 +37,10 @@ Refer to [design.md](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/.ag
 * **ListTile Row Title Overflow Protection**: Any `Row` embedded inside the `title` parameter of `SwitchListTile` or `ListTile` MUST wrap text labels in `Flexible(child: Text(..., overflow: TextOverflow.ellipsis))` to prevent horizontal layout overflow errors on narrow device viewports.
 * **SegmentedButton Responsive Column Layout**: Position multi-segment `SegmentedButton` controls in a vertical `Column` with full-width bounds (`SizedBox(width: double.infinity, child: SegmentedButton(...))`) below their heading label rather than side-by-side in horizontal `Row` containers to eliminate `RenderFlex` horizontal overflow on narrow viewports.
 * **Global Typography Text Scaling**: Inject `MediaQuery(data: mediaQueryData.copyWith(textScaler: TextScaler.linear(mediaQueryData.textScaler.scale(1.0) * (settings.textSize / 16.0))))` in `MaterialApp.builder` so Medium font size (`textSize == 16.0`) natively defaults to the OS device font scale while supporting app-relative scaling.
-* **BouncingWidget Curve Normalization**: When evaluating non-linear animation curves in custom press states (`Curves.easeOutBack`), normalize the controller value (`(_controller.value / upperBound).clamp(0.0, 1.0)`) before evaluating the curve transform.
+* **BouncingWidget Spring Normalization**: Evaluate press states using spring physics tokens (`AppLayout.springFast`), scaling by `0.96` on touch down and releasing with fluid overshoot.
 * **Solid M3 Surface Fills Over Gradients**: Enforce clean solid surface container fills (`surfaceContainerLow` / `surfaceContainerHigh`) and semantic color tokens (`tertiary`, `error`, `primary`) instead of `LinearGradient` decorations on surface cards, chart rods, lock screens, or icon containers to preserve tactile M3 design consistency.
 * **Flexible Badge Scaling & Micro-Button Constraints**: Monospace text badges (e.g. 6-digit pair codes, IP addresses) embedded inside multi-column flex rows must use `Flexible` + `FittedBox(fit: BoxFit.scaleDown)` and explicit icon button constraints (`constraints: BoxConstraints(minWidth: 32, minHeight: 32)`) to eliminate `RenderFlex` horizontal overflow errors on narrow device viewports.
-* **M3 Expressive Tonal Container Fills & Frosted Glass Elevation**: To demarcate distinct card segments (Settings Dashboard hero cards, App Lock Screen backdrop overlay, Financial summary cards, P2P control hub, Cycle phase cards) from background surface noise without returning to gradient fills, use `AppCard.tonal` (12%–25% alpha opacity of semantic container colors with matching 1px border) or `AppCard.frosted` (sigma 16.0–24.0 backdrop blur with 65% alpha surface container fill and subtle 1px border).
+* **M3 Expressive Tonal Container Fills & Squircle Elevation**: To demarcate distinct card segments (Settings Dashboard hero cards, App Lock Screen shield, Financial summary cards, P2P control hub, Cycle phase cards) from background surface noise without returning to gradient fills, use `AppCard.tonal` (12%–25% alpha opacity of semantic container colors with matching 1px border) or `AppCard` with `16–24dp` squircle radius.
 * **Optical High-Contrast QR Code Standard**: QR code matrix modules MUST be rendered in solid pure black (`Colors.black`) on a solid white container (`Colors.white`) with minimum 16dp quiet-zone padding. Never use `colorScheme.onSurface` or `colorScheme.primary` for QR modules, as off-white hues in Dark Mode cause camera optical scanning failures.
 * **Strict Text Emoji Prohibition in UI Controls**: Never insert raw text emoji glyphs (e.g., `🔄`, `🟢`, `🔴`, `📋`) into button labels, dialog actions, or SnackBar alerts. Replace text emojis with official Material Symbols (`Icons.sync_rounded`, `Icons.check_circle_rounded`) and official M3 button APIs (`FilledButton.icon`, `FilledButton.tonalIcon`).
 * **Single Hero Container Dynamic Tint & Border Accent Pattern**: Maintain a single, unified surface container context (`colorScheme.surfaceContainerHigh`) for body cards. Apply dynamic container fills and 1.2px accent borders ONLY to top Hero Cards (`SettingsHeroCard`, Net Balance, P2P Sync Status, Cycle Phase Moon, AI Result Sheet, Trash Auto-Purge Banner):
@@ -58,6 +62,10 @@ Refer to [design.md](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/.ag
 * **Contextual Morphing Action Buttons in Sub-Tab Views**:
   - In screens featuring nested `SegmentedButton` tabs or view modes (`FinancialManagerScreen`), expose a `ValueNotifier<String>` indicating the active sub-tab.
   - The hosting screen's floating action button (`AppMorphingFab`) must reactively listen to this notifier via `ValueListenableBuilder` to dynamically adapt its icon, label, and `onPressed` route destination (e.g. morphing from "New Transaction" to "New Split Bill" when switching to Split Bills).
+* **Bounded Modal Sheets & Dynamic Chip Cloud Scroll Guardrails**: Never render unbounded `Column(mainAxisSize: MainAxisSize.min)` containing `Wrap` chip clouds inside `showModalBottomSheet` or `AppBottomSheet`. To eliminate `RenderFlex` overflows on small devices or when software keyboards appear:
+  - Constrain modal height using `ConstrainedBox(constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.75))`.
+  - Wrap content in `SingleChildScrollView` with `viewInsets.bottom` keyboard padding (`EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom + AppLayout.spaceM)`).
+  - Constrain inner multi-chip clouds (`Wrap`) to a fixed max viewport (e.g. `maxHeight: 180–220dp`) wrapped in a secondary `SingleChildScrollView`.
 
 ## 2. Material 3 Official Components Catalog ([m3.material.io](https://m3.material.io/components))
 When implementing UI components, strictly follow the M3 guidelines codified in [design.md Section 9](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/.agent/skills/UI-UX-Specialist/design.md#9-comprehensive-material-3-component-specifications--guidance-catalog-m3materialio):

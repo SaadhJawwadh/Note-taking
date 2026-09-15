@@ -22,6 +22,7 @@ import '../providers/note_provider.dart';
 import '../features/finances/presentation/screens/financial_manager_screen.dart';
 import '../features/finances/providers/split_bill_provider.dart';
 import '../features/finances/providers/financial_manager_provider.dart';
+import '../features/finances/providers/savings_goal_provider.dart';
 import '../utils/rich_text_utils.dart';
 import '../utils/widget_helper.dart';
 import 'package:intl/intl.dart';
@@ -80,10 +81,12 @@ Future<String> generateBackupJson({Map<String, dynamic>? settingsOverride}) asyn
   List<Map<String, dynamic>> splitBills = [];
   List<Map<String, dynamic>> splitParticipants = [];
   List<Map<String, dynamic>> splitContacts = [];
+  List<Map<String, dynamic>> savingsGoals = [];
   try {
     splitBills = await db.query('split_bills');
     splitParticipants = await db.query('split_participants');
     splitContacts = await db.query('split_contacts');
+    savingsGoals = await db.query('savings_goals');
   } catch (_) {}
   List<Map<String, dynamic>> deletedNotes = [];
   try {
@@ -134,11 +137,12 @@ Future<String> generateBackupJson({Map<String, dynamic>? settingsOverride}) asyn
     'splitBills': splitBills,
     'splitParticipants': splitParticipants,
     'splitContacts': splitContacts,
+    'savingsGoals': savingsGoals,
     'deletedNotes': deletedNotes,
     'deletedTransactionSmsIds': deletedTransactionSmsIds,
     'deletedPeriodLogs': deletedPeriodLogs,
     'settings': settingsMap,
-    'version': 10,
+    'version': 11,
     'exportedAt': DateTime.now().toIso8601String(),
   };
 
@@ -523,6 +527,13 @@ class BackupService {
           }
         }
       }
+      if (data.containsKey('savingsGoals') && data['savingsGoals'] is List) {
+        for (final row in data['savingsGoals']) {
+          if (row is Map) {
+            batch.insert('savings_goals', Map<String, Object?>.from(row), conflictAlgorithm: ConflictAlgorithm.replace);
+          }
+        }
+      }
 
       await batch.commit(noResult: true);
     });
@@ -535,6 +546,7 @@ class BackupService {
       final noteProvider = Provider.of<NoteProvider>(context, listen: false);
       final financeProvider = Provider.of<FinancialManagerProvider>(context, listen: false);
       final splitProvider = Provider.of<SplitBillProvider>(context, listen: false);
+      final savingsGoalProvider = Provider.of<SavingsGoalProvider>(context, listen: false);
       final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
 
       try {
@@ -553,6 +565,12 @@ class BackupService {
         await splitProvider.loadSplitBills(showLoading: false);
       } catch (e) {
         debugPrint('SplitBillProvider refresh error: $e');
+      }
+
+      try {
+        await savingsGoalProvider.loadGoals();
+      } catch (e) {
+        debugPrint('SavingsGoalProvider refresh error: $e');
       }
 
       FinancialManagerScreen.refreshNotifier.value = DateTime.now().millisecondsSinceEpoch;

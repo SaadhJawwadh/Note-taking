@@ -37,24 +37,24 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.primaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.play_arrow_rounded,
-            title: "Instant Auto-Backup Trigger",
-            desc: "Run and verify scheduled encrypted backups on-demand with instant feedback directly in Settings.",
+            icon: Icons.savings_outlined,
+            title: "Goal-Oriented Savings Pockets",
+            desc: "Set target savings goals with auto-calculated monthly pacing and milestone badges.",
           ),
           _WhatsNewItem(
-            icon: Icons.pie_chart_outline_rounded,
-            title: "Contextual Split Bill Action",
-            desc: "Add button on the Split Bills tab immediately launches the full split bill creator.",
+            icon: Icons.compare_arrows_rounded,
+            title: "Authentic Dual-Account Transfers",
+            desc: "Every deposit logs genuine transfers between Daily Operating and Savings Vault accounts.",
           ),
           _WhatsNewItem(
-            icon: Icons.category_outlined,
-            title: "Rich Category Icons",
-            desc: "54 expressive Material 3 icons for finance categories including subscriptions, utilities, and transit.",
+            icon: Icons.receipt_long_rounded,
+            title: "Smart Split Bill Calculator",
+            desc: "Proportional tax, tip, and service fee distribution across individual participant subtotals.",
           ),
           _WhatsNewItem(
-            icon: Icons.photo_library_outlined,
-            title: "Story Card Studio",
-            desc: "Turn notes or quotes into high-res social media story cards (9:16, 1:1, 4:5) with offline fonts and 1-tap sharing.",
+            icon: Icons.calculate_outlined,
+            title: "Interactive Mini Calculator",
+            desc: "Embedded arithmetic keypad directly inside exact share fields for seamless splitting.",
           ),
         ],
       ),
@@ -64,19 +64,19 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.tertiaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.schedule_outlined,
-            title: "Reliable Auto-Backup Scheduling",
-            desc: "Preserved 24-hour backup timers across app launches for consistent background backups.",
+            icon: Icons.speed_rounded,
+            title: "Dynamic Pacing Recalculations",
+            desc: "Monthly pace dynamically recalculates as you deposit to keep your targets on schedule.",
           ),
           _WhatsNewItem(
-            icon: Icons.wifi_tethering_error_rounded,
-            title: "Helpful P2P Offline Guidance",
-            desc: "Clear instructions when attempting Wi-Fi sync if the app is closed on the paired device.",
+            icon: Icons.auto_awesome_rounded,
+            title: "Penny Remainder Reconciliation",
+            desc: "One-tap balance chip accurately fills leftover pennies and residual rounding differences.",
           ),
           _WhatsNewItem(
-            icon: Icons.account_balance_wallet_outlined,
-            title: "Dual-Mode Split Ledger Contract",
-            desc: "Master expenses record to your daily ledger when you pay; friend-paid splits stay isolated without ledger noise.",
+            icon: Icons.play_arrow_rounded,
+            title: "Instant Auto-Backup Trigger",
+            desc: "Run and verify scheduled encrypted backups on-demand with instant feedback directly in Settings.",
           ),
           _WhatsNewItem(
             icon: Icons.rate_review_outlined,
@@ -91,6 +91,11 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.secondaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
+            icon: Icons.unfold_more_rounded,
+            title: "Resilient Full-Form Scrolling",
+            desc: "Zero layout overflows on small screens when configuring savings goals or group splits.",
+          ),
+          _WhatsNewItem(
             icon: Icons.label_outline_rounded,
             title: "Tag Manager & Card Scrollability",
             desc: "Fluid scrolling in tag manager modal, note import preview, and category pickers on all screen sizes.",
@@ -99,11 +104,6 @@ class WhatsNewSheet extends StatelessWidget {
             icon: Icons.format_indent_increase_rounded,
             title: "Note Indentation Preservation",
             desc: "Multi-level bullet and list indents are safely preserved across note saves and restarts.",
-          ),
-          _WhatsNewItem(
-            icon: Icons.swipe_left_rounded,
-            title: "Swipe-to-Delete Split Bills",
-            desc: "Smooth swipe dismissal for group bills with a confirmation dialog and instant Undo.",
           ),
         ],
       ),

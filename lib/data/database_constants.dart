@@ -11,6 +11,25 @@ class TableNames {
   static const String splitParticipants = 'split_participants';
   static const String splitContacts = 'split_contacts';
   static const String deletedPeriodLogs = 'deleted_period_logs';
+  static const String savingsGoals = 'savings_goals';
+}
+
+class SavingsGoalFields {
+  static const String id = 'id';
+  static const String title = 'title';
+  static const String targetAmount = 'targetAmount';
+  static const String currentAmount = 'currentAmount';
+  static const String targetDate = 'targetDate';
+  static const String targetMonths = 'targetMonths';
+  static const String monthlyContribution = 'monthlyContribution';
+  static const String category = 'category';
+  static const String account = 'account';
+  static const String colorValue = 'colorValue';
+  static const String iconCodePoint = 'iconCodePoint';
+  static const String isCompleted = 'isCompleted';
+  static const String createdAt = 'createdAt';
+  static const String completedAt = 'completedAt';
+  static const String deletedAt = 'deletedAt';
 }
 
 class SplitBillFields {

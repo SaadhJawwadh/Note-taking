@@ -119,14 +119,14 @@ void main() {
       expect(settings.trashAutoPurgeDays, 30);
     });
 
-    testWidgets('WhatsNewSheet renders v2.30.3 cards and records version on dismiss', (tester) async {
+    testWidgets('WhatsNewSheet renders v2.31.0 cards and records version on dismiss', (tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
       SharedPreferences.setMockInitialValues({
-        'lastSeenVersion': '2.30.2',
+        'lastSeenVersion': '2.30.3',
       });
       final settings = SettingsProvider();
       await settings.loadSettings();
@@ -136,7 +136,7 @@ void main() {
           value: settings,
           child: const MaterialApp(
             home: Scaffold(
-              body: WhatsNewSheet(currentVersion: '2.30.3'),
+              body: WhatsNewSheet(currentVersion: '2.31.0'),
             ),
           ),
         ),
@@ -149,11 +149,11 @@ void main() {
       expect(find.text("🐛 Fixes"), findsOneWidget);
 
       // Check marquee items
-      expect(find.text("Instant Auto-Backup Trigger"), findsOneWidget);
-      expect(find.text("Contextual Split Bill Action"), findsOneWidget);
-      expect(find.text("Reliable Auto-Backup Scheduling"), findsOneWidget);
-      expect(find.text("Tag Manager & Card Scrollability"), findsOneWidget);
-      expect(find.text("Note Indentation Preservation"), findsOneWidget);
+      expect(find.text("Goal-Oriented Savings Pockets"), findsOneWidget);
+      expect(find.text("Authentic Dual-Account Transfers"), findsOneWidget);
+      expect(find.text("Smart Split Bill Calculator"), findsOneWidget);
+      expect(find.text("Interactive Mini Calculator"), findsOneWidget);
+      expect(find.text("Penny Remainder Reconciliation"), findsOneWidget);
 
       // Tap "Awesome, Got It!" to finish
       await tester.runAsync(() async {
@@ -162,7 +162,7 @@ void main() {
       });
       await tester.pumpAndSettle();
 
-      expect(settings.lastSeenVersion, '2.30.3');
+      expect(settings.lastSeenVersion, '2.31.0');
     });
   });
 }

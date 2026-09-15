@@ -28,9 +28,39 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
+                  version: 'v2.31.0',
+                  date: 'September 16, 2026',
+                  isLatest: true,
+                  changes: [
+                    _ChangelogGroup(
+                      title: "🌟 What's New",
+                      items: [
+                        'Goal-Oriented Savings Pockets: Set target goals with auto-pacing and milestone badges for college, travel, or emergencies.',
+                        'Authentic Dual-Account Transfers: Real double-entry transfer transactions between Daily Operating and Savings Vault accounts.',
+                        'Smart Split Bill Calculator: Itemized breakdown with proportional tax, tip, and service fee distribution across subtotals.',
+                        'Interactive Mini Calculator: Embedded arithmetic keypad directly inside exact share fields for instant portioning.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🚀 Improvements',
+                      items: [
+                        'Real-Time Savings Pacing & Milestones: Progress tracking with milestone badges and dynamic monthly pace recalculations.',
+                        'Penny Remainder Reconciliation: Easily balance one-cent or residual round-off differences on custom splits.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: '🐛 Fixes',
+                      items: [
+                        'Resilient Full-Form Scrolling: Fluid scrolling across savings goals and split bill calculator modals on all screen sizes.',
+                      ],
+                    ),
+                  ],
+                ),
+                _buildVersionSection(
+                  context,
                   version: 'v2.30.3',
                   date: 'September 12, 2026',
-                  isLatest: true,
+                  isLatest: false,
                   changes: [
                     _ChangelogGroup(
                       title: "🌟 What's New",

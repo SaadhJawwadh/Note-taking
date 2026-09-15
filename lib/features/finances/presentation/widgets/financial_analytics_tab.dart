@@ -9,6 +9,7 @@ import '../../../../core/theme/app_layout.dart';
 import '../../../../core/ui/app_card.dart';
 import 'burn_rate_forecast_card.dart';
 import 'category_budgets_card.dart';
+import 'savings_goals_card.dart';
 import '../../services/spending_forecast_service.dart';
 
 /// Modular Budgets & Intelligence Tab widget displaying:
@@ -339,6 +340,9 @@ class _FinancialAnalyticsTabState extends State<FinancialAnalyticsTab> {
           currency: widget.currency,
           onBudgetChanged: widget.onRefresh,
         ),
+        const SizedBox(height: 16),
+        // Goal-Oriented Savings Pockets
+        const SavingsGoalsCard(),
       ],
     );
   }

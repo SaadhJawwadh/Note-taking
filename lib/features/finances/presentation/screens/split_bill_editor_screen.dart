@@ -228,8 +228,9 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
     }
   }
 
-  Future<void> _openCalculator() async {
-    final currentVal = double.tryParse(_amountController.text) ?? 0.0;
+  Future<void> _openCalculator([TextEditingController? targetController]) async {
+    final ctrl = targetController ?? _amountController;
+    final currentVal = double.tryParse(ctrl.text) ?? 0.0;
     final result = await showModalBottomSheet<double>(
       context: context,
       isScrollControlled: true,
@@ -238,9 +239,304 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
     );
     if (result != null) {
       setState(() {
-        _amountController.text = result.toStringAsFixed(2).replaceAll('.00', '');
+        ctrl.text = result.toStringAsFixed(2).replaceAll('.00', '');
       });
     }
+  }
+
+  void _distributeRemainder() {
+    final rem = _remainingToAllocate;
+    if (rem.abs() < 0.005) return;
+    HapticFeedback.lightImpact();
+
+    // If only user share is unallocated, fill it into user share
+    final userText = _userExactAmountController.text.trim();
+    final userAmt = double.tryParse(userText) ?? 0.0;
+    if (_includeUserShare && userAmt == 0.0 && rem > 0) {
+      setState(() {
+        _userExactAmountController.text = rem.toStringAsFixed(2).replaceAll('.00', '');
+      });
+      return;
+    }
+
+    // Distribute remaining evenly across all active parties
+    final count = _totalSplitCount;
+    if (count <= 0) return;
+    final shareDelta = rem / count;
+
+    setState(() {
+      for (final p in _participantsData) {
+        final name = p['name'] as String;
+        final ctrl = _exactAmountControllers[name];
+        if (ctrl != null) {
+          final cur = double.tryParse(ctrl.text.trim()) ?? 0.0;
+          final updated = (cur + shareDelta).clamp(0.0, double.infinity);
+          ctrl.text = updated.toStringAsFixed(2).replaceAll('.00', '');
+        }
+      }
+      if (_includeUserShare) {
+        final cur = double.tryParse(_userExactAmountController.text.trim()) ?? 0.0;
+        final updated = (cur + shareDelta).clamp(0.0, double.infinity);
+        _userExactAmountController.text = updated.toStringAsFixed(2).replaceAll('.00', '');
+      }
+    });
+  }
+
+  void _showTaxTipAllocatorSheet() {
+    final currency = Provider.of<SettingsProvider>(context, listen: false).currencySymbol;
+    final taxPercentController = TextEditingController();
+    final tipPercentController = TextEditingController();
+    final flatFeeController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalContext) {
+        final theme = Theme.of(modalContext);
+        final colorScheme = theme.colorScheme;
+
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final mediaQuery = MediaQuery.of(context);
+            final taxPct = double.tryParse(taxPercentController.text.trim()) ?? 0.0;
+            final tipPct = double.tryParse(tipPercentController.text.trim()) ?? 0.0;
+            final flatFee = double.tryParse(flatFeeController.text.trim()) ?? 0.0;
+
+            final currentSubtotalSum = _allocatedExactSum;
+            final calculatedTax = currentSubtotalSum * (taxPct / 100.0);
+            final calculatedTip = currentSubtotalSum * (tipPct / 100.0);
+            final grandCalculatedTotal = currentSubtotalSum + calculatedTax + calculatedTip + flatFee;
+
+            return Container(
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerLow,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(AppLayout.radiusXL)),
+              ),
+              padding: EdgeInsets.only(
+                left: AppLayout.spaceL,
+                right: AppLayout.spaceL,
+                top: AppLayout.spaceM,
+                bottom: mediaQuery.viewInsets.bottom + AppLayout.spaceL,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: colorScheme.outlineVariant,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppLayout.spaceM),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                          ),
+                          child: Icon(Icons.calculate_rounded, color: colorScheme.primary, size: 20),
+                        ),
+                        const SizedBox(width: AppLayout.spaceM),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Proportional Tax & Tip Allocator',
+                                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                'Distributes tax, tip & service fees across subtotals',
+                                style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppLayout.spaceL),
+
+                    // Inputs Row: Tax % & Tip %
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: taxPercentController,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(
+                              labelText: 'Tax / VAT %',
+                              hintText: 'e.g. 10',
+                              suffixText: '%',
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                            ),
+                            onChanged: (_) => setSheetState(() {}),
+                          ),
+                        ),
+                        const SizedBox(width: AppLayout.spaceM),
+                        Expanded(
+                          child: TextField(
+                            controller: tipPercentController,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(
+                              labelText: 'Tip / Service %',
+                              hintText: 'e.g. 15',
+                              suffixText: '%',
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                            ),
+                            onChanged: (_) => setSheetState(() {}),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppLayout.spaceM),
+
+                    // Flat Fee input
+                    TextField(
+                      controller: flatFeeController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: InputDecoration(
+                        labelText: 'Flat Delivery or Service Fee',
+                        hintText: 'e.g. 5.00',
+                        prefixText: '$currency ',
+                        border: const OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                      onChanged: (_) => setSheetState(() {}),
+                    ),
+                    const SizedBox(height: AppLayout.spaceL),
+
+                    // Calculation Summary Card
+                    AppCard(
+                      padding: const EdgeInsets.all(AppLayout.spaceM),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Items Subtotal:', style: theme.textTheme.bodyMedium),
+                              Text('$currency ${currentSubtotalSum.toStringAsFixed(2)}', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                          if (calculatedTax > 0) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Tax (${taxPct.toStringAsFixed(1)}%):', style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+                                Text('+$currency ${calculatedTax.toStringAsFixed(2)}', style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+                              ],
+                            ),
+                          ],
+                          if (calculatedTip > 0) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Tip (${tipPct.toStringAsFixed(1)}%):', style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+                                Text('+$currency ${calculatedTip.toStringAsFixed(2)}', style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+                              ],
+                            ),
+                          ],
+                          if (flatFee > 0) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Flat Extra Fee:', style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+                                Text('+$currency ${flatFee.toStringAsFixed(2)}', style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+                              ],
+                            ),
+                          ],
+                          const Divider(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Computed Grand Total:', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                              Text('$currency ${grandCalculatedTotal.toStringAsFixed(2)}', style: theme.textTheme.titleSmall?.copyWith(color: colorScheme.primary, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppLayout.spaceL),
+
+                    // Action buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Cancel'),
+                          ),
+                        ),
+                        const SizedBox(width: AppLayout.spaceM),
+                        Expanded(
+                          flex: 2,
+                          child: FilledButton.icon(
+                            icon: const Icon(Icons.check_rounded, size: 18),
+                            label: const Text('Apply to All Shares'),
+                            onPressed: () {
+                              if (currentSubtotalSum <= 0) {
+                                Navigator.pop(context);
+                                return;
+                              }
+                              final extraRatio = (calculatedTax + calculatedTip) / currentSubtotalSum;
+                              final feePerPerson = (_totalSplitCount > 0) ? (flatFee / _totalSplitCount) : 0.0;
+
+                              setState(() {
+                                // Update total bill amount
+                                _amountController.text = grandCalculatedTotal.toStringAsFixed(2).replaceAll('.00', '');
+
+                                // Update participant shares proportionally
+                                for (final p in _participantsData) {
+                                  final name = p['name'] as String;
+                                  final ctrl = _exactAmountControllers[name];
+                                  if (ctrl != null) {
+                                    final sub = double.tryParse(ctrl.text.trim()) ?? 0.0;
+                                    final allocated = sub * (1.0 + extraRatio) + feePerPerson;
+                                    ctrl.text = allocated.toStringAsFixed(2).replaceAll('.00', '');
+                                  }
+                                }
+
+                                if (_includeUserShare) {
+                                  final sub = double.tryParse(_userExactAmountController.text.trim()) ?? 0.0;
+                                  final allocated = sub * (1.0 + extraRatio) + feePerPerson;
+                                  _userExactAmountController.text = allocated.toStringAsFixed(2).replaceAll('.00', '');
+                                }
+                              });
+
+                              Navigator.pop(context);
+                              HapticFeedback.mediumImpact();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Tax, tip, and fees distributed proportionally!'),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _selectDate() async {
@@ -586,6 +882,32 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
                               ),
                           ],
                         ),
+                        if (_splitMode == SplitMode.exact) ...[
+                          const SizedBox(height: AppLayout.spaceS),
+                          Wrap(
+                            spacing: AppLayout.spaceS,
+                            runSpacing: AppLayout.spaceXS,
+                            children: [
+                              ActionChip(
+                                avatar: Icon(Icons.calculate_outlined, size: 16, color: colorScheme.primary),
+                                label: const Text('Add Tax / Tip / Fee'),
+                                tooltip: 'Distribute tax, tip, or service charge proportionally',
+                                onPressed: _showTaxTipAllocatorSheet,
+                              ),
+                              if (_remainingToAllocate.abs() > 0.009)
+                                ActionChip(
+                                  avatar: Icon(Icons.auto_awesome_rounded, size: 16, color: colorScheme.tertiary),
+                                  label: Text(
+                                    _remainingToAllocate > 0
+                                        ? 'Fill Remainder ($currency ${_remainingToAllocate.toStringAsFixed(2)})'
+                                        : 'Reconcile Balance',
+                                  ),
+                                  tooltip: 'Automatically balance remaining amount',
+                                  onPressed: _distributeRemainder,
+                                ),
+                            ],
+                          ),
+                        ],
                         const SizedBox(height: AppLayout.spaceS),
 
                         // Recent Friends Quick Add Chips
@@ -750,7 +1072,7 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
                                       )
                                     else
                                       SizedBox(
-                                        width: 130,
+                                        width: 148,
                                         child: TextField(
                                           controller: ctrl,
                                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -764,7 +1086,15 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
                                               fontSize: 12,
                                               fontWeight: FontWeight.w500,
                                             ),
-                                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                            suffixIcon: IconButton(
+                                              icon: const Icon(Icons.calculate_outlined, size: 18),
+                                              tooltip: 'Calculate share',
+                                              padding: EdgeInsets.zero,
+                                              constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                                              onPressed: ctrl != null ? () => _openCalculator(ctrl) : null,
+                                            ),
+                                            suffixIconConstraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                                            contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                                             filled: true,
                                             fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
                                             border: OutlineInputBorder(

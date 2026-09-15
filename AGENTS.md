@@ -10,7 +10,7 @@ This document is the canonical, authoritative Single Source of Truth (SSOT) for 
 * **Framework & Language**: Flutter (>=3.27.0) with Dart (>=3.6.0).
 * **State Management**: Reactive state management with `package:provider` (`ChangeNotifier`). Decoupled domain providers registered globally in `main.dart`'s root `MultiProvider`.
 * **Local Storage & Security**: Fully local, offline-first SQLCipher encrypted SQLite (`sqflite_sqlcipher` with WAL mode enabled) protected by Android KeyStore / iOS Keychain (`flutter_secure_storage`). AES-256 encrypted JSON backups via `BackupService`.
-* **Design System**: Strict Material 3 Expressive theming (`AppTheme` / `AppLayout`) with dynamic Material You wallpaper color extraction (`dynamic_color`), OLED pitch-black dark mode, Google Sans Flex variable typography, and seamless borderless frosted glass chrome.
+* **Design System**: Strict Material 3 Expressive theming (`AppTheme` / `AppLayout`) with dynamic Material You wallpaper color extraction (`dynamic_color`), OLED pitch-black dark mode, Google Sans Flex variable typography, 5-tier solid surface containers, and spring-physics micro-interactions.
 * **On-Device Intelligence**: Hardware-aware on-device AI (`gemini_nano_android` / AICore) strictly gated by `settings.isAiActive`.
 * **Peer-to-Peer Device Sync**: Zero-cloud, bi-directional LWW Wi-Fi sync engine using direct REST HTTP server (Port 8765) and UDP radio beacon (Port 8766).
 
@@ -25,14 +25,19 @@ lib/
 ├── core/                               # Shared design system, UI primitives, and router
 │   ├── routes/app_router.dart          # Centralized route strings and M3 shared-axis transitions
 │   ├── theme/                          # Single Source of Truth Design Tokens
-│   │   ├── app_layout.dart             # Spacings (spaceXS–XXL), radii (radiusS–MAX), spring curves
+│   │   ├── app_layout.dart             # Spacings (spaceXS–XXL), squircle radii, SpringDescription tokens
 │   │   └── app_theme.dart              # M3 ColorSchemes, 15-role typography, InkSparkle
 │   └── ui/                             # Standard Atomic UI Component Library
-│       ├── app_card.dart               # Surface container card (standard, tonal, frosted)
+│       ├── app_card.dart               # Surface container card (standard, tonal, squircle, connected)
 │       ├── app_bottom_sheet.dart       # Drag-handled modal sheet with responsive width bounds
-│       ├── app_chip.dart               # Standardized tag, category, and phase badge pill
+│       ├── app_chip.dart               # Standardized 8–12dp squircle chip & tag pill
 │       ├── app_dialog.dart             # Responsive confirmation and prompt dialogs
-│       └── frosted_sliver_app_bar.dart # Seamless borderless glassmorphic header
+│       ├── expressive_sliver_app_bar.dart # Seamless borderless M3 surface header (zero blur)
+│       ├── expressive_split_button.dart   # M3 Expressive Split Button (action + dropdown anchor)
+│       ├── expressive_wavy_slider.dart    # Tactile sinusoidal wavy slider
+│       ├── expressive_wavy_progress.dart  # Animated wavy linear & circular progress indicators
+│       ├── expressive_shape_morph_indicator.dart # Shape-morphing loading indicator (35+ shapes)
+│       └── app_morphing_fab.dart       # Dynamic squircle-to-stadium morphing FAB
 ├── features/                           # Feature-Driven Domain Bundles
 │   ├── notes/                          # Lossless Quill Delta notes, tags, auto-purge trash
 │   ├── finances/                       # SMS auto-import ledger, categories, recurring rules, AI refine
@@ -50,8 +55,13 @@ lib/
 ### 🎨 Invariant 1: Single Source of Truth Theme & Core UI Primitives
 * **No Magic Values**: Never hardcode padding, margins, border radii, motion curves, or static colors inside screen widgets.
 * **Tokens**: Reference layout tokens from `AppLayout` and semantic colors from `Theme.of(context).colorScheme` or `AppSemanticColors`.
-* **Shared UI Library**: Always use `AppCard`, `AppBottomSheet`, `AppChip`, `AppDialog`, and `FrostedGlassSliverAppBar` from `lib/core/ui/`.
-* **Seamless Borderless Bars**: Top app bars (`FrostedGlassSliverAppBar`) and bottom navigation bars MUST be 100% borderless (`border: null`), relying on pure backdrop blur (`sigma 16.0`) and translucent `surfaceContainerLow` fill.
+* **Shared UI Library**: Always use `AppCard`, `AppBottomSheet`, `AppChip`, `AppDialog`, and `ExpressiveSliverAppBar` from `lib/core/ui/`.
+* **Seamless Borderless Surface Bars**: Top app bars (`ExpressiveSliverAppBar`) and bottom navigation bars MUST be 100% borderless (`border: null`), relying on pure solid `surfaceContainerLow` / `surfaceContainer` fill with subtle tonal elevation—ZERO `BackdropFilter` or frosted glass blurs.
+* **M3 Expressive Shape Hierarchy**: Use the official M3 Expressive shape scale:
+  - Squircles ($12\text{dp}$–$16\text{dp}$ for chips/cards, $28\text{dp}$ for dialogs/sheets).
+  - Connected Corner Morphing for grouped lists (first item rounded top, middle items flat, last item rounded bottom).
+  - Stadium pills ($1000\text{dp}$) reserved strictly for primary action CTA buttons and search bars.
+* **Velocity-Aware Spring Physics**: Micro-interactions and press states must use `SpringDescription` tokens (`AppLayout.springFast` / `AppLayout.springSpatial`) and `AppLayout.curveEmphasizedDecelerate`, reacting naturally to gesture momentum.
 * **Dynamic Hero Card Opacities**: Hero cards (`SettingsHeroCard`, Net Balance, P2P Sync Status, Cycle Moon Phase, Trash Auto-Purge Banner) must dynamically adjust container opacity (50%–55% alpha in Light Mode; 20%–22% alpha in Dark Mode) with subtle 1.2px accent borders.
 
 ### 🏗️ Invariant 2: Feature-Driven Domain Architecture & Root Provider Registration

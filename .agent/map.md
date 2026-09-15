@@ -34,8 +34,10 @@ lib/
 │   ├── finances/                     # Financial Manager & Split Bills Feature Module
 │   │   ├── data/
 │   │   │   ├── models/
+│   │   │   │   ├── savings_goal_model.dart   # SavingsGoalModel (target, current, monthly breakdown, account routing)
 │   │   │   │   └── split_bill_model.dart     # SplitBillModel, SplitParticipantModel, SplitContactModel
 │   │   │   ├── repositories/
+│   │   │   │   ├── savings_goal_repository.dart# SQLite CRUD, deposits, withdrawals, and completion status
 │   │   │   │   └── split_bill_repository.dart# SQLite CRUD, participant syncing, friend contact auto-save
 │   │   │   └── transaction_repository.dart   # Transactions, categories, SMS senders CRUD & tombstones
 │   │   ├── services/
@@ -49,7 +51,7 @@ lib/
 │   │   │   │   ├── financial_manager_screen.dart  # Ledger, analytics, split bills tab, bulk AI title refine
 │   │   │   │   ├── sms_contacts_screen.dart       # SMS Sender list (block list & custom senders)
 │   │   │   │   ├── sms_rules_screen.dart          # Custom SMS pattern definition editor
-│   │   │   │   ├── split_bill_editor_screen.dart  # Group bill creator, equal/exact splits, OCR receipt hook
+│   │   │   │   ├── split_bill_editor_screen.dart  # Group bill creator, equal/exact splits, smart tax/tip calculator & mini calc
 │   │   │   │   └── transaction_editor_screen.dart # Single transaction editor with inline split button
 │   │   │   └── widgets/              # Feature-specific finance UI widgets
 │   │   │       ├── burn_rate_forecast_card.dart   # Daily Safe-to-Spend burn rate & month-end pacing
@@ -60,12 +62,16 @@ lib/
 │   │   │       ├── minimal_chart_deck.dart        # 3-slide visual intelligence deck (Trajectory, Donut, Budget Pace)
 │   │   │       ├── receipt_scanner_sheet.dart     # Camera/Gallery offline OCR receipt scanner modal
 │   │   │       ├── recurring_rules_sheet.dart     # Subscriptions & recurring rule manager sheet
+│   │   │       ├── savings_goal_deposit_sheet.dart# Target savings allocation & withdrawal modal sheet
+│   │   │       ├── savings_goal_editor_sheet.dart # Target goal creator/editor with monthly auto-breakdown
+│   │   │       ├── savings_goals_card.dart        # Target savings pockets carousel, progress ring, quick deposit
 │   │   │       ├── settle_up_sheet.dart           # Debt settlement sheet with optional Daily Account ledger entry
 │   │   │       ├── split_bills_tab.dart           # 3rd Finance tab: Hero summary, People/Bills view, filter chips
 │   │   │       ├── teach_sms_rule_sheet.dart      # Interactive SMS rule training modal sheet
 │   │   │       └── top_merchants_card.dart        # Top spending destinations & merchant breakdown
 │   │   └── providers/
 │   │       ├── financial_manager_provider.dart    # Income/expense calculations, filters, state
+│   │       ├── savings_goal_provider.dart         # Savings goals reactive state, deposits, auto-rebalance
 │   │       └── split_bill_provider.dart           # Split bills state, 0ms optimistic UI, debts & balances
 │   ├── health/                       # Health & Period Tracker Feature Module
 │   │   ├── data/

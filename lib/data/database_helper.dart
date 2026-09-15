@@ -10,7 +10,7 @@ import 'database_constants.dart';
 import 'database_seed.dart';
 
 class DatabaseHelper {
-  static const int _databaseVersion = 23;
+  static const int _databaseVersion = 24;
   static const String _dbName = 'notes.db';
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
@@ -102,7 +102,7 @@ class DatabaseHelper {
       return await openDatabase(
         path,
         password: password,
-        version: 22,
+        version: _databaseVersion,
         onCreate: _createDB,
         onUpgrade: _upgradeDB,
         onOpen: _onOpenDB,
@@ -123,7 +123,7 @@ class DatabaseHelper {
         return await openDatabase(
           path,
           password: password,
-          version: 22,
+          version: _databaseVersion,
           onCreate: _createDB,
           onUpgrade: _upgradeDB,
           onOpen: _onOpenDB,
@@ -361,6 +361,26 @@ class DatabaseHelper {
         ${SplitContactFields.lastUsed} TEXT NOT NULL
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ${TableNames.savingsGoals} (
+        ${SavingsGoalFields.id} TEXT PRIMARY KEY,
+        ${SavingsGoalFields.title} TEXT NOT NULL,
+        ${SavingsGoalFields.targetAmount} REAL NOT NULL,
+        ${SavingsGoalFields.currentAmount} REAL NOT NULL DEFAULT 0.0,
+        ${SavingsGoalFields.targetDate} TEXT,
+        ${SavingsGoalFields.targetMonths} INTEGER NOT NULL DEFAULT 6,
+        ${SavingsGoalFields.monthlyContribution} REAL NOT NULL DEFAULT 0.0,
+        ${SavingsGoalFields.category} TEXT NOT NULL DEFAULT 'Savings',
+        ${SavingsGoalFields.account} TEXT NOT NULL DEFAULT 'savings',
+        ${SavingsGoalFields.colorValue} INTEGER NOT NULL DEFAULT 0xFF00796B,
+        ${SavingsGoalFields.iconCodePoint} INTEGER NOT NULL DEFAULT 0xe57f,
+        ${SavingsGoalFields.isCompleted} INTEGER NOT NULL DEFAULT 0,
+        ${SavingsGoalFields.createdAt} TEXT NOT NULL,
+        ${SavingsGoalFields.completedAt} TEXT,
+        ${SavingsGoalFields.deletedAt} TEXT
+      )
+    ''');
   }
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -514,6 +534,27 @@ class DatabaseHelper {
     }
     if (oldVersion < 23) {
       await db.execute('CREATE TABLE IF NOT EXISTS ${TableNames.deletedPeriodLogs} (id TEXT PRIMARY KEY, deletedAt TEXT NOT NULL)');
+    }
+    if (oldVersion < 24) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS ${TableNames.savingsGoals} (
+          ${SavingsGoalFields.id} TEXT PRIMARY KEY,
+          ${SavingsGoalFields.title} TEXT NOT NULL,
+          ${SavingsGoalFields.targetAmount} REAL NOT NULL,
+          ${SavingsGoalFields.currentAmount} REAL NOT NULL DEFAULT 0.0,
+          ${SavingsGoalFields.targetDate} TEXT,
+          ${SavingsGoalFields.targetMonths} INTEGER NOT NULL DEFAULT 6,
+          ${SavingsGoalFields.monthlyContribution} REAL NOT NULL DEFAULT 0.0,
+          ${SavingsGoalFields.category} TEXT NOT NULL DEFAULT 'Savings',
+          ${SavingsGoalFields.account} TEXT NOT NULL DEFAULT 'savings',
+          ${SavingsGoalFields.colorValue} INTEGER NOT NULL DEFAULT 0xFF00796B,
+          ${SavingsGoalFields.iconCodePoint} INTEGER NOT NULL DEFAULT 0xe57f,
+          ${SavingsGoalFields.isCompleted} INTEGER NOT NULL DEFAULT 0,
+          ${SavingsGoalFields.createdAt} TEXT NOT NULL,
+          ${SavingsGoalFields.completedAt} TEXT,
+          ${SavingsGoalFields.deletedAt} TEXT
+        )
+      ''');
     }
   }
 }
