@@ -56,6 +56,7 @@ class MainActivity: FlutterFragmentActivity() {
     private fun handleIntent(intent: Intent?) {
         when (intent?.action) {
             "com.saadhjawwadh.notebook.ADD_TRANSACTION" -> pendingWidgetAction = "add_transaction"
+            "com.saadhjawwadh.notebook.VIEW_LEDGER" -> pendingWidgetAction = "view_ledger"
             "com.saadhjawwadh.notebook.VIEW_BUDGETS" -> pendingWidgetAction = "view_budgets"
             "com.saadhjawwadh.notebook.VIEW_TRENDS" -> pendingWidgetAction = "view_trends"
             "com.saadhjawwadh.notebook.NEW_NOTE" -> pendingWidgetAction = "new_note"
@@ -99,14 +100,30 @@ class MainActivity: FlutterFragmentActivity() {
             when (call.method) {
                 "updateWidget" -> {
                     val context = this@MainActivity
-                    val intent = Intent(context, FinanceWidgetProvider::class.java).apply {
-                        action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-                    }
-                    val ids = AppWidgetManager.getInstance(context).getAppWidgetIds(
+                    val appWidgetManager = AppWidgetManager.getInstance(context)
+
+                    val financeIds = appWidgetManager.getAppWidgetIds(
                         ComponentName(context, FinanceWidgetProvider::class.java)
                     )
-                    intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
-                    context.sendBroadcast(intent)
+                    if (financeIds.isNotEmpty()) {
+                        val financeIntent = Intent(context, FinanceWidgetProvider::class.java).apply {
+                            action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, financeIds)
+                        }
+                        context.sendBroadcast(financeIntent)
+                    }
+
+                    val notesIds = appWidgetManager.getAppWidgetIds(
+                        ComponentName(context, NotesWidgetProvider::class.java)
+                    )
+                    if (notesIds.isNotEmpty()) {
+                        val notesIntent = Intent(context, NotesWidgetProvider::class.java).apply {
+                            action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, notesIds)
+                        }
+                        context.sendBroadcast(notesIntent)
+                    }
+
                     result.success(true)
                 }
                 "getPendingAction" -> {

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'app_constants.dart';
 import '../features/finances/data/transaction_repository.dart';
 import '../features/finances/services/spending_forecast_service.dart';
 
@@ -16,7 +17,8 @@ class WidgetHelper {
   static Future<void> updateWidgetData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final currency = prefs.getString('currency') ?? 'LKR';
+      final currencyCode = prefs.getString('currency') ?? 'LKR';
+      final currency = AppConstants.getCurrencyInfo(currencyCode).symbol;
 
       final repo = TransactionRepository.instance;
       final allTx = await repo.readAllTransactions();

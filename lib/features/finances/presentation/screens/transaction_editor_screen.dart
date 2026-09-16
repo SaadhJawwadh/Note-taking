@@ -1022,68 +1022,72 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                     ),
 
                     // Repeat picker
-                    const SizedBox(height: 24),
-                    Text(
-                      'Repeat',
-                      style: textTheme.labelLarge
-                          ?.copyWith(color: colorScheme.onSurfaceVariant),
-                    ),
-                    const SizedBox(height: 8),
-                    SegmentedButton<RecurringFrequency?>(
-                      showSelectedIcon: false,
-                      segments: const [
-                        ButtonSegment(value: null, label: Text('Once')),
-                        ButtonSegment(
-                            value: RecurringFrequency.daily, label: Text('Daily')),
-                        ButtonSegment(
-                            value: RecurringFrequency.weekly, label: Text('Weekly')),
-                        ButtonSegment(
-                            value: RecurringFrequency.monthly,
-                            label: Text('Monthly')),
-                      ],
-                      selected: {_repeatFrequency},
-                      onSelectionChanged: (selection) {
-                        HapticFeedback.selectionClick();
-                        setState(() => _repeatFrequency = selection.first);
-                      },
-                    ),
-                    if (_repeatFrequency != null) ...[
-                      const SizedBox(height: 8),
+                    if (settings.enableRecurringRules) ...[
+                      const SizedBox(height: 24),
                       Text(
-                        'This will be added automatically every '
-                        '${_repeatFrequency!.label.toLowerCase().replaceFirst('ly', '')} '
-                        'starting from the date above.',
-                        style: textTheme.bodySmall
+                        'Repeat',
+                        style: textTheme.labelLarge
                             ?.copyWith(color: colorScheme.onSurfaceVariant),
                       ),
+                      const SizedBox(height: 8),
+                      SegmentedButton<RecurringFrequency?>(
+                        showSelectedIcon: false,
+                        segments: const [
+                          ButtonSegment(value: null, label: Text('Once')),
+                          ButtonSegment(
+                              value: RecurringFrequency.daily, label: Text('Daily')),
+                          ButtonSegment(
+                              value: RecurringFrequency.weekly, label: Text('Weekly')),
+                          ButtonSegment(
+                              value: RecurringFrequency.monthly,
+                              label: Text('Monthly')),
+                        ],
+                        selected: {_repeatFrequency},
+                        onSelectionChanged: (selection) {
+                          HapticFeedback.selectionClick();
+                          setState(() => _repeatFrequency = selection.first);
+                        },
+                      ),
+                      if (_repeatFrequency != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'This will be added automatically every '
+                          '${_repeatFrequency!.label.toLowerCase().replaceFirst('ly', '')} '
+                          'starting from the date above.',
+                          style: textTheme.bodySmall
+                              ?.copyWith(color: colorScheme.onSurfaceVariant),
+                        ),
+                      ],
                     ],
 
-                    const SizedBox(height: 20),
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        HapticFeedback.lightImpact();
-                        final title = _descriptionController.text.trim();
-                        final amount = double.tryParse(_amountController.text.trim());
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => SplitBillEditorScreen(
-                              prelinkedTransactionId: widget.transaction?.id,
-                              initialTitle: title.isNotEmpty ? title : null,
-                              initialAmount: amount,
-                              initialDate: _selectedDate,
+                    if (settings.showSplitBills) ...[
+                      const SizedBox(height: 20),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          HapticFeedback.lightImpact();
+                          final title = _descriptionController.text.trim();
+                          final amount = double.tryParse(_amountController.text.trim());
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => SplitBillEditorScreen(
+                                prelinkedTransactionId: widget.transaction?.id,
+                                initialTitle: title.isNotEmpty ? title : null,
+                                initialAmount: amount,
+                                initialDate: _selectedDate,
+                              ),
                             ),
+                          );
+                        },
+                        icon: const Icon(Icons.pie_chart_outline_rounded),
+                        label: const Text('Split This Bill with Friends'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppLayout.radiusM),
                           ),
-                        );
-                      },
-                      icon: const Icon(Icons.pie_chart_outline_rounded),
-                      label: const Text('Split This Bill with Friends'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppLayout.radiusM),
                         ),
                       ),
-                    ),
+                    ],
 
                     // Guaranteed bottom clearance past floating action button
                     const SizedBox(height: AppLayout.fabBottomPadding),

@@ -149,5 +149,95 @@ void main() {
       final note = (await db.query('notes', where: 'id = ?', whereArgs: ['note_del'])).first;
       expect(note['deletedAt'], equals(newerDate));
     });
+
+    test('merges remote archived note (isArchived: 1) into local note correctly', () async {
+      final now = DateTime.now();
+      final olderDate = now.subtract(const Duration(minutes: 10)).toIso8601String();
+      final newerDate = now.toIso8601String();
+
+      // Seed local unarchived note
+      await db.insert('notes', {
+        'id': 'note_arch',
+        'title': 'Local Note To Be Archived',
+        'content': 'Content',
+        'dateCreated': olderDate,
+        'dateModified': olderDate,
+        'color': 0,
+        'isPinned': 0,
+        'isArchived': 0,
+        'category': 'Notes',
+        'deletedAt': null,
+      });
+
+      // Remote payload where note_arch was archived on another device
+      final remotePayload = {
+        'notes': [
+          {
+            'id': 'note_arch',
+            'title': 'Local Note To Be Archived',
+            'content': 'Content',
+            'dateCreated': olderDate,
+            'dateModified': newerDate,
+            'color': 0,
+            'isPinned': 0,
+            'isArchived': 1,
+            'category': 'Notes',
+            'deletedAt': null,
+          },
+        ]
+      };
+
+      final result = await SyncMergeService.instance.mergeRemoteData(remotePayload);
+
+      expect(result.notesMerged, equals(1));
+
+      final note = (await db.query('notes', where: 'id = ?', whereArgs: ['note_arch'])).first;
+      expect(note['isArchived'], equals(1));
+    });
+
+    test('merges remote archived note even within 5-second clock skew tolerance', () async {
+      final now = DateTime.now();
+      final localMod = now.toIso8601String();
+      final remoteModWithSkew = now.subtract(const Duration(seconds: 2)).toIso8601String();
+
+      // Seed local unarchived note
+      await db.insert('notes', {
+        'id': 'note_skew_arch',
+        'title': 'Note Clock Skew',
+        'content': 'Content',
+        'dateCreated': localMod,
+        'dateModified': localMod,
+        'color': 0,
+        'isPinned': 0,
+        'isArchived': 0,
+        'category': 'Notes',
+        'deletedAt': null,
+      });
+
+      // Remote payload where note was archived with 2-second clock skew
+      final remotePayload = {
+        'notes': [
+          {
+            'id': 'note_skew_arch',
+            'title': 'Note Clock Skew',
+            'content': 'Content',
+            'dateCreated': localMod,
+            'dateModified': remoteModWithSkew,
+            'color': 0,
+            'isPinned': 0,
+            'isArchived': 1,
+            'category': 'Notes',
+            'deletedAt': null,
+          },
+        ]
+      };
+
+      final result = await SyncMergeService.instance.mergeRemoteData(remotePayload);
+
+      expect(result.notesMerged, equals(1));
+
+      final note = (await db.query('notes', where: 'id = ?', whereArgs: ['note_skew_arch'])).first;
+      expect(note['isArchived'], equals(1));
+    });
   });
 }

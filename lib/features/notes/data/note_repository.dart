@@ -236,19 +236,36 @@ class NoteRepository {
 
   Future<void> bulkSetPinned(List<String> ids, bool pinned) async {
     final db = await _db;
+    final now = DateTime.now().toIso8601String();
     final batch = db.batch();
     for (final id in ids) {
-      batch.update(TableNames.notes, {NoteFields.isPinned: pinned ? 1 : 0},
-          where: '${NoteFields.id} = ?', whereArgs: [id]);
+      batch.update(
+        TableNames.notes,
+        {
+          NoteFields.isPinned: pinned ? 1 : 0,
+          NoteFields.dateModified: now,
+        },
+        where: '${NoteFields.id} = ?',
+        whereArgs: [id],
+      );
     }
     await batch.commit(noResult: true);
   }
 
   Future<void> bulkArchive(List<String> ids, bool archive) async {
     final db = await _db;
+    final now = DateTime.now().toIso8601String();
     final batch = db.batch();
     for (final id in ids) {
-      batch.update(TableNames.notes, {NoteFields.isArchived: archive ? 1 : 0}, where: '${NoteFields.id} = ?', whereArgs: [id]);
+      batch.update(
+        TableNames.notes,
+        {
+          NoteFields.isArchived: archive ? 1 : 0,
+          NoteFields.dateModified: now,
+        },
+        where: '${NoteFields.id} = ?',
+        whereArgs: [id],
+      );
     }
     await batch.commit(noResult: true);
   }
@@ -261,23 +278,42 @@ class NoteRepository {
     final batch = db.batch();
     final now = DateTime.now().toIso8601String();
     for (final id in ids) {
-      batch.update(TableNames.notes, {NoteFields.deletedAt: now}, where: '${NoteFields.id} = ?', whereArgs: [id]);
+      batch.update(
+        TableNames.notes,
+        {
+          NoteFields.deletedAt: now,
+          NoteFields.dateModified: now,
+        },
+        where: '${NoteFields.id} = ?',
+        whereArgs: [id],
+      );
     }
     await batch.commit(noResult: true);
   }
 
   Future<void> bulkTag(List<String> ids, List<String> tags) async {
     final db = await _db;
+    final now = DateTime.now().toIso8601String();
     await db.transaction((txn) async {
       final batch = txn.batch();
       for (final id in ids) {
         final currentTagsResult = await txn.query('note_tags', columns: ['tag_name'], where: 'note_id = ?', whereArgs: [id]);
         final currentTags = currentTagsResult.map((r) => r['tag_name'] as String).toSet();
         
+        bool addedAny = false;
         for (final tag in tags) {
           if (!currentTags.contains(tag)) {
             batch.insert('note_tags', {'note_id': id, 'tag_name': tag}, conflictAlgorithm: ConflictAlgorithm.ignore);
+            addedAny = true;
           }
+        }
+        if (addedAny) {
+          batch.update(
+            TableNames.notes,
+            {NoteFields.dateModified: now},
+            where: '${NoteFields.id} = ?',
+            whereArgs: [id],
+          );
         }
       }
       await batch.commit(noResult: true);

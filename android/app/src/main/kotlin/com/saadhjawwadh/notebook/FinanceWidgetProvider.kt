@@ -78,7 +78,7 @@ class FinanceWidgetProvider : AppWidgetProvider() {
             )
         } else {
             views.setTextViewText(R.id.widget_forecast_amount, spentMonth)
-            views.setTextViewText(R.id.widget_forecast_trend, "On Track 🟢")
+            views.setTextViewText(R.id.widget_forecast_trend, "On Track")
         }
 
         // Render Dynamic Mini Sparkline Plot
@@ -241,18 +241,34 @@ class FinanceWidgetProvider : AppWidgetProvider() {
         )
         views.setOnClickPendingIntent(R.id.widget_add_button, addPendingIntent)
 
-        // Intent for clicking the widget body (opens MainActivity deep link to Budgets/Analytics)
-        val mainIntent = Intent(context, MainActivity::class.java).apply {
-            action = "com.saadhjawwadh.notebook.VIEW_TRENDS"
+        // Intent for clicking the Top Overview Grid (opens Ledger)
+        val ledgerIntent = Intent(context, MainActivity::class.java).apply {
+            action = "com.saadhjawwadh.notebook.VIEW_LEDGER"
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
-        val mainPendingIntent = PendingIntent.getActivity(
+        val ledgerPendingIntent = PendingIntent.getActivity(
             context,
             2,
-            mainIntent,
+            ledgerIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        views.setOnClickPendingIntent(R.id.widget_root, mainPendingIntent)
+        views.setOnClickPendingIntent(R.id.widget_overview_grid, ledgerPendingIntent)
+
+        // Intent for clicking the Analytics & Sparkline card (opens Budgets & Analytics)
+        val budgetsIntent = Intent(context, MainActivity::class.java).apply {
+            action = "com.saadhjawwadh.notebook.VIEW_BUDGETS"
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val budgetsPendingIntent = PendingIntent.getActivity(
+            context,
+            3,
+            budgetsIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        views.setOnClickPendingIntent(R.id.widget_analytics_card, budgetsPendingIntent)
+
+        // Root fallback intent (opens Ledger)
+        views.setOnClickPendingIntent(R.id.widget_root, ledgerPendingIntent)
     }
 }
 

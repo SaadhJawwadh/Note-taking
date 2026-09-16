@@ -2921,6 +2921,15 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                           case 'lock':
                                             _toggleNoteLock();
                                             break;
+                                          case 'table':
+                                            _showTableInsertionDialog();
+                                            break;
+                                          case 'dictate':
+                                            _toggleDictation();
+                                            break;
+                                          case 'ai':
+                                            _showAiOptionsSheet();
+                                            break;
                                           case 'delete':
                                             _deleteNote();
                                             break;
@@ -2946,6 +2955,43 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                               ],
                                             ),
                                           ),
+                                          if (settings.minimalEditorMode) ...[
+                                            PopupMenuItem(
+                                              value: 'table',
+                                              height: 48,
+                                              child: Row(
+                                                children: [
+                                                  Icon(Icons.table_chart_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                                                  const SizedBox(width: 12),
+                                                  Text('Insert Table', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                                ],
+                                              ),
+                                            ),
+                                            PopupMenuItem(
+                                              value: 'dictate',
+                                              height: 48,
+                                              child: Row(
+                                                children: [
+                                                  Icon(_isListening ? Icons.mic : Icons.mic_none, size: 20, color: _isListening ? theme.colorScheme.error : colorScheme.onSurfaceVariant),
+                                                  const SizedBox(width: 12),
+                                                  Text(_isListening ? 'Stop Dictation' : 'Voice Dictation', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                                ],
+                                              ),
+                                            ),
+                                            if (settings.isAiActive)
+                                              PopupMenuItem(
+                                                value: 'ai',
+                                                height: 48,
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.auto_awesome_rounded, size: 20, color: colorScheme.primary),
+                                                    const SizedBox(width: 12),
+                                                    Text('Gemini AI Assist', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                                                  ],
+                                                ),
+                                              ),
+                                            const PopupMenuDivider(),
+                                          ],
                                           PopupMenuItem(
                                             value: 'reminder',
                                             height: 48,
@@ -4156,7 +4202,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                       : textColor,
                                 ),
                               ),
-                              if (settings.isAiActive) ...[
+                              if (settings.isAiActive && !settings.minimalEditorMode) ...[
                                 IconButton.filledTonal(
                                   icon: const Icon(Icons.auto_awesome_rounded, size: 20),
                                   tooltip: 'Gemini AI Assist',
@@ -4167,15 +4213,17 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                   ),
                                 ),
                               ],
-                              ExpressiveFloatingToolbar.divider(context),
-                              IconButton(
-                                icon: const Icon(Icons.table_chart_outlined),
-                                tooltip: 'Insert Table',
-                                onPressed: _showTableInsertionDialog,
-                                style: IconButton.styleFrom(
-                                  foregroundColor: textColor,
+                              if (!settings.minimalEditorMode)
+                                ExpressiveFloatingToolbar.divider(context),
+                              if (!settings.minimalEditorMode)
+                                IconButton(
+                                  icon: const Icon(Icons.table_chart_outlined),
+                                  tooltip: 'Insert Table',
+                                  onPressed: _showTableInsertionDialog,
+                                  style: IconButton.styleFrom(
+                                    foregroundColor: textColor,
+                                  ),
                                 ),
-                              ),
                               QuillToolbarToggleCheckListButton(
                                 controller: _quillController,
                                 options: QuillToolbarToggleCheckListButtonOptions(
@@ -4201,20 +4249,21 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                   foregroundColor: textColor,
                                 ),
                               ),
-                              IconButton(
-                                icon: Icon(_isListening
-                                    ? Icons.mic
-                                    : Icons.mic_none),
-                                tooltip: _isListening
-                                    ? 'Stop dictation'
-                                    : 'Dictate',
-                                onPressed: _toggleDictation,
-                                style: IconButton.styleFrom(
-                                  foregroundColor: _isListening
-                                      ? theme.colorScheme.error
-                                      : textColor,
+                              if (!settings.minimalEditorMode)
+                                IconButton(
+                                  icon: Icon(_isListening
+                                      ? Icons.mic
+                                      : Icons.mic_none),
+                                  tooltip: _isListening
+                                      ? 'Stop dictation'
+                                      : 'Dictate',
+                                  onPressed: _toggleDictation,
+                                  style: IconButton.styleFrom(
+                                    foregroundColor: _isListening
+                                        ? theme.colorScheme.error
+                                        : textColor,
+                                  ),
                                 ),
-                              ),
                               if (isKeyboardOpen)
                                 IconButton(
                                   icon: const Icon(Icons.keyboard_hide_rounded),

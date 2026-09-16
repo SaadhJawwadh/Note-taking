@@ -103,30 +103,31 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
 
           const SizedBox(height: AppLayout.spaceM),
 
-          // Search Field
-          TextField(
+          // Search Field (Material 3 SearchBar)
+          SearchBar(
             controller: _searchController,
-            onChanged: (val) => setState(() => _searchQuery = val.trim()),
-            decoration: InputDecoration(
-              hintText: 'Search friends or bills...',
-              prefixIcon: const Icon(Icons.search_rounded, size: 20),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear_rounded, size: 18),
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() => _searchQuery = '');
-                      },
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-                borderSide: BorderSide.none,
-              ),
-              filled: true,
-              fillColor: colorScheme.surfaceContainerHigh,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+            hintText: 'Search friends or bills...',
+            leading: const Icon(Icons.search_rounded, size: 20),
+            trailing: [
+              if (_searchQuery.isNotEmpty)
+                IconButton(
+                  icon: const Icon(Icons.clear_rounded, size: 18),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                ),
+            ],
+            elevation: const WidgetStatePropertyAll(0),
+            backgroundColor: WidgetStatePropertyAll(colorScheme.surfaceContainerHigh),
+            shape: WidgetStatePropertyAll(
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusMAX)),
             ),
+            constraints: const BoxConstraints(minHeight: 48, maxHeight: 48),
+            padding: const WidgetStatePropertyAll(
+              EdgeInsets.symmetric(horizontal: 16),
+            ),
+            onChanged: (val) => setState(() => _searchQuery = val.trim()),
           ),
 
           const SizedBox(height: AppLayout.spaceM),
@@ -179,26 +180,39 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Icon(Icons.pie_chart_outline_rounded, color: colorScheme.primary, size: 20),
-                  const SizedBox(width: AppLayout.spaceS),
-                  Text(
-                    'Split Summary',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface,
+              Flexible(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.pie_chart_outline_rounded, color: colorScheme.primary, size: 20),
+                    const SizedBox(width: AppLayout.spaceS),
+                    Flexible(
+                      child: Text(
+                        'Split Summary',
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: AppLayout.spaceS),
               // Net Position Pill
-              AppChip(
-                label: net >= 0
-                    ? '+$currency ${net.toStringAsFixed(2).replaceAll('.00', '')} (Net Owed)'
-                    : '-$currency ${net.abs().toStringAsFixed(2).replaceAll('.00', '')} (Net You Owe)',
-                backgroundColor: (net >= 0 ? successColor : debtColor).withValues(alpha: 0.18),
-                textColor: net >= 0 ? successColor : debtColor,
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: AppChip(
+                    label: net >= 0
+                        ? '+$currency ${net.toStringAsFixed(2).replaceAll('.00', '')} (Net Owed)'
+                        : '-$currency ${net.abs().toStringAsFixed(2).replaceAll('.00', '')} (Net You Owe)',
+                    backgroundColor: (net >= 0 ? successColor : debtColor).withValues(alpha: 0.18),
+                    textColor: net >= 0 ? successColor : debtColor,
+                  ),
+                ),
               ),
             ],
           ),

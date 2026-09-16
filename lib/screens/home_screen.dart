@@ -207,7 +207,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           );
         }
-      } else if ((action == 'view_trends' || action == 'view_budgets') && mounted) {
+      } else if ((action == 'view_trends' || action == 'view_budgets' || action == 'view_ledger') && mounted) {
         final settings = Provider.of<SettingsProvider>(context, listen: false);
         if (settings.showFinancialManager) {
           final List<Widget> destinations = _buildDestinations(settings);
@@ -430,11 +430,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     if (chosen == null || !mounted) return;
     final ids = noteProvider.selectedNoteIds.toList();
+    final now = DateTime.now();
     for (final id in ids) {
       final note = await NoteRepository.instance.readNote(id);
       if (note != null) {
         await NoteRepository.instance.updateNote(
-          note.copyWith(category: chosen == 'All Notes' ? '' : chosen),
+          note.copyWith(
+            category: chosen == 'All Notes' ? '' : chosen,
+            dateModified: now,
+          ),
         );
       }
     }
@@ -469,6 +473,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             itemCount: availableTags.length,
             itemBuilder: (context, index) => ListTile(
               title: Text(availableTags[index]),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppLayout.radiusM),
+              ),
               onTap: () => Navigator.pop(context, availableTags[index]),
             ),
           ),
@@ -902,7 +909,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               SliverToBoxAdapter(
                 child: UniversalSearchOverlay(query: noteProvider.searchQuery),
               ),
-            SliverToBoxAdapter(child: TagFilterBar(onTagLongPress: _showTagOptions)),
+            if (settings.showTagFilterBar)
+              SliverToBoxAdapter(child: TagFilterBar(onTagLongPress: _showTagOptions)),
             if (settings.showProTips &&
                 settings.isTipDue &&
                 noteProvider.searchQuery.isEmpty &&

@@ -143,6 +143,21 @@ void main() {
       await tester.tap(find.text('Next'), warnIfMissed: false);
       await tester.pumpAndSettle();
 
+      // Test Notes sub-features toggling
+      expect(settings.showTagFilterBar, isTrue);
+      final tagTileFinder = find.widgetWithText(SwitchListTile, 'Tag Filter Bar');
+      expect(tagTileFinder, findsOneWidget);
+      await tester.tap(tagTileFinder, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(settings.showTagFilterBar, isFalse);
+
+      expect(settings.minimalEditorMode, isFalse);
+      final minimalTileFinder = find.widgetWithText(SwitchListTile, 'Minimal Editor Mode');
+      expect(minimalTileFinder, findsOneWidget);
+      await tester.tap(minimalTileFinder, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(settings.minimalEditorMode, isTrue);
+
       expect(settings.showFinancialManager, isFalse);
 
       // Tap switch tile for Financial Manager

@@ -39,6 +39,12 @@ class SettingsProvider extends ChangeNotifier {
   bool _moveCompletedChecklistsToBottom = false;
   bool get moveCompletedChecklistsToBottom => _moveCompletedChecklistsToBottom;
 
+  bool _showTagFilterBar = true;
+  bool get showTagFilterBar => _showTagFilterBar;
+
+  bool _minimalEditorMode = false;
+  bool get minimalEditorMode => _minimalEditorMode;
+
   bool _showFinancialManager = false;
   bool get showFinancialManager => _showFinancialManager;
 
@@ -47,6 +53,15 @@ class SettingsProvider extends ChangeNotifier {
 
   bool _enableSavingsVault = true;
   bool get enableSavingsVault => _enableSavingsVault;
+
+  bool _enableSmsImport = true;
+  bool get enableSmsImport => _enableSmsImport;
+
+  bool _enableBudgetsAndAnalytics = true;
+  bool get enableBudgetsAndAnalytics => _enableBudgetsAndAnalytics;
+
+  bool _enableRecurringRules = true;
+  bool get enableRecurringRules => _enableRecurringRules;
 
   String _account1Name = 'Daily';
   String get account1Name => _account1Name;
@@ -182,6 +197,11 @@ class SettingsProvider extends ChangeNotifier {
     _showFinancialManager = prefs.getBool('showFinancialManager') ?? false;
     _showSplitBills = prefs.getBool('showSplitBills') ?? false;
     _enableSavingsVault = prefs.getBool('enableSavingsVault') ?? true;
+    _enableSmsImport = prefs.getBool('enableSmsImport') ?? true;
+    _enableBudgetsAndAnalytics = prefs.getBool('enableBudgetsAndAnalytics') ?? true;
+    _enableRecurringRules = prefs.getBool('enableRecurringRules') ?? true;
+    _showTagFilterBar = prefs.getBool('showTagFilterBar') ?? true;
+    _minimalEditorMode = prefs.getBool('minimalEditorMode') ?? false;
     _account1Name = prefs.getString('account1Name') ?? 'Daily';
     _account2Name = prefs.getString('account2Name') ?? 'Savings';
     final routingStr = prefs.getString('categoryAccountRouting');
@@ -499,6 +519,41 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setEnableSmsImport(bool enable) async {
+    _enableSmsImport = enable;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('enableSmsImport', enable);
+    notifyListeners();
+  }
+
+  Future<void> setEnableBudgetsAndAnalytics(bool enable) async {
+    _enableBudgetsAndAnalytics = enable;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('enableBudgetsAndAnalytics', enable);
+    notifyListeners();
+  }
+
+  Future<void> setEnableRecurringRules(bool enable) async {
+    _enableRecurringRules = enable;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('enableRecurringRules', enable);
+    notifyListeners();
+  }
+
+  Future<void> setShowTagFilterBar(bool show) async {
+    _showTagFilterBar = show;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('showTagFilterBar', show);
+    notifyListeners();
+  }
+
+  Future<void> setMinimalEditorMode(bool minimal) async {
+    _minimalEditorMode = minimal;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('minimalEditorMode', minimal);
+    notifyListeners();
+  }
+
   Future<void> setAccount1Name(String name) async {
     final clean = name.trim().isEmpty ? 'Daily' : name.trim();
     _account1Name = clean;
@@ -668,6 +723,11 @@ class SettingsProvider extends ChangeNotifier {
         'smsSyncFrequency': _smsSyncFrequency,
         'showProTips': _showProTips,
         'moveCompletedChecklistsToBottom': _moveCompletedChecklistsToBottom,
+        'enableSmsImport': _enableSmsImport,
+        'enableBudgetsAndAnalytics': _enableBudgetsAndAnalytics,
+        'enableRecurringRules': _enableRecurringRules,
+        'showTagFilterBar': _showTagFilterBar,
+        'minimalEditorMode': _minimalEditorMode,
       };
 
   Future<void> restoreFromBackupMap(Map<String, dynamic> map) async {
@@ -791,6 +851,26 @@ class SettingsProvider extends ChangeNotifier {
       if (map.containsKey('showProTips')) {
         final val = map['showProTips'];
         if (val is bool) await setShowProTips(val);
+      }
+      if (map.containsKey('enableSmsImport')) {
+        final val = map['enableSmsImport'];
+        if (val is bool) await setEnableSmsImport(val);
+      }
+      if (map.containsKey('enableBudgetsAndAnalytics')) {
+        final val = map['enableBudgetsAndAnalytics'];
+        if (val is bool) await setEnableBudgetsAndAnalytics(val);
+      }
+      if (map.containsKey('enableRecurringRules')) {
+        final val = map['enableRecurringRules'];
+        if (val is bool) await setEnableRecurringRules(val);
+      }
+      if (map.containsKey('showTagFilterBar')) {
+        final val = map['showTagFilterBar'];
+        if (val is bool) await setShowTagFilterBar(val);
+      }
+      if (map.containsKey('minimalEditorMode')) {
+        final val = map['minimalEditorMode'];
+        if (val is bool) await setMinimalEditorMode(val);
       }
       notifyListeners();
     } catch (_) {}

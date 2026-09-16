@@ -605,6 +605,83 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               const SizedBox(height: AppLayout.spaceXL),
 
+              // Notes & Writing Experience Modular Options
+              AppCard(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppLayout.spaceL,
+                  vertical: AppLayout.spaceS,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.edit_note_rounded,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: AppLayout.spaceM),
+                        Expanded(
+                          child: Text(
+                            'Notes & Writing Experience',
+                            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppLayout.spaceXS),
+                    Text(
+                      'Tailor your writing space. Keep it feature-packed or streamline for pure focus.',
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                    const Divider(height: 24),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      secondary: Icon(
+                        Icons.tag_rounded,
+                        color: theme.colorScheme.primary,
+                        size: 20,
+                      ),
+                      title: Text(
+                        'Tag Filter Bar',
+                        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        'Show quick tag filter carousel at the top of notes list.',
+                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                      value: settings.showTagFilterBar,
+                      onChanged: (val) {
+                        HapticFeedback.lightImpact();
+                        settings.setShowTagFilterBar(val);
+                      },
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      secondary: Icon(
+                        Icons.edit_outlined,
+                        color: theme.colorScheme.secondary,
+                        size: 20,
+                      ),
+                      title: Text(
+                        'Minimal Editor Mode',
+                        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        'Streamlined writing dock; secondary tools tucked in top menu.',
+                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                      value: settings.minimalEditorMode,
+                      onChanged: (val) {
+                        HapticFeedback.lightImpact();
+                        settings.setMinimalEditorMode(val);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppLayout.spaceM),
+
               // Finance Module Toggle Card
               AppCard(
                 padding: const EdgeInsets.symmetric(
@@ -666,22 +743,111 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   child: SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     secondary: Icon(
-                      Icons.sync_rounded,
+                      Icons.sms_outlined,
                       color: theme.colorScheme.primary,
                       size: 20,
                     ),
                     title: Text(
-                      'Auto SMS Background Sync',
+                      'SMS Bank Import',
                       style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Text(
-                      'Non-blocking background sync for bank debit/credit notifications.',
+                      'Automatically parse bank alerts into transactions.',
                       style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     ),
-                    value: settings.dailySyncEnabled,
+                    value: settings.enableSmsImport,
                     onChanged: (val) {
                       HapticFeedback.lightImpact();
-                      settings.setDailySyncEnabled(val);
+                      settings.setEnableSmsImport(val);
+                    },
+                  ),
+                ),
+                if (settings.enableSmsImport) ...[
+                  const SizedBox(height: AppLayout.spaceS),
+                  AppCard(
+                    margin: const EdgeInsets.only(left: AppLayout.spaceL),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppLayout.spaceL,
+                      vertical: AppLayout.spaceXS,
+                    ),
+                    child: SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      secondary: Icon(
+                        Icons.sync_rounded,
+                        color: theme.colorScheme.primary,
+                        size: 20,
+                      ),
+                      title: Text(
+                        'Auto SMS Background Sync',
+                        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        'Non-blocking background sync for bank debit/credit notifications.',
+                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                      value: settings.dailySyncEnabled,
+                      onChanged: (val) {
+                        HapticFeedback.lightImpact();
+                        settings.setDailySyncEnabled(val);
+                      },
+                    ),
+                  ),
+                ],
+                const SizedBox(height: AppLayout.spaceS),
+                AppCard(
+                  margin: const EdgeInsets.only(left: AppLayout.spaceL),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppLayout.spaceL,
+                    vertical: AppLayout.spaceXS,
+                  ),
+                  child: SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    secondary: Icon(
+                      Icons.donut_large_outlined,
+                      color: theme.colorScheme.tertiary,
+                      size: 20,
+                    ),
+                    title: Text(
+                      'Budgets & Visual Analytics',
+                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      'Monthly category spending limits and interactive visual analytics.',
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                    value: settings.enableBudgetsAndAnalytics,
+                    onChanged: (val) {
+                      HapticFeedback.lightImpact();
+                      settings.setEnableBudgetsAndAnalytics(val);
+                    },
+                  ),
+                ),
+                const SizedBox(height: AppLayout.spaceS),
+                AppCard(
+                  margin: const EdgeInsets.only(left: AppLayout.spaceL),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppLayout.spaceL,
+                    vertical: AppLayout.spaceXS,
+                  ),
+                  child: SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    secondary: Icon(
+                      Icons.event_repeat_outlined,
+                      color: theme.colorScheme.secondary,
+                      size: 20,
+                    ),
+                    title: Text(
+                      'Recurring Subscriptions',
+                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      'Track repeating bills, periodic income & payment reminders.',
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                    value: settings.enableRecurringRules,
+                    onChanged: (val) {
+                      HapticFeedback.lightImpact();
+                      settings.setEnableRecurringRules(val);
                     },
                   ),
                 ),
@@ -1046,6 +1212,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppLayout.spaceXL),
+          _buildFeatureCard(
+            theme,
+            icon: Icons.dashboard_customize_outlined,
+            title: 'Modular Sub-Features Architecture',
+            desc: 'Tailor every screen to your taste. Keep everything enabled for complete control, or turn off budgets, charts, and tags for pure minimalist simplicity.',
+          ),
+          const SizedBox(height: AppLayout.spaceM),
           _buildFeatureCard(
             theme,
             icon: Icons.savings_outlined,

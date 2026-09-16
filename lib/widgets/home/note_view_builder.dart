@@ -191,7 +191,10 @@ class NoteViewBuilder extends StatelessWidget {
             ),
           );
         } else {
-          final updated = note.copyWith(isArchived: true);
+          final updated = note.copyWith(
+            isArchived: true,
+            dateModified: DateTime.now(),
+          );
           await NoteRepository.instance.updateNote(updated);
           if (!context.mounted) return;
           ScaffoldMessenger.of(context).clearSnackBars();
@@ -202,7 +205,10 @@ class NoteViewBuilder extends StatelessWidget {
               action: SnackBarAction(
                 label: 'Undo',
                 onPressed: () async {
-                  final reverted = note.copyWith(isArchived: false);
+                  final reverted = note.copyWith(
+                    isArchived: false,
+                    dateModified: DateTime.now(),
+                  );
                   await NoteRepository.instance.updateNote(reverted);
                   refresh();
                 },

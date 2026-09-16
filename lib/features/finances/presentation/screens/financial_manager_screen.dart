@@ -64,6 +64,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
   int _trashedCount = 0;
 
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   late final PageController _heroPageController;
   int _heroCardMode = 0; // 0: Net Cash Flow, 1: Daily Burn Rate, 2: Savings Rate
   int _analyticsSubView = 0; // 0: Breakdown, 1: Budgets
@@ -198,6 +199,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
     WidgetsBinding.instance.removeObserver(this);
     _heroAutoCycleTimer?.cancel();
     _heroPageController.dispose();
+    _scrollController.dispose();
     _searchController.dispose();
     FinancialManagerScreen.tabRedirectNotifier.removeListener(_handleTabRedirect);
     FinancialManagerScreen.refreshNotifier.removeListener(_handleExternalRefresh);
@@ -1031,6 +1033,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
         children: [
           AnimationLimiter(
             child: CustomScrollView(
+              controller: _scrollController,
               slivers: _buildSlivers(colorScheme, textTheme, currency, settings),
             ),
           ),
@@ -1198,6 +1201,8 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
   }
 
   Widget _buildNormalHeader(ColorScheme colorScheme, TextTheme textTheme, String currency, bool isDark) {
+    final settings = Provider.of<SettingsProvider>(context);
+
     return Row(
       children: [
         Expanded(
@@ -1289,49 +1294,50 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
             });
           },
         ),
-        Semantics(
-          button: true,
-          label:
-              'Sync SMS transactions. Tap for quick sync, hold for advanced import options',
-          child: Tooltip(
-            message: 'Quick Sync (Tap) | Advanced Import (Hold)',
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-              child: BouncingWidget(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  _quickImportRecentSms();
-                },
-                onLongPress: () {
-                  HapticFeedback.mediumImpact();
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    showDragHandle: true,
-                    builder: (_) => const SmsImportSheet(),
-                  );
-                },
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: _isSmsSyncing
-                        ? SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                colorScheme.primary,
+        if (settings.enableSmsImport)
+          Semantics(
+            button: true,
+            label:
+                'Sync SMS transactions. Tap for quick sync, hold for advanced import options',
+            child: Tooltip(
+              message: 'Quick Sync (Tap) | Advanced Import (Hold)',
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                child: BouncingWidget(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    _quickImportRecentSms();
+                  },
+                  onLongPress: () {
+                    HapticFeedback.mediumImpact();
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      showDragHandle: true,
+                      builder: (_) => const SmsImportSheet(),
+                    );
+                  },
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: _isSmsSyncing
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  colorScheme.primary,
+                                ),
                               ),
-                            ),
-                          )
-                        : const Icon(Icons.sync_rounded),
+                            )
+                          : const Icon(Icons.sync_rounded),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
         PopupMenuButton<String>(
           icon: const Icon(Icons.more_vert_rounded),
           tooltip: 'Finances Tools',
@@ -1378,8 +1384,8 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
             }
           },
           itemBuilder: (ctx) {
-            final settings = ctx.read<SettingsProvider>();
-            final isAiEnabled = settings.isAiActive;
+            final menuSettings = ctx.read<SettingsProvider>();
+            final isAiEnabled = menuSettings.isAiActive;
             return [
               if (isAiEnabled) ...[
                 PopupMenuItem(
@@ -1395,39 +1401,42 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
                 ),
                 const PopupMenuDivider(),
               ],
-              PopupMenuItem(
-                value: 'sms_rules',
-                height: 48,
-                child: Row(
-                  children: [
-                    Icon(Icons.flash_on_rounded, size: 20, color: colorScheme.primary),
-                    const SizedBox(width: 12),
-                    Text('SMS & Bank Automation', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                  ],
+              if (menuSettings.enableSmsImport)
+                PopupMenuItem(
+                  value: 'sms_rules',
+                  height: 48,
+                  child: Row(
+                    children: [
+                      Icon(Icons.flash_on_rounded, size: 20, color: colorScheme.primary),
+                      const SizedBox(width: 12),
+                      Text('SMS & Bank Automation', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                    ],
+                  ),
                 ),
-              ),
-              PopupMenuItem(
-                value: 'savings_goals',
-                height: 48,
-                child: Row(
-                  children: [
-                    Icon(Icons.flag_rounded, size: 20, color: colorScheme.primary),
-                    const SizedBox(width: 12),
-                    Text('Savings Goals & Pockets', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                  ],
+              if (menuSettings.enableBudgetsAndAnalytics)
+                PopupMenuItem(
+                  value: 'savings_goals',
+                  height: 48,
+                  child: Row(
+                    children: [
+                      Icon(Icons.flag_rounded, size: 20, color: colorScheme.primary),
+                      const SizedBox(width: 12),
+                      Text('Savings Goals & Pockets', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                    ],
+                  ),
                 ),
-              ),
-              PopupMenuItem(
-                value: 'recurring',
-                height: 48,
-                child: Row(
-                  children: [
-                    Icon(Icons.repeat_outlined, size: 20, color: colorScheme.onSurfaceVariant),
-                    const SizedBox(width: 12),
-                    Text('Recurring Subscriptions', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                  ],
+              if (menuSettings.enableRecurringRules)
+                PopupMenuItem(
+                  value: 'recurring',
+                  height: 48,
+                  child: Row(
+                    children: [
+                      Icon(Icons.repeat_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 12),
+                      Text('Recurring Subscriptions', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
+                    ],
+                  ),
                 ),
-              ),
               const PopupMenuDivider(),
               PopupMenuItem(
                 value: 'export',
@@ -1593,6 +1602,12 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
     SettingsProvider settings,
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final showBudgets = settings.enableBudgetsAndAnalytics;
+    final showSplitBills = settings.showSplitBills;
+    final effectiveTab = (showBudgets || _selectedTab != 'Budgets') && (showSplitBills || _selectedTab != 'Split Bills')
+        ? _selectedTab
+        : 'Ledger';
+
     return [
             SliverAppBar(
               pinned: true,
@@ -1627,15 +1642,14 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
               ),
             ),
 
-            if (_isSmsSyncing)
+            if (_isSmsSyncing && settings.enableSmsImport)
               SliverToBoxAdapter(
                 child: _buildSmsSyncProgressBanner(colorScheme, textTheme, isDark),
               ),
 
             // ── Hero summary card (net + income/expense breakdown) ────────
-            if (_selectedTab != 'Split Bills')
-              SliverToBoxAdapter(
-                child: AnimationConfiguration.staggeredList(
+            SliverToBoxAdapter(
+              child: AnimationConfiguration.staggeredList(
                   position: 2,
                   duration: const Duration(milliseconds: 220),
                   child: SlideAnimation(
@@ -1652,15 +1666,20 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
               ),
 
             // ── Tab selector ──────────────────────────────────────────────
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: _buildTabSelector(colorScheme),
+            if (showBudgets || showSplitBills)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: _buildTabSelector(colorScheme),
+                ),
+              )
+            else
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 12),
               ),
-            ),
-            if (_selectedTab == 'Ledger') ...[
+            if (effectiveTab == 'Ledger') ...[
         // ── Minimalist Visual Chart Deck on Ledger (Tap jumps to Budgets) ──
-        if (_categoryExpenses.isNotEmpty || _monthlyData.isNotEmpty) ...[
+        if (showBudgets && (_categoryExpenses.isNotEmpty || _monthlyData.isNotEmpty)) ...[
           SliverToBoxAdapter(
             child: AnimationConfiguration.staggeredList(
               position: 3,
@@ -1981,7 +2000,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
                   await _refreshTransactions();
                 },
               ),
-      ] else if (_selectedTab == 'Budgets') ...[
+      ] else if (effectiveTab == 'Budgets') ...[
         // ── Tab 2: Budgets & Intelligence Dashboard ────────────────────
         Consumer<SettingsProvider>(
           builder: (context, settings, child) {
@@ -1995,7 +2014,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
             );
           },
         ),
-      ] else if (_selectedTab == 'Split Bills') ...[
+      ] else if (effectiveTab == 'Split Bills') ...[
         // ── Tab 3: Split Bills & Shared Liabilities ──────────────────
         const SliverFillRemaining(
           hasScrollBody: true,
@@ -2008,9 +2027,16 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
   // Helper tab selector: 2 or 3-segment toggle for Ledger, Budgets & Split Bills
   Widget _buildTabSelector(ColorScheme colorScheme) {
     final settings = Provider.of<SettingsProvider>(context);
+    final showBudgets = settings.enableBudgetsAndAnalytics;
     final showSplitBills = settings.showSplitBills;
 
-    final effectiveSelected = (showSplitBills || _selectedTab != 'Split Bills') ? _selectedTab : 'Ledger';
+    if (!showBudgets && !showSplitBills) {
+      return const SizedBox.shrink();
+    }
+
+    final effectiveSelected = (showBudgets || _selectedTab != 'Budgets') && (showSplitBills || _selectedTab != 'Split Bills')
+        ? _selectedTab
+        : 'Ledger';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -2022,11 +2048,12 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
             label: Text('Ledger', maxLines: 1, softWrap: false),
             icon: Icon(Icons.receipt_long_outlined, size: 18),
           ),
-          const ButtonSegment<String>(
-            value: 'Budgets',
-            label: Text('Budgets', maxLines: 1, softWrap: false),
-            icon: Icon(Icons.track_changes_rounded, size: 18),
-          ),
+          if (showBudgets)
+            const ButtonSegment<String>(
+              value: 'Budgets',
+              label: Text('Budgets', maxLines: 1, softWrap: false),
+              icon: Icon(Icons.track_changes_rounded, size: 18),
+            ),
           if (showSplitBills)
             const ButtonSegment<String>(
               value: 'Split Bills',
@@ -2041,6 +2068,9 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
             _selectedTab = newSelection.first;
           });
           FinancialManagerScreen.activeTabNotifier.value = newSelection.first;
+          if (_scrollController.hasClients && _scrollController.offset > 0) {
+            _scrollController.jumpTo(0.0);
+          }
         },
         style: SegmentedButton.styleFrom(
           visualDensity: VisualDensity.compact,

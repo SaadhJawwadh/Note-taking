@@ -28,9 +28,42 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
+                  version: 'v2.40.0',
+                  date: 'September 17, 2026',
+                  isLatest: true,
+                  changes: [
+                    _ChangelogGroup(
+                      title: "What's New",
+                      items: [
+                        'Modular Sub-Features Architecture: Toggle individual sub-features within Notes and Finances to make the workspace ultra-minimal or fully featured.',
+                        'Minimal Note Editor Mode: Focus cleanly on writing with an uncluttered bottom dock; advanced formatting stays tucked in the top action menu.',
+                        'Dynamic Single-View Financial Ledger: Automatically merges multi-tab finances into a focused single-view ledger when secondary tabs are disabled.',
+                        'Independent Notes Customization: Easily toggle the tag filter carousel on or off to match your workflow.',
+                        'Expanded Modular Onboarding: Customize your modular layout directly during initial setup or replay anytime in Settings.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: 'Improvements',
+                      items: [
+                        'Interactive Home Widget: Rich cash flow summaries and one-tap quick action deep links directly from your home screen.',
+                        'Context-Aware Transaction Editor: Dynamically adapts recurring, receipt OCR, and split bill controls based on active sub-features.',
+                        'Zero-Friction Reconfigurability: Live reactivity across all screens when toggling sub-features without needing to restart the app.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: 'Fixes',
+                      items: [
+                        'Split Bill Action Gating: Seamlessly hides split bill triggers across transaction forms when split bills are disabled.',
+                        'Non-Destructive Sub-Feature Toggling: Safely preserves existing budgets, recurring rules, and custom categories during sub-feature toggles.',
+                      ],
+                    ),
+                  ],
+                ),
+                _buildVersionSection(
+                  context,
                   version: 'v2.31.1',
                   date: 'September 16, 2026',
-                  isLatest: true,
+                  isLatest: false,
                   changes: [
                     _ChangelogGroup(
                       title: "What's New",

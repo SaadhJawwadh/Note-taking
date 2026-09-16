@@ -3,6 +3,7 @@
     <cloud-backup>
         <include domain="sharedpref" path="." />
         <include domain="database" path="." />
+        <include domain="file" path="." />
         <exclude domain="sharedpref" path="FlutterSecureKeyStorage.xml" />
         <exclude domain="sharedpref" path="FlutterSecureStorage.xml" />
         <!-- Exclude encrypted database file from cloud backup to prevent key mismatch corruption on new devices -->
@@ -11,5 +12,6 @@
     <device-transfer>
         <include domain="sharedpref" path="." />
         <include domain="database" path="notes.db" />
+        <include domain="file" path="." />
     </device-transfer>
 </data-extraction-rules>

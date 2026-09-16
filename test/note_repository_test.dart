@@ -104,4 +104,85 @@ void main() {
       expect(remainingTagNoteIds.contains('note_a_old_trash'), false);
     });
   });
+
+  group('NoteRepository Bulk Operations P2P Timestamp Advancement Tests', () {
+    late Database db;
+    late NoteRepository repository;
+
+    setUp(() async {
+      db = await databaseFactoryFfi.openDatabase(inMemoryDatabasePath);
+      await DatabaseHelper.instance.createTestDatabase(db);
+      DatabaseHelper.setMockDatabase(db);
+      repository = NoteRepository();
+    });
+
+    tearDown(() async {
+      await db.close();
+      DatabaseHelper.setMockDatabase(null);
+    });
+
+    test('bulkSetPinned, bulkArchive, bulkDelete, and bulkTag advance dateModified', () async {
+      final past = DateTime.now().subtract(const Duration(days: 5));
+      final note1 = Note(
+        id: 'bulk_1',
+        title: 'Bulk Note 1',
+        content: 'Content 1',
+        dateCreated: past,
+        dateModified: past,
+      );
+      final note2 = Note(
+        id: 'bulk_2',
+        title: 'Bulk Note 2',
+        content: 'Content 2',
+        dateCreated: past,
+        dateModified: past,
+      );
+
+      await repository.createNote(note1);
+      await repository.createNote(note2);
+
+      // 1. Verify bulkSetPinned updates dateModified
+      await Future.delayed(const Duration(milliseconds: 10));
+      await repository.bulkSetPinned(['bulk_1', 'bulk_2'], true);
+
+      var read1 = await repository.readNote('bulk_1');
+      var read2 = await repository.readNote('bulk_2');
+      expect(read1!.isPinned, true);
+      expect(read2!.isPinned, true);
+      expect(read1.dateModified.isAfter(past), true);
+      expect(read2.dateModified.isAfter(past), true);
+
+      final postPinTime = read1.dateModified;
+
+      // 2. Verify bulkArchive updates dateModified
+      await Future.delayed(const Duration(milliseconds: 10));
+      await repository.bulkArchive(['bulk_1'], true);
+
+      read1 = await repository.readNote('bulk_1');
+      expect(read1!.isArchived, true);
+      expect(read1.dateModified.isAfter(postPinTime), true);
+
+      final postArchiveTime = read1.dateModified;
+
+      // 3. Verify bulkTag updates dateModified
+      await Future.delayed(const Duration(milliseconds: 10));
+      await repository.bulkTag(['bulk_1', 'bulk_2'], ['ProjectA']);
+
+      read1 = await repository.readNote('bulk_1');
+      read2 = await repository.readNote('bulk_2');
+      expect(read1!.tags.contains('ProjectA'), true);
+      expect(read2!.tags.contains('ProjectA'), true);
+      expect(read1.dateModified.isAfter(postArchiveTime), true);
+
+      // 4. Verify bulkDelete updates dateModified
+      final preDeleteTime = read2.dateModified;
+      await Future.delayed(const Duration(milliseconds: 10));
+      await repository.bulkDelete(['bulk_2']);
+
+      final deletedRows = await db.query(TableNames.notes, where: 'id = ?', whereArgs: ['bulk_2']);
+      expect(deletedRows.isNotEmpty, true);
+      final deletedMod = DateTime.parse(deletedRows.first[NoteFields.dateModified] as String);
+      expect(deletedMod.isAfter(preDeleteTime), true);
+    });
+  });
 }

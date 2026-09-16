@@ -47,12 +47,14 @@ Specialist skill governing the onboarding experience, setup screens, live theme 
 3. **Page 3: Modular Powerups**
    - **Financial Manager**: Ledger, categories, and SMS parsing (`settings.setShowFinancialManager(...)`).
    - **Auto SMS Background Sync**: Contextual sub-card toggle (`settings.setDailySyncEnabled(...)`) when Financial Manager is enabled. Automatically triggers `SmsService.syncDailySyncSchedule()`.
+   - **Split Bills & Shared Debts**: Contextual sub-card toggle (`settings.setShowSplitBills(...)`) for group expense splitting, local receipt OCR, and WhatsApp sharing.
    - **Period & Health Tracker**: Offline cycle predictions and discreet alerts (`settings.setIsPeriodTrackerEnabled(...)`).
 4. **Page 4: On-Device Gemini AI Setup**
    - **NPU / Hardware Detection Badge**: Checks `settings.isDeviceAiSupported` (Android AI Core support).
    - **Local AI Toggle**: Offline text summarization and smart SMS categorization (`settings.setUseOnDeviceAi(...)`).
 5. **Page 5: Ready to Explore & Pro-Tips**
    - Pro-tips cards for **P2P Device Sync & Backups** (with a direct **"Configure P2P Sync ➔"** action button launching `P2pSyncScreen`), **App Lock & Security**, **Multi-Select Batch Actions**, and **Responsive Navigation**.
+   - Feature card for **Goal-Oriented Savings Pockets** (monthly auto-pacing) and **Interactive Mini Calculator** in amount fields (`+`, `-`, `*`, `/`).
 6. **What's New Sheet Action Buttons (`WhatsNewSheet`)**:
    - `WhatsNewSheet` items support optional `actionLabel` (e.g. `"Try P2P Sync ➔"`) and `onAction` callbacks to launch feature screens directly from release update cards.
 
@@ -78,4 +80,5 @@ Specialist skill governing the onboarding experience, setup screens, live theme 
   addTearDown(tester.view.resetPhysicalSize);
   ```
 - **Tap Interactions**: Use `warnIfMissed: false` when tapping list tiles or offscreen buttons inside PageView tests.
+- **Offscreen Viewport Scrolling**: Always invoke `await tester.ensureVisible(finder)` before tapping switches, buttons, or checkboxes rendered down a `SingleChildScrollView` to prevent test hit misses.
 - **Mandatory Verification**: Run `flutter analyze` and `flutter test` after modifying any onboarding files.

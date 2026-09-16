@@ -549,6 +549,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     ),
                                     const _Divider(),
                                     SettingsSwitchTile(
+                                      icon: Icons.tag_rounded,
+                                      iconColor: const Color(0xFFF59E0B),
+                                      title: 'Tag Filter Bar',
+                                      subtitle: 'Show quick tag filter pills at the top of the notes list',
+                                      value: settings.showTagFilterBar,
+                                      onChanged: settings.setShowTagFilterBar,
+                                    ),
+                                    const _Divider(),
+                                    SettingsSwitchTile(
+                                      icon: Icons.border_color_outlined,
+                                      iconColor: colorScheme.secondary,
+                                      title: 'Minimal Editor Mode',
+                                      subtitle: 'Streamlined writing toolbar; secondary tools moved to menu',
+                                      value: settings.minimalEditorMode,
+                                      onChanged: settings.setMinimalEditorMode,
+                                    ),
+                                    const _Divider(),
+                                    SettingsSwitchTile(
                                       icon: Icons.checklist_rtl_rounded,
                                       iconColor: colorScheme.secondary,
                                       title: 'Collapse Completed Checklists',
@@ -636,13 +654,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         onTap: () => _showCurrencyPicker(context, settings),
                                       ),
                                       const _Divider(),
-                                      SettingsTile(
-                                        icon: Icons.mark_chat_unread_outlined,
+                                      SettingsSwitchTile(
+                                        icon: Icons.sms_outlined,
                                         iconColor: colorScheme.secondary,
-                                        title: 'SMS & Bank Automation',
-                                        subtitle: 'Auto-sync, import rules, sender blocklist & parser testing',
-                                        showArrow: true,
-                                        onTap: () => AppRoute.push(context, const SmsRulesScreen()),
+                                        title: 'SMS Bank Import',
+                                        subtitle: 'Automatically import and parse transactions from bank SMS',
+                                        value: settings.enableSmsImport,
+                                        onChanged: settings.setEnableSmsImport,
+                                      ),
+                                      if (settings.enableSmsImport) ...[
+                                        const _Divider(),
+                                        SettingsTile(
+                                          icon: Icons.mark_chat_unread_outlined,
+                                          iconColor: colorScheme.secondary,
+                                          title: 'SMS & Bank Automation Rules',
+                                          subtitle: 'Auto-sync, import rules, sender blocklist & parser testing',
+                                          showArrow: true,
+                                          onTap: () => AppRoute.push(context, const SmsRulesScreen()),
+                                        ),
+                                      ],
+                                      const _Divider(),
+                                      SettingsSwitchTile(
+                                        icon: Icons.donut_large_outlined,
+                                        iconColor: colorScheme.tertiary,
+                                        title: 'Budgets & Financial Goals',
+                                        subtitle: 'Monthly spending limits, analytics chart deck & visual targets',
+                                        value: settings.enableBudgetsAndAnalytics,
+                                        onChanged: settings.setEnableBudgetsAndAnalytics,
                                       ),
                                       const _Divider(),
                                       SettingsTile(
@@ -654,18 +692,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         onTap: () => AppRoute.push(context, const CategoryManagementScreen()),
                                       ),
                                       const _Divider(),
-                                      SettingsTile(
+                                      SettingsSwitchTile(
                                         icon: Icons.event_repeat_outlined,
                                         iconColor: const Color(0xFF10B981),
-                                        title: 'Recurring Subscriptions',
-                                        subtitle: 'Manage repeating bills, salaries & automated rules',
-                                        showArrow: true,
-                                        onTap: () => RecurringRulesSheet.show(
-                                          context: context,
-                                          currency: settings.currency,
-                                          onRulesUpdated: () {},
-                                        ),
+                                        title: 'Recurring Subscriptions & Rules',
+                                        subtitle: 'Track repeated bills, periodic income & salary reminders',
+                                        value: settings.enableRecurringRules,
+                                        onChanged: settings.setEnableRecurringRules,
                                       ),
+                                      if (settings.enableRecurringRules) ...[
+                                        const _Divider(),
+                                        SettingsTile(
+                                          icon: Icons.edit_calendar_outlined,
+                                          iconColor: const Color(0xFF10B981),
+                                          title: 'Manage Subscriptions',
+                                          subtitle: 'Manage repeating bills, salaries & automated rules',
+                                          showArrow: true,
+                                          onTap: () => RecurringRulesSheet.show(
+                                            context: context,
+                                            currency: settings.currency,
+                                            onRulesUpdated: () {},
+                                          ),
+                                        ),
+                                      ],
                                       const _Divider(),
                                       SettingsSwitchTile(
                                         icon: Icons.account_balance_wallet_outlined,
@@ -1714,14 +1763,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               color: settings.autoBackupPath == null ? colorScheme.primary : colorScheme.onSurfaceVariant,
             ),
             title: Text(
-              'Secure App Storage (Recommended)',
+              'Secure App Storage (Default)',
               style: TextStyle(
                 fontWeight: settings.autoBackupPath == null ? FontWeight.bold : FontWeight.w500,
                 color: settings.autoBackupPath == null ? colorScheme.primary : colorScheme.onSurface,
               ),
             ),
             subtitle: Text(
-              'Stored in protected app documents — never revoked across OS updates',
+              'Always active & preserved by Google Cloud. Protected across OS updates.',
               style: TextStyle(
                 fontSize: 12,
                 color: colorScheme.onSurfaceVariant,
@@ -1743,14 +1792,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               color: settings.autoBackupPath != null ? colorScheme.primary : colorScheme.onSurfaceVariant,
             ),
             title: Text(
-              'Custom Device Folder',
+              'Custom Folder Mirror (Dual-Save)',
               style: TextStyle(
                 fontWeight: settings.autoBackupPath != null ? FontWeight.bold : FontWeight.w500,
                 color: settings.autoBackupPath != null ? colorScheme.primary : colorScheme.onSurface,
               ),
             ),
             subtitle: Text(
-              settings.autoBackupPath ?? 'Select an external device folder via file picker',
+              settings.autoBackupPath ?? 'Also save an accessible copy to an external device folder',
               style: TextStyle(
                 fontSize: 12,
                 color: colorScheme.onSurfaceVariant,

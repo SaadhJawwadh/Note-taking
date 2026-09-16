@@ -66,6 +66,7 @@
 
     <!-- Spendings Overview Grid -->
     <LinearLayout
+        android:id="@+id/widget_overview_grid"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
@@ -204,7 +205,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="1dp"
                 android:fontFamily="@font/inter"
-                android:text="On Track 🟢"
+                android:text="On Track"
                 android:textColor="@color/widget_income"
                 android:textSize="10.5sp"
                 android:textStyle="bold" />

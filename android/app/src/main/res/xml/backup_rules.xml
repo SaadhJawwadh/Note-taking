@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-    <!-- Include shared preferences and database -->
+    <!-- Include shared preferences, database, and files (backups, images, documents) -->
     <include domain="sharedpref" path="."/>
     <include domain="database" path="."/>
+    <include domain="file" path="."/>
     <!-- Exclude secure storage keys that cannot be restored across devices -->
     <exclude domain="sharedpref" path="FlutterSecureKeyStorage.xml" />
     <exclude domain="sharedpref" path="FlutterSecureStorage.xml" />

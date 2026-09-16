@@ -161,35 +161,43 @@ Future<bool> performAutoBackup() async {
   try {
     final prefs = await SharedPreferences.getInstance();
     if (!(prefs.getBool('autoBackupEnabled') ?? false)) return true;
-    String? targetPath = prefs.getString('autoBackupPath');
-    if (targetPath != null && !await Directory(targetPath).exists()) {
-      targetPath = null;
-    }
-    final appDir = await getApplicationDocumentsDirectory();
-    final effectivePath = targetPath ?? appDir.path;
 
+    final appDir = await getApplicationDocumentsDirectory();
     final jsonContent = await generateBackupJson();
     final dateStr = DateTime.now().toString().replaceAll(RegExp(r'[: ]'), '_').split('.')[0];
-    
-    File file;
-    try {
-      file = File('$effectivePath/notebook_auto_backup_$dateStr.json');
-      await file.writeAsString(jsonContent);
-      await _rotateBackups(effectivePath);
-    } catch (e) {
-      debugPrint('AutoBackup custom directory write failed ($e), falling back to app documents directory');
-      file = File('${appDir.path}/notebook_auto_backup_$dateStr.json');
-      await file.writeAsString(jsonContent);
-      await _rotateBackups(appDir.path);
+    final fileName = 'notebook_auto_backup_$dateStr.json';
+
+    // 1. Primary Invariant: Always maintain internal sandboxed snapshot
+    // (Preserved by Android fragile data prompts and Google Drive Cloud Backup)
+    final internalFile = File('${appDir.path}/$fileName');
+    await internalFile.writeAsString(jsonContent);
+    await _rotateBackups(appDir.path);
+
+    // 2. Dual-Save: Also mirror to user-selected custom external directory if configured
+    String? targetPath = prefs.getString('autoBackupPath');
+    bool savedToCustom = false;
+    if (targetPath != null && targetPath.isNotEmpty && targetPath != appDir.path) {
+      try {
+        final targetDir = Directory(targetPath);
+        if (await targetDir.exists()) {
+          final customFile = File('$targetPath/$fileName');
+          await customFile.writeAsString(jsonContent);
+          await _rotateBackups(targetPath);
+          savedToCustom = true;
+        }
+      } catch (e) {
+        debugPrint('AutoBackup custom directory mirror failed ($e), internal backup remains intact');
+      }
     }
 
     await prefs.setString('lastAutoBackupTime', DateTime.now().toIso8601String());
 
     final formattedTime = DateFormat('h:mm a, MMM d').format(DateTime.now());
-    final fileName = file.path.split('/').last;
     await NotificationService.showBackupNotification(
       title: '📦 Auto-Backup Complete',
-      body: 'Data safely backed up ($fileName) at $formattedTime.',
+      body: savedToCustom
+          ? 'Data safely backed up to internal & custom storage at $formattedTime.'
+          : 'Data safely backed up ($fileName) at $formattedTime.',
     );
     return true;
   } catch (e) {

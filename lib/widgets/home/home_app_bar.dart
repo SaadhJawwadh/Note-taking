@@ -12,6 +12,7 @@ import 'package:note_taking_app/features/notes/presentation/screens/filtered_not
 import 'package:note_taking_app/features/notes/presentation/widgets/note_migration_sheet.dart';
 import '../../core/theme/app_layout.dart';
 import '../../core/ui/app_chip.dart';
+import '../../core/ui/app_dialog.dart';
 import '../../utils/app_route.dart';
 import '../bouncing_widget.dart';
 
@@ -269,8 +270,8 @@ class _HomeAppBarState extends State<HomeAppBar> {
     final controller = TextEditingController();
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Create New Folder'),
+      builder: (ctx) => AppDialog(
+        title: 'Create New Folder',
         content: TextField(
           controller: controller,
           autofocus: true,
@@ -287,23 +288,17 @@ class _HomeAppBarState extends State<HomeAppBar> {
             }
           },
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final name = controller.text.trim();
-              if (name.isNotEmpty) {
-                HapticFeedback.selectionClick();
-                noteProvider.createFolder(name);
-                Navigator.pop(ctx);
-              }
-            },
-            child: const Text('Create'),
-          ),
-        ],
+        cancelLabel: 'Cancel',
+        confirmLabel: 'Create',
+        onCancel: () => Navigator.pop(ctx),
+        onConfirm: () {
+          final name = controller.text.trim();
+          if (name.isNotEmpty) {
+            HapticFeedback.selectionClick();
+            noteProvider.createFolder(name);
+            Navigator.pop(ctx);
+          }
+        },
       ),
     );
   }

@@ -119,14 +119,14 @@ void main() {
       expect(settings.trashAutoPurgeDays, 30);
     });
 
-    testWidgets('WhatsNewSheet renders v2.31.0 cards and records version on dismiss', (tester) async {
+    testWidgets('WhatsNewSheet renders v2.40.0 cards and records version on dismiss', (tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
       SharedPreferences.setMockInitialValues({
-        'lastSeenVersion': '2.30.3',
+        'lastSeenVersion': '2.31.1',
       });
       final settings = SettingsProvider();
       await settings.loadSettings();
@@ -136,7 +136,7 @@ void main() {
           value: settings,
           child: const MaterialApp(
             home: Scaffold(
-              body: WhatsNewSheet(currentVersion: '2.31.1'),
+              body: WhatsNewSheet(currentVersion: '2.40.0'),
             ),
           ),
         ),
@@ -149,11 +149,11 @@ void main() {
       expect(find.text("Fixes"), findsOneWidget);
 
       // Check marquee items
-      expect(find.text("Goal-Oriented Savings Pockets"), findsOneWidget);
-      expect(find.text("Authentic Dual-Account Transfers"), findsOneWidget);
-      expect(find.text("Smart Split Bill Calculator"), findsOneWidget);
-      expect(find.text("Interactive Mini Calculator"), findsOneWidget);
-      expect(find.text("Penny Remainder Reconciliation"), findsOneWidget);
+      expect(find.text("Modular Sub-Features Architecture"), findsOneWidget);
+      expect(find.text("Minimal Note Editor Mode"), findsOneWidget);
+      expect(find.text("Dynamic Single-View Ledger"), findsOneWidget);
+      expect(find.text("Tag Filter Bar Toggle"), findsOneWidget);
+      expect(find.text("Enhanced Home Screen Widget"), findsOneWidget);
 
       // Tap "Awesome, Got It!" to finish
       await tester.runAsync(() async {
@@ -162,7 +162,7 @@ void main() {
       });
       await tester.pumpAndSettle();
 
-      expect(settings.lastSeenVersion, '2.31.1');
+      expect(settings.lastSeenVersion, '2.40.0');
     });
   });
 }

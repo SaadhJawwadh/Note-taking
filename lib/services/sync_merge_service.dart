@@ -181,7 +181,11 @@ class SyncMergeService {
               }
             }
 
-            if (remoteMod.isAfter(localMod)) {
+            final shouldUpdate = remoteMod.isAfter(localMod) ||
+                (remoteMod.difference(localMod).inSeconds.abs() <= 5 &&
+                    remoteRow['isArchived'] != localRow['isArchived']);
+
+            if (shouldUpdate) {
               batch.update(
                 'notes',
                 remoteRow,

@@ -105,10 +105,10 @@ void main() {
       // Verify Shared Preferences
       final prefs = await SharedPreferences.getInstance();
 
-      final expectedSpentToday = now.day == 1 ? 'USD 75' : 'USD 25';
+      final expectedSpentToday = now.day == 1 ? '\$ 75' : '\$ 25';
       expect(prefs.getString('widget_spent_today'), expectedSpentToday);
-      expect(prefs.getString('widget_spent_month'), 'USD 75'); // 25 (today) + 50 (month start)
-      expect(prefs.getString('widget_income_month'), 'USD 100');
+      expect(prefs.getString('widget_spent_month'), '\$ 75'); // 25 (today) + 50 (month start)
+      expect(prefs.getString('widget_income_month'), '\$ 100');
 
       // Verify recent transactions json format
       final recentJson = prefs.getString('widget_recent_transactions');
@@ -127,9 +127,9 @@ void main() {
       expect(thirdTx['description'], 'Utility bill');
 
       // Verify format matches pattern
-      expect(firstTx['amount'], '- USD 25');
-      expect(secondTx['amount'], '+ USD 100');
-      expect(thirdTx['amount'], '- USD 50');
+      expect(firstTx['amount'], '- \$ 25');
+      expect(secondTx['amount'], '+ \$ 100');
+      expect(thirdTx['amount'], '- \$ 50');
 
       // Verify method channel was triggered
       expect(methodCalls.any((call) => call.method == 'updateWidget'), isTrue);

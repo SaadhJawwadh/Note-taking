@@ -141,29 +141,21 @@ class SettingsHeroCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: AppLayout.spaceS),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          minWidth: 48,
-                          minHeight: 48,
-                        ),
-                        child: Center(
-                          child: AppChip(
-                            isCompact: true,
-                            icon: isAppLockEnabled
-                                ? Icons.lock_rounded
-                                : Icons.lock_open_rounded,
-                            label: isAppLockEnabled ? 'Protected' : 'Unlocked',
-                            isSelected: isAppLockEnabled,
-                            onTap: onAppLockTap,
-                            selectedBackgroundColor: isAppLockEnabled
-                                ? colorScheme.primary.withValues(alpha: isDark ? 0.25 : 0.15)
-                                : colorScheme.surfaceContainerHighest,
-                            backgroundColor: colorScheme.surfaceContainerHighest,
-                            textColor: isAppLockEnabled
-                                ? colorScheme.primary
-                                : colorScheme.onSurfaceVariant,
-                          ),
-                        ),
+                      AppChip(
+                        isCompact: true,
+                        icon: isAppLockEnabled
+                            ? Icons.lock_rounded
+                            : Icons.lock_open_rounded,
+                        label: isAppLockEnabled ? 'Protected' : 'Unlocked',
+                        isSelected: isAppLockEnabled,
+                        onTap: onAppLockTap,
+                        selectedBackgroundColor: isAppLockEnabled
+                            ? colorScheme.primary.withValues(alpha: isDark ? 0.25 : 0.15)
+                            : colorScheme.surfaceContainerHighest,
+                        backgroundColor: colorScheme.surfaceContainerHighest,
+                        textColor: isAppLockEnabled
+                            ? colorScheme.primary
+                            : colorScheme.onSurfaceVariant,
                       ),
                     ],
                   ),
@@ -188,6 +180,7 @@ class SettingsHeroCard extends StatelessWidget {
                   Wrap(
                     spacing: AppLayout.spaceXS,
                     runSpacing: AppLayout.spaceXS,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       if (isFinancialManagerEnabled)
                         AppChip(
@@ -219,32 +212,24 @@ class SettingsHeroCard extends StatelessWidget {
                               colorScheme.primary.withValues(alpha: isDark ? 0.22 : 0.14),
                           textColor: colorScheme.primary,
                         ),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          minWidth: 48,
-                          minHeight: 48,
-                        ),
-                        child: Center(
-                          child: AppChip(
-                            isCompact: true,
-                            icon: autoBackupEnabled
-                                ? Icons.cloud_done_rounded
-                                : Icons.cloud_off_rounded,
-                            label: autoBackupEnabled
-                                ? (lastAutoBackupTimeFormatted != null
-                                    ? 'Backup: $lastAutoBackupTimeFormatted'
-                                    : 'Auto-Backup On')
-                                : 'Manual Backup',
-                            isSelected: autoBackupEnabled,
-                            onTap: onBackupTap,
-                            selectedBackgroundColor:
-                                const Color(0xFF0EA5E9).withValues(alpha: isDark ? 0.22 : 0.14),
-                            textColor: autoBackupEnabled
-                                ? (isDark ? const Color(0xFF7DD3FC) : const Color(0xFF0369A1))
-                                : colorScheme.onSurfaceVariant,
-                            backgroundColor: colorScheme.surfaceContainerHighest,
-                          ),
-                        ),
+                      AppChip(
+                        isCompact: true,
+                        icon: autoBackupEnabled
+                            ? Icons.cloud_done_rounded
+                            : Icons.cloud_off_rounded,
+                        label: autoBackupEnabled
+                            ? (lastAutoBackupTimeFormatted != null
+                                ? 'Backup: $lastAutoBackupTimeFormatted'
+                                : 'Auto-Backup On')
+                            : 'Manual Backup',
+                        isSelected: autoBackupEnabled,
+                        onTap: onBackupTap,
+                        selectedBackgroundColor:
+                            const Color(0xFF0EA5E9).withValues(alpha: isDark ? 0.22 : 0.14),
+                        textColor: autoBackupEnabled
+                            ? (isDark ? const Color(0xFF7DD3FC) : const Color(0xFF0369A1))
+                            : colorScheme.onSurfaceVariant,
+                        backgroundColor: colorScheme.surfaceContainerHighest,
                       ),
                     ],
                   ),

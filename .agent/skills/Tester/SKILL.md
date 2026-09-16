@@ -39,6 +39,7 @@ Use this skill to execute QA verifications, unit/widget tests, security audits, 
 * **Tombstone Ingestion Guardrail Tests**: Verify `TransactionRepository.createSmsTransaction` rejects inserting transactions whose `smsId` is present in `deleted_transaction_sms_ids` when `bypassTombstones: false`, and deletes the tombstone record allowing insertion when `bypassTombstones: true`.
 * **Sync Cancellation Tests**: Verify `SmsService.cancelSync()` sets `_cancelRequested` and halts batch ingestion cleanly without unhandled exceptions or incomplete database writes.
 * **Hardware AI Gating Tests**: Test widget trees under both `settings.isDeviceAiSupported = true` and `settings.isDeviceAiSupported = false` to confirm AI buttons and menu items hide cleanly on non-NPU devices and emulators.
+* **Scrollable Widget Test Hit Safety**: In tests involving `SingleChildScrollView`, `ListView`, or `CustomScrollView` (such as `OnboardingScreen` or `SettingsScreen`), always call `await tester.ensureVisible(finder)` prior to `tester.tap(finder)` to prevent offscreen hitTest misses.
 
 ## 3. Data Integrity & Backups Audit
 * **Backup Completeness**: Ensure `BackupService.generateBackupJson` uses `SettingsProvider.toBackupMap()` to export settings. Never hardcode individual SharedPreferences keys, which go stale as new options are added.
