@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_quill/quill_delta.dart';
@@ -14,7 +13,7 @@ import '../../data/note_repository.dart';
 import '../../../../data/note_model.dart';
 import 'package:uuid/uuid.dart';
 import 'package:provider/provider.dart';
-import '../../../../data/settings_provider.dart';
+import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_layout.dart';
 import '../../../../core/ui/app_chip.dart';
@@ -41,6 +40,7 @@ import '../widgets/story_card_creator_sheet.dart';
 import '../../../story_cards/story_cards.dart';
 import '../../../../core/ui/app_bottom_sheet.dart';
 import '../../../../core/ui/app_snack_bar.dart';
+import '../../../../core/ui/expressive_floating_toolbar.dart';
 
 
 class NoteEditorScreen extends StatefulWidget {
@@ -2414,23 +2414,20 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       constraints: const BoxConstraints(maxHeight: 240),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.95),
+        color: colorScheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(AppLayout.radiusXL),
         boxShadow: AppLayout.softShadow(context),
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+          color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+          width: 1,
         ),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppLayout.radiusXL),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
                 child: Row(
                   children: [
                     Icon(Icons.bolt, size: 16, color: colorScheme.primary),
@@ -2512,9 +2509,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
               ),
             ],
           ),
-        ),
-      ),
-    );
+        );
   }
 
   @override
@@ -2568,68 +2563,60 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                           margin: const EdgeInsets.symmetric(horizontal: 24),
                           padding: const EdgeInsets.all(32),
                           decoration: BoxDecoration(
-                            color: cs.surface.withValues(alpha: 0.4),
-                            borderRadius: BorderRadius.circular(28),
+                            color: cs.surfaceContainerHigh,
+                            borderRadius: BorderRadius.circular(AppLayout.radiusL),
                             border: Border.all(
-                              color: cs.outlineVariant.withValues(alpha: 0.2),
-                              width: 1.5,
+                              color: cs.outlineVariant.withValues(alpha: 0.35),
+                              width: 1.0,
                             ),
                           ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(28),
-                            child: BackdropFilter(
-                              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  TweenAnimationBuilder<double>(
-                                    duration: const Duration(milliseconds: 600),
-                                    tween: Tween(begin: 0.0, end: 1.0),
-                                    builder: (context, value, child) {
-                                      return Transform.scale(
-                                        scale: value,
-                                        child: child,
-                                      );
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        color: cs.primaryContainer.withValues(alpha: 0.2),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(Icons.lock_outline, size: 48, color: cs.primary),
-                                    ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TweenAnimationBuilder<double>(
+                                duration: const Duration(milliseconds: 600),
+                                tween: Tween(begin: 0.0, end: 1.0),
+                                builder: (context, value, child) {
+                                  return Transform.scale(
+                                    scale: value,
+                                    child: child,
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: cs.primaryContainer.withValues(alpha: 0.2),
+                                    shape: BoxShape.circle,
                                   ),
-                                  const SizedBox(height: 24),
-                                  Text(
-                                    'This note is locked',
-                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Authenticate to view its content',
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                          color: cs.onSurfaceVariant,
-                                        ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 32),
-                                  FilledButton.icon(
-                                    onPressed: _authenticateForLockedNote,
-                                    icon: const Icon(Icons.fingerprint),
-                                    label: const Text('Unlock Note'),
-                                    style: FilledButton.styleFrom(
-                                      minimumSize: const Size(double.infinity, 54),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                  child: Icon(Icons.lock_outline, size: 48, color: cs.primary),
+                                ),
                               ),
-                            ),
+                              const SizedBox(height: 24),
+                              Text(
+                                'Note Locked',
+                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'This note is protected with a password or biometrics.',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: cs.onSurfaceVariant,
+                                ),
+                              ),
+                              const SizedBox(height: 32),
+                              FilledButton.icon(
+                                onPressed: _authenticateForLockedNote,
+                                icon: const Icon(Icons.fingerprint),
+                                label: const Text('Unlock Note'),
+                                style: FilledButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                  shape: const StadiumBorder(),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -3611,33 +3598,17 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                 key: const ValueKey('floating_formatting_bar'),
                                 top: false,
                                 bottom: false,
-                                child: Container(
+                                child: ExpressiveFloatingToolbar(
                                   margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                                  decoration: BoxDecoration(
-                                    color: (isSystemDefault
-                                            ? theme.colorScheme.surfaceContainerHigh
-                                            : ColorScheme.fromSeed(
-                                                    seedColor: Color(color),
-                                                    brightness: theme.brightness)
-                                                .surfaceContainerHigh)
-                                        .withValues(alpha: 0.90),
-                                    borderRadius:
-                                        BorderRadius.circular(AppLayout.radiusMAX),
-                                    boxShadow: AppLayout.softShadow(context),
-                                    border: Border.all(
-                                      color: noteScheme.outlineVariant.withValues(alpha: 0.35),
-                                      width: 1.0,
-                                    ),
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius:
-                                        BorderRadius.circular(AppLayout.radiusMAX),
-                                    child: BackdropFilter(
-                                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                        child: Row(
-                                          children: [
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                  backgroundColor: (isSystemDefault
+                                          ? theme.colorScheme.surfaceContainerHigh
+                                          : ColorScheme.fromSeed(
+                                                  seedColor: Color(color),
+                                                  brightness: theme.brightness)
+                                              .surfaceContainerHigh)
+                                      .withValues(alpha: 0.95),
+                                  children: [
                                             // ── FIXED LEFT: Horizontal Stepper [ ‹ ] [ › ] ──
                                             Tooltip(
                                               message: 'Nudge left (Double-tap / long-press for word)',
@@ -4148,11 +4119,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                             ),
                                           ],
                                         ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              )
+                                      )
                             : const SizedBox.shrink(key: ValueKey('empty_formatting_bar')),
                       ),
                       // Bottom Toolbar (Pill)
@@ -4160,125 +4127,106 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                         visible: !_isImageSelected,
                         child: SafeArea(
                           top: false,
-                          child: Container(
+                          child: ExpressiveFloatingToolbar(
+                            backgroundColor: isSystemDefault
+                                ? theme.colorScheme.surfaceContainerHighest
+                                : ColorScheme.fromSeed(
+                                        seedColor: Color(color),
+                                        brightness: theme.brightness)
+                                    .surfaceContainerHighest,
                             margin: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: isSystemDefault
-                                  ? theme.colorScheme.surfaceContainerHighest
-                                  : ColorScheme.fromSeed(
-                                          seedColor: Color(color),
-                                          brightness: theme.brightness)
-                                      .surfaceContainerHighest,
-                              borderRadius:
-                                  BorderRadius.circular(AppLayout.radiusMAX),
-                              border: Border.all(
-                                color: noteScheme.outlineVariant.withValues(alpha: 0.35),
-                                width: 1.0,
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            isScrollable: true,
+                            children: [
+                              IconButton(
+                                icon: Icon(_showFormattingBar
+                                    ? Icons.keyboard_hide_outlined
+                                    : Icons.text_fields),
+                                tooltip: 'Formatting',
+                                onPressed: () {
+                                  setState(() {
+                                    _isFormattingBarPinnedManually = !_isFormattingBarPinnedManually;
+                                    _showFormattingBar = _isFormattingBarPinnedManually;
+                                  });
+                                },
+                                style: IconButton.styleFrom(
+                                  foregroundColor: _showFormattingBar
+                                      ? theme.colorScheme.primary
+                                      : textColor,
+                                ),
                               ),
-                              boxShadow: AppLayout.softShadow(context),
-                            ),
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  IconButton(
-                                    icon: Icon(_showFormattingBar
-                                        ? Icons.keyboard_hide_outlined
-                                        : Icons.text_fields),
-                                    tooltip: 'Formatting',
-                                    onPressed: () {
-                                      setState(() {
-                                        _isFormattingBarPinnedManually = !_isFormattingBarPinnedManually;
-                                        _showFormattingBar = _isFormattingBarPinnedManually;
-                                      });
-                                    },
-                                    style: IconButton.styleFrom(
-                                      foregroundColor: _showFormattingBar
-                                          ? theme.colorScheme.primary
-                                          : textColor,
-                                    ),
+                              if (settings.isAiActive) ...[
+                                IconButton.filledTonal(
+                                  icon: const Icon(Icons.auto_awesome_rounded, size: 20),
+                                  tooltip: 'Gemini AI Assist',
+                                  onPressed: _showAiOptionsSheet,
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: noteScheme.primaryContainer,
+                                    foregroundColor: noteScheme.onPrimaryContainer,
                                   ),
-                                  if (settings.isAiActive) ...[
-                                    IconButton.filledTonal(
-                                      icon: const Icon(Icons.auto_awesome_rounded, size: 20),
-                                      tooltip: 'Gemini AI Assist',
-                                      onPressed: _showAiOptionsSheet,
-                                      style: IconButton.styleFrom(
-                                        backgroundColor: noteScheme.primaryContainer,
-                                        foregroundColor: noteScheme.onPrimaryContainer,
-                                      ),
-                                    ),
-                                  ],
-                                  Container(
-                                    height: 24,
-                                    width: 1,
-                                    color: noteScheme.outlineVariant.withValues(alpha: 0.5),
-                                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.table_chart_outlined),
-                                    tooltip: 'Insert Table',
-                                    onPressed: _showTableInsertionDialog,
-                                    style: IconButton.styleFrom(
-                                      foregroundColor: textColor,
-                                    ),
-                                  ),
-                                  QuillToolbarToggleCheckListButton(
-                                    controller: _quillController,
-                                    options: QuillToolbarToggleCheckListButtonOptions(
-                                        iconData: Icons.check_box_outlined,
-                                        iconTheme: QuillIconTheme(
-                                            iconButtonUnselectedData:
-                                                IconButtonData(
-                                                    style: IconButton.styleFrom(
-                                                        foregroundColor:
-                                                            textColor)),
-                                            iconButtonSelectedData:
-                                                IconButtonData(
-                                                    style: IconButton.styleFrom(
-                                                        foregroundColor: theme
-                                                            .colorScheme
-                                                            .onPrimary)))),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.image_outlined),
-                                    tooltip: 'Attach Image',
-                                    onPressed: _showImageOptions,
-                                    style: IconButton.styleFrom(
-                                      foregroundColor: textColor,
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: Icon(_isListening
-                                        ? Icons.mic
-                                        : Icons.mic_none),
-                                    tooltip: _isListening
-                                        ? 'Stop dictation'
-                                        : 'Dictate',
-                                    onPressed: _toggleDictation,
-                                    style: IconButton.styleFrom(
-                                      foregroundColor: _isListening
-                                          ? theme.colorScheme.error
-                                          : textColor,
-                                    ),
-                                  ),
-                                  if (isKeyboardOpen)
-                                    IconButton(
-                                      icon: const Icon(Icons.keyboard_hide_rounded),
-                                      tooltip: 'Hide Keyboard',
-                                      onPressed: () {
-                                        FocusScope.of(context).unfocus();
-                                      },
-                                      style: IconButton.styleFrom(
-                                        foregroundColor: textColor,
-                                      ),
-                                    ),
-                                ],
+                                ),
+                              ],
+                              ExpressiveFloatingToolbar.divider(context),
+                              IconButton(
+                                icon: const Icon(Icons.table_chart_outlined),
+                                tooltip: 'Insert Table',
+                                onPressed: _showTableInsertionDialog,
+                                style: IconButton.styleFrom(
+                                  foregroundColor: textColor,
+                                ),
                               ),
-                            ),
+                              QuillToolbarToggleCheckListButton(
+                                controller: _quillController,
+                                options: QuillToolbarToggleCheckListButtonOptions(
+                                    iconData: Icons.check_box_outlined,
+                                    iconTheme: QuillIconTheme(
+                                        iconButtonUnselectedData:
+                                            IconButtonData(
+                                                style: IconButton.styleFrom(
+                                                    foregroundColor:
+                                                        textColor)),
+                                        iconButtonSelectedData:
+                                            IconButtonData(
+                                                style: IconButton.styleFrom(
+                                                    foregroundColor: theme
+                                                        .colorScheme
+                                                        .onPrimary)))),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.image_outlined),
+                                tooltip: 'Attach Image',
+                                onPressed: _showImageOptions,
+                                style: IconButton.styleFrom(
+                                  foregroundColor: textColor,
+                                ),
+                              ),
+                              IconButton(
+                                icon: Icon(_isListening
+                                    ? Icons.mic
+                                    : Icons.mic_none),
+                                tooltip: _isListening
+                                    ? 'Stop dictation'
+                                    : 'Dictate',
+                                onPressed: _toggleDictation,
+                                style: IconButton.styleFrom(
+                                  foregroundColor: _isListening
+                                      ? theme.colorScheme.error
+                                      : textColor,
+                                ),
+                              ),
+                              if (isKeyboardOpen)
+                                IconButton(
+                                  icon: const Icon(Icons.keyboard_hide_rounded),
+                                  tooltip: 'Hide Keyboard',
+                                  onPressed: () {
+                                    FocusScope.of(context).unfocus();
+                                  },
+                                  style: IconButton.styleFrom(
+                                    foregroundColor: textColor,
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                       ),
@@ -4295,7 +4243,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                         elevation: 8,
                         shape: RoundedRectangleBorder(
                           borderRadius:
-                              BorderRadius.circular(AppLayout.radiusXXL),
+                              BorderRadius.circular(AppLayout.radiusL),
                           side: BorderSide(
                             color: noteScheme.outlineVariant
                                 .withValues(alpha: 0.3),

@@ -5,7 +5,7 @@ description: Master product design engineering and interaction psychology distil
 
 # Product Design Engineering & Interaction Psychology
 
-Distilled from the design breakdowns, technical essays, and product philosophies of **Enrico Tartarotti** (tech founder, former Senior Product Manager at Amazon & Maze). This skill bridges interaction psychology, software engineering, and tactile ergonomics to craft intuitive, high-agency user experiences.
+Distilled from the design breakdowns, technical essays, and product philosophies of **Enrico Tartarotti** synthesized with **Google Material 3 Expressive Research**. This skill bridges interaction psychology, software engineering, and tactile ergonomics to craft intuitive, high-agency user experiences.
 
 ---
 
@@ -34,13 +34,14 @@ Every digital product operates on seven interconnected levels. Flaws at any leve
 ### Level 1: Micro-Details & Optical Integrity
 * **The "Unseen Precision" Principle**: Users cannot articulate sub-pixel misalignments or inconsistent stroke weights, but their nervous system subconsciously interprets them as unreliability or cheapness.
 * **Optical vs Geometric Balance**: Center icons and glyphs according to visual weight, not bounding-box mathematical centers (e.g. play triangles need slight right-shifting; chevrons need optical vertical centering).
-* **High-Contrast Certainty**: Surface borders, dividers, and scrims must use subtle alpha blending (`1px outlineVariant` at 20–35% alpha) to provide spatial separation without visual noise.
+* **High-Contrast Certainty**: Surface borders, dividers, and scrims must use subtle alpha blending (`1px outlineVariant` at 20–35% alpha) over M3 5-tier solid surface containers to provide spatial separation without visual noise.
+* **No Frosted Glass Blurs**: Rely strictly on M3 Expressive solid surface containers (`surfaceContainerLow`, `surfaceContainer`) with tonal elevation and clean 1px borders—zero Apple iOS frosted glass Gaussian blur artifacts.
 
 ### Level 2: Interaction Physics & Behavioral Dynamics
 * **The 100ms Touch Disambiguation**: Capacitive touchscreens enforce an intentional ~100ms ambiguity window between a *Tap* and a *Scroll*.
   - *Consumption Bias*: Touch OSs prioritize scrolling velocity over tapping precision.
   - *Engineering Countermeasure*: For creation interfaces, provide instant press down-states (within 16ms), generous tap-target bounds ($\ge 48 \times 48\text{dp}$), and clear touch cancellation buffers.
-* **Kinetic Momentum & Elastic Boundaries**: Never hit hard stops. Scroll boundaries, swipe dismissals, and bottom sheets must use elastic rubber-banding and spring physics (`Curves.easeOutBack` or damping ratios) to mimic physical mass.
+* **Kinetic Momentum & Elastic Boundaries**: Never hit hard stops. Scroll boundaries, swipe dismissals, and bottom sheets must use elastic rubber-banding and velocity-aware spring physics (`SpringDescription` tokens: `springFast`, `springSpatial`, `springBouncy`) to mimic physical mass.
 * **Context-Aware Behavioral Guards**: Intercept dangerous actions intelligently (e.g. banking apps muting alerts or hiding sensitive numbers during phone calls; editors ignoring accidental edge palms).
 
 ### Level 3: Technical Innovation & Hardware Synergy
@@ -56,7 +57,7 @@ Every digital product operates on seven interconnected levels. Flaws at any leve
 * **Curated Simplicity (Hick’s Law)**: Do not paralyze users with infinite options. Group choices into smart, contextual defaults with progressive disclosure for power users.
 
 ### Level 5: Structural Logic & Atomic Modularity
-* **Toolmaker vs Consumer (The Notion Invariant)**: Transform users from passive consumers into creative toolmakers by providing atomic, composable building blocks (tags, chips, blocks, metadata) instead of rigid hierarchical silos.
+* **Toolmaker vs Consumer**: Transform users from passive consumers into creative toolmakers by providing atomic, composable building blocks (tags, chips, blocks, metadata) instead of rigid hierarchical silos.
 * **Orthogonal Primitives**: Decouple data categories from presentation modes. Notes can have folders, tags, colors, and dates independently without forced nesting.
 * **Lossless Reversibility**: Every state transition must be undoable. Implement soft-deletes (`deletedAt` tombstones), undo SnackBars, and non-destructive merges.
 
@@ -128,10 +129,10 @@ Pure text chatboxes are a regression; voice-only interactions fail because human
   - Interfaces must allow direct tactile manipulation (swiping to archive, dragging to reorder, pinching to zoom).
 * **Dynamic Generative Assembly**:
   - Instead of forcing the user into static, rigid dashboards, assemble UI modules dynamically in response to intent (e.g., searching finances auto-switches to the Ledger tab; scanning a receipt auto-populates split debt cards).
-* **The 1984 Invariants**:
+* **M3 Expressive Direct Manipulation Invariants**:
   - **Visible State**: Always show what mode the user is in (search active, filter applied, synced).
-  - **Immediate Feedback**: Every tap produces an immediate pixel and haptic reaction.
-  - **Reversibility**: Everything can be undone with zero fear of data loss.
+  - **Immediate Feedback**: Every tap produces an immediate pixel and haptic reaction with spring physics.
+  - **Reversibility**: Everything can be undone with zero fear of data loss (LWW soft-deletes and undo SnackBars).
   - **Spatial Constancy**: Keep key anchors (Settings, Search, Sync) in predictable, muscle-memory positions.
 
 ---

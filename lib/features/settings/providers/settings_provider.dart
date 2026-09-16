@@ -646,6 +646,13 @@ class SettingsProvider extends ChangeNotifier {
         'isGridView': isGridView,
         'noteViewMode': _noteViewMode.index,
         'showFinancialManager': _showFinancialManager,
+        'showSplitBills': _showSplitBills,
+        'enableSavingsVault': _enableSavingsVault,
+        'account1Name': _account1Name,
+        'account2Name': _account2Name,
+        'categoryAccountRouting': _categoryAccountRouting,
+        'defaultPaymentInfo': _defaultPaymentInfo,
+        'trashAutoPurgeDays': _trashAutoPurgeDays,
         'currency': _currency,
         'isPeriodTrackerEnabled': _isPeriodTrackerEnabled,
         'appLockEnabled': _appLockEnabled,
@@ -692,6 +699,38 @@ class SettingsProvider extends ChangeNotifier {
         if (show is bool) {
           await setShowFinancialManager(show);
         }
+      }
+      if (map.containsKey('showSplitBills')) {
+        final val = map['showSplitBills'];
+        if (val is bool) await setShowSplitBills(val);
+      }
+      if (map.containsKey('enableSavingsVault')) {
+        final val = map['enableSavingsVault'];
+        if (val is bool) await setEnableSavingsVault(val);
+      }
+      if (map.containsKey('account1Name')) {
+        final val = map['account1Name'];
+        if (val is String && val.trim().isNotEmpty) await setAccount1Name(val.trim());
+      }
+      if (map.containsKey('account2Name')) {
+        final val = map['account2Name'];
+        if (val is String && val.trim().isNotEmpty) await setAccount2Name(val.trim());
+      }
+      if (map.containsKey('categoryAccountRouting')) {
+        final val = map['categoryAccountRouting'];
+        if (val is Map) {
+          final prefs = await SharedPreferences.getInstance();
+          _categoryAccountRouting = val.map((k, v) => MapEntry(k.toString(), v.toString()));
+          await prefs.setString('categoryAccountRouting', jsonEncode(_categoryAccountRouting));
+        }
+      }
+      if (map.containsKey('defaultPaymentInfo')) {
+        final val = map['defaultPaymentInfo'];
+        if (val is String) await setDefaultPaymentInfo(val);
+      }
+      if (map.containsKey('trashAutoPurgeDays')) {
+        final days = (map['trashAutoPurgeDays'] as num?)?.toInt();
+        if (days != null && days > 0) await setTrashAutoPurgeDays(days);
       }
       if (map.containsKey('currency')) {
         final curr = map['currency'];

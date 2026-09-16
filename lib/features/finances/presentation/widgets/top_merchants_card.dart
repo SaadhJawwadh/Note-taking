@@ -122,14 +122,12 @@ class TopMerchantsCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 6),
-                  ClipRRect(
+                  LinearProgressIndicator(
+                    value: percent.clamp(0.0, 1.0),
+                    minHeight: 4,
+                    backgroundColor: colorScheme.surfaceContainerHighest,
+                    valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
                     borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-                    child: LinearProgressIndicator(
-                      value: percent.clamp(0.0, 1.0),
-                      minHeight: 4,
-                      backgroundColor: colorScheme.surfaceContainerHighest,
-                      valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
-                    ),
                   ),
                 ],
               );

@@ -175,6 +175,9 @@ void main() {
       final p2pButton = find.text('Configure P2P Sync ➔');
       expect(p2pButton, findsOneWidget);
 
+      await tester.ensureVisible(p2pButton);
+      await tester.pumpAndSettle();
+
       await tester.tap(p2pButton, warnIfMissed: false);
       await tester.pumpAndSettle();
 

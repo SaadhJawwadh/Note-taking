@@ -1,10 +1,10 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_layout.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/ui/app_bottom_sheet.dart';
 import '../../../../utils/app_route.dart';
 import '../../../../widgets/skeleton_card.dart';
 import 'package:note_taking_app/features/settings/presentation/screens/settings_screen.dart';
@@ -126,97 +126,81 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> with WidgetsB
       ),
     ];
 
-    showDialog(
+    AppBottomSheet.show(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.menu_book_rounded, color: colorScheme.primary, size: 22),
-            const SizedBox(width: 10),
-            Text(
-              'Cycle Phase Guide',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
+      title: 'Cycle Phase Guide',
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: phases.map((p) {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: p.$4.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                border: Border.all(color: p.$4.withValues(alpha: 0.25), width: 1),
               ),
-            ),
-          ],
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: phases.map((p) {
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: p.$4.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(AppLayout.radiusM),
-                    border: Border.all(color: p.$4.withValues(alpha: 0.25), width: 1),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: p.$4.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(p.$5, color: p.$4, size: 18),
                   ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: p.$4.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(p.$5, color: p.$4, size: 18),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    p.$1,
-                                    style: theme.textTheme.titleSmall?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: p.$4,
-                                    ),
-                                  ),
+                            Expanded(
+                              child: Text(
+                                p.$1,
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: p.$4,
                                 ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  p.$2,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(width: 8),
                             Text(
-                              p.$3,
+                              p.$2,
                               style: theme.textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.w600,
                                 color: colorScheme.onSurfaceVariant,
-                                height: 1.35,
                               ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 4),
+                        Text(
+                          p.$3,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            height: 1.35,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                );
-              }).toList(),
-            ),
-          ),
+                ],
+              ),
+            );
+          }).toList(),
         ),
-        actions: [
-          FilledButton.tonal(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Close'),
-          ),
-        ],
       ),
+      actions: [
+        FilledButton.tonal(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Close'),
+        ),
+      ],
     );
   }
 
@@ -274,22 +258,20 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> with WidgetsB
                   toolbarHeight: MediaQuery.of(context).padding.top + 72.0,
                   titleSpacing: 0,
                   automaticallyImplyLeading: false,
-                  flexibleSpace: ClipRect(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                      child: Container(
-                        padding: EdgeInsets.only(
-                          top: MediaQuery.of(context).padding.top + 6,
-                          left: 16,
-                          right: 16,
-                          bottom: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: colorScheme.surfaceContainerLow.withValues(alpha: isDark ? 0.82 : 0.88),
-                        ),
-                        child: SizedBox(
-                          height: 60,
-                          child: Row(
+                  flexibleSpace: Container(
+                    padding: EdgeInsets.only(
+                      top: MediaQuery.of(context).padding.top + 6,
+                      left: 16,
+                      right: 16,
+                      bottom: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerLow,
+                      border: null,
+                    ),
+                    child: SizedBox(
+                      height: 60,
+                      child: Row(
                             children: [
                               Expanded(
                                 child: Column(
@@ -311,16 +293,16 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> with WidgetsB
                                       button: true,
                                       label: 'View cycle phase guide and details',
                                       child: InkWell(
-                                        borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                                        borderRadius: BorderRadius.circular(AppLayout.radiusStadium),
                                         onTap: () {
                                           HapticFeedback.selectionClick();
                                           _showPhaseGuideDialog(context);
                                         },
                                         child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
                                           decoration: BoxDecoration(
                                             color: phaseColor.withValues(alpha: isDark ? 0.22 : 0.16),
-                                            borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                                            borderRadius: BorderRadius.circular(AppLayout.radiusStadium),
                                             border: Border.all(
                                               color: phaseColor.withValues(alpha: 0.35),
                                               width: 1.0,
@@ -468,9 +450,6 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> with WidgetsB
                         ),
                       ),
                     ),
-                  ),
-                ),
-
                 // ── Hero Moon Phase Card ──────────────────────────────────
                 SliverToBoxAdapter(
                   child: AnimationConfiguration.staggeredList(

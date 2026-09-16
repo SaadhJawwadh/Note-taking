@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:note_taking_app/core/theme/app_layout.dart';
 
 /// A Material 3 dialog for choosing dimensions (rows/columns) when inserting a table.
 class EditorTableDialog extends StatefulWidget {
@@ -49,7 +50,7 @@ class _EditorTableDialogState extends State<EditorTableDialog> {
     return AlertDialog(
       backgroundColor: colorScheme.surfaceContainerHigh,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(AppLayout.radiusXXL),
       ),
       title: Row(
         children: [

@@ -29,7 +29,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     phaseLuteal: Color(0xFF7B1FA2),
   );
   static const dark = AppSemanticColors(
-    success: Color(0xFF32D74B),
+    success: Color(0xFF4CAF50), // M3 Harmonized Success Green
     phaseMenstrual: Color(0xFFEF9A9A),
     phaseFollicular: Color(0xFF90CAF9),
     phaseOvulatory: Color(0xFFFFCC80),
@@ -218,6 +218,12 @@ class AppTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppLayout.radiusL),
+          side: BorderSide(
+            color: scheme.outlineVariant.withValues(
+              alpha: brightness == Brightness.dark ? 0.35 : 0.50,
+            ),
+            width: 1.0,
+          ),
         ),
       ),
       popupMenuTheme: PopupMenuThemeData(
@@ -343,9 +349,12 @@ class AppTheme {
       ),
       chipTheme: ChipThemeData(
         shape: const StadiumBorder(),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         labelStyle: textTheme.labelLarge,
-        side: BorderSide.none,
+        side: BorderSide(
+          color: scheme.outlineVariant.withValues(alpha: 0.35),
+          width: 1,
+        ),
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: scheme.surfaceContainerHigh,
@@ -366,6 +375,11 @@ class AppTheme {
           borderRadius: BorderRadius.circular(AppLayout.radiusXXL),
         ),
       ),
+      dividerTheme: DividerThemeData(
+        color: scheme.outlineVariant.withValues(alpha: 0.35),
+        thickness: 1.0,
+        space: 1.0,
+      ),
       textSelectionTheme: TextSelectionThemeData(
         selectionColor: scheme.primary.withValues(alpha: 0.3),
         selectionHandleColor: scheme.primary,
@@ -383,6 +397,17 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppLayout.radiusM),
         ),
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: scheme.primary,
+        linearTrackColor: scheme.surfaceContainerHighest,
+        circularTrackColor: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        linearMinHeight: 6.0,
+        borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+        strokeCap: StrokeCap.round,
+        stopIndicatorColor: scheme.primary,
+        stopIndicatorRadius: 3.0,
+        trackGap: 4.0,
       ),
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {

@@ -204,7 +204,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             ),
                             decoration: BoxDecoration(
                               color: theme.colorScheme.primary,
-                              borderRadius: BorderRadius.circular(AppLayout.radiusL),
+                              borderRadius: BorderRadius.circular(AppLayout.radiusStadium),
                               boxShadow: AppLayout.softShadow(context),
                             ),
                             child: Row(
@@ -719,6 +719,35 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   margin: const EdgeInsets.only(left: AppLayout.spaceL),
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppLayout.spaceL,
+                    vertical: AppLayout.spaceXS,
+                  ),
+                  child: SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    secondary: Icon(
+                      Icons.call_split_rounded,
+                      color: theme.colorScheme.tertiary,
+                      size: 20,
+                    ),
+                    title: Text(
+                      'Split Bills & Shared Debts',
+                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      'Split expenses, balance pennies, scan receipts with OCR, and track settlements.',
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                    value: settings.showSplitBills,
+                    onChanged: (val) {
+                      HapticFeedback.lightImpact();
+                      settings.setShowSplitBills(val);
+                    },
+                  ),
+                ),
+                const SizedBox(height: AppLayout.spaceS),
+                AppCard(
+                  margin: const EdgeInsets.only(left: AppLayout.spaceL),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppLayout.spaceL,
                     vertical: AppLayout.spaceS,
                   ),
                   child: Row(
@@ -1019,6 +1048,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const SizedBox(height: AppLayout.spaceXL),
           _buildFeatureCard(
             theme,
+            icon: Icons.savings_outlined,
+            title: 'Savings Pockets & Split Calculator',
+            desc: 'Organize goal-oriented savings with daily pacing, or split shared expenses fairly with ML Kit offline receipt OCR scanning and automatic penny balancing.',
+          ),
+          const SizedBox(height: AppLayout.spaceM),
+          _buildFeatureCard(
+            theme,
             icon: Icons.photo_library_outlined,
             title: 'Story Card Studio & Social Share',
             desc: 'Turn any note or selected quote into high-resolution social media cards (9:16 Story, 1:1 Square, 4:5 Portrait) with offline typography and 1-tap sharing.',
@@ -1127,18 +1163,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   TextButton(
                     onPressed: onAction,
                     style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      minimumSize: const Size(0, 48),
                       backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
                       foregroundColor: theme.colorScheme.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppLayout.radiusS),
-                      ),
+                      shape: const StadiumBorder(),
                     ),
                     child: Text(
                       actionLabel,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                     ),
                   ),
                 ],

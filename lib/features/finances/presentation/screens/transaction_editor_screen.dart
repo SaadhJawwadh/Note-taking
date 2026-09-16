@@ -3,7 +3,7 @@ import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
-import 'package:note_taking_app/data/settings_provider.dart';
+import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import 'package:note_taking_app/features/finances/data/transaction_repository.dart';
 import 'package:note_taking_app/data/transaction_model.dart';
 import 'package:note_taking_app/data/transaction_category.dart';
@@ -17,7 +17,7 @@ import 'package:note_taking_app/utils/app_route.dart';
 import 'package:uuid/uuid.dart';
 import 'package:note_taking_app/core/theme/app_layout.dart';
 import 'package:note_taking_app/core/ui/app_morphing_fab.dart';
-import 'package:note_taking_app/widgets/frosted_glass_sliver_app_bar.dart';
+import 'package:note_taking_app/core/ui/expressive_sliver_app_bar.dart';
 import 'package:note_taking_app/utils/app_globals.dart';
 import 'package:note_taking_app/features/finances/providers/financial_manager_provider.dart';
 import 'split_bill_editor_screen.dart';
@@ -676,15 +676,26 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                         children: _colorSwatches.map((c) {
                           final isSelected =
                               c.toARGB32() == selectedColor.toARGB32();
-                          return GestureDetector(
-                            onTap: () => setDialogState(() => selectedColor = c),
-                            child: CircleAvatar(
-                              radius: 16,
-                              backgroundColor: c,
-                              child: isSelected
-                                  ? const Icon(Icons.check,
-                                      size: 16, color: Colors.white)
-                                  : null,
+                          return Semantics(
+                            button: true,
+                            label: 'Color option',
+                            selected: isSelected,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(AppLayout.radiusStadium),
+                              onTap: () => setDialogState(() => selectedColor = c),
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                                child: Center(
+                                  child: CircleAvatar(
+                                    radius: 16,
+                                    backgroundColor: c,
+                                    child: isSelected
+                                        ? const Icon(Icons.check,
+                                            size: 16, color: Colors.white)
+                                        : null,
+                                  ),
+                                ),
+                              ),
                             ),
                           );
                         }).toList(),
@@ -737,7 +748,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
         onNotification: _onScrollNotification,
         child: CustomScrollView(
           slivers: [
-            FrostedGlassSliverAppBar(
+            ExpressiveSliverAppBar(
               titleText: widget.transaction == null
                   ? 'New Transaction'
                   : 'Edit Transaction',
@@ -903,8 +914,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                                   color: selected ? catColor : colorScheme.outline.withValues(alpha: 0.5),
                                   width: selected ? 1.5 : 0.5,
                                 ),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(AppLayout.radiusS)),
+                                shape: const StadiumBorder(),
                               );
                             }),
                             ActionChip(
@@ -913,8 +923,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                                   Text('New', style: TextStyle(color: colorScheme.primary)),
                               onPressed: _showNewCategoryDialog,
                               side: BorderSide(color: colorScheme.primary, width: 0.5),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(AppLayout.radiusS)),
+                              shape: const StadiumBorder(),
                             ),
                           ],
                         ),
@@ -935,7 +944,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
                             ),
                             backgroundColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
                             side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusM)),
+                            shape: const StadiumBorder(),
                             onPressed: () async {
                               final messenger = ScaffoldMessenger.of(context);
                               await HapticFeedback.selectionClick();

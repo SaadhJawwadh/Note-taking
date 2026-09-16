@@ -4,7 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../../../../data/transaction_model.dart';
 import '../../../../data/transaction_category.dart';
-import '../../../../data/settings_provider.dart';
+import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import '../../../../core/theme/app_layout.dart';
 import '../../../../core/ui/app_card.dart';
 import 'burn_rate_forecast_card.dart';
@@ -615,14 +615,12 @@ class _FinancialAnalyticsTabState extends State<FinancialAnalyticsTab> {
                     ],
                   ),
                   const SizedBox(height: 6),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: pct.clamp(0.01, 1.0),
-                      minHeight: 5,
-                      backgroundColor: colorScheme.surfaceContainerLow,
-                      valueColor: AlwaysStoppedAnimation<Color>(catColor),
-                    ),
+                  LinearProgressIndicator(
+                    value: pct.clamp(0.01, 1.0),
+                    minHeight: 5,
+                    backgroundColor: colorScheme.surfaceContainerLow,
+                    valueColor: AlwaysStoppedAnimation<Color>(catColor),
+                    borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
                   ),
                 ],
               ),

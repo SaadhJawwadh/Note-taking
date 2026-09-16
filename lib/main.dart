@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'data/settings_provider.dart';
+import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import 'data/transaction_category.dart';
 import 'services/sms_service.dart';
 import 'package:note_taking_app/core/theme/app_theme.dart';

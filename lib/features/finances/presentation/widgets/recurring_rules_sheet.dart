@@ -9,6 +9,7 @@ import '../../../../data/category_constants.dart';
 import '../../../../core/theme/app_layout.dart';
 import '../../../../core/ui/app_bottom_sheet.dart';
 import '../../../../core/ui/app_dialog.dart';
+import '../../../../core/ui/expressive_shape_morph_indicator.dart';
 
 /// Interactive modal sheet to view, add, and manage automated recurring transaction rules.
 class RecurringRulesSheet extends StatefulWidget {
@@ -466,7 +467,7 @@ class _RecurringRulesSheetState extends State<RecurringRulesSheet> {
     if (_isLoading) {
       return const SizedBox(
         height: 200,
-        child: Center(child: CircularProgressIndicator()),
+        child: Center(child: ExpressiveShapeMorphIndicator(size: 44)),
       );
     }
 

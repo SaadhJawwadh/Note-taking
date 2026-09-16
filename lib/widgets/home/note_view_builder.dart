@@ -4,7 +4,7 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:provider/provider.dart';
 import 'package:animations/animations.dart';
 import '../../data/note_model.dart';
-import '../../data/settings_provider.dart';
+import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import '../../providers/note_provider.dart';
 import 'package:note_taking_app/features/notes/presentation/screens/note_editor_screen.dart';
 import '../../screens/home_screen.dart'; // For NoteCard for now, maybe move it too
@@ -94,7 +94,7 @@ class NoteViewBuilder extends StatelessWidget {
     }
 
     return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 88),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, AppLayout.fabBottomPadding),
       sliver: _buildSliverLayout(context, settings, noteProvider),
     );
   }
@@ -157,7 +157,7 @@ class NoteViewBuilder extends StatelessWidget {
       background: Container(
         decoration: BoxDecoration(
           color: colorScheme.primaryContainer,
-          borderRadius: BorderRadius.circular(AppLayout.radiusXL),
+          borderRadius: BorderRadius.circular(AppLayout.radiusL),
         ),
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -166,7 +166,7 @@ class NoteViewBuilder extends StatelessWidget {
       secondaryBackground: Container(
         decoration: BoxDecoration(
           color: colorScheme.errorContainer,
-          borderRadius: BorderRadius.circular(AppLayout.radiusXL),
+          borderRadius: BorderRadius.circular(AppLayout.radiusL),
         ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -223,9 +223,9 @@ class NoteViewBuilder extends StatelessWidget {
       openBuilder: (context, _) => NoteEditorScreen(note: note),
       closedElevation: 0,
       openElevation: 0,
-      closedColor: Theme.of(context).colorScheme.surfaceContainer,
+      closedColor: Colors.transparent,
       openColor: Theme.of(context).colorScheme.surface,
-      closedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusXL)),
+      closedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusL)),
       onClosed: (returned) async {
         if (returned == true) {
           refresh();

@@ -58,9 +58,9 @@ lib/
 * **Shared UI Library**: Always use `AppCard`, `AppBottomSheet`, `AppChip`, `AppDialog`, and `ExpressiveSliverAppBar` from `lib/core/ui/`.
 * **Seamless Borderless Surface Bars**: Top app bars (`ExpressiveSliverAppBar`) and bottom navigation bars MUST be 100% borderless (`border: null`), relying on pure solid `surfaceContainerLow` / `surfaceContainer` fill with subtle tonal elevation—ZERO `BackdropFilter` or frosted glass blurs.
 * **M3 Expressive Shape Hierarchy**: Use the official M3 Expressive shape scale:
-  - Squircles ($12\text{dp}$–$16\text{dp}$ for chips/cards, $28\text{dp}$ for dialogs/sheets).
+  - Tactile Stadium Pills ($1000\text{dp}$ / `StadiumBorder`): Standard for chips, tags, filter pills, search bars, and primary CTAs, creating soft, touch-friendly capsules (matching Google's M3 Expressive research).
+  - Squircles ($12\text{dp}$–$16\text{dp}$ for cards, $28\text{dp}$ for dialogs/sheets).
   - Connected Corner Morphing for grouped lists (first item rounded top, middle items flat, last item rounded bottom).
-  - Stadium pills ($1000\text{dp}$) reserved strictly for primary action CTA buttons and search bars.
 * **Velocity-Aware Spring Physics**: Micro-interactions and press states must use `SpringDescription` tokens (`AppLayout.springFast` / `AppLayout.springSpatial`) and `AppLayout.curveEmphasizedDecelerate`, reacting naturally to gesture momentum.
 * **Dynamic Hero Card Opacities**: Hero cards (`SettingsHeroCard`, Net Balance, P2P Sync Status, Cycle Moon Phase, Trash Auto-Purge Banner) must dynamically adjust container opacity (50%–55% alpha in Light Mode; 20%–22% alpha in Dark Mode) with subtle 1.2px accent borders.
 

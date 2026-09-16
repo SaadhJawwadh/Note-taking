@@ -4,7 +4,7 @@ import 'package:note_taking_app/features/finances/data/transaction_repository.da
 import 'package:note_taking_app/data/sms_contact.dart';
 import 'package:note_taking_app/services/sms_service.dart';
 import 'package:note_taking_app/core/theme/app_layout.dart';
-import 'package:note_taking_app/widgets/frosted_glass_sliver_app_bar.dart';
+import 'package:note_taking_app/core/ui/expressive_sliver_app_bar.dart';
 
 class SmsContactsScreen extends StatefulWidget {
   const SmsContactsScreen({super.key});
@@ -182,8 +182,8 @@ class _SmsContactsScreenState extends State<SmsContactsScreen> {
       body: AnimationLimiter(
         child: CustomScrollView(
           slivers: [
-            const FrostedGlassSliverAppBar(
-              titleText: 'SMS Contacts',
+            const ExpressiveSliverAppBar(
+              titleText: 'Financial Senders',
               showBackButton: true,
             ),
             if (_loading)

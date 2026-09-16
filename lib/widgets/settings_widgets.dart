@@ -41,95 +41,40 @@ class SettingsHeroCard extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 20),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppLayout.radiusXXL),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: isDark
-                ? [
-                    colorScheme.primaryContainer.withValues(alpha: 0.35),
-                    colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
-                    colorScheme.surfaceContainerHigh.withValues(alpha: 0.60),
-                  ]
-                : [
-                    colorScheme.primaryContainer.withValues(alpha: 0.50),
-                    colorScheme.surfaceContainerLow.withValues(alpha: 0.75),
-                    colorScheme.surfaceContainerLowest,
-                  ],
-          ),
+          color: colorScheme.primaryContainer.withValues(alpha: isDark ? 0.20 : 0.52),
+          borderRadius: BorderRadius.circular(AppLayout.radiusL),
           border: Border.all(
-            color: colorScheme.primary.withValues(alpha: isDark ? 0.40 : 0.35),
+            color: colorScheme.primary.withValues(alpha: isDark ? 0.35 : 0.45),
             width: 1.2,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: colorScheme.primary.withValues(alpha: isDark ? 0.12 : 0.06),
-              blurRadius: 18,
-              offset: const Offset(0, 6),
-            ),
-          ],
         ),
         clipBehavior: Clip.antiAlias,
-        child: Stack(
-          children: [
-            // Ambient aura glow in top-right
-            Positioned(
-              top: -35,
-              right: -35,
-              child: Container(
-                width: 130,
-                height: 130,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      colorScheme.primary.withValues(alpha: isDark ? 0.22 : 0.15),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppLayout.spaceL),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: Padding(
+          padding: const EdgeInsets.all(AppLayout.spaceL),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. Header & Security Badge
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // 1. Header & Security Badge
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    colorScheme.primary,
-                                    colorScheme.tertiary,
-                                  ],
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: colorScheme.primary.withValues(alpha: isDark ? 0.40 : 0.25),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ],
-                              ),
-                              child: Icon(
-                                Icons.tune_rounded,
-                                size: 22,
-                                color: colorScheme.onPrimary,
-                              ),
-                            ),
-                            const SizedBox(width: AppLayout.spaceM),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: colorScheme.primary,
+                          ),
+                          child: Icon(
+                            Icons.tune_rounded,
+                            size: 22,
+                            color: colorScheme.onPrimary,
+                          ),
+                        ),
+                        const SizedBox(width: AppLayout.spaceM),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -157,7 +102,7 @@ class SettingsHeroCard extends StatelessWidget {
                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                                         decoration: BoxDecoration(
                                           color: (isDark ? const Color(0xFF10B981) : const Color(0xFF059669)).withValues(alpha: isDark ? 0.18 : 0.10),
-                                          borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                                          borderRadius: BorderRadius.circular(AppLayout.radiusStadium),
                                           border: Border.all(
                                             color: (isDark ? const Color(0xFF34D399) : const Color(0xFF10B981)).withValues(alpha: 0.35),
                                             width: 0.8,
@@ -196,21 +141,29 @@ class SettingsHeroCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: AppLayout.spaceS),
-                      AppChip(
-                        isCompact: true,
-                        icon: isAppLockEnabled
-                            ? Icons.lock_rounded
-                            : Icons.lock_open_rounded,
-                        label: isAppLockEnabled ? 'Protected' : 'Unlocked',
-                        isSelected: isAppLockEnabled,
-                        onTap: onAppLockTap,
-                        selectedBackgroundColor: isAppLockEnabled
-                            ? colorScheme.primary.withValues(alpha: isDark ? 0.25 : 0.15)
-                            : colorScheme.surfaceContainerHighest,
-                        backgroundColor: colorScheme.surfaceContainerHighest,
-                        textColor: isAppLockEnabled
-                            ? colorScheme.primary
-                            : colorScheme.onSurfaceVariant,
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          minWidth: 48,
+                          minHeight: 48,
+                        ),
+                        child: Center(
+                          child: AppChip(
+                            isCompact: true,
+                            icon: isAppLockEnabled
+                                ? Icons.lock_rounded
+                                : Icons.lock_open_rounded,
+                            label: isAppLockEnabled ? 'Protected' : 'Unlocked',
+                            isSelected: isAppLockEnabled,
+                            onTap: onAppLockTap,
+                            selectedBackgroundColor: isAppLockEnabled
+                                ? colorScheme.primary.withValues(alpha: isDark ? 0.25 : 0.15)
+                                : colorScheme.surfaceContainerHighest,
+                            backgroundColor: colorScheme.surfaceContainerHighest,
+                            textColor: isAppLockEnabled
+                                ? colorScheme.primary
+                                : colorScheme.onSurfaceVariant,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -266,24 +219,32 @@ class SettingsHeroCard extends StatelessWidget {
                               colorScheme.primary.withValues(alpha: isDark ? 0.22 : 0.14),
                           textColor: colorScheme.primary,
                         ),
-                      AppChip(
-                        isCompact: true,
-                        icon: autoBackupEnabled
-                            ? Icons.cloud_done_rounded
-                            : Icons.cloud_off_rounded,
-                        label: autoBackupEnabled
-                            ? (lastAutoBackupTimeFormatted != null
-                                ? 'Backup: $lastAutoBackupTimeFormatted'
-                                : 'Auto-Backup On')
-                            : 'Manual Backup',
-                        isSelected: autoBackupEnabled,
-                        onTap: onBackupTap,
-                        selectedBackgroundColor:
-                            const Color(0xFF0EA5E9).withValues(alpha: isDark ? 0.22 : 0.14),
-                        textColor: autoBackupEnabled
-                            ? (isDark ? const Color(0xFF7DD3FC) : const Color(0xFF0369A1))
-                            : colorScheme.onSurfaceVariant,
-                        backgroundColor: colorScheme.surfaceContainerHighest,
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          minWidth: 48,
+                          minHeight: 48,
+                        ),
+                        child: Center(
+                          child: AppChip(
+                            isCompact: true,
+                            icon: autoBackupEnabled
+                                ? Icons.cloud_done_rounded
+                                : Icons.cloud_off_rounded,
+                            label: autoBackupEnabled
+                                ? (lastAutoBackupTimeFormatted != null
+                                    ? 'Backup: $lastAutoBackupTimeFormatted'
+                                    : 'Auto-Backup On')
+                                : 'Manual Backup',
+                            isSelected: autoBackupEnabled,
+                            onTap: onBackupTap,
+                            selectedBackgroundColor:
+                                const Color(0xFF0EA5E9).withValues(alpha: isDark ? 0.22 : 0.14),
+                            textColor: autoBackupEnabled
+                                ? (isDark ? const Color(0xFF7DD3FC) : const Color(0xFF0369A1))
+                                : colorScheme.onSurfaceVariant,
+                            backgroundColor: colorScheme.surfaceContainerHighest,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -357,12 +318,10 @@ class SettingsHeroCard extends StatelessWidget {
                 ],
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+          ),
+        );
+      }
+    }
 
 class SettingsSection extends StatelessWidget {
   final String title;
@@ -431,7 +390,7 @@ class SettingsSection extends StatelessWidget {
           Material(
             color: containerColor,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppLayout.radiusXL),
+              borderRadius: BorderRadius.circular(AppLayout.radiusL),
               side: BorderSide(
                 color: borderColor,
                 width: 1.0,

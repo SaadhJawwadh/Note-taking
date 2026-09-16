@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter/services.dart';
 import 'dart:io';
@@ -7,7 +6,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
-import '../data/settings_provider.dart';
+import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import '../core/ui/app_card.dart';
 
 class AppLockScreen extends StatefulWidget {
@@ -273,20 +272,15 @@ class AppLockScreenState extends State<AppLockScreen>
     if (!_isSessionAuthenticated) {
       final isDark = Theme.of(context).brightness == Brightness.dark;
       final lockOverlay = Positioned.fill(
-        child: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 24.0, sigmaY: 24.0),
-            child: Container(
-              color: (isDark ? Colors.black : Theme.of(context).colorScheme.surface)
-                  .withValues(alpha: isDark ? 0.75 : 0.85),
-              child: Scaffold(
-                backgroundColor: Colors.transparent,
-                body: Center(
-                  child: AppCard.frosted(
-                    margin: const EdgeInsets.symmetric(horizontal: 24),
-                    padding: const EdgeInsets.all(32),
-                    borderRadius: 28,
-                    blurSigma: 24.0,
+        child: Container(
+          color: (isDark ? Colors.black : Theme.of(context).colorScheme.surface),
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            body: Center(
+              child: AppCard.frosted(
+                margin: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.all(32),
+                borderRadius: 28,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -402,9 +396,7 @@ class AppLockScreenState extends State<AppLockScreen>
                 ),
               ),
             ),
-          ),
-        ),
-      );
+          );
 
       return Stack(
         children: [

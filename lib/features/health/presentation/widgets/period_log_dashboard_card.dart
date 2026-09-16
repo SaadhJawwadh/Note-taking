@@ -164,7 +164,7 @@ class _PeriodLogDashboardCardState extends State<PeriodLogDashboardCard> {
                 backgroundColor: colorScheme.primary,
                 foregroundColor: colorScheme.onPrimary,
                 minimumSize: const Size(double.infinity, 52),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusL)),
+                shape: const StadiumBorder(),
               ),
               icon: const Icon(Icons.play_arrow),
               label: const Text('Start Period'),
@@ -186,7 +186,7 @@ class _PeriodLogDashboardCardState extends State<PeriodLogDashboardCard> {
                 backgroundColor: colorScheme.primary,
                 foregroundColor: colorScheme.onPrimary,
                 minimumSize: const Size(double.infinity, 52),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusL)),
+                shape: const StadiumBorder(),
               ),
               icon: const Icon(Icons.add),
               label: const Text('Add Period Log'),
@@ -203,7 +203,7 @@ class _PeriodLogDashboardCardState extends State<PeriodLogDashboardCard> {
                   backgroundColor: colorScheme.errorContainer,
                   foregroundColor: colorScheme.onErrorContainer,
                   minimumSize: const Size(double.infinity, 52),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusL)),
+                  shape: const StadiumBorder(),
                 ),
                 icon: const Icon(Icons.stop_rounded),
                 label: const Text('Stop Period'),
@@ -312,7 +312,7 @@ class _PeriodLogDashboardCardState extends State<PeriodLogDashboardCard> {
                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                         decoration: BoxDecoration(
                           color: colorScheme.primaryContainer,
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(AppLayout.radiusStadium),
                         ),
                         child: Text(
                           '${selectedLog.symptoms.length}',
@@ -368,7 +368,7 @@ class _PeriodLogDashboardCardState extends State<PeriodLogDashboardCard> {
                                       color: isSelected
                                           ? colorScheme.primaryContainer
                                           : colorScheme.surfaceContainerHighest,
-                                      borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                                      borderRadius: BorderRadius.circular(AppLayout.radiusStadium),
                                     ),
                                     child: Text(
                                       symptom,

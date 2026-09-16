@@ -17,12 +17,12 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
   - `lib/features/health/`: Period log model, `PeriodRepository`, `PeriodTrackerProvider`, and cycle prediction screens.
   - `lib/features/settings/`: `SettingsProvider`, backup services, app lock, and settings screens.
   - `lib/core/theme/`: Single source of truth for design tokens (`AppTheme`, `AppLayout`, `AppSemanticColors`).
-  - `lib/core/ui/`: Core shared UI primitives (`AppCard`, `AppBottomSheet`, `AppChip`, `AppDialog`, `FrostedGlassSliverAppBar`).
-  - `lib/core/routes/`: Centralized router (`AppRouter`).
-
-- **Single Source of Truth Rules**:
-  - **No Magic Numbers / Hardcoded Styles**: All spacings, radii, animation curves, and colors MUST be referenced from `AppLayout` and `AppTheme` / `Theme.of(context).colorScheme`.
-  - **Shared UI Primitives**: Use `AppCard` for cards, `AppBottomSheet` for modal sheets, `AppChip` for tag/filter pills, `AppDialog` for confirmation prompts, and `FrostedGlassSliverAppBar` for glassmorphic headers.
+  - `lib/core/ui/`: Core shared UI primitives (`AppCard`, `AppBottomSheet`, `AppChip`, `AppDialog`, `ExpressiveSliverAppBar`).
+  - `lib/features/`: Feature-driven domains (`notes/`, `finances/`, `health/`, `settings/`, `sync/`).
+  - `lib/services/`: Cross-cutting background isolates, Workmanager tasks, notifications, and on-device AI.
+- **Strict Invariants**:
+  - **Single Source of Truth Theme**: Layout metrics from `AppLayout`, colors from `AppSemanticColors` or `Theme.of(context).colorScheme`. NEVER hardcode padding or colors inside screen widgets.
+  - **Shared UI Primitives**: Use `AppCard` for cards, `AppBottomSheet` for modal sheets, `AppChip` for tag/filter pills, `AppDialog` for confirmation prompts, and `ExpressiveSliverAppBar` for borderless M3 surface headers.
   - **Root Provider Registration Invariant**: Always register domain `ChangeNotifierProvider`s (`FinancialManagerProvider`, `NoteProvider`, `P2pSyncProvider`) in `main.dart`'s root `MultiProvider` list so state is globally accessible across screens, push routes, and modal bottom sheets.
   - **Variable Font System**: Always use `GoogleSansFlex` variable font (`GoogleSansFlex-VariableFont_*.ttf`) for font definitions. Avoid adding static font weight binaries (`Bold`, `Medium`, `Regular`) to assets.
   - **Overlay & Modal Provider Safety**: Modal bottom sheets (`AppBottomSheet`) and `PopupMenuButton` items run in separate `OverlayEntry` route contexts. Never wrap `PopupMenuButton.itemBuilder` entries in `Consumer<T>` or rely on route-scoped providers inside popups; use local state variables (e.g., `_trashedCount`) and convert popup sheets to `StatefulWidget`s that read repository singletons (`TransactionRepository.instance`) directly.

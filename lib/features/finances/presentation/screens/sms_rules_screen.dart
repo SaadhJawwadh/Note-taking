@@ -2,20 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:provider/provider.dart';
-import 'package:note_taking_app/data/settings_provider.dart';
+import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import 'package:note_taking_app/features/finances/data/transaction_repository.dart';
 import 'package:note_taking_app/data/transaction_category.dart';
 import 'package:note_taking_app/services/sms_service.dart';
 import 'package:note_taking_app/services/sms_parser.dart';
 import 'package:note_taking_app/services/sms_constants.dart';
 import 'package:note_taking_app/core/theme/app_layout.dart';
+import 'package:note_taking_app/core/ui/expressive_sliver_app_bar.dart';
 import 'package:note_taking_app/data/custom_sms_rule.dart';
 import 'package:note_taking_app/features/finances/presentation/widgets/teach_sms_rule_sheet.dart';
 import 'package:note_taking_app/utils/app_route.dart';
-import 'package:note_taking_app/widgets/frosted_glass_sliver_app_bar.dart';
 import 'package:note_taking_app/features/finances/presentation/screens/category_management_screen.dart';
 import 'package:note_taking_app/features/finances/presentation/screens/sms_contacts_screen.dart';
-import 'package:note_taking_app/widgets/sms_import_sheet.dart';
+import '../widgets/sms_import_sheet.dart';
 
 class SmsRulesScreen extends StatefulWidget {
   const SmsRulesScreen({super.key});
@@ -139,7 +139,7 @@ class _SmsRulesScreenState extends State<SmsRulesScreen> {
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          FrostedGlassSliverAppBar(
+          ExpressiveSliverAppBar(
             titleText: 'SMS Bank Automation',
             showBackButton: true,
             actions: [
@@ -746,12 +746,23 @@ class _SmsRulesScreenState extends State<SmsRulesScreen> {
                                     // Custom Description line if configured
                                     if (rule.customDescription != null && rule.customDescription!.isNotEmpty) ...[
                                       const SizedBox(height: 6),
-                                      Text(
-                                        '🏷️ Title: ${rule.customDescription}',
-                                        style: tt.bodySmall?.copyWith(
-                                          fontWeight: FontWeight.w500,
-                                          color: cs.onSurface,
-                                        ),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.label_outline_rounded,
+                                            size: 14,
+                                            color: cs.primary,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Title: ${rule.customDescription}',
+                                            style: tt.bodySmall?.copyWith(
+                                              fontWeight: FontWeight.w500,
+                                              color: cs.onSurface,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ],

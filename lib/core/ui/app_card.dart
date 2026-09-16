@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme/app_layout.dart';
 
@@ -12,6 +11,7 @@ class AppCard extends StatelessWidget {
   final Color? backgroundColor;
   final BorderSide? border;
   final double? borderRadius;
+  final BorderRadiusGeometry? borderRadiusGeometry;
   final List<BoxShadow>? boxShadow;
   final bool isFrosted;
   final double blurSigma;
@@ -26,6 +26,7 @@ class AppCard extends StatelessWidget {
     this.backgroundColor,
     this.border,
     this.borderRadius,
+    this.borderRadiusGeometry,
     this.boxShadow,
   })  : isFrosted = false,
         blurSigma = 0.0;
@@ -41,6 +42,7 @@ class AppCard extends StatelessWidget {
     VoidCallback? onTap,
     VoidCallback? onLongPress,
     double? borderRadius,
+    BorderRadiusGeometry? borderRadiusGeometry,
     List<BoxShadow>? boxShadow,
   }) {
     return AppCard(
@@ -55,12 +57,13 @@ class AppCard extends StatelessWidget {
         width: 1.0,
       ),
       borderRadius: borderRadius,
+      borderRadiusGeometry: borderRadiusGeometry,
       boxShadow: boxShadow,
       child: child,
     );
   }
 
-  /// Frosted Glass Card constructor using BackdropFilter blur & outline border.
+  /// Material 3 Surface Card constructor (formerly frosted, now pure solid M3 surface container).
   const AppCard.frosted({
     super.key,
     required this.child,
@@ -71,8 +74,9 @@ class AppCard extends StatelessWidget {
     this.backgroundColor,
     this.border,
     this.borderRadius,
+    this.borderRadiusGeometry,
     this.boxShadow,
-    this.blurSigma = 16.0,
+    this.blurSigma = 0.0,
   }) : isFrosted = true;
 
   @override
@@ -82,10 +86,9 @@ class AppCard extends StatelessWidget {
     final effectiveColor = backgroundColor ??
         (isFrosted
             ? (isDark
-                ? theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.65)
-                : theme.colorScheme.surfaceContainerLow.withValues(alpha: 0.75))
+                ? theme.colorScheme.surfaceContainerHigh
+                : theme.colorScheme.surfaceContainer)
             : theme.colorScheme.surfaceContainerHigh);
-    final effectiveRadius = borderRadius ?? AppLayout.radiusL;
     final effectiveBorder = border ??
         (isFrosted
             ? BorderSide(
@@ -93,6 +96,8 @@ class AppCard extends StatelessWidget {
                 width: 1.0,
               )
             : null);
+    final effectiveBorderRadius = borderRadiusGeometry ??
+        BorderRadius.circular(borderRadius ?? AppLayout.radiusL);
 
     Widget cardPadding = Padding(
       padding: padding ?? AppLayout.paddingAllL,
@@ -101,7 +106,7 @@ class AppCard extends StatelessWidget {
 
     Widget innerContent = Material(
       color: effectiveColor,
-      borderRadius: BorderRadius.circular(effectiveRadius),
+      borderRadius: effectiveBorderRadius,
       clipBehavior: Clip.antiAlias,
       child: (onTap != null || onLongPress != null)
           ? InkWell(
@@ -109,26 +114,16 @@ class AppCard extends StatelessWidget {
               onLongPress: onLongPress,
               splashColor: theme.colorScheme.primary.withValues(alpha: 0.12),
               highlightColor: theme.colorScheme.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(effectiveRadius),
+              borderRadius: effectiveBorderRadius is BorderRadius ? effectiveBorderRadius : null,
               child: cardPadding,
             )
           : cardPadding,
     );
 
-    if (isFrosted) {
-      innerContent = ClipRRect(
-        borderRadius: BorderRadius.circular(effectiveRadius),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-          child: innerContent,
-        ),
-      );
-    }
-
     if (effectiveBorder != null || boxShadow != null) {
       innerContent = Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(effectiveRadius),
+          borderRadius: effectiveBorderRadius,
           border: effectiveBorder != null ? Border.fromBorderSide(effectiveBorder) : null,
           boxShadow: boxShadow,
         ),

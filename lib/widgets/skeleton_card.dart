@@ -33,7 +33,7 @@ class _SkeletonCardState extends State<SkeletonCard>
         height: widget.height,
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(AppLayout.radiusXXL),
+          borderRadius: BorderRadius.circular(AppLayout.radiusL),
         ),
       ),
     );

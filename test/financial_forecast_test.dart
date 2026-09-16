@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:note_taking_app/data/transaction_model.dart';
-import 'package:note_taking_app/data/settings_provider.dart';
+import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import 'package:note_taking_app/features/finances/services/spending_forecast_service.dart';
 import 'package:note_taking_app/features/finances/presentation/widgets/burn_rate_forecast_card.dart';
 import 'package:note_taking_app/features/finances/presentation/widgets/financial_analytics_tab.dart';

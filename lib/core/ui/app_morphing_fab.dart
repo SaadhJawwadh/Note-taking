@@ -38,15 +38,15 @@ class AppMorphingFab extends StatelessWidget {
 
     return Material(
       elevation: AppLayout.floatingElevation,
-      borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+      borderRadius: BorderRadius.circular(AppLayout.radiusStadium),
       color: bg,
       shadowColor: colorScheme.shadow.withValues(alpha: 0.2),
       child: AnimatedContainer(
         duration: AppLayout.animDefault,
-        curve: Curves.easeOutCubic,
+        curve: AppLayout.curveEmphasizedDecelerate,
         height: 56,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+          borderRadius: BorderRadius.circular(AppLayout.radiusStadium),
           border: Border.all(
             color: colorScheme.outlineVariant.withValues(alpha: 0.3),
             width: 1,
@@ -54,7 +54,7 @@ class AppMorphingFab extends StatelessWidget {
         ),
         child: AnimatedSize(
           duration: AppLayout.animDefault,
-          curve: Curves.easeOutCubic,
+          curve: AppLayout.curveEmphasizedDecelerate,
           child: !isExpanded
               ? SizedBox(
                   width: 56,

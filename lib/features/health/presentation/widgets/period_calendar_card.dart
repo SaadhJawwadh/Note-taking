@@ -59,7 +59,7 @@ class PeriodCalendarCard extends StatelessWidget {
 
     final periodColor = semantic?.phaseMenstrual ?? colorScheme.errorContainer;
     final onPeriodColor = theme.brightness == Brightness.dark
-        ? const Color(0xFF1C1A22)
+        ? colorScheme.surfaceContainerLow
         : colorScheme.onErrorContainer;
 
     return AppCard(

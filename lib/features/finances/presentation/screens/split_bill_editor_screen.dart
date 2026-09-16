@@ -10,11 +10,11 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/app_card.dart';
 import '../../../../core/ui/app_dialog.dart';
 import '../../../../core/ui/app_morphing_fab.dart';
+import '../../../../core/ui/expressive_sliver_app_bar.dart';
 import '../../../../data/category_constants.dart';
-import '../../../../data/settings_provider.dart';
 import '../../../../data/transaction_category.dart';
+import '../../../../features/settings/providers/settings_provider.dart';
 import '../../../../widgets/calculator_dialog.dart';
-import '../../../../widgets/frosted_glass_sliver_app_bar.dart';
 import '../../data/models/split_bill_model.dart';
 import '../../providers/split_bill_provider.dart';
 import '../widgets/receipt_scanner_sheet.dart';
@@ -579,7 +579,7 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
         onNotification: _onScrollNotification,
         child: CustomScrollView(
           slivers: [
-            FrostedGlassSliverAppBar(
+            ExpressiveSliverAppBar(
               titleText: widget.existingBill != null ? 'Edit Split Bill' : 'New Split Bill',
               showBackButton: true,
               actions: [
@@ -627,7 +627,19 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
                                 style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                                 decoration: InputDecoration(
                                   labelText: 'Total Bill Amount (${settings.currency})',
-                                  prefixIcon: const Icon(Icons.attach_money_rounded),
+                                  prefixIcon: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    child: Center(
+                                      widthFactor: 0.0,
+                                      child: Text(
+                                        settings.currency,
+                                        style: theme.textTheme.titleMedium?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: colorScheme.primary,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                   border: const OutlineInputBorder(),
                                 ),
                                 onChanged: (_) => setState(() {}),
@@ -651,7 +663,7 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
                                 label: Text(DateFormat('MMM d, yyyy').format(_selectedDate)),
                                 style: OutlinedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusM)),
+                                  shape: const StadiumBorder(),
                                 ),
                               ),
                             ),
@@ -691,9 +703,7 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
                                   color: isSelected ? catColor : colorScheme.outline.withValues(alpha: 0.5),
                                   width: isSelected ? 1.5 : 0.5,
                                 ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(AppLayout.radiusS),
-                                ),
+                                shape: const StadiumBorder(),
                               );
                             }),
                           ],

@@ -5,7 +5,8 @@ import 'package:uuid/uuid.dart';
 import '../../../../core/theme/app_layout.dart';
 import '../../../../core/ui/app_bottom_sheet.dart';
 import '../../../../core/ui/app_card.dart';
-import '../../../../data/settings_provider.dart';
+import '../../../../core/ui/expressive_wavy_slider.dart';
+import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import '../../../../data/transaction_model.dart';
 import '../../data/models/savings_goal_model.dart';
 import '../../providers/savings_goal_provider.dart';
@@ -207,10 +208,14 @@ class _SavingsGoalEditorSheetState extends State<SavingsGoalEditorSheet> {
     final netNeeded = (target - initial).clamp(0.0, double.infinity);
     final calculatedMonthly = _targetMonths > 0 ? (netNeeded / _targetMonths) : 0.0;
     final completionDate = _computeTargetDate();
+    final viewInsets = MediaQuery.viewInsetsOf(context);
 
     return Form(
       key: _formKey,
       child: SingleChildScrollView(
+        padding: EdgeInsets.only(
+          bottom: viewInsets.bottom + AppLayout.spaceXL,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -342,17 +347,17 @@ class _SavingsGoalEditorSheetState extends State<SavingsGoalEditorSheet> {
                       }).toList(),
                     ),
                     const SizedBox(height: AppLayout.spaceM),
-                    // Stepper / Slider
+                    // Stepper / Expressive Wavy Slider
                     Row(
-                      children: [
+                       children: [
                         Text('$_targetMonths months', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                        const SizedBox(width: AppLayout.spaceS),
                         Expanded(
-                          child: Slider(
+                          child: ExpressiveWavySlider(
                             value: _targetMonths.toDouble().clamp(1.0, 36.0),
                             min: 1,
                             max: 36,
                             divisions: 35,
-                            label: '$_targetMonths mos',
                             onChanged: (v) {
                               setState(() {
                                 _targetMonths = v.round();
@@ -394,9 +399,18 @@ class _SavingsGoalEditorSheetState extends State<SavingsGoalEditorSheet> {
                     ),
                     child: Row(
                       children: [
-                        CircleAvatar(
-                          backgroundColor: Color(_colorValue).withValues(alpha: 0.2),
-                          child: Icon(Icons.auto_awesome_rounded, color: Color(_colorValue), size: 20),
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Color(_colorValue).withValues(alpha: 0.20),
+                          ),
+                          child: Icon(
+                            Icons.event_repeat_rounded,
+                            color: Color(_colorValue),
+                            size: 20,
+                          ),
                         ),
                         const SizedBox(width: AppLayout.spaceM),
                         Expanded(
@@ -544,7 +558,7 @@ class _SavingsGoalEditorSheetState extends State<SavingsGoalEditorSheet> {
             FilledButton.icon(
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusM)),
+                shape: const StadiumBorder(),
               ),
               icon: const Icon(Icons.check_rounded),
               label: Text(widget.goal == null ? 'Create Savings Goal' : 'Save Changes'),

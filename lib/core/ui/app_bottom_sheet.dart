@@ -48,7 +48,10 @@ class AppBottomSheet extends StatelessWidget {
     return Align(
       alignment: Alignment.bottomCenter,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: AppLayout.maxContentWidth),
+        constraints: BoxConstraints(
+          maxWidth: AppLayout.maxContentWidth,
+          maxHeight: MediaQuery.sizeOf(context).height * 0.90,
+        ),
         child: Material(
           color: theme.colorScheme.surfaceContainerHigh,
           borderRadius: const BorderRadius.vertical(

@@ -10,12 +10,14 @@ class AppLayout {
   static const double spaceXXL = 32.0;
 
   // Border Radii Single Source of Truth
+  static const double radiusXS = 4.0;
   static const double radiusS = 8.0;
   static const double radiusM = 12.0;
   static const double radiusL = 16.0;
   static const double radiusXL = 20.0;
-  static const double radiusXXL = 24.0;
+  static const double radiusXXL = 28.0;
   static const double radiusMAX = 32.0;
+  static const double radiusStadium = 1000.0;
 
   // Icons
   static const double iconS = 16.0;
@@ -31,6 +33,30 @@ class AppLayout {
   static const Curve curveExpressive = Curves.easeOutBack;
   static const Curve curveSpring = Curves.elasticOut;
   static const Curve curveFast = Curves.easeOutCubic;
+  static const Curve curveEmphasizedDecelerate = Cubic(0.05, 0.7, 0.1, 1.0);
+  static const Curve curveEmphasizedAccelerate = Cubic(0.3, 0.0, 0.8, 0.15);
+
+  // M3 Expressive Velocity-Aware Spring Physics Tokens
+  /// Fast snappy spring for button presses, icon snaps, and toggle micro-interactions.
+  static const SpringDescription springFast = SpringDescription(
+    mass: 1.0,
+    stiffness: 380.0,
+    damping: 24.0,
+  );
+
+  /// Spatial natural spring for bottom sheets, dialog entrances, and folder expansions.
+  static const SpringDescription springSpatial = SpringDescription(
+    mass: 1.0,
+    stiffness: 300.0,
+    damping: 22.0,
+  );
+
+  /// Playful bouncy spring for FAB morphs, badges, and success celebrations.
+  static const SpringDescription springBouncy = SpringDescription(
+    mass: 1.0,
+    stiffness: 240.0,
+    damping: 14.0,
+  );
 
   // Layout Constraints
   static const double maxContentWidth = 600.0;

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:note_taking_app/data/settings_provider.dart';
+import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import 'package:note_taking_app/screens/app_lock_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -189,6 +189,41 @@ void main() {
       // Should still be unlocked!
       expect(find.text('Sensitive Workspace'), findsOneWidget);
       expect(find.text('App Locked'), findsNothing);
+    });
+
+    test('toBackupMap and restoreFromBackupMap roundtrip preserves all extended settings', () async {
+      final sp = SettingsProvider();
+      await sp.loadSettings();
+      await sp.setShowSplitBills(true);
+      await sp.setEnableSavingsVault(false);
+      await sp.setAccount1Name('Personal Checking');
+      await sp.setAccount2Name('Emergency Fund');
+      await sp.setCategoryAccountRouting('Groceries', 'daily');
+      await sp.setCategoryAccountRouting('Investments', 'savings');
+      await sp.setDefaultPaymentInfo('UPI: test@bank');
+      await sp.setTrashAutoPurgeDays(45);
+
+      final backupMap = sp.toBackupMap();
+      expect(backupMap['showSplitBills'], isTrue);
+      expect(backupMap['enableSavingsVault'], isFalse);
+      expect(backupMap['account1Name'], equals('Personal Checking'));
+      expect(backupMap['account2Name'], equals('Emergency Fund'));
+      expect(backupMap['categoryAccountRouting'], equals({'Groceries': 'daily', 'Investments': 'savings'}));
+      expect(backupMap['defaultPaymentInfo'], equals('UPI: test@bank'));
+      expect(backupMap['trashAutoPurgeDays'], equals(45));
+
+      // Restore into fresh instance
+      final restoredSp = SettingsProvider();
+      await restoredSp.loadSettings();
+      await restoredSp.restoreFromBackupMap(backupMap);
+      expect(restoredSp.showSplitBills, isTrue);
+      expect(restoredSp.enableSavingsVault, isFalse);
+      expect(restoredSp.account1Name, equals('Personal Checking'));
+      expect(restoredSp.account2Name, equals('Emergency Fund'));
+      expect(restoredSp.categoryAccountRouting['Groceries'], equals('daily'));
+      expect(restoredSp.categoryAccountRouting['Investments'], equals('savings'));
+      expect(restoredSp.defaultPaymentInfo, equals('UPI: test@bank'));
+      expect(restoredSp.trashAutoPurgeDays, equals(45));
     });
   });
 }

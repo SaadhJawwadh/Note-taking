@@ -1,11 +1,10 @@
-import 'dart:ui';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
-import '../../../../data/settings_provider.dart';
+import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import '../../data/transaction_repository.dart';
 import '../../../../data/repositories/recurring_rule_repository.dart';
 import '../../../../data/transaction_model.dart';
@@ -22,9 +21,10 @@ import 'package:note_taking_app/features/finances/providers/financial_manager_pr
 
 import '../../../../core/theme/app_layout.dart';
 import '../../../../core/ui/app_card.dart';
+import '../../../../core/ui/expressive_wavy_progress.dart';
 
 import '../../../../widgets/bouncing_widget.dart';
-import '../../../../widgets/sms_import_sheet.dart';
+import '../widgets/sms_import_sheet.dart';
 import '../widgets/financial_trash_sheet.dart';
 import '../widgets/financial_ledger_tab.dart';
 import '../widgets/financial_analytics_tab.dart';
@@ -414,7 +414,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
               HapticFeedback.mediumImpact();
               Navigator.pop(ctx, range);
             },
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppLayout.radiusM),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -422,7 +422,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
                 color: isSelected
                     ? colorScheme.primaryContainer
                     : colorScheme.surfaceContainer,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppLayout.radiusM),
                 border: Border.all(
                   color: isSelected
                       ? colorScheme.primary
@@ -693,7 +693,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
     return AppCard(
       backgroundColor: isPositive
           ? cs.tertiaryContainer.withValues(alpha: isDark ? 0.22 : 0.55)
-          : cs.errorContainer.withValues(alpha: isDark ? 0.22 : 0.45),
+          : cs.errorContainer.withValues(alpha: isDark ? 0.22 : 0.52),
       borderRadius: AppLayout.radiusXL,
       border: BorderSide(
         color: isPositive
@@ -893,76 +893,90 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
               Row(
                 children: [
                   Expanded(
-                    child: InkWell(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        setState(() {
-                          _selectedAccount = _selectedAccount == AccountType.daily ? 'all' : AccountType.daily;
-                        });
-                        _applyFilters();
-                      },
-                      borderRadius: BorderRadius.circular(AppLayout.radiusS),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _selectedAccount == AccountType.daily ? onColor.withValues(alpha: 0.18) : Colors.transparent,
-                          borderRadius: BorderRadius.circular(AppLayout.radiusS),
-                          border: Border.all(color: onColor.withValues(alpha: _selectedAccount == AccountType.daily ? 0.4 : 0.15)),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.credit_card_outlined, size: 13, color: onColor.withValues(alpha: 0.85)),
-                            const SizedBox(width: 4),
-                            Flexible(
-                              child: Text(
-                                '${settings.account1Name}: $currency ${_dailyCashFlow.toStringAsFixed(0)}',
-                                style: tt.labelSmall?.copyWith(
-                                  color: onColor,
-                                  fontWeight: _selectedAccount == AccountType.daily ? FontWeight.bold : FontWeight.w500,
+                    child: Semantics(
+                      button: true,
+                      label: 'Filter by ${settings.account1Name}',
+                      selected: _selectedAccount == AccountType.daily,
+                      child: InkWell(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() {
+                            _selectedAccount = _selectedAccount == AccountType.daily ? 'all' : AccountType.daily;
+                          });
+                          _applyFilters();
+                        },
+                        borderRadius: BorderRadius.circular(AppLayout.radiusStadium),
+                        child: Container(
+                          constraints: const BoxConstraints(minHeight: 48),
+                          alignment: Alignment.center,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: _selectedAccount == AccountType.daily ? onColor.withValues(alpha: 0.18) : Colors.transparent,
+                            borderRadius: BorderRadius.circular(AppLayout.radiusStadium),
+                            border: Border.all(color: onColor.withValues(alpha: _selectedAccount == AccountType.daily ? 0.4 : 0.15)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.credit_card_outlined, size: 13, color: onColor.withValues(alpha: 0.85)),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  '${settings.account1Name}: $currency ${_dailyCashFlow.toStringAsFixed(0)}',
+                                  style: tt.labelSmall?.copyWith(
+                                    color: onColor,
+                                    fontWeight: _selectedAccount == AccountType.daily ? FontWeight.bold : FontWeight.w500,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: InkWell(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        setState(() {
-                          _selectedAccount = _selectedAccount == AccountType.savings ? 'all' : AccountType.savings;
-                        });
-                        _applyFilters();
-                      },
-                      borderRadius: BorderRadius.circular(AppLayout.radiusS),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _selectedAccount == AccountType.savings ? onColor.withValues(alpha: 0.18) : Colors.transparent,
-                          borderRadius: BorderRadius.circular(AppLayout.radiusS),
-                          border: Border.all(color: onColor.withValues(alpha: _selectedAccount == AccountType.savings ? 0.4 : 0.15)),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.account_balance_outlined, size: 13, color: onColor.withValues(alpha: 0.85)),
-                            const SizedBox(width: 4),
-                            Flexible(
-                              child: Text(
-                                '${settings.account2Name}: $currency ${_savingsVaultCashFlow.toStringAsFixed(0)}',
-                                style: tt.labelSmall?.copyWith(
-                                  color: onColor,
-                                  fontWeight: _selectedAccount == AccountType.savings ? FontWeight.bold : FontWeight.w500,
+                    child: Semantics(
+                      button: true,
+                      label: 'Filter by ${settings.account2Name}',
+                      selected: _selectedAccount == AccountType.savings,
+                      child: InkWell(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() {
+                            _selectedAccount = _selectedAccount == AccountType.savings ? 'all' : AccountType.savings;
+                          });
+                          _applyFilters();
+                        },
+                        borderRadius: BorderRadius.circular(AppLayout.radiusStadium),
+                        child: Container(
+                          constraints: const BoxConstraints(minHeight: 48),
+                          alignment: Alignment.center,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: _selectedAccount == AccountType.savings ? onColor.withValues(alpha: 0.18) : Colors.transparent,
+                            borderRadius: BorderRadius.circular(AppLayout.radiusStadium),
+                            border: Border.all(color: onColor.withValues(alpha: _selectedAccount == AccountType.savings ? 0.4 : 0.15)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.account_balance_outlined, size: 13, color: onColor.withValues(alpha: 0.85)),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  '${settings.account2Name}: $currency ${_savingsVaultCashFlow.toStringAsFixed(0)}',
+                                  style: tt.labelSmall?.copyWith(
+                                    color: onColor,
+                                    fontWeight: _selectedAccount == AccountType.savings ? FontWeight.bold : FontWeight.w500,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -1207,16 +1221,16 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
                 label:
                     'Selected date range: ${_selectedRange.duration.inDays == 0 ? DateFormat.MMMd().format(_selectedRange.start) : '${DateFormat.MMMd().format(_selectedRange.start)} to ${DateFormat.MMMd().format(_selectedRange.end)}'}. Tap to change filter',
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                  borderRadius: BorderRadius.circular(AppLayout.radiusStadium),
                   onTap: () {
                     HapticFeedback.lightImpact();
                     _selectDateRange(context);
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
                     decoration: BoxDecoration(
                       color: colorScheme.primaryContainer.withValues(alpha: isDark ? 0.35 : 0.45),
-                      borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                      borderRadius: BorderRadius.circular(AppLayout.radiusStadium),
                       border: Border.all(
                         color: colorScheme.primary.withValues(alpha: 0.28),
                         width: 1.0,
@@ -1560,14 +1574,11 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
               ],
             ),
             const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(2),
-              child: LinearProgressIndicator(
-                value: progressVal,
-                minHeight: 3,
-                backgroundColor: colorScheme.primaryContainer.withValues(alpha: 0.4),
-                valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
-              ),
+            ExpressiveWavyLinearProgress(
+              value: progressVal,
+              height: 4.0,
+              color: colorScheme.primary,
+              backgroundColor: colorScheme.primaryContainer.withValues(alpha: 0.4),
             ),
           ],
         ),
@@ -1593,31 +1604,24 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
               toolbarHeight: MediaQuery.of(context).padding.top + 72.0,
               titleSpacing: 0,
               automaticallyImplyLeading: false,
-              flexibleSpace: ClipRect(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                  child: Container(
-                    padding: EdgeInsets.only(
-                      top: MediaQuery.of(context).padding.top + 6,
-                      left: 16,
-                      right: 16,
-                      bottom: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .surfaceContainerLow
-                          .withValues(alpha: isDark ? 0.82 : 0.88),
-                    ),
-                    child: Align(
-                      alignment: Alignment.center,
-                      child: SizedBox(
-                        height: 60,
-                        child: _isSearching
-                            ? _buildSearchModeHeader(colorScheme, textTheme)
-                            : _buildNormalHeader(colorScheme, textTheme, currency, isDark),
-                      ),
-                    ),
+              flexibleSpace: Container(
+                padding: EdgeInsets.only(
+                  top: MediaQuery.of(context).padding.top + 6,
+                  left: 16,
+                  right: 16,
+                  bottom: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerLow,
+                  border: null,
+                ),
+                child: Align(
+                  alignment: Alignment.center,
+                  child: SizedBox(
+                    height: 60,
+                    child: _isSearching
+                        ? _buildSearchModeHeader(colorScheme, textTheme)
+                        : _buildNormalHeader(colorScheme, textTheme, currency, isDark),
                   ),
                 ),
               ),
@@ -1714,7 +1718,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(AppLayout.radiusStadium),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,

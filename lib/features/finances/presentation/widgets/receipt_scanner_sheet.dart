@@ -5,7 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_layout.dart';
 import '../../../../core/ui/app_bottom_sheet.dart';
-import '../../../../data/settings_provider.dart';
+import '../../../../core/ui/expressive_shape_morph_indicator.dart';
+import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import '../../../../screens/app_lock_screen.dart';
 import '../../services/receipt_scanner_service.dart';
 
@@ -137,7 +138,7 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
               Center(
                 child: Column(
                   children: [
-                    const CircularProgressIndicator(),
+                    const ExpressiveShapeMorphIndicator(size: 48),
                     const SizedBox(height: AppLayout.spaceM),
                     Text(
                       'Analyzing receipt offline...',
@@ -214,10 +215,22 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
               TextField(
                 controller: _totalController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: 'Total Bill Amount (Rs.)',
-                  prefixIcon: Icon(Icons.attach_money_rounded),
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: 'Total Bill Amount (${context.read<SettingsProvider>().currency})',
+                  prefixIcon: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Center(
+                      widthFactor: 0.0,
+                      child: Text(
+                        context.read<SettingsProvider>().currency,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: AppLayout.spaceL),
@@ -227,7 +240,7 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
                 label: const Text('Apply to Bill'),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusM)),
+                  shape: const StadiumBorder(),
                 ),
               ),
             ],

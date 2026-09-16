@@ -1,11 +1,10 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_layout.dart';
 
-/// A unified, highly reusable frosted glass top app bar used across all screens.
-/// Guarantees 100% visual symmetry, edge-to-edge blur, and standardized spacing.
-class FrostedGlassSliverAppBar extends StatelessWidget {
+/// Material 3 Expressive borderless surface top app bar.
+/// Uses 100% solid surfaceContainerLow fill with subtle tonal elevation and zero blur.
+class ExpressiveSliverAppBar extends StatelessWidget {
   final Widget? title;
   final String? titleText;
   final Widget? leading;
@@ -14,7 +13,7 @@ class FrostedGlassSliverAppBar extends StatelessWidget {
   final List<Widget>? actions;
   final double height;
 
-  const FrostedGlassSliverAppBar({
+  const ExpressiveSliverAppBar({
     super.key,
     this.title,
     this.titleText,
@@ -27,7 +26,6 @@ class FrostedGlassSliverAppBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final statusBarHeight = MediaQuery.of(context).padding.top;
     final totalHeight = statusBarHeight + height + 12.0;
 
@@ -68,37 +66,30 @@ class FrostedGlassSliverAppBar extends StatelessWidget {
       toolbarHeight: totalHeight,
       titleSpacing: 0,
       automaticallyImplyLeading: false,
-      flexibleSpace: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-          child: Container(
-            padding: EdgeInsets.only(
-              top: statusBarHeight + 6,
-              left: AppLayout.spaceL,
-              right: AppLayout.spaceL,
-              bottom: 6,
-            ),
-            decoration: BoxDecoration(
-              color: Theme.of(context)
-                  .colorScheme
-                  .surfaceContainerLow
-                  .withValues(alpha: isDark ? 0.82 : 0.80),
-            ),
-            child: Align(
-              alignment: Alignment.center,
-              child: SizedBox(
-                height: height,
-                child: Row(
-                  children: [
-                    if (leadingWidget != null) ...[
-                      leadingWidget,
-                      const SizedBox(width: AppLayout.spaceXS),
-                    ],
-                    Expanded(child: headerContent),
-                    if (actions != null) ...actions!,
-                  ],
-                ),
-              ),
+      flexibleSpace: Container(
+        padding: EdgeInsets.only(
+          top: statusBarHeight + 6,
+          left: AppLayout.spaceL,
+          right: AppLayout.spaceL,
+          bottom: 6,
+        ),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerLow,
+          border: null,
+        ),
+        child: Align(
+          alignment: Alignment.center,
+          child: SizedBox(
+            height: height,
+            child: Row(
+              children: [
+                if (leadingWidget != null) ...[
+                  leadingWidget,
+                  const SizedBox(width: AppLayout.spaceXS),
+                ],
+                Expanded(child: headerContent),
+                if (actions != null) ...actions!,
+              ],
             ),
           ),
         ),
@@ -106,3 +97,6 @@ class FrostedGlassSliverAppBar extends StatelessWidget {
     );
   }
 }
+
+/// Backward compatibility alias for migration continuity.
+typedef FrostedGlassSliverAppBar = ExpressiveSliverAppBar;

@@ -3,13 +3,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:note_taking_app/core/theme/app_theme.dart';
-import 'package:note_taking_app/data/settings_provider.dart';
+import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import 'package:note_taking_app/providers/note_provider.dart';
 import 'package:note_taking_app/features/sync/providers/p2p_sync_provider.dart';
 import 'package:note_taking_app/features/finances/providers/financial_manager_provider.dart';
 import 'package:note_taking_app/features/finances/presentation/screens/financial_manager_screen.dart';
 import 'package:note_taking_app/widgets/home/home_app_bar.dart';
-import 'package:note_taking_app/widgets/sms_import_sheet.dart';
+import 'package:note_taking_app/features/finances/presentation/widgets/sms_import_sheet.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

@@ -1,9 +1,8 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:provider/provider.dart';
-import '../data/settings_provider.dart';
+import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import '../core/theme/app_layout.dart';
 import '../core/ui/app_card.dart';
 import '../widgets/bouncing_widget.dart';
@@ -32,7 +31,8 @@ class WhatsNewSheet extends StatelessWidget {
 
     final categories = [
       _WhatsNewCategory(
-        categoryTitle: "🌟 What's New",
+        categoryTitle: "New Features",
+        categoryIcon: Icons.auto_awesome_rounded,
         categoryColor: theme.colorScheme.primary,
         bgColor: theme.colorScheme.primaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
@@ -56,10 +56,16 @@ class WhatsNewSheet extends StatelessWidget {
             title: "Interactive Mini Calculator",
             desc: "Embedded arithmetic keypad directly inside exact share fields for seamless splitting.",
           ),
+          _WhatsNewItem(
+            icon: Icons.palette_outlined,
+            title: "Material 3 Expressive Design",
+            desc: "Tactile sinusoidal wavy sliders, shape-morphing loaders, and solid surface containers.",
+          ),
         ],
       ),
       _WhatsNewCategory(
-        categoryTitle: "🚀 Improvements",
+        categoryTitle: "Improvements",
+        categoryIcon: Icons.trending_up_rounded,
         categoryColor: theme.colorScheme.tertiary,
         bgColor: theme.colorScheme.tertiaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
@@ -86,7 +92,8 @@ class WhatsNewSheet extends StatelessWidget {
         ],
       ),
       _WhatsNewCategory(
-        categoryTitle: "🐛 Fixes",
+        categoryTitle: "Fixes",
+        categoryIcon: Icons.build_circle_outlined,
         categoryColor: theme.colorScheme.secondary,
         bgColor: theme.colorScheme.secondaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
@@ -109,26 +116,22 @@ class WhatsNewSheet extends StatelessWidget {
       ),
     ];
 
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(AppLayout.radiusXXL)),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          height: MediaQuery.of(context).size.height * 0.75,
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.92),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppLayout.radiusXXL)),
-            border: Border.all(
-              color: theme.colorScheme.outlineVariant.withValues(alpha: isDark ? 0.15 : 0.3),
-              width: 1.0,
-            ),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppLayout.spaceXL),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.75,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHigh,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppLayout.radiusXXL)),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: isDark ? 0.25 : 0.35),
+          width: 1.0,
+        ),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppLayout.spaceXL),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
                   const SizedBox(height: AppLayout.spaceM),
                   // Top Drag Handle
                   Center(
@@ -219,14 +222,25 @@ class WhatsNewSheet extends StatelessWidget {
                                         ),
                                         decoration: BoxDecoration(
                                           color: category.bgColor,
-                                          borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                                          borderRadius: BorderRadius.circular(AppLayout.radiusStadium),
                                         ),
-                                        child: Text(
-                                          category.categoryTitle,
-                                          style: theme.textTheme.titleSmall?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: category.categoryColor,
-                                          ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              category.categoryIcon,
+                                              size: 14,
+                                              color: category.categoryColor,
+                                            ),
+                                            const SizedBox(width: AppLayout.spaceXS),
+                                            Text(
+                                              category.categoryTitle,
+                                              style: theme.textTheme.titleSmall?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                                color: category.categoryColor,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                       const SizedBox(height: AppLayout.spaceM),
@@ -298,17 +312,11 @@ class WhatsNewSheet extends StatelessWidget {
                       onTap: () => _finishWhatsNew(context),
                       child: Container(
                         width: double.infinity,
+                        constraints: const BoxConstraints(minHeight: 48),
                         padding: const EdgeInsets.symmetric(vertical: AppLayout.spaceM),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.primary,
-                          borderRadius: BorderRadius.circular(AppLayout.radiusL),
-                          boxShadow: [
-                            BoxShadow(
-                              color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
+                          borderRadius: BorderRadius.circular(AppLayout.radiusStadium),
                         ),
                         child: Center(
                           child: Text(
@@ -327,20 +335,20 @@ class WhatsNewSheet extends StatelessWidget {
               ),
             ),
           ),
-        ),
-      ),
-    );
+        );
   }
 }
 
 class _WhatsNewCategory {
   final String categoryTitle;
+  final IconData categoryIcon;
   final Color categoryColor;
   final Color bgColor;
   final List<_WhatsNewItem> items;
 
   _WhatsNewCategory({
     required this.categoryTitle,
+    required this.categoryIcon,
     required this.categoryColor,
     required this.bgColor,
     required this.items,

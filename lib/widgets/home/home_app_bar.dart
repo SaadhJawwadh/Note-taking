@@ -1,9 +1,8 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../../data/settings_provider.dart';
+import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import '../../providers/note_provider.dart';
 import '../../features/sync/providers/p2p_sync_provider.dart';
 import 'package:note_taking_app/features/sync/presentation/screens/p2p_sync_screen.dart';
@@ -77,7 +76,6 @@ class _HomeAppBarState extends State<HomeAppBar> {
   Widget build(BuildContext context) {
     final noteProvider = context.watch<NoteProvider>();
     final settings = context.watch<SettingsProvider>();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final statusBarHeight = MediaQuery.of(context).padding.top;
 
     final totalHeight = statusBarHeight + 72.0;
@@ -92,62 +90,55 @@ class _HomeAppBarState extends State<HomeAppBar> {
       toolbarHeight: totalHeight,
       titleSpacing: 0,
       automaticallyImplyLeading: false,
-      flexibleSpace: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-          child: Container(
-            padding: EdgeInsets.only(
-              top: statusBarHeight + 6,
-              left: 16,
-              right: 16,
-              bottom: 6,
-            ),
-            decoration: BoxDecoration(
-              color: Theme.of(context)
-                  .colorScheme
-                  .surfaceContainerLow
-                  .withValues(alpha: isDark ? 0.82 : 0.88),
-            ),
-            child: Align(
-              alignment: Alignment.center,
-              child: SizedBox(
-                height: 60,
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 180),
-                  switchInCurve: Curves.fastOutSlowIn,
-                  switchOutCurve: Curves.fastOutSlowIn,
-                  child: noteProvider.isSelectionMode
+      flexibleSpace: Container(
+        padding: EdgeInsets.only(
+          top: statusBarHeight + 6,
+          left: 16,
+          right: 16,
+          bottom: 6,
+        ),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerLow,
+          border: null,
+        ),
+        child: Align(
+          alignment: Alignment.center,
+          child: SizedBox(
+            height: 60,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              switchInCurve: Curves.fastOutSlowIn,
+              switchOutCurve: Curves.fastOutSlowIn,
+              child: noteProvider.isSelectionMode
+                  ? KeyedSubtree(
+                      key: const ValueKey('selection_mode'),
+                      child: _buildSelectionMode(context, noteProvider))
+                  : _isSearching
                       ? KeyedSubtree(
-                          key: const ValueKey('selection_mode'),
-                          child: _buildSelectionMode(context, noteProvider))
-                      : _isSearching
-                          ? KeyedSubtree(
-                              key: const ValueKey('search_mode'),
-                              child: Container(
-                                height: 48,
-                                padding: const EdgeInsets.symmetric(horizontal: 4),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .surfaceContainerHigh
-                                      .withValues(alpha: 0.85),
-                                  borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-                                  border: Border.all(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .outlineVariant
-                                        .withValues(alpha: 0.3),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: _buildSearchMode(context),
+                          key: const ValueKey('search_mode'),
+                          child: Container(
+                            height: 48,
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHigh
+                                  .withValues(alpha: 0.85),
+                              borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+                              border: Border.all(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .outlineVariant
+                                    .withValues(alpha: 0.3),
+                                width: 1,
                               ),
-                            )
-                          : KeyedSubtree(
-                              key: const ValueKey('normal_mode'),
-                              child: _buildNormalMode(context, settings)),
-                ),
-              ),
+                            ),
+                            child: _buildSearchMode(context),
+                          ),
+                        )
+                      : KeyedSubtree(
+                          key: const ValueKey('normal_mode'),
+                          child: _buildNormalMode(context, settings)),
             ),
           ),
         ),
@@ -156,11 +147,15 @@ class _HomeAppBarState extends State<HomeAppBar> {
   }
 
   Widget _buildSelectionMode(BuildContext context, NoteProvider noteProvider) {
+    final allSelected = noteProvider.selectedNoteIds.length == noteProvider.notes.length &&
+        noteProvider.notes.isNotEmpty;
+
     return Row(
       children: [
         const SizedBox(width: 8),
         IconButton(
           icon: const Icon(Icons.close_rounded),
+          tooltip: 'Clear selection',
           onPressed: () {
             HapticFeedback.selectionClick();
             widget.onClearSelection();
@@ -174,61 +169,23 @@ class _HomeAppBarState extends State<HomeAppBar> {
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.push_pin_outlined),
-          tooltip: 'Pin / unpin selected',
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-          onPressed: () {
-            HapticFeedback.lightImpact();
-            context.read<NoteProvider>().bulkTogglePin();
-          },
-        ),
-        IconButton(
-          icon: const Icon(Icons.archive_outlined),
-          tooltip: 'Archive selected',
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-          onPressed: () {
-            HapticFeedback.lightImpact();
-            widget.onBulkArchive();
-          },
-        ),
-        IconButton(
-          icon: const Icon(Icons.label_outline),
-          tooltip: 'Tag selected',
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+          icon: Icon(allSelected ? Icons.deselect_rounded : Icons.select_all_rounded),
+          tooltip: allSelected ? 'Deselect all' : 'Select all',
           onPressed: () {
             HapticFeedback.selectionClick();
-            widget.onBulkTag();
+            if (allSelected) {
+              noteProvider.clearSelection();
+            } else {
+              noteProvider.selectAll();
+            }
           },
         ),
-        IconButton(
-          icon: const Icon(Icons.drive_file_move_outlined),
-          tooltip: 'Move to folder',
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-          onPressed: () {
-            HapticFeedback.selectionClick();
-            widget.onBulkMoveToFolder();
-          },
-        ),
-        IconButton(
-          icon: const Icon(Icons.delete_outline),
-          tooltip: 'Delete selected',
-          color: Theme.of(context).colorScheme.error,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-          onPressed: () {
-            HapticFeedback.mediumImpact();
-            widget.onBulkDelete();
-          },
-        ),
+        const SizedBox(width: 4),
       ],
     );
   }
@@ -508,16 +465,16 @@ class _HomeAppBarState extends State<HomeAppBar> {
                 button: true,
                 label: 'Folder: $displayFolder, $count notes. Tap to change folder',
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                  borderRadius: BorderRadius.circular(AppLayout.radiusStadium),
                   onTap: () {
                     HapticFeedback.selectionClick();
                     _showFolderPicker(context, noteProvider);
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
                     decoration: BoxDecoration(
                       color: colorScheme.primaryContainer.withValues(alpha: isDark ? 0.35 : 0.45),
-                      borderRadius: BorderRadius.circular(AppLayout.radiusS),
+                      borderRadius: BorderRadius.circular(AppLayout.radiusStadium),
                       border: Border.all(
                         color: colorScheme.primary.withValues(alpha: 0.28),
                         width: 1.0,

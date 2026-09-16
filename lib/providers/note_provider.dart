@@ -255,6 +255,12 @@ class NoteProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void selectAll() {
+    _selectedNoteIds.addAll(_notes.map((n) => n.id));
+    _isSelectionMode = _selectedNoteIds.isNotEmpty;
+    notifyListeners();
+  }
+
   // Bulk Actions
   /// Pins the selection; if every selected note is already pinned, unpins.
   Future<void> bulkTogglePin() async {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/sms_service.dart';
-import '../screens/app_lock_screen.dart';
+import 'package:note_taking_app/services/sms_service.dart';
+import 'package:note_taking_app/screens/app_lock_screen.dart';
 
 class SmsImportSheet extends StatefulWidget {
   const SmsImportSheet({super.key});

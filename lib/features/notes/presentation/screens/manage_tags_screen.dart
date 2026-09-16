@@ -4,7 +4,8 @@ import 'package:note_taking_app/features/notes/data/note_repository.dart';
 import 'package:note_taking_app/core/theme/app_theme.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:note_taking_app/core/theme/app_layout.dart';
-import 'package:note_taking_app/widgets/frosted_glass_sliver_app_bar.dart';
+import 'package:note_taking_app/core/ui/expressive_sliver_app_bar.dart';
+import 'package:note_taking_app/core/ui/expressive_shape_morph_indicator.dart';
 
 class ManageTagsScreen extends StatefulWidget {
   const ManageTagsScreen({super.key});
@@ -186,13 +187,13 @@ class _ManageTagsScreenState extends State<ManageTagsScreen> {
       body: AnimationLimiter(
         child: CustomScrollView(
           slivers: [
-            const FrostedGlassSliverAppBar(
+            const ExpressiveSliverAppBar(
               titleText: 'Manage Tags',
               showBackButton: true,
             ),
             if (_isLoading)
               const SliverFillRemaining(
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(child: ExpressiveShapeMorphIndicator(size: 44)),
               )
             else if (_tags.isEmpty)
               SliverFillRemaining(

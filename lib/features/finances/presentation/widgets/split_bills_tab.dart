@@ -9,7 +9,8 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/ui/app_card.dart';
 import '../../../../core/ui/app_chip.dart';
 import '../../../../core/ui/app_dialog.dart';
-import '../../../../data/settings_provider.dart';
+import '../../../../core/ui/expressive_shape_morph_indicator.dart';
+import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import '../../../../data/transaction_category.dart';
 import '../../data/models/split_bill_model.dart';
 import '../../providers/split_bill_provider.dart';
@@ -139,7 +140,7 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
           if (splitProvider.isLoading && splitProvider.bills.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 40),
-              child: Center(child: CircularProgressIndicator()),
+              child: Center(child: ExpressiveShapeMorphIndicator(size: 42)),
             )
           else if (splitProvider.activeViewMode == 0)
             _buildPeopleView(context, splitProvider)
@@ -522,8 +523,8 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                                   ),
                                   style: FilledButton.styleFrom(
                                     visualDensity: VisualDensity.compact,
-                                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusS)),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    shape: const StadiumBorder(),
                                   ),
                                   child: const Text('Settle Up', style: TextStyle(fontSize: 12)),
                                 ),
@@ -809,7 +810,7 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                                     style: FilledButton.styleFrom(
                                       visualDensity: VisualDensity.compact,
                                       padding: const EdgeInsets.symmetric(horizontal: 10),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusS)),
+                                      shape: const StadiumBorder(),
                                     ),
                                     child: const Text('Settle My Share', style: TextStyle(fontSize: 12)),
                                   ),
@@ -825,7 +826,7 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                           LinearProgressIndicator(
                             value: progress,
                             backgroundColor: colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
                           ),
                           const SizedBox(height: AppLayout.spaceXS),
                           Row(

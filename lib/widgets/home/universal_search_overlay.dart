@@ -6,7 +6,7 @@ import '../../features/health/data/period_repository.dart';
 import '../../data/transaction_model.dart';
 import '../../data/period_log_model.dart';
 import '../../data/transaction_category.dart';
-import '../../data/settings_provider.dart';
+import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import '../../providers/note_provider.dart';
 import '../../features/finances/presentation/screens/category_management_screen.dart';
 import '../../features/finances/presentation/screens/sms_contacts_screen.dart';
@@ -17,7 +17,7 @@ import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/notes/presentation/screens/manage_tags_screen.dart';
 import '../../features/notes/presentation/screens/filtered_notes_screen.dart';
 import '../../features/sync/presentation/screens/p2p_sync_screen.dart';
-import '../recurring_rules_sheet.dart';
+import '../../features/finances/presentation/widgets/recurring_rules_sheet.dart';
 import '../../services/backup_service.dart';
 import '../../services/sms_service.dart';
 import '../../utils/app_route.dart';
@@ -299,11 +299,14 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
           'subscription',
           'auto transaction'
         ],
-        onTap: () => showModalBottomSheet(
+        onTap: () {
+          final currency = context.read<SettingsProvider>().currency;
+          RecurringRulesSheet.show(
             context: context,
-            isScrollControlled: true,
-            showDragHandle: true,
-            builder: (_) => const RecurringRulesSheet()),
+            currency: currency,
+            onRulesUpdated: () {},
+          );
+        },
       ),
       SettingsSearchResult(
         title: 'SMS Import Rules',

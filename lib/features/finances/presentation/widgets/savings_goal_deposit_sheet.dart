@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_layout.dart';
 import '../../../../core/ui/app_bottom_sheet.dart';
-import '../../../../data/settings_provider.dart';
+import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import '../../../../data/transaction_model.dart';
 import '../../data/models/savings_goal_model.dart';
 import '../../providers/savings_goal_provider.dart';
@@ -103,8 +103,12 @@ class _SavingsGoalDepositSheetState extends State<SavingsGoalDepositSheet> {
 
     final remaining = goal.remainingAmount;
     final goalColor = Color(goal.colorValue);
+    final viewInsets = MediaQuery.viewInsetsOf(context);
 
     return SingleChildScrollView(
+      padding: EdgeInsets.only(
+        bottom: viewInsets.bottom + AppLayout.spaceXL,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -166,14 +170,12 @@ class _SavingsGoalDepositSheetState extends State<SavingsGoalDepositSheet> {
                         style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(AppLayout.radiusS),
-                        child: LinearProgressIndicator(
-                          value: goal.progressRatio,
-                          backgroundColor: colorScheme.surfaceContainerHighest,
-                          color: goalColor,
-                          minHeight: 6,
-                        ),
+                      LinearProgressIndicator(
+                        value: goal.progressRatio,
+                        backgroundColor: colorScheme.surfaceContainerHighest,
+                        color: goalColor,
+                        minHeight: 6,
+                        borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
                       ),
                     ],
                   ),

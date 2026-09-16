@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../../core/theme/app_layout.dart';
-import '../../../../core/ui/frosted_sliver_app_bar.dart';
+import '../../../../core/ui/expressive_sliver_app_bar.dart';
+import '../../../../screens/app_lock_screen.dart';
 
 class QrScannerScreen extends StatefulWidget {
   const QrScannerScreen({super.key});
@@ -13,6 +14,12 @@ class QrScannerScreen extends StatefulWidget {
 class _QrScannerScreenState extends State<QrScannerScreen> {
   final MobileScannerController _controller = MobileScannerController();
   bool _hasScanned = false;
+
+  @override
+  void initState() {
+    super.initState();
+    AppLockScreen.ignoreNextResumeLock();
+  }
 
   @override
   void dispose() {
@@ -42,7 +49,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
           ),
           const CustomScrollView(
             slivers: [
-              FrostedGlassSliverAppBar(
+              ExpressiveSliverAppBar(
                 titleText: 'Scan Pair QR Code',
                 showBackButton: true,
               ),

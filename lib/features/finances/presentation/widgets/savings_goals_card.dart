@@ -4,7 +4,7 @@ import '../../../../core/theme/app_layout.dart';
 import '../../../../core/ui/app_card.dart';
 import '../../../../core/ui/app_chip.dart';
 import '../../../../core/ui/app_dialog.dart';
-import '../../../../data/settings_provider.dart';
+import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import '../../../../data/transaction_model.dart';
 import '../../data/models/savings_goal_model.dart';
 import '../../providers/savings_goal_provider.dart';
@@ -154,14 +154,12 @@ class SavingsGoalsCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppLayout.radiusS),
-            child: LinearProgressIndicator(
-              value: ratio,
-              minHeight: 6,
-              backgroundColor: colorScheme.surfaceContainerHighest,
-              color: colorScheme.primary,
-            ),
+          LinearProgressIndicator(
+            value: ratio,
+            minHeight: 6,
+            backgroundColor: colorScheme.surfaceContainerHighest,
+            color: colorScheme.primary,
+            borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
           ),
         ],
       ),
@@ -316,14 +314,12 @@ class SavingsGoalsCard extends StatelessWidget {
           const SizedBox(height: 6),
 
           // Progress Bar
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppLayout.radiusS),
-            child: LinearProgressIndicator(
-              value: goal.progressRatio,
-              minHeight: 7,
-              backgroundColor: colorScheme.surfaceContainerHighest,
-              color: goalColor,
-            ),
+          LinearProgressIndicator(
+            value: goal.progressRatio,
+            minHeight: 7,
+            backgroundColor: colorScheme.surfaceContainerHighest,
+            color: goalColor,
+            borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
           ),
           const SizedBox(height: AppLayout.spaceM),
 

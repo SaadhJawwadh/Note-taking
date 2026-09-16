@@ -9,8 +9,9 @@ import 'package:note_taking_app/features/finances/data/transaction_repository.da
 import 'package:note_taking_app/data/transaction_category.dart';
 import 'package:note_taking_app/core/theme/app_layout.dart';
 import 'package:note_taking_app/core/ui/app_morphing_fab.dart';
+import 'package:note_taking_app/core/ui/expressive_sliver_app_bar.dart';
+import 'package:note_taking_app/core/ui/expressive_shape_morph_indicator.dart';
 import 'package:note_taking_app/utils/app_route.dart';
-import 'package:note_taking_app/widgets/frosted_glass_sliver_app_bar.dart';
 import 'package:note_taking_app/features/finances/presentation/screens/sms_rules_screen.dart';
 
 class CategoryManagementScreen extends StatefulWidget {
@@ -161,7 +162,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
         child: AnimationLimiter(
           child: CustomScrollView(
             slivers: [
-              FrostedGlassSliverAppBar(
+              ExpressiveSliverAppBar(
                 titleText: 'Manage Categories',
                 showBackButton: true,
                 actions: [
@@ -174,7 +175,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
               ),
               if (_loading)
                 const SliverFillRemaining(
-                  child: Center(child: CircularProgressIndicator()),
+                  child: Center(child: ExpressiveShapeMorphIndicator(size: 44)),
                 )
               else
                 SliverPadding(

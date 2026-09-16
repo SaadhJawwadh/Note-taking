@@ -94,12 +94,12 @@ Widget buildExpressivePressable({required Widget child, required VoidCallback on
 * **Behavior:** Expanded on scroll-top, collapses to square-rounded icon (`BorderRadius.circular(24.0)`) on downward scroll.
 * **FAB Menu Pattern:** Expands into a morphing container revealing secondary quick-action chips (`Text Note`, `Voice Note`, `Checklist`, `Scan`) with staggered entrance physics.
 
-### B. Split Buttons
-* **Pattern:** Combines a primary action `FilledButton` (e.g. `+ Add Expense`) with an attached sub-action menu toggle (`Icon(Icons.arrow_drop_down)`) for dual-function quick actions.
+### B. Split Buttons (`ExpressiveSplitButton`)
+* **Pattern:** Combines a primary action `FilledButton` (e.g. `+ Add Expense` or `New Note`) with an attached dropdown anchor menu toggle (`Icon(Icons.arrow_drop_down)`) for dual-function quick actions in a unified M3 container.
 
 ### C. Floating Formatting Toolbar
 * **Placement:** Suspended above the software keyboard or bottom center.
-* **Container:** `surfaceContainerHighest` fill with explicit `BackdropFilter` glassmorphic blur (`sigmaX: 12, sigmaY: 12`, opacity `0.85`, radius `32.0`) and `IconButton.filledTonal` active states.
+* **Container:** Solid `surfaceContainerHighest` fill with subtle 1px `outlineVariant` border, squircle radius (`AppLayout.radiusXL`), and `IconButton.filledTonal` active states. ZERO `BackdropFilter` or frosted glass blurs.
 
 ### D. Expressive & Connected Lists
 * **Geometry:** Connected list item geometry where top item morphs `radiusL` top corners, middle items are square, and bottom item morphs `radiusL` bottom corners.
@@ -107,9 +107,16 @@ Widget buildExpressivePressable({required Widget child, required VoidCallback on
 ### E. Search & Input Fields
 * **In-Place Search Morphing:** Morph top bar in-place into `SearchBar` pill using `AnimatedSwitcher` (`180ms Curves.fastOutSlowIn`).
 * **TextField Container Transparency:** When embedding `TextField` inside custom containers or pill headers, explicitly override `InputDecoration` with `filled: false`, `fillColor: Colors.transparent`, `border: InputBorder.none`, `enabledBorder: InputBorder.none`, and `focusedBorder: InputBorder.none` to prevent global `inputDecorationTheme` fill color artifacts.
-* **Symmetric Navigation Bars:** Pair frosted glass app headers with matching frosted glass bottom navigation bars (`ClipRect` + `BackdropFilter` `16px` blur) and `extendBody: true` on `Scaffold` for edge-to-edge scrolling depth.
+* **Symmetric Navigation Bars:** Pair seamless borderless app headers (`ExpressiveSliverAppBar`) with solid bottom navigation bars (`NavigationBar`) using `surfaceContainerLow` and subtle tonal elevation.
 
-### F. Iconography & Material Symbols Standard
+### F. Tactile Sinusoidal Wavy Sliders & Progress (`ExpressiveWavySlider` & `ExpressiveWavyProgress`)
+* **Wavy Slider:** Sinusoidal oscillating track responding dynamically to scrub velocity, replacing static linear track sliders.
+* **Wavy Progress Indicator:** Animated harmonic sinusoidal waves for linear and circular progress, conveying continuous background activity (e.g. SMS sync, budget consumption).
+
+### G. Shape-Morphing Loading Indicators (`ExpressiveShapeMorphIndicator`)
+* **Continuous Shape Interpolation:** Smooth mathematical morphing between 35+ expressive geometric polygons (triangles, clovers, starbursts, squircles) during async operations.
+
+### H. Iconography & Material Symbols Standard
 * **Catalog Reference:** All UI icon identifiers must align with official [Google Material Icons / Symbols](https://fonts.google.com/icons).
 * **Variant & Weight Guidelines:** Prefer outlined or rounded variants (`Icons.<name>_outlined`, `Icons.<name>_rounded`) for list tiles, section headers, and secondary actions to preserve a refined M3 visual balance. Use filled variants (`Icons.<name>`) primarily for active selection states (e.g. selected navigation bar tabs or selected toggle buttons).
 
@@ -254,8 +261,8 @@ Containers that structure content into coherent spatial cards, sheets, lists, an
 Components that structure app hierarchy and view switching across compact and expanded displays.
 
 #### 1. Top App Bar ([m3.material.io/components/top-app-bar](https://m3.material.io/components/top-app-bar/overview))
-* **Variants:** Center-aligned (`CenterAlignedTopAppBar`), Small (`SliverAppBar`), Medium, Large (`FrostedGlassSliverAppBar`).
-* **Usage Guidance:** Use glassmorphic backdrop blur (`16px`) and `surfaceContainerLow` transparent fills for edge-to-edge content depth.
+* **Variants:** Center-aligned (`CenterAlignedTopAppBar`), Small (`SliverAppBar`), Medium, Large (`ExpressiveSliverAppBar`).
+* **Usage Guidance:** Use borderless solid `surfaceContainerLow` / `surfaceContainer` fills with subtle tonal elevation—ZERO `BackdropFilter` or frosted glass blurs.
 
 #### 2. Bottom App Bar ([m3.material.io/components/bottom-app-bar](https://m3.material.io/components/bottom-app-bar/overview))
 * **Variants:** `BottomAppBar` with embedded action icon buttons and FAB notch integration.
@@ -391,7 +398,7 @@ This catalog codifies all official style systems from [m3.material.io/styles](ht
   - `Level 2` ($3\text{ dp}$): Dropdown menus, popovers, floating app bars.
   - `Level 3` ($6\text{ dp}$): Floating Action Buttons (FAB), dialogs.
   - `Level 4–5` ($8\text{–}12\text{ dp}$): Modal bottom sheets with backdrop scrim.
-* **Glassmorphic Depth:** Use `BackdropFilter` with `16.0` to `24.0` sigma blur paired with $0.80$ alpha surface container fills for frosted top app bars and floating toolbars.
+* **Surface Container Borders:** Instead of Apple-style Gaussian frosted blurs, spatial depth is achieved through 5-tier solid surface containers, subtle tonal elevation steps, and delicate 1px `outlineVariant` borders with dynamic opacity.
 
 ---
 

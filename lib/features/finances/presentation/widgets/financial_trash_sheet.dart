@@ -4,6 +4,7 @@ import '../../../../core/theme/app_layout.dart';
 import '../../../../core/ui/app_bottom_sheet.dart';
 import '../../../../core/ui/app_card.dart';
 import '../../../../core/ui/app_dialog.dart';
+import '../../../../core/ui/expressive_shape_morph_indicator.dart';
 import '../../../../data/transaction_model.dart';
 import '../../data/transaction_repository.dart';
 
@@ -52,7 +53,7 @@ class _FinancialTrashSheetState extends State<FinancialTrashSheet> {
     if (_isLoading) {
       return const Padding(
         padding: EdgeInsets.all(AppLayout.spaceXL),
-        child: Center(child: CircularProgressIndicator()),
+        child: Center(child: ExpressiveShapeMorphIndicator(size: 44)),
       );
     }
 
@@ -200,7 +201,7 @@ class _FinancialTrashSheetState extends State<FinancialTrashSheet> {
                               button: true,
                               label: 'Restore transaction',
                               child: InkWell(
-                                borderRadius: BorderRadius.circular(20),
+                                borderRadius: BorderRadius.circular(AppLayout.radiusStadium),
                                 onTap: () async {
                                   if (txn.id != null) {
                                     // 1. Instant optimistic UI removal (0ms)
@@ -240,7 +241,7 @@ class _FinancialTrashSheetState extends State<FinancialTrashSheet> {
                               button: true,
                               label: 'Permanently delete transaction',
                               child: InkWell(
-                                borderRadius: BorderRadius.circular(20),
+                                borderRadius: BorderRadius.circular(AppLayout.radiusStadium),
                                 onTap: () async {
                                   if (txn.id != null) {
                                     // 1. Instant optimistic UI removal (0ms)

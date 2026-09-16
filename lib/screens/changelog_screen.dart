@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_layout.dart';
-import '../widgets/frosted_glass_sliver_app_bar.dart';
+import '../core/ui/expressive_sliver_app_bar.dart';
 import '../core/ui/app_card.dart';
 
 class ChangelogScreen extends StatelessWidget {
@@ -15,7 +15,7 @@ class ChangelogScreen extends StatelessWidget {
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          const FrostedGlassSliverAppBar(
+          const ExpressiveSliverAppBar(
             titleText: 'Changelog',
             showBackButton: true,
           ),
@@ -28,12 +28,44 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
-                  version: 'v2.31.0',
+                  version: 'v2.31.1',
                   date: 'September 16, 2026',
                   isLatest: true,
                   changes: [
                     _ChangelogGroup(
-                      title: "🌟 What's New",
+                      title: "What's New",
+                      items: [
+                        'Material 3 Expressive Design System: Complete visual elevation with 5-tier solid surfaces, tactile stadium pills, and variable typography.',
+                        'Tactile Sinusoidal Wavy Slider: Interactive typography scaling in Settings with live text preview and real-time font size adjustment.',
+                        'Shape-Morphing Indicators: Fluid loading animations transitioning across 35+ expressive geometric shapes during receipt OCR scanning and module loading.',
+                        'Expressive Split Buttons: Multi-action note migration button offering one-tap file browsing alongside instant Google Takeout access.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: 'Improvements',
+                      items: [
+                        'Zero Frosted Glass Blur: Purged all legacy backdrop blurs in favor of high-performance, battery-friendly solid surface containers.',
+                        'Connected Corner Morphing: Grouped list cards and paired P2P devices now feature unified morphing rounded corners.',
+                        'Resilient Backup Serialization: Expanded backup coverage to guarantee 100% preservation of split bills, savings vault, and custom account routing.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: 'Fixes',
+                      items: [
+                        'Dialog & Sheet Standardization: Unified all prompt guides and cycle phase sheets into responsive Material 3 bottom sheets.',
+                        'P2P Sync & Camera Resume: Camera QR scanning and sync operations reliably preserve session state without unwanted lock triggers.',
+                      ],
+                    ),
+                  ],
+                ),
+                _buildVersionSection(
+                  context,
+                  version: 'v2.31.0',
+                  date: 'September 16, 2026',
+                  isLatest: false,
+                  changes: [
+                    _ChangelogGroup(
+                      title: "What's New",
                       items: [
                         'Goal-Oriented Savings Pockets: Set target goals with auto-pacing and milestone badges for college, travel, or emergencies.',
                         'Authentic Dual-Account Transfers: Real double-entry transfer transactions between Daily Operating and Savings Vault accounts.',
@@ -42,14 +74,14 @@ class ChangelogScreen extends StatelessWidget {
                       ],
                     ),
                     _ChangelogGroup(
-                      title: '🚀 Improvements',
+                      title: 'Improvements',
                       items: [
                         'Real-Time Savings Pacing & Milestones: Progress tracking with milestone badges and dynamic monthly pace recalculations.',
                         'Penny Remainder Reconciliation: Easily balance one-cent or residual round-off differences on custom splits.',
                       ],
                     ),
                     _ChangelogGroup(
-                      title: '🐛 Fixes',
+                      title: 'Fixes',
                       items: [
                         'Resilient Full-Form Scrolling: Fluid scrolling across savings goals and split bill calculator modals on all screen sizes.',
                       ],
@@ -1103,7 +1135,7 @@ class ChangelogScreen extends StatelessWidget {
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
                                 color: theme.colorScheme.primary,
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(AppLayout.radiusStadium),
                               ),
                               child: Text(
                                 'LATEST',
@@ -1127,14 +1159,35 @@ class ChangelogScreen extends StatelessWidget {
                     ],
                   ),
                   const Divider(height: AppLayout.spaceXL),
-                  ...changes.map((group) => Column(
+                  ...changes.map((group) {
+                    final cleanTitle = group.title.replaceAll(RegExp(r'[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]', unicode: true), '').trim();
+                    IconData groupIcon = Icons.article_outlined;
+                    Color iconColor = theme.colorScheme.primary;
+                    final lowerTitle = cleanTitle.toLowerCase();
+                    if (lowerTitle.contains("what's new") || lowerTitle.contains("feature")) {
+                      groupIcon = Icons.auto_awesome_rounded;
+                      iconColor = theme.colorScheme.primary;
+                    } else if (lowerTitle.contains("improvement")) {
+                      groupIcon = Icons.trending_up_rounded;
+                      iconColor = theme.colorScheme.tertiary;
+                    } else if (lowerTitle.contains("fix")) {
+                      groupIcon = Icons.build_circle_outlined;
+                      iconColor = theme.colorScheme.secondary;
+                    }
+                    return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            group.title,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                          Row(
+                            children: [
+                              Icon(groupIcon, size: 18, color: iconColor),
+                              const SizedBox(width: AppLayout.spaceXS),
+                              Text(
+                                cleanTitle,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: AppLayout.spaceS),
                           ...group.items.map((item) => Padding(
@@ -1166,7 +1219,8 @@ class ChangelogScreen extends StatelessWidget {
                               )),
                           const SizedBox(height: AppLayout.spaceM),
                         ],
-                      )),
+                      );
+                    }),
                 ],
               ),
             ),

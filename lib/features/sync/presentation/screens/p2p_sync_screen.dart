@@ -9,9 +9,12 @@ import 'package:note_taking_app/core/ui/app_card.dart';
 import 'package:note_taking_app/core/ui/app_bottom_sheet.dart';
 import 'package:note_taking_app/core/ui/app_chip.dart';
 import 'package:note_taking_app/core/ui/app_dialog.dart';
-import 'package:note_taking_app/core/ui/frosted_sliver_app_bar.dart';
+import 'package:note_taking_app/core/ui/expressive_sliver_app_bar.dart';
 import 'package:note_taking_app/widgets/bouncing_widget.dart';
 import 'package:note_taking_app/providers/note_provider.dart';
+import 'package:note_taking_app/features/finances/providers/financial_manager_provider.dart';
+import 'package:note_taking_app/features/health/providers/period_tracker_provider.dart';
+import 'package:note_taking_app/screens/app_lock_screen.dart';
 import 'package:note_taking_app/services/backup_service.dart';
 import 'package:note_taking_app/features/sync/providers/p2p_sync_provider.dart';
 import 'package:note_taking_app/features/sync/data/p2p_pairing_model.dart';
@@ -96,6 +99,7 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                     height: 48,
                     child: FilledButton.icon(
                       onPressed: () async {
+                        AppLockScreen.ignoreNextResumeLock();
                         final scanned = await Navigator.push<String>(
                           context,
                           MaterialPageRoute(builder: (_) => const QrScannerScreen()),
@@ -292,7 +296,7 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
         return Scaffold(
           body: CustomScrollView(
             slivers: [
-              const FrostedGlassSliverAppBar(
+              const ExpressiveSliverAppBar(
                 titleText: 'Master P2P Device Sync',
                 showBackButton: true,
               ),
@@ -396,8 +400,12 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                                           ? null
                                           : () async {
                                               final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+                                              final finProvider = Provider.of<FinancialManagerProvider>(context, listen: false);
+                                              final healthProvider = Provider.of<PeriodTrackerProvider>(context, listen: false);
                                               final result = await syncProvider.syncBiDirectional(onCompleted: () {
                                                 noteProvider.refreshNotes();
+                                                finProvider.refresh();
+                                                healthProvider.loadData();
                                               });
                                               if (context.mounted) {
                                                 ScaffoldMessenger.of(context).clearSnackBars();
@@ -419,6 +427,8 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                                                             textColor: colorScheme.onError,
                                                             onPressed: () => syncProvider.syncBiDirectional(onCompleted: () {
                                                               noteProvider.refreshNotes();
+                                                              finProvider.refresh();
+                                                              healthProvider.loadData();
                                                             }),
                                                           ),
                                                   ),
@@ -704,12 +714,35 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                         ),
                       )
                     else
-                      ...syncProvider.pairedDevices.map((device) {
+                      ...List.generate(syncProvider.pairedDevices.length, (index) {
+                        final device = syncProvider.pairedDevices[index];
                         final targetIp = device.ipAddress;
+                        final count = syncProvider.pairedDevices.length;
+                        final isFirst = index == 0;
+                        final isLast = index == count - 1;
+                        final isOnly = count == 1;
+
+                        final BorderRadiusGeometry radiusGeometry;
+                        if (isOnly) {
+                          radiusGeometry = BorderRadius.circular(AppLayout.radiusL);
+                        } else if (isFirst) {
+                          radiusGeometry = const BorderRadius.vertical(
+                            top: Radius.circular(AppLayout.radiusL),
+                            bottom: Radius.circular(AppLayout.radiusXS),
+                          );
+                        } else if (isLast) {
+                          radiusGeometry = const BorderRadius.vertical(
+                            top: Radius.circular(AppLayout.radiusXS),
+                            bottom: Radius.circular(AppLayout.radiusL),
+                          );
+                        } else {
+                          radiusGeometry = BorderRadius.circular(AppLayout.radiusXS);
+                        }
 
                         return Padding(
-                          padding: const EdgeInsets.only(bottom: AppLayout.spaceS),
+                          padding: EdgeInsets.only(bottom: isLast ? AppLayout.spaceL : 2.0),
                           child: AppCard(
+                            borderRadiusGeometry: radiusGeometry,
                             child: Row(
                               children: [
                                 Container(
@@ -759,9 +792,15 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                                         ? null
                                         : () async {
                                             final noteProvider = Provider.of<NoteProvider>(context, listen: false);
+                                            final finProvider = Provider.of<FinancialManagerProvider>(context, listen: false);
+                                            final healthProvider = Provider.of<PeriodTrackerProvider>(context, listen: false);
                                             final res = await syncProvider.syncBiDirectional(
                                               targetIp: targetIp,
-                                              onCompleted: () => noteProvider.refreshNotes(),
+                                              onCompleted: () {
+                                                noteProvider.refreshNotes();
+                                                finProvider.refresh();
+                                                healthProvider.loadData();
+                                              },
                                             );
                                             if (context.mounted) {
                                               ScaffoldMessenger.of(context).showSnackBar(
@@ -775,20 +814,54 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                                             }
                                           },
                                   ),
-                                IconButton(
-                                  icon: const Icon(Icons.edit_outlined),
-                                  tooltip: 'Rename ${device.deviceName}',
-                                  onPressed: () => _showRenameDeviceDialog(
-                                    context: context,
-                                    currentName: device.deviceName,
-                                    onSave: (name) => syncProvider.renamePairedDevice(device.deviceId, name),
+                                PopupMenuButton<String>(
+                                  icon: const Icon(Icons.more_vert_rounded),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(AppLayout.radiusM),
                                   ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete_outline_rounded),
-                                  color: colorScheme.error,
-                                  tooltip: 'Unpair Device',
-                                  onPressed: () => syncProvider.unpairDevice(device.deviceId),
+                                  tooltip: 'Device options',
+                                  onSelected: (value) async {
+                                    if (value == 'rename') {
+                                      _showRenameDeviceDialog(
+                                        context: context,
+                                        currentName: device.deviceName,
+                                        onSave: (name) => syncProvider.renamePairedDevice(device.deviceId, name),
+                                      );
+                                    } else if (value == 'unpair') {
+                                      final confirmed = await AppDialog.showConfirm(
+                                        context: context,
+                                        title: 'Unpair ${device.deviceName}?',
+                                        message: 'This device will be removed from your trusted peer network. You can pair it again at any time.',
+                                        confirmLabel: 'Unpair',
+                                        isDestructive: true,
+                                      );
+                                      if (confirmed == true) {
+                                        await syncProvider.unpairDevice(device.deviceId);
+                                      }
+                                    }
+                                  },
+                                  itemBuilder: (context) => [
+                                    PopupMenuItem(
+                                      value: 'rename',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.edit_outlined, size: 18, color: colorScheme.onSurface),
+                                          const SizedBox(width: AppLayout.spaceS),
+                                          const Text('Rename'),
+                                        ],
+                                      ),
+                                    ),
+                                    PopupMenuItem(
+                                      value: 'unpair',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.link_off_rounded, size: 18, color: colorScheme.error),
+                                          const SizedBox(width: AppLayout.spaceS),
+                                          Text('Unpair', style: TextStyle(color: colorScheme.error)),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../../../data/settings_provider.dart';
+import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import '../../../../data/transaction_category.dart';
 import '../../../../core/theme/app_layout.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -210,14 +210,12 @@ class CategoryBudgetsCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 6),
-                      ClipRRect(
+                      LinearProgressIndicator(
+                        value: hasBudget ? progress : 0.0,
+                        minHeight: 6,
+                        backgroundColor: colorScheme.surfaceContainerHighest,
+                        valueColor: AlwaysStoppedAnimation<Color>(progressColor),
                         borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
-                        child: LinearProgressIndicator(
-                          value: hasBudget ? progress : 0.0,
-                          minHeight: 6,
-                          backgroundColor: colorScheme.surfaceContainerHighest,
-                          valueColor: AlwaysStoppedAnimation<Color>(progressColor),
-                        ),
                       ),
                       if (isOverBudget)
                         Padding(

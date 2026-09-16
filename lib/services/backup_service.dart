@@ -13,7 +13,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:share_plus/share_plus.dart';
 import '../screens/app_lock_screen.dart';
 import 'package:provider/provider.dart';
-import '../data/settings_provider.dart';
+import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import '../data/transaction_category.dart';
 import '../data/transaction_model.dart';
 import '../features/finances/data/transaction_repository.dart';

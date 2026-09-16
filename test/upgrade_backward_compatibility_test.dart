@@ -136,7 +136,7 @@ void main() {
           value: settings,
           child: const MaterialApp(
             home: Scaffold(
-              body: WhatsNewSheet(currentVersion: '2.31.0'),
+              body: WhatsNewSheet(currentVersion: '2.31.1'),
             ),
           ),
         ),
@@ -144,9 +144,9 @@ void main() {
       await tester.pumpAndSettle();
 
       // Check categories
-      expect(find.text("🌟 What's New"), findsOneWidget);
-      expect(find.text("🚀 Improvements"), findsOneWidget);
-      expect(find.text("🐛 Fixes"), findsOneWidget);
+      expect(find.text("New Features"), findsOneWidget);
+      expect(find.text("Improvements"), findsOneWidget);
+      expect(find.text("Fixes"), findsOneWidget);
 
       // Check marquee items
       expect(find.text("Goal-Oriented Savings Pockets"), findsOneWidget);
@@ -162,7 +162,7 @@ void main() {
       });
       await tester.pumpAndSettle();
 
-      expect(settings.lastSeenVersion, '2.31.0');
+      expect(settings.lastSeenVersion, '2.31.1');
     });
   });
 }

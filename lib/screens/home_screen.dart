@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
@@ -11,12 +10,13 @@ import 'dart:io';
 
 import '../data/note_model.dart';
 import '../data/note_templates.dart';
-import '../data/settings_provider.dart';
+import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import '../providers/note_provider.dart';
 import '../core/theme/app_theme.dart';
 import '../core/theme/app_layout.dart';
 import '../core/ui/app_chip.dart';
 import '../core/ui/app_morphing_fab.dart';
+import '../core/ui/expressive_floating_toolbar.dart';
 import '../widgets/tag_filter_bar.dart';
 import '../widgets/home/home_app_bar.dart';
 import '../widgets/home/note_view_builder.dart';
@@ -501,24 +501,47 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 children: AppTheme.noteColors.map((c) {
                   final bool isSystem = c.toARGB32() == 0;
                   final bool isSelected = !isSystem && selectedColor == c.toARGB32();
-                  return GestureDetector(
-                    onTap: () {
-                      if (isSystem) {
-                        final nonZeroColors = AppTheme.noteColors.where((color) => color.toARGB32() != 0).toList();
-                        final randomColor = (nonZeroColors..shuffle()).first;
-                        setDialogState(() => selectedColor = randomColor.toARGB32());
-                      } else {
-                        setDialogState(() => selectedColor = c.toARGB32());
-                      }
-                    },
-                    child: Container(
-                      width: 32, height: 32,
-                      decoration: BoxDecoration(
-                        color: isSystem ? Theme.of(context).colorScheme.surface : c,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.outlineVariant, width: isSelected ? 3 : 1),
+                  return Semantics(
+                    button: true,
+                    label: isSystem ? 'Random color' : 'Color swatch',
+                    selected: isSelected,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(AppLayout.radiusStadium),
+                      onTap: () {
+                        if (isSystem) {
+                          final nonZeroColors = AppTheme.noteColors.where((color) => color.toARGB32() != 0).toList();
+                          final randomColor = (nonZeroColors..shuffle()).first;
+                          setDialogState(() => selectedColor = randomColor.toARGB32());
+                        } else {
+                          setDialogState(() => selectedColor = c.toARGB32());
+                        }
+                      },
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                        child: Center(
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: isSystem ? Theme.of(context).colorScheme.surface : c,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isSelected
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Theme.of(context).colorScheme.outlineVariant,
+                                width: isSelected ? 3 : 1,
+                              ),
+                            ),
+                            child: isSystem
+                                ? const Icon(Icons.shuffle, size: 16)
+                                : (isSelected
+                                    ? Icon(Icons.check,
+                                        size: 16,
+                                        color: c.computeLuminance() > 0.5 ? Colors.black : Colors.white)
+                                    : null),
+                          ),
+                        ),
                       ),
-                      child: isSystem ? const Icon(Icons.shuffle, size: 16) : (isSelected ? Icon(Icons.check, size: 16, color: c.computeLuminance() > 0.5 ? Colors.black : Colors.white) : null),
                     ),
                   );
                 }).toList(),
@@ -646,12 +669,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         });
       }
 
+      final noteProvider = context.watch<NoteProvider>();
+      final isSelectionMode = noteProvider.isSelectionMode;
+
       final bool hasExtraFeatures = settings.showFinancialManager || settings.isPeriodTrackerEnabled;
       
       if (!hasExtraFeatures) {
         return Scaffold(
+          extendBody: true,
           body: _buildNotesScaffold(context, settings),
-          floatingActionButton: _buildFAB(context),
+          floatingActionButton: isSelectionMode ? null : _buildFAB(context),
+          bottomNavigationBar: isSelectionMode
+              ? _buildSelectionToolbar(context, noteProvider)
+              : null,
         );
       }
 
@@ -662,6 +692,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
       if (isTablet) {
         return Scaffold(
+          extendBody: true,
           body: Row(
             children: [
               NavigationRail(
@@ -686,11 +717,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ],
           ),
-          floatingActionButton: _buildCurrentFAB(context, settings),
+          floatingActionButton: isSelectionMode ? null : _buildCurrentFAB(context, settings),
+          bottomNavigationBar: isSelectionMode
+              ? _buildSelectionToolbar(context, noteProvider)
+              : null,
         );
       }
-
-      final isDark = Theme.of(context).brightness == Brightness.dark;
 
       return Scaffold(
         extendBody: true,
@@ -701,32 +733,98 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             children: _buildFeatureScreens(settings),
           ),
         ),
-        floatingActionButton: _buildCurrentFAB(context, settings),
-        bottomNavigationBar: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .surfaceContainerLow
-                    .withValues(alpha: isDark ? 0.82 : 0.88),
-              ),
-              child: NavigationBar(
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                selectedIndex: _currentIndex,
-                onDestinationSelected: (index) {
-                  HapticFeedback.selectionClick();
-                  setState(() => _currentIndex = index);
-                },
-                destinations: _buildNavDestinations(settings),
-              ),
-            ),
-          ),
+        floatingActionButton: isSelectionMode ? null : _buildCurrentFAB(context, settings),
+        bottomNavigationBar: AnimatedSwitcher(
+          duration: AppLayout.animDefault,
+          switchInCurve: AppLayout.curveEmphasizedDecelerate,
+          switchOutCurve: AppLayout.curveEmphasizedAccelerate,
+          transitionBuilder: (child, animation) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0.0, 1.0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
+          child: isSelectionMode
+              ? _buildSelectionToolbar(context, noteProvider)
+              : Container(
+                  key: const ValueKey('navigation_bar'),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerLow,
+                    border: null,
+                  ),
+                  child: NavigationBar(
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    selectedIndex: _currentIndex,
+                    onDestinationSelected: (index) {
+                      HapticFeedback.selectionClick();
+                      setState(() => _currentIndex = index);
+                    },
+                    destinations: _buildNavDestinations(settings),
+                  ),
+                ),
         ),
       );
     });
+  }
+
+  Widget _buildSelectionToolbar(BuildContext context, NoteProvider noteProvider) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return SafeArea(
+      top: false,
+      child: ExpressiveFloatingToolbar(
+        key: const ValueKey('selection_toolbar'),
+        isVibrant: true,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ExpressiveFloatingToolbar.actionButton(
+            icon: Icons.push_pin_outlined,
+            tooltip: 'Pin / unpin selected',
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              noteProvider.bulkTogglePin();
+            },
+          ),
+          ExpressiveFloatingToolbar.actionButton(
+            icon: Icons.archive_outlined,
+            tooltip: 'Archive selected',
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              noteProvider.bulkArchive();
+            },
+          ),
+          ExpressiveFloatingToolbar.actionButton(
+            icon: Icons.label_outline,
+            tooltip: 'Tag selected',
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              bulkTag();
+            },
+          ),
+          ExpressiveFloatingToolbar.actionButton(
+            icon: Icons.drive_file_move_outlined,
+            tooltip: 'Move to folder',
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              bulkMoveToFolder();
+            },
+          ),
+          ExpressiveFloatingToolbar.divider(context),
+          ExpressiveFloatingToolbar.actionButton(
+            icon: Icons.delete_outline,
+            tooltip: 'Delete selected',
+            color: colorScheme.error,
+            onPressed: () {
+              HapticFeedback.mediumImpact();
+              _bulkDeleteWithUndo(noteProvider);
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   List<NavigationRailDestination> _buildNavRailDestinations(SettingsProvider settings) {
@@ -1038,7 +1136,7 @@ class NoteCard extends StatelessWidget {
         padding: AppLayout.paddingAllL,
         decoration: BoxDecoration(
           color: isSelected ? theme.colorScheme.primaryContainer : backgroundColor,
-          borderRadius: BorderRadius.circular(AppLayout.radiusXXL),
+          borderRadius: BorderRadius.circular(AppLayout.radiusL),
           border: Border.all(color: isSelected ? theme.colorScheme.primary : borderColor, width: isSelected ? 2 : 1),
         ),
         child: Stack(
@@ -1131,14 +1229,14 @@ class NoteCard extends StatelessWidget {
                           bg = scheme.primaryContainer;
                           fg = scheme.onPrimaryContainer;
                         }
-                        return Container(padding: const EdgeInsets.symmetric(horizontal: AppLayout.spaceS, vertical: AppLayout.spaceXS), decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(AppLayout.radiusM)), child: Text(tag, style: TextStyle(fontSize: 11.5, color: fg, fontWeight: FontWeight.w600)));
+                        return Container(padding: const EdgeInsets.symmetric(horizontal: AppLayout.spaceS, vertical: AppLayout.spaceXS), decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(AppLayout.radiusStadium)), child: Text(tag, style: TextStyle(fontSize: 11.5, color: fg, fontWeight: FontWeight.w600)));
                       }),
                       if (note.tags.length > 3)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: AppLayout.spaceS, vertical: AppLayout.spaceXS),
                           decoration: BoxDecoration(
                             color: theme.colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                            borderRadius: BorderRadius.circular(AppLayout.radiusStadium),
                           ),
                           child: Text(
                             '+${note.tags.length - 3}',

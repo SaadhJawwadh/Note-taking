@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:note_taking_app/features/notes/data/note_repository.dart';
 import 'package:note_taking_app/data/note_model.dart';
-import 'package:note_taking_app/data/settings_provider.dart';
+import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import 'package:animations/animations.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 import 'package:note_taking_app/screens/home_screen.dart';
 import 'package:note_taking_app/features/notes/presentation/screens/note_editor_screen.dart';
 import 'package:note_taking_app/core/theme/app_layout.dart';
-import 'package:note_taking_app/widgets/frosted_glass_sliver_app_bar.dart';
+import 'package:note_taking_app/core/ui/expressive_sliver_app_bar.dart';
 import 'package:note_taking_app/core/ui/app_card.dart';
+import 'package:note_taking_app/core/ui/expressive_shape_morph_indicator.dart';
 
 enum FilterType { archived, trash }
 
@@ -157,7 +158,7 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
       return Scaffold(
         body: CustomScrollView(
           slivers: [
-            FrostedGlassSliverAppBar(
+            ExpressiveSliverAppBar(
               titleText: title,
               showBackButton: true,
             ),
@@ -169,7 +170,7 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
                     final isDark = Theme.of(ctx).brightness == Brightness.dark;
                     return AppCard.tonal(
                       color: colorScheme.errorContainer
-                          .withValues(alpha: isDark ? 0.16 : 0.35),
+                          .withValues(alpha: isDark ? 0.20 : 0.52),
                       borderColor: colorScheme.error
                           .withValues(alpha: isDark ? 0.35 : 0.45),
                       borderRadius: AppLayout.radiusL,
@@ -220,7 +221,7 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
               ),
             if (isLoading)
               const SliverFillRemaining(
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(child: ExpressiveShapeMorphIndicator(size: 44)),
               )
             else if (displayedNotes.isEmpty)
               SliverFillRemaining(
@@ -267,7 +268,7 @@ class _FilteredNotesScreenState extends State<FilteredNotesScreen> {
                                 closedElevation: 0,
                                 closedColor: Colors.transparent,
                                 closedShape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(AppLayout.radiusXL),
+                                  borderRadius: BorderRadius.circular(AppLayout.radiusL),
                                 ),
                                 onClosed: (returned) async {
                                   if (returned == true) {

@@ -100,22 +100,24 @@ class AppChip extends StatelessWidget {
             : theme.colorScheme.onSurfaceVariant);
 
     final horizPadding = isCompact ? 10.0 : 14.0;
-    final vertPadding = isCompact ? 3.0 : 6.0;
+    final vertPadding = isCompact ? 4.0 : 7.0;
     final fontSize = isCompact ? 12.0 : 13.0;
     final iconSize = isCompact ? 14.0 : 16.0;
+
+    const effectiveRadius = AppLayout.radiusStadium;
 
     final chipWidget = Container(
       decoration: BoxDecoration(
         color: effectiveBg,
-        borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+        borderRadius: BorderRadius.circular(effectiveRadius),
         border: border != null ? Border.fromBorderSide(border!) : null,
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+        borderRadius: BorderRadius.circular(effectiveRadius),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+          borderRadius: BorderRadius.circular(effectiveRadius),
           child: Padding(
             padding: EdgeInsets.symmetric(
               horizontal: horizPadding,
@@ -141,12 +143,25 @@ class AppChip extends StatelessWidget {
                 ),
                 if (onDelete != null) ...[
                   const SizedBox(width: AppLayout.spaceXS),
-                  GestureDetector(
-                    onTap: onDelete,
-                    child: Icon(
-                      Icons.close_rounded,
-                      size: iconSize,
-                      color: effectiveFg,
+                  Semantics(
+                    button: true,
+                    label: 'Delete $label',
+                    child: GestureDetector(
+                      onTap: onDelete,
+                      behavior: HitTestBehavior.opaque,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          minWidth: 48,
+                          minHeight: 48,
+                        ),
+                        child: Center(
+                          child: Icon(
+                            Icons.close_rounded,
+                            size: iconSize,
+                            color: effectiveFg,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ],

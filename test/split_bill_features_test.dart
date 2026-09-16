@@ -6,7 +6,7 @@ import 'package:note_taking_app/features/finances/services/receipt_scanner_servi
 import 'package:note_taking_app/features/finances/presentation/widgets/settle_up_sheet.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:note_taking_app/data/settings_provider.dart';
+import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import 'package:note_taking_app/features/finances/providers/financial_manager_provider.dart';
 import 'package:note_taking_app/features/finances/providers/split_bill_provider.dart';
 

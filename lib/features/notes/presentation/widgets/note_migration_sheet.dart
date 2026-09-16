@@ -6,6 +6,7 @@ import '../../../../core/theme/app_layout.dart';
 import '../../../../core/ui/app_bottom_sheet.dart';
 import '../../../../core/ui/app_card.dart';
 import '../../../../core/ui/app_chip.dart';
+import '../../../../core/ui/expressive_split_button.dart';
 import '../../../../data/note_model.dart';
 import '../../../../providers/note_provider.dart';
 import '../../../../screens/app_lock_screen.dart';
@@ -238,8 +239,7 @@ class _NoteMigrationSheetState extends State<NoteMigrationSheet> {
               ),
             ),
             const SizedBox(height: AppLayout.spaceL),
-            FilledButton.icon(
-              onPressed: _isLoading ? null : _pickFiles,
+            ExpressiveSplitButton<String>(
               icon: _isLoading
                   ? const SizedBox(
                       width: 18,
@@ -247,11 +247,38 @@ class _NoteMigrationSheetState extends State<NoteMigrationSheet> {
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
                   : const Icon(Icons.folder_open_rounded),
-              label: Text(_isLoading ? 'Scanning Files...' : 'Select Takeout ZIP or Note Files'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusM)),
-              ),
+              label: _isLoading ? 'Scanning Files...' : 'Select Takeout ZIP or Notes',
+              onPrimaryPressed: _isLoading ? () {} : _pickFiles,
+              menuItems: const [
+                PopupMenuItem(
+                  value: 'pick',
+                  child: Row(
+                    children: [
+                      Icon(Icons.file_open_outlined, size: 20),
+                      SizedBox(width: 10),
+                      Text('Browse Device Files'),
+                    ],
+                  ),
+                ),
+                PopupMenuDivider(),
+                PopupMenuItem(
+                  value: 'takeout',
+                  child: Row(
+                    children: [
+                      Icon(Icons.open_in_browser_rounded, size: 20),
+                      SizedBox(width: 10),
+                      Text('Open Google Takeout'),
+                    ],
+                  ),
+                ),
+              ],
+              onSelected: (val) {
+                if (val == 'pick') {
+                  _pickFiles();
+                } else if (val == 'takeout') {
+                  _launchGoogleTakeout();
+                }
+              },
             ),
           ] else ...[
             // Preview parsed notes
@@ -337,7 +364,7 @@ class _NoteMigrationSheetState extends State<NoteMigrationSheet> {
                     onPressed: _isLoading ? null : () => setState(() => _parsedNotes = null),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusM)),
+                      shape: const StadiumBorder(),
                     ),
                     child: const Text('Change Files'),
                   ),
@@ -356,7 +383,7 @@ class _NoteMigrationSheetState extends State<NoteMigrationSheet> {
                     label: Text(_isLoading ? 'Importing...' : 'Import Notes'),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusM)),
+                      shape: const StadiumBorder(),
                     ),
                   ),
                 ),

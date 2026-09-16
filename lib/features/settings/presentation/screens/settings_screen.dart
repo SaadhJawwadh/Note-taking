@@ -18,16 +18,18 @@ import '../../../../utils/widget_helper.dart';
 import '../../../../utils/app_route.dart';
 import '../../../../core/theme/app_layout.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/ui/frosted_sliver_app_bar.dart';
+import '../../../../core/ui/expressive_sliver_app_bar.dart';
 import '../../../../core/ui/app_bottom_sheet.dart';
 import '../../../../core/ui/app_chip.dart';
+import '../../../../core/ui/app_card.dart';
+import '../../../../core/ui/expressive_wavy_slider.dart';
 import '../../../../data/transaction_category.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../../screens/app_lock_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../services/backup_service.dart';
 import '../../../../widgets/settings_widgets.dart';
-import '../../../../widgets/recurring_rules_sheet.dart';
+import '../../../finances/presentation/widgets/recurring_rules_sheet.dart';
 import '../../../../l10n/app_localizations.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -172,51 +174,137 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showTextSizePicker(BuildContext context, SettingsProvider settings) {
-    final options = [
-      (label: 'Small (14px)', size: 14.0, desc: 'Compact font size for maximum content density'),
-      (label: 'Medium (16px)', size: 16.0, desc: 'Standard readable typography scale'),
-      (label: 'Large (20px)', size: 20.0, desc: 'Large high-legibility font scale'),
+    double currentSize = settings.textSize;
+    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+
+    final presets = [
+      (label: 'Small (14px)', size: 14.0),
+      (label: 'Medium (16px)', size: 16.0),
+      (label: 'Large (20px)', size: 20.0),
     ];
 
     AppBottomSheet.show(
       context: context,
-      title: 'Choose Text Scale',
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: options.map((opt) {
-          final isSelected = settings.textSize == opt.size;
-          final colorScheme = Theme.of(context).colorScheme;
+      title: 'Typography & Text Scale',
+      child: StatefulBuilder(
+        builder: (context, setSheetState) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Dynamic Live Preview Card
+              AppCard(
+                padding: const EdgeInsets.all(AppLayout.spaceM),
+                backgroundColor: colorScheme.surfaceContainerLow,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.format_size_rounded, size: 18, color: colorScheme.primary),
+                            const SizedBox(width: AppLayout.spaceXS),
+                            Text(
+                              'Live Preview',
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        AppChip(
+                          label: '${currentSize.toInt()}px • ${settings.textSizeLabel}',
+                          backgroundColor: colorScheme.primaryContainer,
+                          textColor: colorScheme.onPrimaryContainer,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppLayout.spaceM),
+                    AnimatedDefaultTextStyle(
+                      duration: AppLayout.animShort,
+                      curve: AppLayout.curveEmphasizedDecelerate,
+                      style: theme.textTheme.bodyMedium!.copyWith(
+                        fontSize: currentSize,
+                        height: 1.45,
+                        color: colorScheme.onSurface,
+                      ),
+                      child: const Text(
+                        'Everything App keeps your thoughts, finances, and health encrypted on-device with zero-cloud P2P sync.',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppLayout.spaceL),
 
-          return ListTile(
-            leading: Icon(
-              Icons.text_fields,
-              color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
-            ),
-            title: Text(
-              opt.label,
-              style: TextStyle(
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? colorScheme.primary : colorScheme.onSurface,
+              // Tactile Sinusoidal Wavy Slider
+              ExpressiveWavySlider(
+                value: currentSize,
+                min: 12.0,
+                max: 24.0,
+                divisions: 6,
+                activeColor: colorScheme.primary,
+                onChanged: (val) {
+                  setSheetState(() => currentSize = val);
+                  settings.setTextSize(val);
+                },
               ),
-            ),
-            subtitle: Text(
-              opt.desc,
-              style: TextStyle(
-                fontSize: 12,
-                color: colorScheme.onSurfaceVariant,
+              const SizedBox(height: AppLayout.spaceS),
+
+              // Scale Label Badges
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('12px', style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+                  Text('18px', style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+                  Text('24px', style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+                ],
               ),
-            ),
-            trailing: isSelected
-                ? Icon(Icons.check_circle_rounded, color: colorScheme.primary)
-                : null,
-            onTap: () {
-              HapticFeedback.selectionClick();
-              settings.setTextSize(opt.size);
-              Navigator.pop(context);
-            },
+              const SizedBox(height: AppLayout.spaceM),
+
+              // Preset Quick Chips
+              Wrap(
+                spacing: AppLayout.spaceS,
+                runSpacing: AppLayout.spaceS,
+                alignment: WrapAlignment.center,
+                children: presets.map((p) {
+                  final isSelected = (currentSize - p.size).abs() < 0.5;
+                  return ChoiceChip(
+                    label: Text(p.label),
+                    selected: isSelected,
+                    showCheckmark: false,
+                    shape: const StadiumBorder(),
+                    selectedColor: colorScheme.primaryContainer,
+                    labelStyle: TextStyle(
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurface,
+                    ),
+                    onSelected: (selected) {
+                      if (selected) {
+                        HapticFeedback.selectionClick();
+                        setSheetState(() => currentSize = p.size);
+                        settings.setTextSize(p.size);
+                      }
+                    },
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: AppLayout.spaceM),
+            ],
           );
-        }).toList(),
+        },
       ),
+      actions: [
+        FilledButton.tonal(
+          style: FilledButton.styleFrom(shape: const StadiumBorder()),
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Done'),
+        ),
+      ],
     );
   }
 
@@ -235,7 +323,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           return AnimationLimiter(
             child: CustomScrollView(
               slivers: [
-                FrostedGlassSliverAppBar(
+                ExpressiveSliverAppBar(
                   showBackButton: true,
                   title: Container(
                     height: 44,
@@ -243,7 +331,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     decoration: BoxDecoration(
                       color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.85),
-                      borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
+                      borderRadius: BorderRadius.circular(AppLayout.radiusStadium),
                       border: Border.all(
                         color: colorScheme.outlineVariant.withValues(alpha: 0.35),
                         width: 1,
@@ -572,11 +660,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         title: 'Recurring Subscriptions',
                                         subtitle: 'Manage repeating bills, salaries & automated rules',
                                         showArrow: true,
-                                        onTap: () => showModalBottomSheet(
+                                        onTap: () => RecurringRulesSheet.show(
                                           context: context,
-                                          isScrollControlled: true,
-                                          showDragHandle: true,
-                                          builder: (_) => const RecurringRulesSheet(),
+                                          currency: settings.currency,
+                                          onRulesUpdated: () {},
                                         ),
                                       ),
                                       const _Divider(),
@@ -1033,11 +1120,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           title: 'Recurring Subscriptions',
           subtitle: 'Manage repeating bills, salaries & automated rules',
           showArrow: true,
-          onTap: () => showModalBottomSheet(
+          onTap: () => RecurringRulesSheet.show(
             context: context,
-            isScrollControlled: true,
-            showDragHandle: true,
-            builder: (_) => const RecurringRulesSheet(),
+            currency: settings.currency,
+            onRulesUpdated: () {},
           ),
         ),
         'Features',
