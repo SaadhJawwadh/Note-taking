@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:note_taking_app/services/sms_service.dart';
 import 'package:note_taking_app/screens/app_lock_screen.dart';
+import 'package:note_taking_app/core/theme/app_layout.dart';
 
 class SmsImportSheet extends StatefulWidget {
   const SmsImportSheet({super.key});
@@ -129,7 +130,7 @@ class _SmsImportSheetState extends State<SmsImportSheet> {
               ),
             );
           }),
-          const Divider(height: 24),
+          const SizedBox(height: AppLayout.spaceM),
           Material(
             color: Colors.transparent,
             child: CheckboxListTile(

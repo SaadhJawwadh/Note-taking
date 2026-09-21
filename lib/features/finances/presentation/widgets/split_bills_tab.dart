@@ -10,6 +10,7 @@ import '../../../../core/ui/app_card.dart';
 import '../../../../core/ui/app_chip.dart';
 import '../../../../core/ui/app_dialog.dart';
 import '../../../../core/ui/expressive_shape_morph_indicator.dart';
+import '../../../../core/ui/expressive_floating_toolbar.dart';
 import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import '../../../../data/transaction_category.dart';
 import '../../data/models/split_bill_model.dart';
@@ -28,6 +29,71 @@ class SplitBillsTab extends StatefulWidget {
 class _SplitBillsTabState extends State<SplitBillsTab> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  final Set<String> _selectedBillIds = {};
+
+  bool get _isSelectionMode => _selectedBillIds.isNotEmpty;
+
+  void _toggleSelection(String id) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      if (_selectedBillIds.contains(id)) {
+        _selectedBillIds.remove(id);
+      } else {
+        _selectedBillIds.add(id);
+      }
+    });
+  }
+
+  void _clearSelection() {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _selectedBillIds.clear();
+    });
+  }
+
+  Future<void> _bulkDeleteBills(SplitBillProvider splitProvider) async {
+    final count = _selectedBillIds.length;
+    final confirmed = await AppDialog.showConfirm(
+      context: context,
+      title: 'Delete $count Split Bill${count == 1 ? "" : "s"}?',
+      message: 'Are you sure you want to delete the selected split bills?',
+      confirmLabel: 'Delete',
+      isDestructive: true,
+    );
+    if (confirmed == true) {
+      final idsToDelete = List<String>.from(_selectedBillIds);
+      for (final id in idsToDelete) {
+        await splitProvider.deleteBill(id);
+      }
+      setState(() => _selectedBillIds.clear());
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Deleted $count split bill${count == 1 ? "" : "s"}'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _bulkShareReminders(SplitBillProvider splitProvider) async {
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
+    final currency = settings.currencySymbol;
+    final selectedBills = splitProvider.bills.where((b) => _selectedBillIds.contains(b.id)).toList();
+    if (selectedBills.isEmpty) return;
+    for (final bill in selectedBills) {
+      if (!bill.isFullySettled && mounted) {
+        await SplitShareService.shareToWhatsAppOrSystem(
+          bill,
+          defaultPaymentInfo: settings.defaultPaymentInfo,
+          currencySymbol: currency,
+        );
+      }
+    }
+    setState(() => _selectedBillIds.clear());
+  }
 
   @override
   void initState() {
@@ -60,95 +126,155 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
           b.participants.any((p) => p.contactName.toLowerCase().contains(q));
     }).toList();
 
-    return RefreshIndicator(
-      onRefresh: () => splitProvider.loadSplitBills(showLoading: false),
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(AppLayout.spaceM, AppLayout.spaceS, AppLayout.spaceM, AppLayout.fabBottomPadding),
+    return PopScope(
+      canPop: !_isSelectionMode,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _clearSelection();
+      },
+      child: Stack(
         children: [
-          // 1. Dynamic Split Summary Hero Card
-          _buildHeroSummaryCard(context, splitProvider, isDark, currency),
+          RefreshIndicator(
+            onRefresh: () => splitProvider.loadSplitBills(showLoading: false),
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(AppLayout.spaceM, AppLayout.spaceS, AppLayout.spaceM, AppLayout.fabBottomPadding),
+              children: [
+                // 1. Dynamic Split Summary Hero Card
+                _buildHeroSummaryCard(context, splitProvider, isDark, currency),
 
-          const SizedBox(height: AppLayout.spaceM),
+                const SizedBox(height: AppLayout.spaceM),
 
-          // 2. View Mode Selector (People vs Bills)
-          Center(
-            child: SegmentedButton<int>(
-              showSelectedIcon: false,
-              segments: [
-                ButtonSegment<int>(
-                  value: 0,
-                  label: Text('People (${splitProvider.contactBalances.length})'),
-                  icon: const Icon(Icons.people_alt_outlined, size: 18),
+                // 2. View Mode Selector (People vs Bills)
+                Center(
+                  child: SegmentedButton<int>(
+                    showSelectedIcon: false,
+                    segments: [
+                      ButtonSegment<int>(
+                        value: 0,
+                        label: Text('People (${splitProvider.contactBalances.length})'),
+                        icon: const Icon(Icons.people_alt_outlined, size: 18),
+                      ),
+                      ButtonSegment<int>(
+                        value: 1,
+                        label: Text('Bills (${splitProvider.bills.length})'),
+                        icon: const Icon(Icons.receipt_long_outlined, size: 18),
+                      ),
+                    ],
+                    selected: {splitProvider.activeViewMode},
+                    onSelectionChanged: (set) {
+                      HapticFeedback.lightImpact();
+                      if (_isSelectionMode) _clearSelection();
+                      splitProvider.setViewMode(set.first);
+                    },
+                    style: SegmentedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      selectedBackgroundColor: colorScheme.secondaryContainer,
+                      selectedForegroundColor: colorScheme.onSecondaryContainer,
+                      backgroundColor: colorScheme.surfaceContainerLow,
+                    ),
+                  ),
                 ),
-                ButtonSegment<int>(
-                  value: 1,
-                  label: Text('Bills (${splitProvider.bills.length})'),
-                  icon: const Icon(Icons.receipt_long_outlined, size: 18),
+
+                const SizedBox(height: AppLayout.spaceM),
+
+                // Search Field (Material 3 SearchBar)
+                SearchBar(
+                  controller: _searchController,
+                  hintText: 'Search friends or bills...',
+                  leading: const Icon(Icons.search_rounded, size: 20),
+                  trailing: [
+                    if (_searchQuery.isNotEmpty)
+                      IconButton(
+                        icon: const Icon(Icons.clear_rounded, size: 18),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                      ),
+                  ],
+                  elevation: const WidgetStatePropertyAll(0),
+                  backgroundColor: WidgetStatePropertyAll(colorScheme.surfaceContainerHigh),
+                  shape: WidgetStatePropertyAll(
+                    RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusMAX)),
+                  ),
+                  constraints: const BoxConstraints(minHeight: 48, maxHeight: 48),
+                  padding: const WidgetStatePropertyAll(
+                    EdgeInsets.symmetric(horizontal: 16),
+                  ),
+                  onChanged: (val) => setState(() => _searchQuery = val.trim()),
                 ),
+
+                const SizedBox(height: AppLayout.spaceM),
+
+                // 3. Filter Chips Bar
+                _buildFilterBar(context, splitProvider),
+
+                const SizedBox(height: AppLayout.spaceM),
+
+                // 4. Content Section (People View vs Bills View)
+                if (splitProvider.isLoading && splitProvider.bills.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40),
+                    child: Center(child: ExpressiveShapeMorphIndicator(size: 42)),
+                  )
+                else if (splitProvider.activeViewMode == 0)
+                  _buildPeopleView(context, splitProvider)
+                else
+                  _buildBillsView(context, bills, splitProvider, settings),
+
+                const SizedBox(height: 96), // Clearance for morphing FAB
               ],
-              selected: {splitProvider.activeViewMode},
-              onSelectionChanged: (set) {
-                HapticFeedback.lightImpact();
-                splitProvider.setViewMode(set.first);
+            ),
+          ),
+          Positioned(
+            bottom: AppLayout.spaceM,
+            left: 0,
+            right: 0,
+            child: AnimatedSwitcher(
+              duration: AppLayout.animDefault,
+              switchInCurve: AppLayout.curveEmphasizedDecelerate,
+              switchOutCurve: AppLayout.curveEmphasizedAccelerate,
+              transitionBuilder: (child, animation) {
+                return SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0.0, 1.0),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
+                );
               },
-              style: SegmentedButton.styleFrom(
-                visualDensity: VisualDensity.compact,
-                selectedBackgroundColor: colorScheme.secondaryContainer,
-                selectedForegroundColor: colorScheme.onSecondaryContainer,
-                backgroundColor: colorScheme.surfaceContainerLow,
-              ),
+              child: _isSelectionMode
+                  ? SafeArea(
+                      top: false,
+                      child: Center(
+                        child: ExpressiveFloatingToolbar(
+                          key: const ValueKey('split_bills_selection_toolbar'),
+                          isVibrant: true,
+                          mainAxisSize: MainAxisSize.min,
+                          margin: EdgeInsets.zero,
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                          children: [
+                            ExpressiveFloatingToolbar.labeledActionButton(
+                              icon: Icons.share_rounded,
+                              label: 'Remind',
+                              color: colorScheme.primary,
+                              onPressed: () => _bulkShareReminders(splitProvider),
+                            ),
+                            ExpressiveFloatingToolbar.spacer(),
+                            ExpressiveFloatingToolbar.labeledActionButton(
+                              icon: Icons.delete_outline_rounded,
+                              label: 'Delete',
+                              color: colorScheme.error,
+                              onPressed: () => _bulkDeleteBills(splitProvider),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  : const SizedBox.shrink(),
             ),
           ),
-
-          const SizedBox(height: AppLayout.spaceM),
-
-          // Search Field (Material 3 SearchBar)
-          SearchBar(
-            controller: _searchController,
-            hintText: 'Search friends or bills...',
-            leading: const Icon(Icons.search_rounded, size: 20),
-            trailing: [
-              if (_searchQuery.isNotEmpty)
-                IconButton(
-                  icon: const Icon(Icons.clear_rounded, size: 18),
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() => _searchQuery = '');
-                  },
-                ),
-            ],
-            elevation: const WidgetStatePropertyAll(0),
-            backgroundColor: WidgetStatePropertyAll(colorScheme.surfaceContainerHigh),
-            shape: WidgetStatePropertyAll(
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radiusMAX)),
-            ),
-            constraints: const BoxConstraints(minHeight: 48, maxHeight: 48),
-            padding: const WidgetStatePropertyAll(
-              EdgeInsets.symmetric(horizontal: 16),
-            ),
-            onChanged: (val) => setState(() => _searchQuery = val.trim()),
-          ),
-
-          const SizedBox(height: AppLayout.spaceM),
-
-          // 3. Filter Chips Bar
-          _buildFilterBar(context, splitProvider),
-
-          const SizedBox(height: AppLayout.spaceM),
-
-          // 4. Content Section (People View vs Bills View)
-          if (splitProvider.isLoading && splitProvider.bills.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 40),
-              child: Center(child: ExpressiveShapeMorphIndicator(size: 42)),
-            )
-          else if (splitProvider.activeViewMode == 0)
-            _buildPeopleView(context, splitProvider)
-          else
-            _buildBillsView(context, bills, splitProvider, settings),
-
-          const SizedBox(height: 96), // Clearance for morphing FAB
         ],
       ),
     );
@@ -566,6 +692,7 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
   ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final semantic = theme.extension<AppSemanticColors>();
     final successColor = semantic?.success ?? colorScheme.primary;
     final debtColor = colorScheme.error;
@@ -612,76 +739,38 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
           final totalExpected = bill.totalOthersShare;
           final progress = totalExpected > 0 ? (totalReceived / totalExpected).clamp(0.0, 1.0) : 1.0;
 
+          final isSelected = _selectedBillIds.contains(bill.id);
+
           return AnimationConfiguration.staggeredList(
             position: index,
             duration: const Duration(milliseconds: 250),
             child: SlideAnimation(
               verticalOffset: 20.0,
               child: FadeInAnimation(
-                child: Dismissible(
-                  key: ValueKey('split_bill_${bill.id}'),
-                  direction: DismissDirection.endToStart,
-                  background: Container(
-                    margin: const EdgeInsets.only(bottom: AppLayout.spaceS),
-                    decoration: BoxDecoration(
-                      color: colorScheme.errorContainer,
-                      borderRadius: BorderRadius.circular(AppLayout.radiusM),
-                    ),
-                    alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.only(right: 20),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text(
-                          'Delete',
-                          style: TextStyle(
-                            color: colorScheme.onErrorContainer,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(Icons.delete_outline, color: colorScheme.onErrorContainer),
-                      ],
-                    ),
-                  ),
-                  confirmDismiss: (direction) async {
-                    return await AppDialog.showConfirm(
-                      context: context,
-                      title: 'Delete Split Bill?',
-                      message: 'Are you sure you want to delete "${bill.title}"?',
-                      confirmLabel: 'Delete',
-                      isDestructive: true,
-                    );
-                  },
-                  onDismissed: (direction) async {
-                    await splitProvider.deleteBill(bill.id);
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).clearSnackBars();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Deleted "${bill.title}"'),
-                          behavior: SnackBarBehavior.floating,
-                          action: SnackBarAction(
-                            label: 'UNDO',
-                            onPressed: () {
-                              splitProvider.restoreBill(bill.id);
-                            },
-                          ),
-                        ),
-                      );
-                    }
-                  },
-                  child: InkWell(
-                    onTap: () {
+                child: InkWell(
+                  onTap: () {
+                    if (_isSelectionMode) {
+                      _toggleSelection(bill.id);
+                    } else {
                       HapticFeedback.lightImpact();
                       Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => SplitBillEditorScreen(existingBill: bill)),
                       );
-                    },
-                    borderRadius: BorderRadius.circular(AppLayout.radiusM),
-                    child: AppCard(
-                      padding: const EdgeInsets.all(AppLayout.spaceM),
-                      child: Column(
+                    }
+                  },
+                  onLongPress: () {
+                    _toggleSelection(bill.id);
+                  },
+                  borderRadius: BorderRadius.circular(AppLayout.radiusM),
+                  child: AppCard(
+                    padding: const EdgeInsets.all(AppLayout.spaceM),
+                    backgroundColor: isSelected
+                        ? colorScheme.primaryContainer.withValues(alpha: isDark ? 0.35 : 0.45)
+                        : null,
+                    border: isSelected
+                        ? BorderSide(color: colorScheme.primary, width: 1.5)
+                        : null,
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Title & Status
@@ -694,6 +783,14 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                                 children: [
                                   Row(
                                     children: [
+                                      if (isSelected) ...[
+                                        Icon(
+                                          Icons.check_circle_rounded,
+                                          size: 18,
+                                          color: colorScheme.primary,
+                                        ),
+                                        const SizedBox(width: AppLayout.spaceXS),
+                                      ],
                                       Expanded(
                                         child: Text(
                                           bill.title,
@@ -1026,9 +1123,8 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                 ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
     ),
   );
 }

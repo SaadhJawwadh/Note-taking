@@ -123,8 +123,12 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
                   Expanded(
                     child: Text(
                       progress.found > 0
-                          ? 'Synced ${progress.found} new transaction${progress.found == 1 ? "" : "s"} from the last 24h'
-                          : 'Up to date • No new transactions found in the last 24h',
+                          ? (progress.alreadyImported > 0
+                              ? 'Synced ${progress.found} new transaction${progress.found == 1 ? "" : "s"} (${progress.alreadyImported} already up-to-date)'
+                              : 'Synced ${progress.found} new transaction${progress.found == 1 ? "" : "s"} from the last 24h')
+                          : (progress.alreadyImported > 0
+                              ? 'Up to date • ${progress.alreadyImported} transaction${progress.alreadyImported == 1 ? " was" : "s were"} already imported'
+                              : 'Up to date • No new transactions found in the last 24h'),
                     ),
                   ),
                 ],
@@ -511,9 +515,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
                 ),
                 const SizedBox(height: 10),
                 buildPresetCard('All Time (Full History)', Icons.all_inclusive_outlined, allTime),
-                const SizedBox(height: 16),
-                Divider(color: colorScheme.outlineVariant.withValues(alpha: 0.4)),
-                const SizedBox(height: 4),
+                const SizedBox(height: AppLayout.spaceS),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: CircleAvatar(
@@ -865,31 +867,24 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
             ),
           ),
 
-          const SizedBox(height: 10),
-            Divider(color: onColor.withValues(alpha: 0.2), height: 1),
-            const SizedBox(height: 8),
+          const SizedBox(height: 12.0),
 
             // Income / Expense breakdown Row
-            IntrinsicHeight(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _miniStat(tt, Icons.south_west, 'Income',
-                        _totalIncome, currency, onColor),
-                  ),
-                  VerticalDivider(
-                      width: 1, color: onColor.withValues(alpha: 0.2)),
-                  Expanded(
-                    child: _miniStat(tt, Icons.arrow_outward, 'Expense',
-                        _totalExpense, currency, onColor),
-                  ),
-                ],
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: _miniStat(tt, Icons.south_west, 'Income',
+                      _totalIncome, currency, onColor),
+                ),
+                const SizedBox(width: 8.0),
+                Expanded(
+                  child: _miniStat(tt, Icons.arrow_outward, 'Expense',
+                      _totalExpense, currency, onColor),
+                ),
+              ],
             ),
             if (settings.enableSavingsVault) ...[
-              const SizedBox(height: 8),
-              Divider(color: onColor.withValues(alpha: 0.2), height: 1),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12.0),
 
               // Dual Account Quick-Filter Badges (Daily Operating vs. Savings Vault)
               Row(
@@ -1027,24 +1022,40 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
     final currency = settings.currency;
     final finProvider = Provider.of<FinancialManagerProvider>(context);
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Stack(
-        children: [
-          AnimationLimiter(
-            child: CustomScrollView(
-              controller: _scrollController,
-              slivers: _buildSlivers(colorScheme, textTheme, currency, settings),
+    return PopScope(
+      canPop: !finProvider.isSelectionMode && !_isSearching,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (finProvider.isSelectionMode) {
+          finProvider.clearSelection();
+        } else if (_isSearching) {
+          setState(() {
+            _isSearching = false;
+            _searchController.clear();
+            _searchQuery = '';
+            _applyFilters();
+          });
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Stack(
+          children: [
+            AnimationLimiter(
+              child: CustomScrollView(
+                controller: _scrollController,
+                slivers: _buildSlivers(colorScheme, textTheme, currency, settings, finProvider),
+              ),
             ),
-          ),
-          if (finProvider.isSmsSyncing && finProvider.smsSyncProgress != null)
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 70,
-              left: 16,
-              right: 16,
-              child: _buildSyncProgressBanner(context, finProvider.smsSyncProgress!),
-            ),
-        ],
+            if (finProvider.isSmsSyncing && finProvider.smsSyncProgress != null)
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 70,
+                left: 16,
+                right: 16,
+                child: _buildSyncProgressBanner(context, finProvider.smsSyncProgress!),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -1378,9 +1389,6 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
               FinancialTrashSheet.show(context).then((_) {
                 if (mounted) _refreshTransactions();
               });
-            } else if (value == 'settings') {
-              AppRoute.push(context, const SettingsScreen())
-                  .then((_) => _refreshTransactions());
             }
           },
           itemBuilder: (ctx) {
@@ -1399,7 +1407,6 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
                     ],
                   ),
                 ),
-                const PopupMenuDivider(),
               ],
               if (menuSettings.enableSmsImport)
                 PopupMenuItem(
@@ -1437,7 +1444,6 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
                     ],
                   ),
                 ),
-              const PopupMenuDivider(),
               PopupMenuItem(
                 value: 'export',
                 height: 48,
@@ -1464,18 +1470,6 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
                         label: Text('$_trashedCount'),
                         backgroundColor: colorScheme.error,
                       ),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(),
-              PopupMenuItem(
-                value: 'settings',
-                height: 48,
-                child: Row(
-                  children: [
-                    Icon(Icons.settings_outlined, size: 20, color: colorScheme.onSurfaceVariant),
-                    const SizedBox(width: 12),
-                    Text('Settings', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
                   ],
                 ),
               ),
@@ -1595,11 +1589,65 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
     );
   }
 
+  Widget _buildSelectionModeHeader(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+    FinancialManagerProvider finProvider,
+  ) {
+    final validTxIds = _transactions.where((t) => t.id != null).map((t) => t.id!).toList();
+    final allSelected = validTxIds.isNotEmpty &&
+        validTxIds.every((id) => finProvider.selectedTransactionIds.contains(id));
+
+    return Row(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.close_rounded),
+          tooltip: 'Clear selection',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+          visualDensity: VisualDensity.compact,
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            finProvider.clearSelection();
+          },
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            '${finProvider.selectedCount} selected',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface,
+            ),
+          ),
+        ),
+        IconButton(
+          icon: Icon(allSelected ? Icons.deselect_rounded : Icons.select_all_rounded),
+          tooltip: allSelected ? 'Deselect all' : 'Select all',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+          visualDensity: VisualDensity.compact,
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            if (allSelected) {
+              finProvider.clearSelection();
+            } else {
+              finProvider.selectAll(_transactions);
+            }
+          },
+        ),
+      ],
+    );
+  }
+
   List<Widget> _buildSlivers(
     ColorScheme colorScheme,
     TextTheme textTheme,
     String currency,
     SettingsProvider settings,
+    FinancialManagerProvider finProvider,
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final showBudgets = settings.enableBudgetsAndAnalytics;
@@ -1634,9 +1682,11 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
                   alignment: Alignment.center,
                   child: SizedBox(
                     height: 60,
-                    child: _isSearching
-                        ? _buildSearchModeHeader(colorScheme, textTheme)
-                        : _buildNormalHeader(colorScheme, textTheme, currency, isDark),
+                    child: finProvider.isSelectionMode
+                        ? _buildSelectionModeHeader(colorScheme, textTheme, finProvider)
+                        : _isSearching
+                            ? _buildSearchModeHeader(colorScheme, textTheme)
+                            : _buildNormalHeader(colorScheme, textTheme, currency, isDark),
                   ),
                 ),
               ),
@@ -2064,6 +2114,10 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
         selected: {effectiveSelected},
         onSelectionChanged: (Set<String> newSelection) {
           HapticFeedback.lightImpact();
+          final finProvider = Provider.of<FinancialManagerProvider>(context, listen: false);
+          if (finProvider.isSelectionMode) {
+            finProvider.clearSelection();
+          }
           setState(() {
             _selectedTab = newSelection.first;
           });

@@ -340,7 +340,7 @@ class _HomeAppBarState extends State<HomeAppBar> {
                   ],
                 ),
               ),
-              const Divider(),
+              const SizedBox(height: AppLayout.spaceS),
               Flexible(
                 child: ListView(
                   shrinkWrap: true,
@@ -388,7 +388,7 @@ class _HomeAppBarState extends State<HomeAppBar> {
                         },
                       );
                     }),
-                    const Divider(height: 16),
+                    const SizedBox(height: AppLayout.spaceM),
                     ListTile(
                       leading: Icon(Icons.archive_outlined, color: Theme.of(context).colorScheme.onSurfaceVariant),
                       title: const Text('Archived Notes'),
@@ -641,7 +641,6 @@ class _HomeAppBarState extends State<HomeAppBar> {
                   ],
                 ),
               ),
-              const PopupMenuDivider(height: 1),
               ...[
                 ('modified', 'Sort by Last Modified', Icons.access_time_rounded),
                 ('created', 'Sort by Date Created', Icons.calendar_today_rounded),
@@ -679,7 +678,6 @@ class _HomeAppBarState extends State<HomeAppBar> {
                   ),
                 );
               }),
-              const PopupMenuDivider(height: 1),
               PopupMenuItem<String>(
                 value: 'manage_folders',
                 height: 48,

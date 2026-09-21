@@ -21,6 +21,7 @@ class ExpressiveFloatingToolbar extends StatelessWidget {
   final bool isVibrant;
   final bool isScrollable;
   final MainAxisSize mainAxisSize;
+  final MainAxisAlignment mainAxisAlignment;
   final CrossAxisAlignment crossAxisAlignment;
 
   const ExpressiveFloatingToolbar({
@@ -34,6 +35,7 @@ class ExpressiveFloatingToolbar extends StatelessWidget {
     this.isVibrant = false,
     this.isScrollable = false,
     this.mainAxisSize = MainAxisSize.min,
+    this.mainAxisAlignment = MainAxisAlignment.center,
     this.crossAxisAlignment = CrossAxisAlignment.center,
   });
 
@@ -54,6 +56,7 @@ class ExpressiveFloatingToolbar extends StatelessWidget {
 
     Widget content = Row(
       mainAxisSize: mainAxisSize,
+      mainAxisAlignment: mainAxisAlignment,
       crossAxisAlignment: crossAxisAlignment,
       children: children,
     );
@@ -97,15 +100,18 @@ class ExpressiveFloatingToolbar extends StatelessWidget {
     );
   }
 
-  /// Helper to create a standard M3 vertical divider for toolbar button clusters.
-  static Widget divider(BuildContext context, {double height = 24.0}) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      height: height,
-      width: 1.0,
-      margin: const EdgeInsets.symmetric(horizontal: 4.0),
-      color: colorScheme.outlineVariant.withValues(alpha: 0.40),
-    );
+  /// Helper to provide intentional M3 whitespace grouping between toolbar button clusters.
+  /// In Material 3 Expressive, visual grouping is achieved through whitespace gaps
+  /// rather than 1px hairline rules.
+  static Widget spacer({double width = 8.0}) {
+    return SizedBox(width: width);
+  }
+
+  /// Legacy helper for toolbar button clustering.
+  /// Maintained for backwards-compatibility; now renders an intentional M3 whitespace spacer
+  /// instead of a 1px vertical hairline rule.
+  static Widget divider(BuildContext context, {double height = 24.0, double width = 8.0}) {
+    return SizedBox(width: width);
   }
 
   /// Helper to create an accessible toolbar icon button with guaranteed >=48x48dp bounds.
@@ -129,6 +135,41 @@ class ExpressiveFloatingToolbar extends StatelessWidget {
           constraints: const BoxConstraints(minWidth: 48.0, minHeight: 48.0),
           padding: const EdgeInsets.all(8.0),
           icon: customIcon ?? Icon(icon, size: 24.0, color: buttonColor),
+        );
+      },
+    );
+  }
+
+  /// Helper to create an accessible toolbar button with an icon and label text.
+  static Widget labeledActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback? onPressed,
+    Color? color,
+    bool isSelected = false,
+  }) {
+    return Builder(
+      builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        final Color buttonColor = color ??
+            (isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant);
+
+        return TextButton.icon(
+          onPressed: onPressed,
+          icon: Icon(icon, size: 20.0, color: buttonColor),
+          label: Text(
+            label,
+            style: TextStyle(
+              color: buttonColor,
+              fontWeight: FontWeight.w600,
+              fontSize: 13.0,
+            ),
+          ),
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 8.0),
+            minimumSize: const Size(48.0, 48.0),
+            shape: const StadiumBorder(),
+          ),
         );
       },
     );

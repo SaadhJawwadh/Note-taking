@@ -55,6 +55,13 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
   }
 
   late String _initialCategory;
+  late final String _initAmount;
+  late final String _initDesc;
+  late final DateTime _initDate;
+  late final bool _initIsExpense;
+  late final String _initCategory;
+  late final String _initAccount;
+  RecurringFrequency? _initRepeatFrequency;
 
   @override
   void initState() {
@@ -70,6 +77,71 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
       _checkExistingRecurringRule();
     }
     _initialCategory = _category;
+    _initAmount = _amountController.text.trim();
+    _initDesc = _descriptionController.text.trim();
+    _initDate = _selectedDate;
+    _initIsExpense = _isExpense;
+    _initCategory = _category;
+    _initAccount = _account;
+    _initRepeatFrequency = _repeatFrequency;
+  }
+
+  bool get _isDirty {
+    if (_amountController.text.trim() != _initAmount) return true;
+    if (_descriptionController.text.trim() != _initDesc) return true;
+    if (_isExpense != _initIsExpense) return true;
+    if (_category != _initCategory) return true;
+    if (_account != _initAccount) return true;
+    if (_selectedDate.year != _initDate.year ||
+        _selectedDate.month != _initDate.month ||
+        _selectedDate.day != _initDate.day) {
+      return true;
+    }
+    if (_repeatFrequency != _initRepeatFrequency) return true;
+    return false;
+  }
+
+  Future<bool> _showDiscardConfirmation() async {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppLayout.radiusL),
+        ),
+        title: Text(
+          'Unsaved Changes',
+          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'You have unsaved changes to this transaction. Do you want to save them before leaving?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop('discard'),
+            style: TextButton.styleFrom(foregroundColor: colorScheme.error),
+            child: const Text('Discard'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop('keep'),
+            child: const Text('Keep Editing'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop('save'),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == 'discard') {
+      return true;
+    } else if (result == 'save') {
+      await _saveTransaction();
+      return false;
+    }
+    return false;
   }
 
   Future<void> _checkExistingRecurringRule() async {
@@ -85,6 +157,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
         setState(() {
           _matchedRuleId = rule.id;
           _repeatFrequency = rule.frequency;
+          _initRepeatFrequency = rule.frequency;
         });
       }
     } catch (_) {}
@@ -743,23 +816,33 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
     final settings = Provider.of<SettingsProvider>(context);
     final currency = settings.currency;
 
-    return Scaffold(
-      body: NotificationListener<UserScrollNotification>(
-        onNotification: _onScrollNotification,
-        child: CustomScrollView(
-          slivers: [
-            ExpressiveSliverAppBar(
-              titleText: widget.transaction == null
-                  ? 'New Transaction'
-                  : 'Edit Transaction',
-              showBackButton: true,
-              actions: [
-                if (widget.transaction != null)
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline),
-                    color: colorScheme.error,
-                    onPressed: _deleteTransaction,
-                  ),
+    return PopScope(
+      canPop: !_isDirty && !_isLoading,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final shouldPop = await _showDiscardConfirmation();
+        if (shouldPop == true && context.mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        body: NotificationListener<UserScrollNotification>(
+          onNotification: _onScrollNotification,
+          child: CustomScrollView(
+            slivers: [
+              ExpressiveSliverAppBar(
+                titleText: widget.transaction == null
+                    ? 'New Transaction'
+                    : 'Edit Transaction',
+                showBackButton: true,
+                onBackPressed: () => Navigator.maybePop(context),
+                actions: [
+                  if (widget.transaction != null)
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline),
+                      color: colorScheme.error,
+                      onPressed: _deleteTransaction,
+                    ),
               ],
             ),
             SliverPadding(
@@ -1113,6 +1196,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
           },
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

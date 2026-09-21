@@ -27,6 +27,7 @@ import '../../core/theme/app_theme.dart';
 class SettingsSearchResult {
   final String title;
   final String subtitle;
+  final String section;
   final IconData icon;
   final List<String> keywords;
   final VoidCallback onTap;
@@ -35,6 +36,7 @@ class SettingsSearchResult {
   const SettingsSearchResult({
     required this.title,
     required this.subtitle,
+    this.section = 'Settings',
     required this.icon,
     required this.keywords,
     required this.onTap,
@@ -194,9 +196,11 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
     final settings = Provider.of<SettingsProvider>(context, listen: false);
 
     final allItems = <SettingsSearchResult>[
+      // Security
       SettingsSearchResult(
         title: 'App Lock & Security',
         subtitle: 'Configure PIN & biometric protection',
+        section: 'Security',
         icon: Icons.lock_outlined,
         keywords: [
           'app lock',
@@ -206,7 +210,8 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
           'password',
           'timeout',
           'lock',
-          'setings'
+          'fingerprint',
+          'face unlock',
         ],
         onTap: () => AppRoute.push(context, const SettingsScreen(initialQuery: 'App Lock')),
         trailingWidget: Switch.adaptive(
@@ -217,16 +222,21 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
           },
         ),
       ),
+
+      // Finances
       SettingsSearchResult(
         title: 'SMS Auto-Sync',
         subtitle: 'Daily background SMS transaction import',
+        section: 'Finances',
         icon: Icons.sync_outlined,
         keywords: [
           'auto sync',
           'sms sync',
           'daily sync',
           'background sync',
-          'test sync'
+          'test sync',
+          'telephony',
+          'bank parser',
         ],
         onTap: () => AppRoute.push(context, const SettingsScreen(initialQuery: 'SMS')),
         trailingWidget: _isTestingSync
@@ -255,21 +265,17 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
               ),
       ),
       SettingsSearchResult(
-        title: 'Import Transactions (CSV)',
-        subtitle: 'Import transaction records from CSV file',
-        icon: Icons.file_upload_outlined,
-        keywords: [
-          'import csv',
-          'csv',
-          'import transactions',
-          'excel',
-          'ledger csv'
-        ],
-        onTap: () => BackupService.importTransactionsFromCsv(context),
+        title: 'Currency',
+        subtitle: 'Select currency symbol (${settings.currencySymbol} - LKR, USD, EUR, INR...)',
+        section: 'Finances',
+        icon: Icons.monetization_on_outlined,
+        keywords: ['currency', 'symbol', 'usd', 'lkr', 'eur', 'gbp', 'inr', 'rupee', 'dollar', 'money'],
+        onTap: () => AppRoute.push(context, const SettingsScreen(initialQuery: 'Currency')),
       ),
       SettingsSearchResult(
         title: 'Manage Categories',
         subtitle: 'Customise transaction categories & keywords',
+        section: 'Finances',
         icon: Icons.category_outlined,
         keywords: [
           'category',
@@ -282,22 +288,55 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
         onTap: () => AppRoute.push(context, const CategoryManagementScreen()),
       ),
       SettingsSearchResult(
+        title: 'Savings Goals & Vault',
+        subtitle: 'Goal pockets, milestone targets & vault reserve transfers',
+        section: 'Finances',
+        icon: Icons.savings_outlined,
+        keywords: ['savings', 'savings goals', 'vault', 'pocket', 'piggy bank', 'deposit', 'emergency fund'],
+        onTap: () => AppRoute.push(context, const SettingsScreen(initialQuery: 'Savings')),
+      ),
+      SettingsSearchResult(
+        title: 'Split Bills & Shared Debts',
+        subtitle: 'Split receipts with friends and record settlement repayments',
+        section: 'Finances',
+        icon: Icons.call_split_rounded,
+        keywords: ['split bills', 'split', 'iou', 'shared debt', 'group expense', 'friends', 'settle up', 'whatsapp'],
+        onTap: () => AppRoute.push(context, const SettingsScreen(initialQuery: 'Split Bills')),
+      ),
+      SettingsSearchResult(
         title: 'SMS Contacts',
         subtitle: 'Manage recognized bank senders for auto-import',
+        section: 'Finances',
         icon: Icons.contacts_outlined,
-        keywords: ['sms contacts', 'contacts', 'senders', 'bank', 'phone'],
+        keywords: ['sms contacts', 'contacts', 'senders', 'bank', 'phone', 'whitelist', 'blacklist'],
         onTap: () => AppRoute.push(context, const SmsContactsScreen()),
+      ),
+      SettingsSearchResult(
+        title: 'SMS Import Rules',
+        subtitle: 'Auto-categorization & transaction type rules',
+        section: 'Finances',
+        icon: Icons.rule_folder_outlined,
+        keywords: [
+          'sms rules',
+          'auto categorize',
+          'income rules',
+          'expense rules',
+          'train parser',
+        ],
+        onTap: () => AppRoute.push(context, const SmsRulesScreen()),
       ),
       SettingsSearchResult(
         title: 'Recurring Transactions',
         subtitle: 'Manage automatically repeating ledger entries',
+        section: 'Finances',
         icon: Icons.event_repeat_outlined,
         keywords: [
           'recurring',
           'rules',
           'repeating',
           'subscription',
-          'auto transaction'
+          'auto transaction',
+          'salary',
         ],
         onTap: () {
           final currency = context.read<SettingsProvider>().currency;
@@ -308,35 +347,72 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
           );
         },
       ),
-      SettingsSearchResult(
-        title: 'SMS Import Rules',
-        subtitle: 'Auto-categorization & transaction type rules',
-        icon: Icons.rule_folder_outlined,
-        keywords: [
-          'sms rules',
-          'auto categorize',
-          'income rules',
-          'expense rules'
-        ],
-        onTap: () => AppRoute.push(context, const SmsRulesScreen()),
-      ),
+
+      // Data & Backups
       SettingsSearchResult(
         title: 'Export & Import Backup',
-        subtitle: 'Save or restore all notes and settings to JSON file',
+        subtitle: 'Save or restore all notes and settings to encrypted JSON file',
+        section: 'Data',
         icon: Icons.backup_outlined,
         keywords: [
           'backup',
           'export backup',
           'import backup',
           'restore',
-          'json'
+          'json',
+          'encrypted',
+          'saf',
+          'storage',
         ],
         onTap: () => AppRoute.push(context, const SettingsScreen(initialQuery: 'Backup')),
       ),
       SettingsSearchResult(
+        title: 'Import Transactions (CSV)',
+        subtitle: 'Import transaction records from CSV file',
+        section: 'Data',
+        icon: Icons.file_upload_outlined,
+        keywords: [
+          'import csv',
+          'csv',
+          'import transactions',
+          'excel',
+          'ledger csv',
+        ],
+        onTap: () => BackupService.importTransactionsFromCsv(context),
+      ),
+      SettingsSearchResult(
+        title: 'P2P Device Sync',
+        subtitle: 'Sync notes & finances with paired devices over Wi-Fi',
+        section: 'Data',
+        icon: Icons.sync_rounded,
+        keywords: [
+          'p2p',
+          'sync',
+          'device sync',
+          'pair',
+          'wifi sync',
+          'pair device',
+          'qr code',
+          'paired devices',
+          'p2p sync',
+        ],
+        onTap: () => AppRoute.push(context, const P2pSyncScreen()),
+      ),
+      SettingsSearchResult(
+        title: 'Google Keep Import',
+        subtitle: 'Import notes and archives from Google Takeout ZIP',
+        section: 'Data',
+        icon: Icons.archive_outlined,
+        keywords: ['google keep', 'takeout', 'import notes', 'keep notes', 'migration', 'zip import'],
+        onTap: () => AppRoute.push(context, const SettingsScreen(initialQuery: 'Google Keep')),
+      ),
+
+      // Features
+      SettingsSearchResult(
         title: 'Period Tracker',
         subtitle: 'Optional cycle tracking and symptom logs',
-        icon: Icons.calendar_month_outlined,
+        section: 'Features',
+        icon: Icons.water_drop_outlined,
         keywords: [
           'period',
           'tracker',
@@ -345,14 +421,14 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
           'symptoms',
           'ovulation',
           'menstrual',
-          'peroid'
+          'lunar',
         ],
         onTap: () => AppRoute.push(context, const PeriodTrackerScreen()),
       ),
       SettingsSearchResult(
         title: 'Gemini Nano AI',
-        subtitle:
-            'Enable offline summaries, tag suggestions & smart SMS parsing',
+        subtitle: 'Offline note summaries, tag suggestions & smart SMS parsing',
+        section: 'Features',
         icon: Icons.auto_awesome_outlined,
         keywords: [
           'ai',
@@ -360,20 +436,23 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
           'nano',
           'summaries',
           'tag suggestions',
-          'smart sms'
+          'smart sms',
+          'on device ai',
         ],
         onTap: () => AppRoute.push(context, const SettingsScreen(initialQuery: 'Gemini')),
       ),
       SettingsSearchResult(
         title: 'Manage Tags',
         subtitle: 'View, edit, and organize all note tags',
+        section: 'Features',
         icon: Icons.label_outlined,
-        keywords: ['tags', 'manage tags', 'labels', 'tag colors'],
+        keywords: ['tags', 'manage tags', 'labels', 'tag colors', 'rename tag'],
         onTap: () => AppRoute.push(context, const ManageTagsScreen()),
       ),
       SettingsSearchResult(
         title: 'Archive',
         subtitle: 'View archived notes',
+        section: 'Features',
         icon: Icons.archive_outlined,
         keywords: ['archive', 'archived', 'hidden notes'],
         onTap: () => AppRoute.push(context,
@@ -382,63 +461,91 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
       SettingsSearchResult(
         title: 'Trash',
         subtitle: 'View deleted notes',
+        section: 'Features',
         icon: Icons.delete_outline,
-        keywords: ['trash', 'deleted', 'restore deleted'],
+        keywords: ['trash', 'deleted', 'restore deleted', 'bin', 'purge'],
         onTap: () => AppRoute.push(
             context, const FilteredNotesScreen(filterType: FilterType.trash)),
       ),
       SettingsSearchResult(
-        title: 'Currency',
-        subtitle: 'Select currency symbol (LKR, USD, EUR, GBP...)',
-        icon: Icons.currency_exchange_outlined,
-        keywords: ['currency', 'symbol', 'usd', 'lkr', 'eur', 'gbp', 'money'],
-        onTap: () => AppRoute.push(context, const SettingsScreen(initialQuery: 'Currency')),
-      ),
-      SettingsSearchResult(
-        title: 'P2P Device Sync',
-        subtitle: 'Sync notes & finances with paired devices over Wi-Fi',
-        icon: Icons.sync_rounded,
+        title: 'Folders',
+        subtitle: 'Organize and manage note folders',
+        section: 'Features',
+        icon: Icons.folder_outlined,
         keywords: [
-          'p2p', 'sync', 'device sync', 'pair', 'wifi sync',
-          'pair device', 'qr code', 'paired devices', 'p2p sync'
+          'folder',
+          'folders',
+          'organize',
+          'category',
+          'notebook',
+          'move note',
+          'create folder',
         ],
-        onTap: () => AppRoute.push(context, const P2pSyncScreen()),
+        onTap: () => AppRoute.push(context, const SettingsScreen(initialQuery: 'Folders')),
       ),
-      SettingsSearchResult(
-        title: 'Text Size',
-        subtitle: 'Adjust app-wide font size for comfortable reading',
-        icon: Icons.text_fields_outlined,
-        keywords: [
-          'text size', 'font size', 'font', 'reading', 'accessibility',
-          'large text', 'small text', 'text scale'
-        ],
-        onTap: () => AppRoute.push(context, const SettingsScreen(initialQuery: 'Text Size')),
-      ),
+
+      // Appearance
       SettingsSearchResult(
         title: 'App Theme & Color',
         subtitle: 'Switch light/dark mode and dynamic Material You colors',
+        section: 'Appearance',
         icon: Icons.palette_outlined,
         keywords: [
-          'theme', 'dark mode', 'light mode', 'color', 'dynamic color',
-          'material you', 'wallpaper', 'appearance', 'dark', 'light'
+          'theme',
+          'dark mode',
+          'light mode',
+          'color',
+          'dynamic color',
+          'material you',
+          'wallpaper',
+          'appearance',
+          'dark',
+          'light',
+          'oled',
         ],
         onTap: () => AppRoute.push(context, const SettingsScreen(initialQuery: 'Theme')),
       ),
       SettingsSearchResult(
-        title: 'Folders',
-        subtitle: 'Organize and manage note folders',
-        icon: Icons.folder_outlined,
+        title: 'Text Size',
+        subtitle: 'Adjust app-wide font size for comfortable reading',
+        section: 'Appearance',
+        icon: Icons.text_fields_outlined,
         keywords: [
-          'folder', 'folders', 'organize', 'category', 'notebook',
-          'move note', 'create folder'
+          'text size',
+          'font size',
+          'font',
+          'reading',
+          'accessibility',
+          'large text',
+          'small text',
+          'text scale',
         ],
-        onTap: () => AppRoute.push(context, const SettingsScreen(initialQuery: 'Folders')),
+        onTap: () => AppRoute.push(context, const SettingsScreen(initialQuery: 'Text Size')),
+      ),
+
+      // About
+      SettingsSearchResult(
+        title: 'What\'s New / Changelog',
+        subtitle: 'View latest release highlights and version history',
+        section: 'About',
+        icon: Icons.new_releases_outlined,
+        keywords: ['changelog', 'whats new', 'updates', 'version', 'release notes', 'history'],
+        onTap: () => AppRoute.push(context, const SettingsScreen(initialQuery: 'Changelog')),
+      ),
+      SettingsSearchResult(
+        title: 'Replay Onboarding',
+        subtitle: 'Tour features, personalization, and core architecture setup',
+        section: 'About',
+        icon: Icons.explore_outlined,
+        keywords: ['onboarding', 'tutorial', 'tour', 'setup wizard', 'welcome', 'guide'],
+        onTap: () => AppRoute.push(context, const SettingsScreen(initialQuery: 'Onboarding')),
       ),
     ];
 
     return allItems.where((item) {
       return _fuzzyMatch(item.title, search) ||
           _fuzzyMatch(item.subtitle, search) ||
+          _fuzzyMatch(item.section, search) ||
           item.keywords.any((k) => _fuzzyMatch(k, search));
     }).toList();
   }
@@ -608,14 +715,36 @@ class _UniversalSearchOverlayState extends State<UniversalSearchOverlay> {
           ),
           child: Icon(s.icon, color: primaryColor, size: 18),
         ),
-        title: HighlightedText(
-          text: s.title,
-          query: widget.query,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-          highlightStyle: TextStyle(
-              fontWeight: FontWeight.bold, fontSize: 14, color: primaryColor),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+        title: Row(
+          children: [
+            Expanded(
+              child: HighlightedText(
+                text: s.title,
+                query: widget.query,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                highlightStyle: TextStyle(
+                    fontWeight: FontWeight.bold, fontSize: 14, color: primaryColor),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: primaryColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(AppLayout.radiusXS),
+              ),
+              child: Text(
+                s.section,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: primaryColor,
+                ),
+              ),
+            ),
+          ],
         ),
         subtitle: HighlightedText(
           text: s.subtitle,

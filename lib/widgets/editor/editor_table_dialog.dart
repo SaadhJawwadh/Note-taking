@@ -79,11 +79,7 @@ class _EditorTableDialogState extends State<EditorTableDialog> {
                 onDecrement: _cols > 1 ? () => setState(() => _cols--) : null,
                 onIncrement: _cols < 10 ? () => setState(() => _cols++) : null,
               ),
-              Container(
-                height: 40,
-                width: 1,
-                color: colorScheme.outlineVariant.withValues(alpha: 0.4),
-              ),
+              const SizedBox(width: AppLayout.spaceM),
               _DimensionCounter(
                 label: 'Rows',
                 value: _rows,

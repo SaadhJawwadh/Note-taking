@@ -29,7 +29,8 @@ lib/
 │       ├── app_chip.dart             # Standardized pill/chip widget (tags, categories, phases)
 │       ├── app_dialog.dart           # Standardized M3 confirmation & input dialogs
 │       ├── app_morphing_fab.dart     # Standardized stadium-to-circle morphing action button
-│       └── frosted_sliver_app_bar.dart# Glassmorphic edge-to-edge top app bar
+│       ├── expressive_floating_toolbar.dart # Tactile contextual floating action pill toolbar
+│       └── expressive_sliver_app_bar.dart # Seamless borderless M3 surface header
 ├── features/                         # Modular Domain Feature Bundles
 │   ├── finances/                     # Financial Manager & Split Bills Feature Module
 │   │   ├── data/

@@ -210,9 +210,7 @@ class _PeriodLogDashboardCardState extends State<PeriodLogDashboardCard> {
               ),
             ],
 
-            const SizedBox(height: 14),
-            Divider(height: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppLayout.spaceL),
 
             // Flow Intensity
             Text(
@@ -278,8 +276,7 @@ class _PeriodLogDashboardCardState extends State<PeriodLogDashboardCard> {
               }),
             ),
 
-            const SizedBox(height: 14),
-            Divider(height: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+            const SizedBox(height: AppLayout.spaceM),
 
             // Collapsible Symptoms Section
             InkWell(

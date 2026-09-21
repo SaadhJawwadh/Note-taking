@@ -128,21 +128,17 @@ class _P2pSyncScreenState extends State<P2pSyncScreen> {
                     ),
                   ),
                   const SizedBox(height: AppLayout.spaceL),
-                  Row(
-                    children: [
-                      const Expanded(child: Divider()),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: AppLayout.spaceS),
-                        child: Text(
-                          'OR ENTER MANUAL IP & CODE',
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.outline,
-                              ),
-                        ),
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: AppLayout.spaceXS),
+                      child: Text(
+                        'OR ENTER MANUAL IP & CODE',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
                       ),
-                      const Expanded(child: Divider()),
-                    ],
+                    ),
                   ),
                   const SizedBox(height: AppLayout.spaceM),
                   TextField(

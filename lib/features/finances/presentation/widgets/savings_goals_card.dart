@@ -97,9 +97,7 @@ class SavingsGoalsCard extends StatelessWidget {
               ] else ...[
                 // Aggregate Overview
                 _buildAggregateOverview(context, goals, currencySymbol),
-                const SizedBox(height: AppLayout.spaceM),
-                const Divider(height: 1),
-                const SizedBox(height: AppLayout.spaceS),
+                const SizedBox(height: AppLayout.spaceL),
 
                 // Goals List
                 ListView.separated(

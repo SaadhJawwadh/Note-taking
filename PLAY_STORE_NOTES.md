@@ -1,22 +1,18 @@
 <en-US>
 🌟 What's New
-• Modular Architecture: Enable/disable sub-features in Notes & Finances to keep the app ultra-minimal or feature-packed.
-• Minimal Note Editor: Distraction-free writing dock with formatting tucked away.
-• Single-View Ledger: Auto-streamlines finance view when extra tools are off.
-• Modular Onboarding: Customize your setup right from the start.
+• Multi-Select: Easily select and manage multiple notes, transactions, and trash items at once.
+• Floating Action Toolbars: Quick batch actions for categorizing, archiving, and deleting.
+• Modern Material 3 Design: Clean dividerless surfaces with enhanced visual clarity.
 
 🚀 Improvements
-• Interactive Home Screen Widget with cash flow summary.
+• Smoother touch feedback and polished dialog layouts.
 </en-US>
 <ta-IN>
 🌟 புதிய அம்சங்கள்
-• தனிப்பயனாக்கம்: குறிப்புகள் மற்றும் நிதி பிரிவுகளில் தேவையான கருவிகளை மட்டும் ஆன்/ஆஃப் செய்யலாம்.
-• எளிய நோட் எடிட்டர்: கவனச்சிதறலற்ற எழுதுதல் வசதி.
-• ஒற்றைப் பார்வை கணக்கு: கூடுதல் வசதிகள் முடக்கப்பட்டால் எளிய பார்வை.
-• புதிய தொடக்க திரை வழிகாட்டி.
+• பல தேர்வு வசதி: பல குறிப்புகள் மற்றும் பரிவர்த்தனைகளை ஒரே நேரத்தில் எளிதாக தேர்வு செய்து நிர்வகிக்கலாம்.
+• விரைவு கருவிப்பட்டி: பல பதிவுகளை ஒரே நேரத்தில் மாற்ற, காப்பகப்படுத்த மற்றும் நீக்க உதவும் புதிய பட்டி.
+• புதிய நவீன வடிவமைப்பு: வரிகளற்ற தெளிவான தோற்றம்.
 
 🚀 மேம்பாடுகள்
-• முகப்புத்திரை விட்ஜெட் மூலம் விரைவு தகவல்கள்.
+• மேம்பட்ட தொடுதல் உணர்வு மற்றும் திரைகள்.
 </ta-IN>
-
-

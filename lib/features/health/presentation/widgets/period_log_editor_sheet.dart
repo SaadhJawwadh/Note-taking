@@ -182,7 +182,7 @@ class _PeriodLogEditorSheetState extends State<PeriodLogEditorSheet> {
                 }
               },
             ),
-            const Divider(),
+            const SizedBox(height: AppLayout.spaceS),
 
             SwitchListTile(
               title: const Text('Ongoing Period'),
@@ -223,9 +223,7 @@ class _PeriodLogEditorSheetState extends State<PeriodLogEditorSheet> {
                 },
               ),
             ],
-            const Divider(),
-
-            const SizedBox(height: 16),
+            const SizedBox(height: AppLayout.spaceM),
             Text('Flow Intensity', style: theme.textTheme.titleMedium),
             const SizedBox(height: 12),
             SegmentedButton<String>(

@@ -28,9 +28,40 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
+                  version: 'v2.41.0',
+                  date: 'September 21, 2026',
+                  isLatest: true,
+                  changes: [
+                    _ChangelogGroup(
+                      title: "What's New",
+                      items: [
+                        'Long-Press Multi-Selection: Select multiple items across Notes, Financial Ledger, Trash, and Split Bills for quick batch operations.',
+                        'Contextual Floating Action Toolbars: Smooth floating action toolbar for one-tap batch categories, archiving, and deletion.',
+                        'Material 3 Expressive Surfaces: Complete dividerless surface redesign with solid tonal container layering and improved contrast.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: 'Improvements',
+                      items: [
+                        'Tactile Haptic Feedback: Micro-vibration responses on item selections and bulk action triggers.',
+                        'Polished Dialogs & Sheets: Consistent edge-to-edge layouts across Calculator, SMS Import, and Details dialogs.',
+                        'Sub-Pixel Layout Alignment: Flawless vertical headroom and symmetry across all module sliver headers.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: 'Fixes',
+                      items: [
+                        'Multi-Selection State Consistency: Smooth transitions entering and exiting selection modes without flickering.',
+                        'Table Dialog & Action Layout: Resolved divider lines and improved button padding in editor dialogs.',
+                      ],
+                    ),
+                  ],
+                ),
+                _buildVersionSection(
+                  context,
                   version: 'v2.40.0',
                   date: 'September 17, 2026',
-                  isLatest: true,
+                  isLatest: false,
                   changes: [
                     _ChangelogGroup(
                       title: "What's New",
@@ -1191,7 +1222,7 @@ class ChangelogScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const Divider(height: AppLayout.spaceXL),
+                  const SizedBox(height: AppLayout.spaceM),
                   ...changes.map((group) {
                     final cleanTitle = group.title.replaceAll(RegExp(r'[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]', unicode: true), '').trim();
                     IconData groupIcon = Icons.article_outlined;

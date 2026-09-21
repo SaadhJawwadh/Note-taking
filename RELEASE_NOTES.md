@@ -1,17 +1,15 @@
 
 ### 🌟 What's New
-- **Modular Sub-Features Architecture**: Complete personalization over your workspace. Enable or disable individual sub-features within Notes and Finances to make the app as ultra-minimal or as feature-packed as you need.
-- **Minimal Note Editor Mode**: Focus purely on your thoughts with a distraction-free writing dock. Advanced formatting and secondary utilities tuck cleanly into the top menu.
-- **Dynamic Single-View Financial Ledger**: When secondary finance tools (Budgets, Split Bills) are turned off, the finance screen automatically converts from multi-tab navigation into a clean, seamless single-view ledger.
-- **Independent Notes Customization**: Toggle the note tag filter bar on or off independently to suit your organization style.
-- **Expanded Modular Onboarding**: Slide 3 of the setup wizard now allows new users to configure their preferred modular writing and finance tools from day one, with full replayability anytime in Settings.
+- **Long-Press Multi-Selection**: Long press to select multiple items across Notes, Financial Ledger, Trash, and Split Bills to perform quick bulk operations.
+- **Contextual Floating Action Toolbars**: Convenient floating bottom action toolbar dynamically appears during selection mode, letting you batch assign categories, archive, or delete selected records with one tap.
+- **Material 3 Expressive Surfaces**: Unified dividerless surface architecture with smooth tonal container layering, cleaner layouts, and enhanced contrast.
 
 ### 🚀 Improvements
-- **Finance Home Screen Widget**: Interactive home screen widget with quick action buttons, responsive typography, and instant cash flow balance syncing.
-- **Context-Aware Transaction Editor**: Fields for recurring cycles, receipt scanning, and bill splitting dynamically adapt to active sub-features, removing visual clutter.
-- **Zero-Friction Reconfigurability**: Toggling sub-features in Settings or during Onboarding applies instantly across all screens with zero restarts required.
+- **Tactile Haptic Feedback**: Refined micro-vibrations when engaging multi-selection, toggling items, and confirming batch actions.
+- **Polished Dialogs & Sheets**: Streamlined padding and clean surface backgrounds across Calculator, SMS Import, and Note Details sheets.
+- **Sub-Pixel Layout Alignment**: Enhanced edge-to-edge content presentation with perfect vertical headroom across all module headers.
 
 ### 🐛 Fixes
-- **Split Bill Action Parity**: Safely hid the split bill creation button in the transaction editor when the Split Bills sub-feature is disabled.
-- **State Preservation on Re-enable**: Disabling sub-features safely retains your underlying categories, budgets, and recurring rules so nothing is lost if re-enabled.
+- **Multi-Selection State Consistency**: Smooth transition when entering and exiting selection mode without visual flickering or sticky states.
+- **Table Dialog & Action Layout**: Resolved divider overlap and improved action button spacing in editor dialogs.
 

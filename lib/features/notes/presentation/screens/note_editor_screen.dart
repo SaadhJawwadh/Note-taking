@@ -2449,7 +2449,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                   ],
                 ),
               ),
-              const Divider(height: 1),
+              const SizedBox(height: 6.0),
               Flexible(
                 child: ListView.builder(
                   shrinkWrap: true,
@@ -2840,13 +2840,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                         onPressed: () => Navigator.maybePop(context),
                                       ),
                                     ),
-                                    Container(
-                                      height: 32,
-                                      width: 1,
-                                      color: textColor.withValues(alpha: 0.2),
-                                      margin:
-                                          const EdgeInsets.symmetric(horizontal: 8),
-                                    ),
+                                    const SizedBox(width: AppLayout.spaceS),
                                     QuillToolbarHistoryButton(
                                       isUndo: true,
                                       controller: _quillController,
@@ -2879,14 +2873,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                         onPressed: _showTagPicker,
                                       ),
                                     ),
-                                    SizedBox(
-                                      height: 20,
-                                      child: VerticalDivider(
-                                        width: 12,
-                                        thickness: 1,
-                                        color: textColor.withValues(alpha: 0.2),
-                                      ),
-                                    ),
+                                    const SizedBox(width: 4.0),
                                     PopupMenuButton<String>(
                                       icon: Icon(Icons.more_vert_rounded, color: textColor),
                                       tooltip: 'More',
@@ -2990,7 +2977,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                                   ],
                                                 ),
                                               ),
-                                            const PopupMenuDivider(),
                                           ],
                                           PopupMenuItem(
                                             value: 'reminder',
@@ -3342,7 +3328,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                                 if (!_isCompletedCollapsed)
                                                   Column(
                                                     children: [
-                                                      Divider(height: 1, thickness: 1, color: noteScheme.outlineVariant.withValues(alpha: 0.3)),
+                                                       const SizedBox(height: 6.0),
                                                       ..._completedItems.map((item) {
                                                         return Padding(
                                                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -3692,14 +3678,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                                 ),
                                               ),
                                             ),
-                                            SizedBox(
-                                              height: 20,
-                                              child: VerticalDivider(
-                                                width: 8,
-                                                thickness: 1,
-                                                color: noteScheme.outlineVariant.withValues(alpha: 0.5),
-                                              ),
-                                            ),
+                                            const SizedBox(width: 8.0),
 
                                             // ── SCROLLABLE CENTER: Formatting Tools ──
                                             Expanded(
@@ -3876,12 +3855,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                                         );
                                                       },
                                                     ),
-                                                    Container(
-                                                      height: 20,
-                                                      width: 1,
-                                                      color: noteScheme.outlineVariant.withValues(alpha: 0.5),
-                                                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                                                    ),
+                                                    const SizedBox(width: AppLayout.spaceS),
                                                     // Cluster 2: Inline Styles
                                                     QuillToolbarToggleStyleButton(
                                                       attribute: Attribute.bold,
@@ -3952,12 +3926,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                                                               .onPrimary)))),
                                                     ),
 
-                                                    Container(
-                                                      height: 20,
-                                                      width: 1,
-                                                      color: noteScheme.outlineVariant.withValues(alpha: 0.5),
-                                                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                                                    ),
+                                                    const SizedBox(width: AppLayout.spaceS),
                                                     // Cluster 3: Paragraph & Alignment
                                                     QuillToolbarToggleStyleButton(
                                                       attribute: Attribute.ol,
@@ -4123,14 +4092,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                             ),
 
                                             // ── FIXED RIGHT: Vertical Stepper [ ▲ ] [ ▼ ] ──
-                                            SizedBox(
-                                              height: 20,
-                                              child: VerticalDivider(
-                                                width: 8,
-                                                thickness: 1,
-                                                color: noteScheme.outlineVariant.withValues(alpha: 0.5),
-                                              ),
-                                            ),
+                                            const SizedBox(width: 8.0),
                                             Tooltip(
                                               message: 'Expand selection line up',
                                               child: InkResponse(
@@ -4212,9 +4174,8 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                     foregroundColor: noteScheme.onPrimaryContainer,
                                   ),
                                 ),
+                                ExpressiveFloatingToolbar.spacer(),
                               ],
-                              if (!settings.minimalEditorMode)
-                                ExpressiveFloatingToolbar.divider(context),
                               if (!settings.minimalEditorMode)
                                 IconButton(
                                   icon: const Icon(Icons.table_chart_outlined),
@@ -4906,11 +4867,7 @@ class _TableWidgetState extends State<TableWidget> {
                             tooltip: 'Remove Row',
                             onPressed: _cells.length > 1 ? _removeRow : null,
                           ),
-                          Container(
-                            height: 16,
-                            width: 1,
-                            color: borderColor,
-                          ),
+                          const SizedBox(width: AppLayout.spaceS),
                           IconButton(
                             icon: _buildTableStructureActionIcon(
                               structureIcon: Icons.view_column_outlined,

@@ -161,11 +161,6 @@ class SettingsHeroCard extends StatelessWidget {
                   ),
 
                   const SizedBox(height: AppLayout.spaceL),
-                  Divider(
-                    height: 1,
-                    color: colorScheme.outlineVariant.withValues(alpha: isDark ? 0.30 : 0.40),
-                  ),
-                  const SizedBox(height: AppLayout.spaceM),
 
                   // 2. Active Feature Module Badges
                   Text(

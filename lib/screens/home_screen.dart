@@ -24,6 +24,8 @@ import '../widgets/home/universal_search_overlay.dart';
 import '../widgets/home/home_tip_card.dart';
 import 'package:note_taking_app/features/notes/presentation/screens/note_editor_screen.dart';
 import 'package:note_taking_app/features/finances/presentation/screens/financial_manager_screen.dart';
+import 'package:note_taking_app/features/finances/providers/financial_manager_provider.dart';
+import 'package:note_taking_app/features/finances/presentation/widgets/ledger_floating_toolbar.dart';
 import 'package:note_taking_app/features/health/presentation/screens/period_tracker_screen.dart';
 import 'app_lock_screen.dart';
 import 'package:note_taking_app/features/finances/presentation/screens/category_management_screen.dart';
@@ -677,7 +679,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
 
       final noteProvider = context.watch<NoteProvider>();
-      final isSelectionMode = noteProvider.isSelectionMode;
+      final finProvider = context.watch<FinancialManagerProvider>();
+
+      final isNotesSelection = _currentIndex == 0 && noteProvider.isSelectionMode;
+      final isFinancesSelection = settings.showFinancialManager && _currentIndex == 1 && finProvider.isSelectionMode;
+      final isSelectionMode = isNotesSelection || isFinancesSelection;
+
+      Widget? activeToolbar;
+      if (isNotesSelection) {
+        activeToolbar = _buildSelectionToolbar(context, noteProvider);
+      } else if (isFinancesSelection) {
+        activeToolbar = const LedgerFloatingToolbar();
+      }
 
       final bool hasExtraFeatures = settings.showFinancialManager || settings.isPeriodTrackerEnabled;
       
@@ -687,7 +700,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           body: _buildNotesScaffold(context, settings),
           floatingActionButton: isSelectionMode ? null : _buildFAB(context),
           bottomNavigationBar: isSelectionMode
-              ? _buildSelectionToolbar(context, noteProvider)
+              ? activeToolbar
               : null,
         );
       }
@@ -706,13 +719,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 selectedIndex: _currentIndex,
                 onDestinationSelected: (index) {
                   HapticFeedback.selectionClick();
+                  if (noteProvider.isSelectionMode) noteProvider.clearSelection();
+                  if (finProvider.isSelectionMode) finProvider.clearSelection();
                   setState(() => _currentIndex = index);
                 },
                 labelType: NavigationRailLabelType.all,
                 destinations: _buildNavRailDestinations(settings),
                 backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
               ),
-              const VerticalDivider(thickness: 1, width: 1),
               Expanded(
                 child: NotificationListener<UserScrollNotification>(
                   onNotification: _onScrollNotification,
@@ -726,7 +740,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
           floatingActionButton: isSelectionMode ? null : _buildCurrentFAB(context, settings),
           bottomNavigationBar: isSelectionMode
-              ? _buildSelectionToolbar(context, noteProvider)
+              ? activeToolbar
               : null,
         );
       }
@@ -755,7 +769,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             );
           },
           child: isSelectionMode
-              ? _buildSelectionToolbar(context, noteProvider)
+              ? (activeToolbar ?? const SizedBox.shrink())
               : Container(
                   key: const ValueKey('navigation_bar'),
                   decoration: BoxDecoration(
@@ -768,6 +782,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     selectedIndex: _currentIndex,
                     onDestinationSelected: (index) {
                       HapticFeedback.selectionClick();
+                      if (noteProvider.isSelectionMode) noteProvider.clearSelection();
+                      if (finProvider.isSelectionMode) finProvider.clearSelection();
                       setState(() => _currentIndex = index);
                     },
                     destinations: _buildNavDestinations(settings),
@@ -819,7 +835,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               bulkMoveToFolder();
             },
           ),
-          ExpressiveFloatingToolbar.divider(context),
+          ExpressiveFloatingToolbar.spacer(),
           ExpressiveFloatingToolbar.actionButton(
             icon: Icons.delete_outline,
             tooltip: 'Delete selected',

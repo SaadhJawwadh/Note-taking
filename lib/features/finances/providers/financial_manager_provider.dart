@@ -183,4 +183,100 @@ class FinancialManagerProvider extends ChangeNotifier {
     }
     return removed;
   }
+
+  // ── Multi-Selection & Batch Operations ──────────────────────────────────
+  bool _isSelectionMode = false;
+  final Set<int> _selectedTransactionIds = <int>{};
+
+  bool get isSelectionMode => _isSelectionMode;
+  Set<int> get selectedTransactionIds => Set.unmodifiable(_selectedTransactionIds);
+  int get selectedCount => _selectedTransactionIds.length;
+
+  void startSelection(int id) {
+    _isSelectionMode = true;
+    _selectedTransactionIds.add(id);
+    notifyListeners();
+  }
+
+  void toggleSelection(int id) {
+    if (_selectedTransactionIds.contains(id)) {
+      _selectedTransactionIds.remove(id);
+      if (_selectedTransactionIds.isEmpty) {
+        _isSelectionMode = false;
+      }
+    } else {
+      _selectedTransactionIds.add(id);
+      _isSelectionMode = true;
+    }
+    notifyListeners();
+  }
+
+  void selectAll(List<TransactionModel> visibleTransactions) {
+    _isSelectionMode = true;
+    _selectedTransactionIds.clear();
+    for (final tx in visibleTransactions) {
+      if (tx.id != null) {
+        _selectedTransactionIds.add(tx.id!);
+      }
+    }
+    notifyListeners();
+  }
+
+  void clearSelection() {
+    _isSelectionMode = false;
+    _selectedTransactionIds.clear();
+    notifyListeners();
+  }
+
+  Future<List<int>> bulkDeleteSelected() async {
+    final idsToDelete = _selectedTransactionIds.toList();
+    if (idsToDelete.isEmpty) return [];
+    clearSelection();
+    await _repository.bulkDeleteTransactions(idsToDelete);
+    await loadTransactions();
+    return idsToDelete;
+  }
+
+  Future<void> bulkRestore(List<int> ids) async {
+    if (ids.isEmpty) return;
+    await _repository.bulkRestoreTransactions(ids);
+    await loadTransactions();
+  }
+
+  Future<void> bulkUpdateCategory(String category) async {
+    final ids = _selectedTransactionIds.toList();
+    if (ids.isEmpty) return;
+    clearSelection();
+    await _repository.bulkUpdateCategory(ids, category);
+    await loadTransactions();
+  }
+
+  Future<void> bulkUpdateAccount(String account) async {
+    final ids = _selectedTransactionIds.toList();
+    if (ids.isEmpty) return;
+    clearSelection();
+    await _repository.bulkUpdateAccount(ids, account);
+    await loadTransactions();
+  }
+
+  Future<int> bulkAiRefineSelected() async {
+    final ids = _selectedTransactionIds.toSet();
+    if (ids.isEmpty) return 0;
+    clearSelection();
+
+    final selectedTxns = _allTransactions.where((t) => t.id != null && ids.contains(t.id)).toList();
+    int refinedCount = 0;
+    for (final t in selectedTxns) {
+      final refined = await SmsService.refineSingleTransactionWithAi(t);
+      if (refined != null) {
+        final updated = refined.copy(isAiRefined: true);
+        await _repository.updateTransaction(updated);
+        refinedCount++;
+      } else {
+        await _repository.updateTransaction(t.copy(isAiRefined: true));
+      }
+    }
+    await loadTransactions();
+    return refinedCount;
+  }
 }

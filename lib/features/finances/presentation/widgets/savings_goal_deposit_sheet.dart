@@ -5,6 +5,7 @@ import '../../../../core/theme/app_layout.dart';
 import '../../../../core/ui/app_bottom_sheet.dart';
 import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import '../../../../data/transaction_model.dart';
+import '../../../../data/transaction_category.dart';
 import '../../data/models/savings_goal_model.dart';
 import '../../providers/savings_goal_provider.dart';
 
@@ -35,6 +36,22 @@ class _SavingsGoalDepositSheetState extends State<SavingsGoalDepositSheet> {
   final _noteController = TextEditingController();
   _PocketAction _action = _PocketAction.deposit;
   bool _recordInLedger = true;
+  late String _liquidationCategory;
+
+  @override
+  void initState() {
+    super.initState();
+    final all = TransactionCategory.allNames;
+    if (all.contains(widget.goal.category)) {
+      _liquidationCategory = widget.goal.category;
+    } else if (all.contains('Shopping')) {
+      _liquidationCategory = 'Shopping';
+    } else if (all.contains('Other')) {
+      _liquidationCategory = 'Other';
+    } else {
+      _liquidationCategory = all.isNotEmpty ? all.first : 'Savings';
+    }
+  }
 
   @override
   void dispose() {
@@ -86,7 +103,7 @@ class _SavingsGoalDepositSheetState extends State<SavingsGoalDepositSheet> {
       await provider.liquidateGoal(
         goalId: goal.id,
         amount: goal.currentAmount,
-        category: goal.category,
+        category: _liquidationCategory,
         merchantTitle: goal.title,
       );
     }
@@ -268,8 +285,39 @@ class _SavingsGoalDepositSheetState extends State<SavingsGoalDepositSheet> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Ready to spend your saved funds for ${goal.title}? Completing will liquidate the pocket balance of $currency ${goal.currentAmount.toStringAsFixed(2)} and log it as an authentic expense under "${goal.category}".',
+                      'Ready to spend your saved funds for ${goal.title}? Completing will liquidate the pocket balance of $currency ${goal.currentAmount.toStringAsFixed(2)} and log it as an authentic expense under "$_liquidationCategory".',
                       style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Ledger Expense Category:',
+                      style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 6),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: TransactionCategory.allNames.map((cat) {
+                          final isSelected = _liquidationCategory == cat;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: FilterChip(
+                              selected: isSelected,
+                              showCheckmark: false,
+                              avatar: Icon(
+                                TransactionCategory.iconFor(cat),
+                                size: 14,
+                                color: isSelected ? colorScheme.onPrimaryContainer : TransactionCategory.colorFor(cat),
+                              ),
+                              label: Text(cat, style: const TextStyle(fontSize: 12)),
+                              onSelected: (_) {
+                                HapticFeedback.selectionClick();
+                                setState(() => _liquidationCategory = cat);
+                              },
+                            ),
+                          );
+                        }).toList(),
+                      ),
                     ),
                   ],
                 ),

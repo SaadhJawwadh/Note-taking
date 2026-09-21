@@ -131,7 +131,7 @@ class EditorNoteDetailsSheet extends StatelessWidget {
                     ],
                   ),
                   if (createdAt != null) ...[
-                    const Divider(height: 20),
+                    const SizedBox(height: 12.0),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -149,7 +149,7 @@ class EditorNoteDetailsSheet extends StatelessWidget {
                     ),
                   ],
                   if (updatedAt != null) ...[
-                    const Divider(height: 20),
+                    const SizedBox(height: 12.0),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [

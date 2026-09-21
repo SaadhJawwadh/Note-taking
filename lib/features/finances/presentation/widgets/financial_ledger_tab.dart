@@ -3,10 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:animations/animations.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../../../../data/transaction_model.dart';
 import '../../../../data/transaction_category.dart';
 import '../../../../core/theme/app_layout.dart';
 import '../../../../core/ui/app_card.dart';
+import '../../providers/financial_manager_provider.dart';
 import '../screens/transaction_editor_screen.dart';
 
 /// Modular Ledger Tab widget for FinancialManagerScreen displaying transactions list and date grouping.
@@ -130,118 +132,113 @@ class FinancialLedgerTab extends StatelessWidget {
                       if (updated == true) onRefresh();
                     },
                     closedBuilder: (context, openContainer) {
-                      return Dismissible(
-                        key: ValueKey('tx_${transaction.id}_${transaction.date.millisecondsSinceEpoch}'),
-                        background: Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(AppLayout.radiusM),
-                          ),
-                          alignment: Alignment.centerLeft,
-                          padding: const EdgeInsets.only(left: 20),
-                          child: Row(
-                            children: [
-                              Icon(Icons.content_copy, color: colorScheme.onPrimaryContainer),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Duplicate',
-                                style: TextStyle(
-                                  color: colorScheme.onPrimaryContainer,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        secondaryBackground: Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: colorScheme.errorContainer,
-                            borderRadius: BorderRadius.circular(AppLayout.radiusM),
-                          ),
-                          alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.only(right: 20),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Text(
-                                'Delete',
-                                style: TextStyle(
-                                  color: colorScheme.onErrorContainer,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Icon(Icons.delete_outline, color: colorScheme.onErrorContainer),
-                            ],
-                          ),
-                        ),
-                        confirmDismiss: (direction) async {
-                          if (direction == DismissDirection.startToEnd) {
-                            await HapticFeedback.mediumImpact();
-                            onDuplicate(transaction);
-                            return false;
-                          } else {
-                            await HapticFeedback.mediumImpact();
-                            onDelete(transaction);
-                            return true;
-                          }
-                        },
-                        child: AppCard(
-                          margin: const EdgeInsets.only(bottom: AppLayout.spaceS),
-                          padding: const EdgeInsets.symmetric(horizontal: AppLayout.spaceM, vertical: AppLayout.spaceXS),
-                          child: Semantics(
-                            label:
-                                '${transaction.description}, ${transaction.category}, ${transaction.isExpense ? 'Expense' : 'Income'} of $currency ${NumberFormat('#,##0.00').format(transaction.amount)}, at ${DateFormat('hh:mm a').format(transaction.date)}. Tap to edit.',
-                            child: ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: Builder(
-                                builder: (context) {
-                                  final catColor = TransactionCategory.colorFor(transaction.category);
-                                  return Container(
-                                    padding: const EdgeInsets.all(AppLayout.spaceS),
-                                    decoration: BoxDecoration(
-                                      color: catColor.withValues(alpha: 0.15),
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: catColor.withValues(alpha: 0.3),
-                                        width: 1,
+                      final finProvider = Provider.of<FinancialManagerProvider>(context);
+                      final isSelected = transaction.id != null &&
+                          finProvider.selectedTransactionIds.contains(transaction.id);
+                      final catColor = TransactionCategory.colorFor(transaction.category);
+                      final isDark = theme.brightness == Brightness.dark;
+
+                      return AppCard(
+                        margin: const EdgeInsets.only(bottom: AppLayout.spaceS),
+                        padding: const EdgeInsets.symmetric(horizontal: AppLayout.spaceM, vertical: AppLayout.spaceXS),
+                        backgroundColor: isSelected
+                            ? colorScheme.primaryContainer.withValues(alpha: isDark ? 0.35 : 0.45)
+                            : null,
+                        border: isSelected
+                            ? BorderSide(color: colorScheme.primary, width: 1.5)
+                            : null,
+                        child: Semantics(
+                          label:
+                              '${transaction.description}, ${transaction.category}, ${transaction.isExpense ? 'Expense' : 'Income'} of $currency ${NumberFormat('#,##0.00').format(transaction.amount)}, at ${DateFormat('hh:mm a').format(transaction.date)}.',
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 180),
+                              transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+                              child: isSelected
+                                  ? Container(
+                                      key: const ValueKey('selected'),
+                                      padding: const EdgeInsets.all(AppLayout.spaceS),
+                                      decoration: BoxDecoration(
+                                        color: colorScheme.primary,
+                                        shape: BoxShape.circle,
                                       ),
-                                    ),
-                                    child: Icon(
-                                      TransactionCategory.iconFor(transaction.category),
-                                      color: catColor,
-                                      size: 20,
-                                    ),
-                                  );
-                                },
+                                      child: Icon(
+                                        Icons.check_rounded,
+                                        color: colorScheme.onPrimary,
+                                        size: 20,
+                                      ),
+                                    )
+                                  : finProvider.isSelectionMode
+                                      ? Container(
+                                          key: const ValueKey('unselected'),
+                                          padding: const EdgeInsets.all(AppLayout.spaceS),
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: colorScheme.outline.withValues(alpha: 0.6),
+                                              width: 1.5,
+                                            ),
+                                          ),
+                                          child: const SizedBox(width: 20, height: 20),
+                                        )
+                                      : Container(
+                                          key: const ValueKey('category_icon'),
+                                          padding: const EdgeInsets.all(AppLayout.spaceS),
+                                          decoration: BoxDecoration(
+                                            color: catColor.withValues(alpha: 0.15),
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: catColor.withValues(alpha: 0.3),
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: Icon(
+                                            TransactionCategory.iconFor(transaction.category),
+                                            color: catColor,
+                                            size: 20,
+                                          ),
+                                        ),
+                            ),
+                            title: Text(
+                              transaction.description,
+                              style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            subtitle: Text(
+                              '${transaction.account == AccountType.savings ? 'Savings • ' : ''}${transaction.category} • ${DateFormat('hh:mm a').format(transaction.date)}',
+                              style: textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                            ),
+                            trailing: Text(
+                              '${transaction.isExpense ? '-' : '+'}$currency ${NumberFormat('#,##0.00').format(transaction.amount)}',
+                              style: textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontFeatures: const [FontFeature.tabularFigures()],
+                                color: transaction.isExpense
+                                    ? colorScheme.error
+                                    : colorScheme.primary,
                               ),
-                              title: Text(
-                                transaction.description,
-                                style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              subtitle: Text(
-                                '${transaction.account == AccountType.savings ? 'Savings • ' : ''}${transaction.category} • ${DateFormat('hh:mm a').format(transaction.date)}',
-                                style: textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
-                              ),
-                              trailing: Text(
-                                '${transaction.isExpense ? '-' : '+'}$currency ${NumberFormat('#,##0.00').format(transaction.amount)}',
-                                style: textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  fontFeatures: const [FontFeature.tabularFigures()],
-                                  color: transaction.isExpense
-                                      ? colorScheme.error
-                                      : colorScheme.primary,
-                                ),
-                              ),
-                              onTap: () async {
+                            ),
+                            onTap: () async {
+                              if (finProvider.isSelectionMode && transaction.id != null) {
+                                await HapticFeedback.selectionClick();
+                                finProvider.toggleSelection(transaction.id!);
+                              } else {
                                 await HapticFeedback.lightImpact();
                                 openContainer();
-                              },
-                            ),
+                              }
+                            },
+                            onLongPress: () async {
+                              if (transaction.id != null) {
+                                await HapticFeedback.selectionClick();
+                                if (finProvider.isSelectionMode) {
+                                  finProvider.toggleSelection(transaction.id!);
+                                } else {
+                                  finProvider.startSelection(transaction.id!);
+                                }
+                              }
+                            },
                           ),
                         ),
                       );

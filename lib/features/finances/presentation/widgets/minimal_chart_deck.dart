@@ -915,13 +915,7 @@ class _MinimalChartDeckState extends State<MinimalChartDeck> {
               ),
             ),
 
-            // Vertical Subtle Divider
-            Container(
-              height: 52,
-              width: 1,
-              margin: const EdgeInsets.symmetric(horizontal: 8),
-              color: colorScheme.outlineVariant.withValues(alpha: 0.35),
-            ),
+            const SizedBox(width: AppLayout.spaceM),
 
             // Right Column: Projected Month-End & Status Pill
             Expanded(

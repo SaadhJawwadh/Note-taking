@@ -164,6 +164,89 @@ class TransactionRepository {
     return count;
   }
 
+  /// Atomically soft-deletes multiple transactions by ID.
+  Future<int> bulkDeleteTransactions(List<int> ids) async {
+    if (ids.isEmpty) return 0;
+    final db = await _db;
+    final now = DateTime.now().toIso8601String();
+    int total = 0;
+    await db.transaction((txn) async {
+      for (final id in ids) {
+        total += await txn.update(
+          TableNames.transactions,
+          {TransactionFields.deletedAt: now},
+          where: '${TransactionFields.id} = ?',
+          whereArgs: [id],
+        );
+      }
+    });
+    if (total > 0) {
+      await WidgetHelper.updateWidgetData();
+    }
+    return total;
+  }
+
+  /// Atomically restores multiple soft-deleted transactions by ID.
+  Future<int> bulkRestoreTransactions(List<int> ids) async {
+    if (ids.isEmpty) return 0;
+    final db = await _db;
+    int total = 0;
+    await db.transaction((txn) async {
+      for (final id in ids) {
+        total += await txn.rawUpdate(
+          'UPDATE ${TableNames.transactions} SET ${TransactionFields.deletedAt} = NULL WHERE ${TransactionFields.id} = ?',
+          [id],
+        );
+      }
+    });
+    if (total > 0) {
+      await WidgetHelper.updateWidgetData();
+    }
+    return total;
+  }
+
+  /// Atomically updates the category for multiple transactions by ID.
+  Future<int> bulkUpdateCategory(List<int> ids, String category) async {
+    if (ids.isEmpty) return 0;
+    final db = await _db;
+    int total = 0;
+    await db.transaction((txn) async {
+      for (final id in ids) {
+        total += await txn.update(
+          TableNames.transactions,
+          {TransactionFields.category: category},
+          where: '${TransactionFields.id} = ? AND ${TransactionFields.deletedAt} IS NULL',
+          whereArgs: [id],
+        );
+      }
+    });
+    if (total > 0) {
+      await WidgetHelper.updateWidgetData();
+    }
+    return total;
+  }
+
+  /// Atomically updates the account (daily vs savings) for multiple transactions by ID.
+  Future<int> bulkUpdateAccount(List<int> ids, String account) async {
+    if (ids.isEmpty) return 0;
+    final db = await _db;
+    int total = 0;
+    await db.transaction((txn) async {
+      for (final id in ids) {
+        total += await txn.update(
+          TableNames.transactions,
+          {TransactionFields.account: account},
+          where: '${TransactionFields.id} = ? AND ${TransactionFields.deletedAt} IS NULL',
+          whereArgs: [id],
+        );
+      }
+    });
+    if (total > 0) {
+      await WidgetHelper.updateWidgetData();
+    }
+    return total;
+  }
+
   Future<int> permanentlyDeleteTransaction(int id) async {
     final db = await _db;
     final txn = await readTransaction(id);

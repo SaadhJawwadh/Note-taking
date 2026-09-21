@@ -419,7 +419,6 @@ class _PeriodTrackerScreenState extends State<PeriodTrackerScreen> with WidgetsB
                                       ],
                                     ),
                                   ),
-                                  const PopupMenuDivider(),
                                   PopupMenuItem(
                                     value: 'cycle_settings',
                                     height: 48,

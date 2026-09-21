@@ -162,8 +162,7 @@ class _CalculatorDialogState extends State<CalculatorDialog> {
               ],
             ),
           ),
-          const Divider(),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12.0),
           // Buttons
           SizedBox(
             height: 320,

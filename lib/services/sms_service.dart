@@ -25,6 +25,7 @@ class SmsSyncProgress {
   final int scanned;
   final int total;
   final int found;
+  final int alreadyImported;
   final String? message;
 
   const SmsSyncProgress({
@@ -32,6 +33,7 @@ class SmsSyncProgress {
     this.scanned = 0,
     this.total = 0,
     this.found = 0,
+    this.alreadyImported = 0,
     this.message,
   });
 }
@@ -58,6 +60,7 @@ class SmsService {
   static Stream<SmsSyncProgress> get syncProgressStream => _syncProgressController.stream;
 
   static Future<TransactionModel?> _handleNewSms(SmsMessage sms) async {
+    await reloadSmsContacts();
     await TransactionCategory.reload();
     final transaction = await _parseWithAiFallback(
       body: sms.body ?? '',
@@ -68,6 +71,7 @@ class SmsService {
       blockedSenderIds: _blockedSenderIds,
       customExpenseRules: _customExpenseRules,
       customIncomeRules: _customIncomeRules,
+      customSmsRules: _customSmsRules,
     );
     if (transaction == null || transaction.smsId == null) {
       return null;
@@ -216,6 +220,7 @@ class SmsService {
     DateTime from, {
     bool bypassTombstones = false,
     void Function(int scanned, int total, int found)? onProgress,
+    void Function(int alreadyImported)? onAlreadyImported,
   }) async {
     if (!await hasPermission()) {
       return 0;
@@ -223,14 +228,26 @@ class SmsService {
     await reloadSmsContacts();
     await TransactionCategory.reload();
 
-    final start = from.millisecondsSinceEpoch;
+    final startMs = from.millisecondsSinceEpoch;
+    final startSec = from.millisecondsSinceEpoch ~/ 1000;
 
-    final messages = await telephony.getInboxSms(
+    List<SmsMessage> messages = await telephony.getInboxSms(
       columns: [SmsColumn.ADDRESS, SmsColumn.BODY, SmsColumn.DATE, SmsColumn.ID],
-      filter: SmsFilter.where(SmsColumn.DATE).greaterThanOrEqualTo(start.toString()),
+      filter: SmsFilter.where(SmsColumn.DATE).greaterThanOrEqualTo(startMs.toString()),
     );
 
+    if (messages.isEmpty) {
+      final secMessages = await telephony.getInboxSms(
+        columns: [SmsColumn.ADDRESS, SmsColumn.BODY, SmsColumn.DATE, SmsColumn.ID],
+        filter: SmsFilter.where(SmsColumn.DATE).greaterThanOrEqualTo(startSec.toString()),
+      );
+      if (secMessages.isNotEmpty) {
+        messages = secMessages;
+      }
+    }
+
     int count = 0;
+    int alreadyImported = 0;
     int processed = 0;
     final total = messages.length;
     onProgress?.call(0, total, 0);
@@ -244,6 +261,12 @@ class SmsService {
       processed++;
       if (processed % 25 == 0) {
         await Future.delayed(Duration.zero);
+      }
+
+      final msgDate = SmsParser.resolveMessageDate(m.date);
+      if (msgDate.isBefore(from)) {
+        onProgress?.call(processed, total, count);
+        continue;
       }
 
       final t = await _parseWithAiFallback(
@@ -263,6 +286,14 @@ class SmsService {
         continue;
       }
       if (await TransactionRepository.instance.hasCrossSenderDuplicate(t.amount, t.date)) {
+        onProgress?.call(processed, total, count);
+        continue;
+      }
+
+      final exists = await TransactionRepository.instance.smsExists(t.smsId!);
+      if (exists && !bypassTombstones) {
+        alreadyImported++;
+        onAlreadyImported?.call(alreadyImported);
         onProgress?.call(processed, total, count);
         continue;
       }
@@ -561,9 +592,13 @@ class SmsService {
         startCutoff = DateTime.now().subtract(const Duration(hours: 24));
       }
 
+      int currentAlreadyImported = 0;
       final count = await syncInboxFrom(
         startCutoff,
         bypassTombstones: bypassTombstones,
+        onAlreadyImported: (already) {
+          currentAlreadyImported = already;
+        },
         onProgress: (scanned, total, found) {
           onProgress?.call(scanned, total, found);
           _syncProgressController.add(SmsSyncProgress(
@@ -571,6 +606,7 @@ class SmsService {
             scanned: scanned,
             total: total,
             found: found,
+            alreadyImported: currentAlreadyImported,
           ));
         },
       );
@@ -579,12 +615,24 @@ class SmsService {
       await prefs.setString('lastSmsSyncTime', now.toIso8601String());
       await prefs.setInt('lastSmsSyncCount', count);
 
+      String completionMsg;
+      if (count > 0 && currentAlreadyImported > 0) {
+        completionMsg = 'Imported $count new transaction${count == 1 ? "" : "s"} ($currentAlreadyImported up-to-date)';
+      } else if (count > 0) {
+        completionMsg = 'Imported $count transaction${count == 1 ? "" : "s"}';
+      } else if (currentAlreadyImported > 0) {
+        completionMsg = 'All $currentAlreadyImported recent transaction${currentAlreadyImported == 1 ? " is" : "s are"} up-to-date';
+      } else {
+        completionMsg = 'Up to date • No new transactions found';
+      }
+
       _syncProgressController.add(SmsSyncProgress(
         isSyncing: false,
         scanned: 0,
         total: 0,
         found: count,
-        message: 'Imported $count transaction${count == 1 ? "" : "s"}',
+        alreadyImported: currentAlreadyImported,
+        message: completionMsg,
       ));
 
       return count;
@@ -804,22 +852,9 @@ class SmsService {
     if (!await aiService.isSupported()) return 0;
 
     final now = DateTime.now();
-    final prefs = await SharedPreferences.getInstance();
-    final lastSyncStr = prefs.getString('lastSmsSyncTime');
-    final lastSync = lastSyncStr != null ? DateTime.tryParse(lastSyncStr) : null;
-    final startOfToday = DateTime(now.year, now.month, now.day);
-    final maxLookback = now.subtract(lookbackWindow ?? const Duration(hours: 24));
-
-    DateTime cutoff;
-    if (lookbackWindow != null) {
-      cutoff = now.subtract(lookbackWindow);
-    } else if (lastSync != null && lastSync.isBefore(startOfToday) && lastSync.isAfter(maxLookback)) {
-      cutoff = lastSync;
-    } else if (lastSync != null && lastSync.isAfter(startOfToday)) {
-      cutoff = startOfToday;
-    } else {
-      cutoff = startOfToday.isAfter(maxLookback) ? startOfToday : maxLookback;
-    }
+    // Default to scanning the full 24-hour window so background auto-fetched transactions
+    // that arrived earlier in the day or overnight are comprehensively refined.
+    final cutoff = now.subtract(lookbackWindow ?? const Duration(hours: 24));
 
     final allTransactions = await TransactionRepository.instance.readAllTransactions();
     final candidates = allTransactions.where((t) {

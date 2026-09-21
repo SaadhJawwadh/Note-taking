@@ -49,28 +49,40 @@ class _SavingsGoalEditorSheetState extends State<SavingsGoalEditorSheet> {
   static const List<int> _presetMonths = [3, 6, 9, 12, 18, 24];
 
   static const List<int> _colorPalette = [
-    0xFF4CAF50, // Green
-    0xFF009688, // Teal
-    0xFF2196F3, // Blue
+    0xFF00796B, // Teal Vault
+    0xFF4CAF50, // Emerald Green
+    0xFF2196F3, // Sky Blue
+    0xFF3F51B5, // Royal Indigo
     0xFF673AB7, // Deep Purple
-    0xFFE91E63, // Pink
-    0xFFFF9800, // Orange
-    0xFF3F51B5, // Indigo
-    0xFF00BCD4, // Cyan
+    0xFFE91E63, // Vibrant Pink
+    0xFFFF5722, // Flame Coral
+    0xFFFF9800, // Golden Amber
+    0xFF795548, // Warm Earth
+    0xFF607D8B, // Slate Blue
+    0xFF00BCD4, // Vivid Cyan
+    0xFF8BC34A, // Lime Green
   ];
 
-  static final List<IconData> _goalIcons = [
-    Icons.savings_rounded,
-    Icons.school_rounded,
-    Icons.smartphone_rounded,
-    Icons.laptop_mac_rounded,
-    Icons.flight_takeoff_rounded,
-    Icons.directions_car_rounded,
-    Icons.home_rounded,
-    Icons.favorite_rounded,
-    Icons.fitness_center_rounded,
-    Icons.redeem_rounded,
+  static const List<String> _goalCategories = [
+    'Savings',
+    'Emergency Fund',
+    'Travel & Adventure',
+    'Tech & Gadgets',
+    'Vehicle',
+    'Education',
+    'Home & Living',
+    'Celebration & Gifts',
+    'Investment',
+    'Health & Wellness',
   ];
+
+  List<String> get _allCategories {
+    final list = List<String>.from(_goalCategories);
+    if (!list.contains(_category)) {
+      list.add(_category);
+    }
+    return list;
+  }
 
   @override
   void initState() {
@@ -387,7 +399,7 @@ class _SavingsGoalEditorSheetState extends State<SavingsGoalEditorSheet> {
                     Text('Will take approximately $_targetMonths months', style: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.w600, fontSize: 13)),
                   ],
 
-                  const Divider(height: 24),
+                  const SizedBox(height: AppLayout.spaceM),
 
                   // Smart Breakdown Summary
                   Container(
@@ -470,16 +482,7 @@ class _SavingsGoalEditorSheetState extends State<SavingsGoalEditorSheet> {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: [
-                'Savings',
-                'Education',
-                'Electronics',
-                'Travel',
-                'Vehicle',
-                'Emergency',
-                'Shopping',
-                'Home',
-              ].map((cat) {
+              children: _allCategories.map((cat) {
                 final selected = _category == cat;
                 return FilterChip(
                   showCheckmark: false,
@@ -531,24 +534,41 @@ class _SavingsGoalEditorSheetState extends State<SavingsGoalEditorSheet> {
               ],
             ),
             const SizedBox(height: AppLayout.spaceM),
-            // Icon Picker Row
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: _goalIcons.map((ic) {
+            // Expressive 2-Row Icon Picker Grid
+            SizedBox(
+              height: 104,
+              child: GridView.builder(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  childAspectRatio: 1.0,
+                ),
+                itemCount: SavingsGoalModel.defaultIcons.length,
+                itemBuilder: (context, index) {
+                  final ic = SavingsGoalModel.defaultIcons[index];
                   final selected = _iconCodePoint == ic.codePoint;
-                  return IconButton(
+                  return IconButton.filledTonal(
                     style: IconButton.styleFrom(
-                      backgroundColor: selected ? Color(_colorValue).withValues(alpha: 0.25) : null,
-                      foregroundColor: selected ? Color(_colorValue) : colorScheme.onSurfaceVariant,
+                      backgroundColor: selected
+                          ? Color(_colorValue).withValues(alpha: 0.3)
+                          : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                      foregroundColor: selected
+                          ? Color(_colorValue)
+                          : colorScheme.onSurfaceVariant,
+                      side: selected
+                          ? BorderSide(color: Color(_colorValue), width: 1.5)
+                          : BorderSide.none,
                     ),
-                    icon: Icon(ic),
+                    icon: Icon(ic, size: 22),
                     onPressed: () {
                       HapticFeedback.lightImpact();
                       setState(() => _iconCodePoint = ic.codePoint);
                     },
                   );
-                }).toList(),
+                },
               ),
             ),
 

@@ -260,7 +260,6 @@ class _NoteMigrationSheetState extends State<NoteMigrationSheet> {
                     ],
                   ),
                 ),
-                PopupMenuDivider(),
                 PopupMenuItem(
                   value: 'takeout',
                   child: Row(

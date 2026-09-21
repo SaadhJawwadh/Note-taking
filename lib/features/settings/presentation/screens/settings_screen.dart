@@ -31,6 +31,7 @@ import '../../../../services/backup_service.dart';
 import '../../../../widgets/settings_widgets.dart';
 import '../../../finances/presentation/widgets/recurring_rules_sheet.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../data/settings_search_index.dart';
 
 class SettingsScreen extends StatefulWidget {
   final String? initialQuery;
@@ -53,6 +54,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     'All',
     'Appearance',
     'Features',
+    'Finances',
     'Security',
     'Data',
     'About',
@@ -1005,15 +1007,74 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return categoryName.toLowerCase() == catFilter.toLowerCase();
     }
 
-    bool matchesQuery(String title, [String? subtitle]) {
-      return title.toLowerCase().contains(query) ||
-          (subtitle != null && subtitle.toLowerCase().contains(query));
-    }
+    void addTile(
+      Widget tile,
+      String categoryName,
+      String title, [
+      String? subtitle,
+      List<String>? keywords,
+    ]) {
+      if (!matchesCategory(categoryName)) return;
 
-    void addTile(Widget tile, String categoryName, String title, [String? subtitle]) {
-      if (matchesCategory(categoryName) && matchesQuery(title, subtitle)) {
+      // Look up indexed synonyms and keywords for this setting
+      final registered = SettingsSearchIndex.items.firstWhere(
+        (it) =>
+            it.title.toLowerCase() == title.toLowerCase() ||
+            (it.section.toLowerCase() == categoryName.toLowerCase() &&
+                it.title.toLowerCase().contains(title.toLowerCase())),
+        orElse: () => SettingsIndexItem(
+          id: '',
+          title: title,
+          subtitle: subtitle ?? '',
+          section: categoryName,
+          icon: Icons.settings,
+          keywords: keywords ?? [],
+        ),
+      );
+
+      final combinedKeywords = <String>{
+        categoryName.toLowerCase(),
+        title.toLowerCase(),
+        if (subtitle != null) subtitle.toLowerCase(),
+        ...registered.keywords.map((k) => k.toLowerCase()),
+        if (keywords != null) ...keywords.map((k) => k.toLowerCase()),
+      };
+
+      final matches = title.toLowerCase().contains(query) ||
+          (subtitle != null && subtitle.toLowerCase().contains(query)) ||
+          categoryName.toLowerCase().contains(query) ||
+          combinedKeywords.any((k) => k.contains(query) || query.contains(k));
+
+      if (matches) {
         if (items.isNotEmpty) items.add(const _Divider());
-        items.add(tile);
+        items.add(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 56, top: 4, bottom: 2),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.35),
+                    borderRadius: BorderRadius.circular(AppLayout.radiusXS),
+                  ),
+                  child: Text(
+                    categoryName.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ),
+              ),
+              tile,
+            ],
+          ),
+        );
       }
     }
 
@@ -1469,7 +1530,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: ListView.separated(
           shrinkWrap: true,
           itemCount: curated.length + 1,
-          separatorBuilder: (_, __) => const Divider(height: 1),
+          separatorBuilder: (_, __) => const SizedBox(height: 4.0),
           itemBuilder: (context, index) {
             if (index == curated.length) {
               // Custom currency entry

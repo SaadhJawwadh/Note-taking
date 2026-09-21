@@ -1,25 +1,74 @@
 import 'package:flutter/material.dart';
 import '../../../../data/database_constants.dart';
 import '../../../../data/transaction_model.dart';
+import '../../../../data/transaction_category.dart';
 
 typedef SavingsGoal = SavingsGoalModel;
 
 class SavingsGoalModel {
   static const List<IconData> defaultIcons = [
+    // Savings & Financial Vault
     Icons.savings_rounded,
-    Icons.school_rounded,
+    Icons.account_balance_rounded,
+    Icons.wallet_rounded,
+    Icons.paid_rounded,
+    Icons.trending_up_rounded,
+    Icons.shield_rounded,
+
+    // Travel & Adventure
+    Icons.flight_takeoff_rounded,
+    Icons.beach_access_rounded,
+    Icons.luggage_rounded,
+    Icons.explore_rounded,
+    Icons.hiking_rounded,
+    Icons.hotel_rounded,
+
+    // Tech, Gadgets & Creative
     Icons.smartphone_rounded,
     Icons.laptop_mac_rounded,
-    Icons.flight_takeoff_rounded,
+    Icons.tablet_mac_rounded,
+    Icons.headphones_rounded,
+    Icons.videogame_asset_rounded,
+    Icons.photo_camera_rounded,
+    Icons.watch_rounded,
+    Icons.tv_rounded,
+
+    // Vehicles & Mobility
     Icons.directions_car_rounded,
+    Icons.two_wheeler_rounded,
+    Icons.directions_bike_rounded,
+    Icons.electric_car_rounded,
+    Icons.car_rental_rounded,
+
+    // Home, Living & Family
     Icons.home_rounded,
-    Icons.favorite_rounded,
-    Icons.fitness_center_rounded,
+    Icons.chair_rounded,
+    Icons.kitchen_rounded,
+    Icons.construction_rounded,
+    Icons.bed_rounded,
+    Icons.child_friendly_rounded,
+
+    // Education, Milestones & Celebrations
+    Icons.school_rounded,
+    Icons.menu_book_rounded,
+    Icons.workspace_premium_rounded,
     Icons.redeem_rounded,
+    Icons.favorite_rounded,
+    Icons.cake_rounded,
+    Icons.celebration_rounded,
+
+    // Health, Fitness & Wellness
+    Icons.fitness_center_rounded,
+    Icons.spa_rounded,
+    Icons.medical_services_rounded,
+    Icons.sports_soccer_rounded,
   ];
 
   static IconData getIcon(int codePoint) {
     for (final icon in defaultIcons) {
+      if (icon.codePoint == codePoint) return icon;
+    }
+    for (final icon in TransactionCategory.swatches) {
       if (icon.codePoint == codePoint) return icon;
     }
     return Icons.savings_rounded;

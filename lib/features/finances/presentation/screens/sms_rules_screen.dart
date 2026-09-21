@@ -216,7 +216,7 @@ class _SmsRulesScreenState extends State<SmsRulesScreen> {
                       onChanged: settings.setDailySyncEnabled,
                     ),
                     if (settings.dailySyncEnabled) ...[
-                      const Divider(height: 1),
+                      const SizedBox(height: AppLayout.spaceXS),
                       ListTile(
                         leading: Icon(Icons.access_time_outlined, color: cs.secondary),
                         title: const Text('Auto-Sync Time', style: TextStyle(fontWeight: FontWeight.w500)),
@@ -233,7 +233,7 @@ class _SmsRulesScreenState extends State<SmsRulesScreen> {
                         ),
                         onTap: () => _showTimePicker(context, settings),
                       ),
-                      const Divider(height: 1),
+                      const SizedBox(height: AppLayout.spaceXS),
                       ListTile(
                         leading: Icon(Icons.play_circle_outline_rounded, color: cs.primary),
                         title: const Text('Sync SMS Now', style: TextStyle(fontWeight: FontWeight.w500)),
@@ -777,10 +777,7 @@ class _SmsRulesScreenState extends State<SmsRulesScreen> {
               ),
             ),
 
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Divider(),
-            ),
+            const SizedBox(height: AppLayout.spaceM),
 
             // Link to Category Rules & Keywords
             Padding(

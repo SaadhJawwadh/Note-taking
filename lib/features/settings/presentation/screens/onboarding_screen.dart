@@ -634,7 +634,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       'Tailor your writing space. Keep it feature-packed or streamline for pure focus.',
                       style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     ),
-                    const Divider(height: 24),
+                    const SizedBox(height: AppLayout.spaceM),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       secondary: Icon(

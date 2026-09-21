@@ -458,7 +458,7 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
                               ],
                             ),
                           ],
-                          const Divider(height: 16),
+                          const SizedBox(height: 8.0),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -829,7 +829,7 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
                           contentPadding: EdgeInsets.zero,
                           dense: true,
                         ),
-                        const Divider(height: 24),
+                        const SizedBox(height: AppLayout.spaceM),
                         Text('Splitting Method', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
                         const SizedBox(height: AppLayout.spaceS),
                         SegmentedButton<SplitMode>(
@@ -1035,7 +1035,7 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
                                   ),
                             contentPadding: EdgeInsets.zero,
                           ),
-                          const Divider(),
+                          const SizedBox(height: AppLayout.spaceS),
                         ],
 
                         // Participant Rows
@@ -1054,7 +1054,7 @@ class _SplitBillEditorScreenState extends State<SplitBillEditorScreen> {
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             itemCount: _participantsData.length,
-                            separatorBuilder: (_, __) => const Divider(),
+                            separatorBuilder: (_, __) => const SizedBox(height: AppLayout.spaceXS),
                             itemBuilder: (context, index) {
                               final p = _participantsData[index];
                               final name = p['name'] as String;
