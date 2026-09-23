@@ -28,6 +28,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../../../screens/app_lock_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../services/backup_service.dart';
+import '../../../../services/notification_service.dart';
 import '../../../../widgets/settings_widgets.dart';
 import '../../../finances/presentation/widgets/recurring_rules_sheet.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -949,6 +950,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     ),
                                     const _Divider(),
                                     SettingsTile(
+                                      icon: Icons.notifications_active_outlined,
+                                      iconColor: colorScheme.primary,
+                                      title: 'Test Notifications',
+                                      subtitle: 'Trigger a sample diagnostic alert immediately',
+                                      showArrow: true,
+                                      onTap: () async {
+                                        await HapticFeedback.selectionClick();
+                                        await NotificationService.showTestNotification();
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).clearSnackBars();
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Test notification sent! Check your notification shade.'),
+                                              behavior: SnackBarBehavior.floating,
+                                              duration: Duration(seconds: 2),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                    ),
+                                    const _Divider(),
+                                    SettingsTile(
                                       icon: Icons.rocket_launch_outlined,
                                       iconColor: colorScheme.secondary,
                                       title: 'Replay Setup & Intro',
@@ -1474,6 +1497,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
       'About',
       'Changelog',
       'View version release logs',
+    );
+    addTile(
+      SettingsTile(
+        icon: Icons.notifications_active_outlined,
+        title: 'Test Notifications',
+        subtitle: 'Trigger a sample diagnostic alert immediately',
+        showArrow: true,
+        onTap: () async {
+          await HapticFeedback.selectionClick();
+          await NotificationService.showTestNotification();
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).clearSnackBars();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Test notification sent! Check your notification shade.'),
+                behavior: SnackBarBehavior.floating,
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+        },
+      ),
+      'About',
+      'Test Notifications',
+      'Trigger a sample diagnostic alert immediately test notifications',
     );
     addTile(
       SettingsTile(

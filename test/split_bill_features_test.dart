@@ -200,6 +200,50 @@ void main() {
       expect(reminder, contains('💳 Send to:'));
       expect(reminder, contains('Acc: 987654321'));
     });
+
+    test('Generates comprehensive person pending statement for multiple bills', () {
+      final bill1 = SplitBillModel(
+        id: 'b-1',
+        title: 'Dinner at Subway',
+        totalAmount: 3000.0,
+        payerName: 'You',
+        isPayerUser: true,
+        date: DateTime(2026, 9, 20),
+        participants: const [
+          SplitParticipantModel(id: 'p-1', billId: 'b-1', contactName: 'You', shareAmount: 1500.0, hasPaid: true),
+          SplitParticipantModel(id: 'p-2', billId: 'b-1', contactName: 'Alex', shareAmount: 1500.0, hasPaid: false),
+        ],
+      );
+      final bill2 = SplitBillModel(
+        id: 'b-2',
+        title: 'Uber to Airport',
+        totalAmount: 1200.0,
+        payerName: 'You',
+        isPayerUser: true,
+        date: DateTime(2026, 9, 22),
+        participants: const [
+          SplitParticipantModel(id: 'p-3', billId: 'b-2', contactName: 'You', shareAmount: 600.0, hasPaid: true),
+          SplitParticipantModel(id: 'p-4', billId: 'b-2', contactName: 'Alex', shareAmount: 600.0, hasPaid: false),
+        ],
+      );
+
+      final statement = SplitShareService.formatPersonPendingStatement(
+        contactName: 'Alex',
+        openBills: [bill1, bill2],
+        totalAmount: 2100.0,
+        currencySymbol: 'Rs.',
+        defaultPaymentInfo: 'UPI: user@bank',
+      );
+
+      expect(statement, contains('👋 Hey Alex,'));
+      expect(statement, contains('💰 Total Pending: Rs. 2100'));
+      expect(statement, contains('• Dinner at Subway'));
+      expect(statement, contains('Rs. 1500'));
+      expect(statement, contains('• Uber to Airport'));
+      expect(statement, contains('Rs. 600'));
+      expect(statement, contains('💳 Payment Details:'));
+      expect(statement, contains('UPI: user@bank'));
+    });
   });
 
   group('Receipt OCR Regex Engine Tests', () {

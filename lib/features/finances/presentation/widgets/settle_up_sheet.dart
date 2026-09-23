@@ -173,13 +173,31 @@ class _SettleUpSheetState extends State<SettleUpSheet> {
                   ? null
                   : () async {
                       final settings = Provider.of<SettingsProvider>(context, listen: false);
-                      final reminder = SplitShareService.formatPersonReminder(
-                        contactName: widget.contactName,
-                        billTitle: widget.specificBill?.title ?? 'Split Bill',
-                        shareAmount: widget.netAmount,
-                        currencySymbol: settings.currencySymbol,
-                        defaultPaymentInfo: settings.defaultPaymentInfo,
-                      );
+                      final splitProvider = Provider.of<SplitBillProvider>(context, listen: false);
+                      final String reminder;
+                      if (widget.specificBill != null) {
+                        reminder = SplitShareService.formatPersonReminder(
+                          contactName: widget.contactName,
+                          billTitle: widget.specificBill!.title,
+                          shareAmount: widget.netAmount,
+                          currencySymbol: settings.currencySymbol,
+                          defaultPaymentInfo: settings.defaultPaymentInfo,
+                        );
+                      } else {
+                        final openBills = splitProvider.bills.where((b) {
+                          if (b.isFullySettled) return false;
+                          return b.isPayerUser &&
+                              b.participants.any((p) =>
+                                  p.contactName.trim().toLowerCase() == widget.contactName.trim().toLowerCase() && !p.hasPaid);
+                        }).toList();
+                        reminder = SplitShareService.formatPersonPendingStatement(
+                          contactName: widget.contactName,
+                          openBills: openBills,
+                          totalAmount: widget.netAmount,
+                          currencySymbol: settings.currencySymbol,
+                          defaultPaymentInfo: settings.defaultPaymentInfo,
+                        );
+                      }
                       await SplitShareService.shareText(reminder, subject: 'Split Bill Reminder');
                     },
               icon: const Icon(Icons.share_rounded, size: 18),
@@ -235,6 +253,7 @@ class _SettleUpSheetState extends State<SettleUpSheet> {
           widget.specificParticipant != null &&
           widget.specificParticipant!.contactName.trim().toLowerCase() != 'you';
 
+      int? createdTxId;
       if (!isFriendSettlingWithFriend && _recordInLedger && absAmount > 0 && mounted) {
         final txRepo = TransactionRepository.instance;
         final description = isContactOwingUser
@@ -250,7 +269,8 @@ class _SettleUpSheetState extends State<SettleUpSheet> {
           account: AccountType.daily,
         );
 
-        await txRepo.createTransaction(newTx);
+        final createdTx = await txRepo.createTransaction(newTx);
+        createdTxId = createdTx.id;
         FinancialManagerScreen.refreshNotifier.value++;
 
         // Notify Financial Manager Provider if present
@@ -261,10 +281,30 @@ class _SettleUpSheetState extends State<SettleUpSheet> {
 
       if (mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.clearSnackBars();
+        messenger.showSnackBar(
           SnackBar(
             content: Text('Settled with ${widget.contactName} successfully.'),
             behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'UNDO',
+              onPressed: () async {
+                if (widget.specificParticipant != null) {
+                  await splitProvider.toggleParticipantPaid(widget.specificParticipant!.id, false);
+                } else {
+                  await splitProvider.unsettleAllForContact(widget.contactName);
+                }
+                if (createdTxId != null) {
+                  await TransactionRepository.instance.deleteTransaction(createdTxId);
+                }
+                FinancialManagerScreen.refreshNotifier.value++;
+                try {
+                  await fmProvider.loadTransactions();
+                } catch (_) {}
+              },
+            ),
           ),
         );
       }

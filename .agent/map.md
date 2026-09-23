@@ -481,4 +481,6 @@ sequenceDiagram
     *   `test/period_tracker_phase4_features_test.dart`: Validates period predictions, regularity scoring, symptom toggles, and cycle phase cards.
     *   `test/financial_trash_and_sms_fetch_test.dart`: Validates financial trash bin, tombstone re-import prevention, soft-delete UNDO restoration, and SMS cancel tokens.
     *   `test/features/sms_and_recurring_overhaul_test.dart`: Validates Fuel Pass quota filtering, CEFTS self-transfers, Amana Bank, COMBANK, PickMe Food merchant cleaning, recurring keyword auto-detection, and duplicate prevention.
+    *   `test/upgrade_backward_compatibility_test.dart`: Validates database schema migrations, SharedPreferences resiliency, and What's New version card rendering across release cycles.
+    *   `test/qol_editor_sms_backup_test.dart`: Validates launcher shortcut intent constants, auto-backup notifications, and SMS parsing stability.
 

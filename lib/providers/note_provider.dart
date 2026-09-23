@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../features/notes/data/note_repository.dart';
 import '../data/note_model.dart';
 import '../services/p2p_sync_service.dart';
+import '../services/notification_service.dart';
 
 class NoteProvider extends ChangeNotifier {
   final NoteRepository _noteRepository = NoteRepository();
@@ -124,7 +125,10 @@ class NoteProvider extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final purgeDays = prefs.getInt('trashAutoPurgeDays') ?? 30;
-      await _noteRepository.clearOldTrash(purgeDays);
+      final purgedCount = await _noteRepository.clearOldTrash(purgeDays);
+      if (purgedCount > 0) {
+        await NotificationService.showAutoPurgeNotification(purgedCount, purgeDays);
+      }
       final tags = await _noteRepository.getAllTags();
       final colors = await _noteRepository.getAllTagColors();
 

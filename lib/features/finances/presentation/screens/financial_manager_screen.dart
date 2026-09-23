@@ -11,7 +11,6 @@ import '../../../../data/transaction_model.dart';
 import '../../../../data/transaction_category.dart';
 import '../../../../services/sms_service.dart';
 import '../../../../services/sms_constants.dart';
-import '../../../../services/gemini_nano_service.dart';
 import 'package:note_taking_app/features/finances/presentation/screens/transaction_editor_screen.dart';
 import 'package:note_taking_app/features/finances/presentation/screens/sms_rules_screen.dart';
 import 'package:note_taking_app/features/settings/presentation/screens/settings_screen.dart';
@@ -623,48 +622,6 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
 
     // Non-blocking trigger of daily auto-sync pipeline
     unawaited(SmsService.performDailySyncManualTrigger());
-  }
-
-  Future<void> _bulkRefineRecentTransactionsWithAi() async {
-    final messenger = ScaffoldMessenger.of(context);
-    await HapticFeedback.mediumImpact();
-
-    final aiService = GeminiNanoService();
-    if (!await aiService.isSupported()) {
-      messenger.clearSnackBars();
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Gemini Nano on-device AI is unsupported or disabled on this device.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    messenger.clearSnackBars();
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Refining recent transaction titles with Gemini Nano...'),
-        behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 3),
-      ),
-    );
-
-    final count = await SmsService.performBulkAiRefine();
-
-    if (!mounted) return;
-    await _refreshTransactions();
-    messenger.clearSnackBars();
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          count == 0
-              ? 'All recent transaction titles are already refined!'
-              : 'Successfully refined $count transaction title${count == 1 ? '' : 's'} with AI!',
-        ),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
   }
 
   /// Combined hero card: net balance +   /// Builds an interactive Swipable Hero Summary Card with 3 distinct insight modes:
@@ -1366,9 +1323,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
           color: colorScheme.surfaceContainerHigh,
           onSelected: (value) {
             HapticFeedback.selectionClick();
-            if (value == 'ai_refine') {
-              _bulkRefineRecentTransactionsWithAi();
-            } else if (value == 'savings_goals') {
+            if (value == 'savings_goals') {
               setState(() => _selectedTab = 'Budgets');
               SavingsGoalEditorSheet.show(context);
             } else if (value == 'sms_rules') {
@@ -1393,21 +1348,7 @@ class _FinancialManagerScreenState extends State<FinancialManagerScreen> with Wi
           },
           itemBuilder: (ctx) {
             final menuSettings = ctx.read<SettingsProvider>();
-            final isAiEnabled = menuSettings.isAiActive;
             return [
-              if (isAiEnabled) ...[
-                PopupMenuItem(
-                  value: 'ai_refine',
-                  height: 48,
-                  child: Row(
-                    children: [
-                      Icon(Icons.auto_fix_high_rounded, size: 20, color: colorScheme.primary),
-                      const SizedBox(width: 12),
-                      Text('Refine Recent with AI', style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                    ],
-                  ),
-                ),
-              ],
               if (menuSettings.enableSmsImport)
                 PopupMenuItem(
                   value: 'sms_rules',

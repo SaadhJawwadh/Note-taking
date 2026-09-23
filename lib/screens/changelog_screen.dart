@@ -28,9 +28,39 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
+                  version: 'v2.42.0',
+                  date: 'September 23, 2026',
+                  isLatest: true,
+                  changes: [
+                    _ChangelogGroup(
+                      title: "What's New",
+                      items: [
+                        'App Launcher Shortcuts: Long-press the app icon to jump directly into New Note, Add Expense, Scan Receipt, or Sync Devices.',
+                        'Dedicated Note Sorting: Convenient one-tap sort button on the Notes header to quickly sort by modified date, created date, title, or color.',
+                        'Itemized Split Bills & Undo: Share itemized statements of all pending bills via WhatsApp and undo settlements with automatic ledger sync.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: 'Improvements',
+                      items: [
+                        'Streamlined Tools Menus: Refined Notes and Finance action menus, reducing visual clutter while keeping essential utilities easily accessible.',
+                        'Auto-Purge & Diagnostic Notifications: Helpful notification summaries when old trash notes are cleared, plus a one-tap notification test in Settings.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: 'Fixes',
+                      items: [
+                        'Split Settlement Balance Parity: Undoing a settlement automatically reverses the ledger transaction to maintain exact cash flow accuracy.',
+                        'Background SMS Stability: Smoother background SMS parsing with improved duplicate prevention.',
+                      ],
+                    ),
+                  ],
+                ),
+                _buildVersionSection(
+                  context,
                   version: 'v2.41.0',
                   date: 'September 21, 2026',
-                  isLatest: true,
+                  isLatest: false,
                   changes: [
                     _ChangelogGroup(
                       title: "What's New",

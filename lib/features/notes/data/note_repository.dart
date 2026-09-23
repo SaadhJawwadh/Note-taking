@@ -385,11 +385,12 @@ class NoteRepository {
     });
   }
 
-  Future<void> clearOldTrash([int days = 7]) async {
-    if (days <= 0) return; // Disabled
+  Future<int> clearOldTrash([int days = 7]) async {
+    if (days <= 0) return 0; // Disabled
     final db = await _db;
     final cutoff = DateTime.now().subtract(Duration(days: days));
     final nowIso = DateTime.now().toIso8601String();
+    int purgedCount = 0;
     await db.transaction((txn) async {
       final oldNotes = await txn.query(
         TableNames.notes,
@@ -397,6 +398,7 @@ class NoteRepository {
         where: '${NoteFields.deletedAt} IS NOT NULL AND ${NoteFields.deletedAt} < ?',
         whereArgs: [cutoff.toIso8601String()],
       );
+      purgedCount = oldNotes.length;
       for (final row in oldNotes) {
         final id = row[NoteFields.id] as String;
         await NotificationService.cancelNoteReminder(id);
@@ -405,6 +407,7 @@ class NoteRepository {
         await txn.delete(TableNames.notes, where: '${NoteFields.id} = ?', whereArgs: [id]);
       }
     });
+    return purgedCount;
   }
 
   Future<Note> _populateNoteTags(Note note) async {

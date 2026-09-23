@@ -119,14 +119,14 @@ void main() {
       expect(settings.trashAutoPurgeDays, 30);
     });
 
-    testWidgets('WhatsNewSheet renders v2.41.0 cards and records version on dismiss', (tester) async {
+    testWidgets('WhatsNewSheet renders v2.42.0 cards and records version on dismiss', (tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
       SharedPreferences.setMockInitialValues({
-        'lastSeenVersion': '2.40.0',
+        'lastSeenVersion': '2.41.0',
       });
       final settings = SettingsProvider();
       await settings.loadSettings();
@@ -136,7 +136,7 @@ void main() {
           value: settings,
           child: const MaterialApp(
             home: Scaffold(
-              body: WhatsNewSheet(currentVersion: '2.41.0'),
+              body: WhatsNewSheet(currentVersion: '2.42.0'),
             ),
           ),
         ),
@@ -149,11 +149,11 @@ void main() {
       expect(find.text("Fixes"), findsOneWidget);
 
       // Check marquee items
-      expect(find.text("Long-Press Multi-Selection"), findsOneWidget);
-      expect(find.text("Contextual Floating Toolbars"), findsOneWidget);
-      expect(find.text("Dividerless Surface Architecture"), findsOneWidget);
-      expect(find.text("Tactile Haptic Feedback"), findsOneWidget);
-      expect(find.text("Polished Dialogs & Sheets"), findsOneWidget);
+      expect(find.text("App Launcher Shortcuts"), findsOneWidget);
+      expect(find.text("Dedicated Note Sorting"), findsOneWidget);
+      expect(find.text("Itemized Split Bills & Undo"), findsOneWidget);
+      expect(find.text("Streamlined Tools Menus"), findsOneWidget);
+      expect(find.text("Auto-Purge Notifications"), findsOneWidget);
 
       // Tap "Awesome, Got It!" to finish
       await tester.runAsync(() async {
@@ -162,7 +162,7 @@ void main() {
       });
       await tester.pumpAndSettle();
 
-      expect(settings.lastSeenVersion, '2.41.0');
+      expect(settings.lastSeenVersion, '2.42.0');
     });
   });
 }

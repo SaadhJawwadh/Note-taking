@@ -287,6 +287,65 @@ class SplitBillRepository {
     });
   }
 
+  Future<void> unsettleAllForContact(String contactName) async {
+    final db = await _dbHelper.database;
+    await db.transaction((txn) async {
+      final normalized = contactName.trim().toLowerCase();
+
+      // 1. Mark participants as unpaid in all active bills where this contact was a participant
+      await txn.rawUpdate('''
+        UPDATE ${TableNames.splitParticipants}
+        SET ${SplitParticipantFields.hasPaid} = 0, ${SplitParticipantFields.paidAt} = NULL
+        WHERE LOWER(TRIM(${SplitParticipantFields.contactName})) = ? AND ${SplitParticipantFields.hasPaid} = 1
+      ''', [normalized]);
+
+      // 2. If contact was payer of bills where user owed, unmark user share as paid
+      await txn.rawUpdate('''
+        UPDATE ${TableNames.splitParticipants}
+        SET ${SplitParticipantFields.hasPaid} = 0, ${SplitParticipantFields.paidAt} = NULL
+        WHERE LOWER(TRIM(${SplitParticipantFields.contactName})) = 'you'
+          AND ${SplitParticipantFields.billId} IN (
+            SELECT ${SplitBillFields.id} FROM ${TableNames.splitBills}
+            WHERE LOWER(TRIM(${SplitBillFields.payerName})) = ? AND ${SplitBillFields.isPayerUser} = 0
+          )
+      ''', [normalized]);
+
+      // 3. Recompute statuses of all bills involving this contact
+      final affectedBills = await txn.rawQuery('''
+        SELECT DISTINCT ${SplitParticipantFields.billId} AS bill_id FROM ${TableNames.splitParticipants}
+        WHERE LOWER(TRIM(${SplitParticipantFields.contactName})) = ?
+        UNION
+        SELECT ${SplitBillFields.id} AS bill_id FROM ${TableNames.splitBills}
+        WHERE LOWER(TRIM(${SplitBillFields.payerName})) = ?
+      ''', [normalized, normalized]);
+
+      for (final row in affectedBills) {
+        final billId = row['bill_id'] as String;
+        final allPMaps = await txn.query(
+          TableNames.splitParticipants,
+          where: '${SplitParticipantFields.billId} = ?',
+          whereArgs: [billId],
+        );
+        final participants = allPMaps.map((m) => SplitParticipantModel.fromMap(m)).toList();
+        final billMap = await txn.query(
+          TableNames.splitBills,
+          where: '${SplitBillFields.id} = ?',
+          whereArgs: [billId],
+        );
+        if (billMap.isNotEmpty) {
+          final bill = SplitBillModel.fromMap(billMap.first, participants: participants);
+          final derivedStatus = bill.computeDerivedStatus();
+          await txn.update(
+            TableNames.splitBills,
+            {SplitBillFields.status: derivedStatus.name},
+            where: '${SplitBillFields.id} = ?',
+            whereArgs: [billId],
+          );
+        }
+      }
+    });
+  }
+
   Future<void> softDeleteSplitBill(String id) async {
     final db = await _dbHelper.database;
     await db.transaction((txn) async {

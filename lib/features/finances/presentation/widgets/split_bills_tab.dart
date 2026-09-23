@@ -11,11 +11,17 @@ import '../../../../core/ui/app_chip.dart';
 import '../../../../core/ui/app_dialog.dart';
 import '../../../../core/ui/expressive_shape_morph_indicator.dart';
 import '../../../../core/ui/expressive_floating_toolbar.dart';
+import '../../../../data/database_helper.dart';
+import '../../../../data/database_constants.dart';
+import '../../../../data/transaction_model.dart';
 import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import '../../../../data/transaction_category.dart';
 import '../../data/models/split_bill_model.dart';
+import '../../data/transaction_repository.dart';
+import '../../providers/financial_manager_provider.dart';
 import '../../providers/split_bill_provider.dart';
 import '../../services/split_share_service.dart';
+import '../screens/financial_manager_screen.dart';
 import '../screens/split_bill_editor_screen.dart';
 import 'settle_up_sheet.dart';
 
@@ -42,6 +48,88 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
         _selectedBillIds.add(id);
       }
     });
+  }
+
+  Future<void> _unsettleParticipant(
+    BuildContext context,
+    SplitBillProvider splitProvider,
+    SplitParticipantModel p,
+    SplitBillModel bill,
+  ) async {
+    await splitProvider.toggleParticipantPaid(p.id, false);
+
+    // Look for matching settlement entry in personal ledger and delete it to maintain parity
+    final contactName = p.contactName.trim().toLowerCase() == 'you' ? bill.payerName.trim() : p.contactName.trim();
+    try {
+      final db = await DatabaseHelper.instance.database;
+      final settlementRows = await db.query(
+        TableNames.transactions,
+        columns: [TransactionFields.id],
+        where: '${TransactionFields.deletedAt} IS NULL AND (${TransactionFields.description} LIKE ? OR ${TransactionFields.description} LIKE ?)',
+        whereArgs: ['%$contactName - Split settlement%', '%Paid $contactName - Split settlement%'],
+        orderBy: '${TransactionFields.date} DESC',
+        limit: 1,
+      );
+      if (settlementRows.isNotEmpty) {
+        final txId = settlementRows.first[TransactionFields.id] as int;
+        await TransactionRepository.instance.deleteTransaction(txId);
+      }
+    } catch (_) {}
+
+    FinancialManagerScreen.refreshNotifier.value++;
+    if (context.mounted) {
+      try {
+        await Provider.of<FinancialManagerProvider>(context, listen: false).loadTransactions();
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _confirmUnsettleContact(
+    BuildContext context,
+    SplitBillProvider splitProvider,
+    String contactName,
+  ) async {
+    final confirmed = await AppDialog.showConfirm(
+      context: context,
+      title: 'Reopen Bills with $contactName?',
+      message: 'This will undo the settlement for $contactName, reopen unpaid balances, and remove the settlement transaction from your ledger.',
+      confirmLabel: 'Reopen Bills',
+      isDestructive: false,
+    );
+    if (confirmed != true) return;
+
+    await splitProvider.unsettleAllForContact(contactName);
+
+    // Delete settlement transaction from ledger
+    try {
+      final db = await DatabaseHelper.instance.database;
+      final settlementRows = await db.query(
+        TableNames.transactions,
+        columns: [TransactionFields.id],
+        where: '${TransactionFields.deletedAt} IS NULL AND (${TransactionFields.description} LIKE ? OR ${TransactionFields.description} LIKE ?)',
+        whereArgs: ['%$contactName - Split settlement%', '%Paid $contactName - Split settlement%'],
+        orderBy: '${TransactionFields.date} DESC',
+        limit: 1,
+      );
+      if (settlementRows.isNotEmpty) {
+        final txId = settlementRows.first[TransactionFields.id] as int;
+        await TransactionRepository.instance.deleteTransaction(txId);
+      }
+    } catch (_) {}
+
+    FinancialManagerScreen.refreshNotifier.value++;
+    if (!context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await Provider.of<FinancialManagerProvider>(context, listen: false).loadTransactions();
+    } catch (_) {}
+    if (!context.mounted) return;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('Settlement undone. Bills with $contactName are reopened.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   void _clearSelection() {
@@ -643,14 +731,18 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                                     tooltip: 'Remind on WhatsApp',
                                     visualDensity: VisualDensity.compact,
                                     onPressed: () {
-                                      final firstBill = openBills.isNotEmpty ? openBills.first : null;
-                                      if (firstBill != null) {
-                                        SplitShareService.shareToWhatsAppOrSystem(
-                                          firstBill,
-                                          defaultPaymentInfo: Provider.of<SettingsProvider>(context, listen: false).defaultPaymentInfo,
-                                          currencySymbol: currency,
-                                        );
-                                      }
+                                      final settings = Provider.of<SettingsProvider>(context, listen: false);
+                                      final text = SplitShareService.formatPersonPendingStatement(
+                                        contactName: name,
+                                        openBills: openBills,
+                                        totalAmount: netBalance,
+                                        currencySymbol: currency,
+                                        defaultPaymentInfo: settings.defaultPaymentInfo,
+                                      );
+                                      SplitShareService.shareText(
+                                        text,
+                                        subject: 'Split Balance Reminder - $name',
+                                      );
                                     },
                                   ),
                                   const SizedBox(width: AppLayout.spaceXS),
@@ -669,6 +761,28 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                                   child: const Text('Settle Up', style: TextStyle(fontSize: 12)),
                                 ),
                               ],
+                            ),
+                          ] else ...[
+                            Builder(
+                              builder: (ctx) {
+                                final hasSettledBills = splitProvider.bills.any((b) =>
+                                  (b.isPayerUser && b.participants.any((p) => p.contactName.trim().toLowerCase() == name.trim().toLowerCase() && p.hasPaid)) ||
+                                  (!b.isPayerUser && b.payerName.trim().toLowerCase() == name.trim().toLowerCase() && b.isUserSharePaid)
+                                );
+                                if (!hasSettledBills) return const SizedBox.shrink();
+                                return Padding(
+                                  padding: const EdgeInsets.only(top: AppLayout.spaceXS),
+                                  child: TextButton.icon(
+                                    onPressed: () => _confirmUnsettleContact(context, splitProvider, name),
+                                    icon: const Icon(Icons.undo_rounded, size: 14),
+                                    label: const Text('Undo Settle', style: TextStyle(fontSize: 11)),
+                                    style: TextButton.styleFrom(
+                                      visualDensity: VisualDensity.compact,
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           ],
                         ],
@@ -987,7 +1101,7 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                                               specificParticipant: p,
                                             );
                                           } else {
-                                            splitProvider.toggleParticipantPaid(p.id, false);
+                                            _unsettleParticipant(context, splitProvider, p, bill);
                                           }
                                         } else if (bill.isPayerUser) {
                                           // You paid the bill -> other participants pay YOU back
@@ -1000,7 +1114,7 @@ class _SplitBillsTabState extends State<SplitBillsTab> {
                                               specificParticipant: p,
                                             );
                                           } else {
-                                            splitProvider.toggleParticipantPaid(p.id, false);
+                                            _unsettleParticipant(context, splitProvider, p, bill);
                                           }
                                         } else {
                                           // Friend paid the bill -> other friends owe the payer, NOT you!

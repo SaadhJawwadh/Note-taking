@@ -23,13 +23,24 @@
             android:targetClass="com.saadhjawwadh.notebook.MainActivity" />
     </shortcut>
     <shortcut
-        android:shortcutId="search"
+        android:shortcutId="scan_receipt"
         android:enabled="true"
-        android:icon="@drawable/ic_shortcut_search"
-        android:shortcutShortLabel="@string/shortcut_search_short"
-        android:shortcutLongLabel="@string/shortcut_search_long">
+        android:icon="@drawable/ic_shortcut_scan_receipt"
+        android:shortcutShortLabel="@string/shortcut_scan_receipt_short"
+        android:shortcutLongLabel="@string/shortcut_scan_receipt_long">
         <intent
-            android:action="com.saadhjawwadh.notebook.SEARCH"
+            android:action="com.saadhjawwadh.notebook.SCAN_RECEIPT"
+            android:targetPackage="com.saadhjawwadh.notebook"
+            android:targetClass="com.saadhjawwadh.notebook.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="sync_devices"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_sync"
+        android:shortcutShortLabel="@string/shortcut_sync_devices_short"
+        android:shortcutLongLabel="@string/shortcut_sync_devices_long">
+        <intent
+            android:action="com.saadhjawwadh.notebook.SYNC_DEVICES"
             android:targetPackage="com.saadhjawwadh.notebook"
             android:targetClass="com.saadhjawwadh.notebook.MainActivity" />
     </shortcut>

@@ -8,4 +8,8 @@
     <string name="shortcut_new_transaction_long">Add a new transaction</string>
     <string name="shortcut_search_short">Search</string>
     <string name="shortcut_search_long">Search notes and transactions</string>
+    <string name="shortcut_scan_receipt_short">Scan receipt</string>
+    <string name="shortcut_scan_receipt_long">Scan physical receipt with OCR</string>
+    <string name="shortcut_sync_devices_short">Sync devices</string>
+    <string name="shortcut_sync_devices_long">P2P local Wi-Fi sync</string>
 </resources>

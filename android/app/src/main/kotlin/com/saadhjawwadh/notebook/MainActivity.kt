@@ -61,6 +61,8 @@ class MainActivity: FlutterFragmentActivity() {
             "com.saadhjawwadh.notebook.VIEW_TRENDS" -> pendingWidgetAction = "view_trends"
             "com.saadhjawwadh.notebook.NEW_NOTE" -> pendingWidgetAction = "new_note"
             "com.saadhjawwadh.notebook.SEARCH" -> pendingWidgetAction = "search"
+            "com.saadhjawwadh.notebook.SCAN_RECEIPT" -> pendingWidgetAction = "scan_receipt"
+            "com.saadhjawwadh.notebook.SYNC_DEVICES" -> pendingWidgetAction = "sync_devices"
             Intent.ACTION_PROCESS_TEXT -> {
                 val text = intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.toString()
                 if (!text.isNullOrEmpty()) {

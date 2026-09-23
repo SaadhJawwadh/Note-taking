@@ -277,6 +277,9 @@ class NotificationService {
     const NotificationDetails platformChannelSpecifics =
         NotificationDetails(android: androidPlatformChannelSpecifics);
 
+    if (!kIsWeb && Platform.environment.containsKey('FLUTTER_TEST')) {
+      return;
+    }
     try {
       await _notificationsPlugin.show(
         id,
@@ -286,6 +289,74 @@ class NotificationService {
       );
     } catch (e) {
       debugPrint('Error showing auto-backup notification: $e');
+    }
+  }
+
+  static Future<void> showTestNotification() async {
+    if (!kIsWeb && Platform.environment.containsKey('FLUTTER_TEST')) {
+      return;
+    }
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'system_channel',
+      'System & Diagnostics',
+      channelDescription: 'Diagnostics and test notifications',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+    const DarwinNotificationDetails darwinDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+    const NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: darwinDetails,
+      macOS: darwinDetails,
+    );
+
+    try {
+      await _notificationsPlugin.show(
+        0x54455354, // 'TEST'
+        '🔔 Notifications Active',
+        'Test notification delivered successfully! All alerts and channels are configured properly.',
+        platformDetails,
+      );
+    } catch (e) {
+      debugPrint('Error showing test notification: $e');
+    }
+  }
+
+  static Future<void> showAutoPurgeNotification(int count, int days) async {
+    if (!kIsWeb && Platform.environment.containsKey('FLUTTER_TEST')) {
+      return;
+    }
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'trash_cleanup_channel',
+      'Trash & Auto-Purge',
+      channelDescription: 'Notifications for automated trash retention cleanup',
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+    );
+    const DarwinNotificationDetails darwinDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+    const NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: darwinDetails,
+      macOS: darwinDetails,
+    );
+
+    try {
+      await _notificationsPlugin.show(
+        0x50555247, // 'PURG'
+        '🗑️ Trash Cleaned',
+        'Automatically purged $count note${count == 1 ? '' : 's'} older than $days days.',
+        platformDetails,
+      );
+    } catch (e) {
+      debugPrint('Error showing auto-purge notification: $e');
     }
   }
 

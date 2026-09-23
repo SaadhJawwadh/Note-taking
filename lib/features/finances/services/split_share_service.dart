@@ -67,6 +67,48 @@ class SplitShareService {
     return buffer.toString().trim();
   }
 
+  static String formatPersonPendingStatement({
+    required String contactName,
+    required List<SplitBillModel> openBills,
+    required double totalAmount,
+    String currencySymbol = 'Rs.',
+    String? defaultPaymentInfo,
+  }) {
+    final buffer = StringBuffer();
+    buffer.writeln('👋 Hey $contactName,');
+    final formattedTotal = totalAmount.abs().toStringAsFixed(2).replaceAll('.00', '');
+    buffer.writeln('Here is a summary of your pending balance:');
+    buffer.writeln('💰 Total Pending: $currencySymbol $formattedTotal');
+
+    if (openBills.isNotEmpty) {
+      buffer.writeln('');
+      buffer.writeln('📋 Pending Bills:');
+      final dateFormat = DateFormat('MMM d, yyyy');
+      for (final bill in openBills) {
+        final dateStr = dateFormat.format(bill.date);
+        if (bill.isPayerUser) {
+          final p = bill.participants.where((part) =>
+              part.contactName.trim().toLowerCase() == contactName.trim().toLowerCase() && !part.hasPaid).firstOrNull;
+          if (p != null) {
+            final shareStr = p.shareAmount.toStringAsFixed(2).replaceAll('.00', '');
+            buffer.writeln('• ${bill.title} ($dateStr): $currencySymbol $shareStr');
+          }
+        } else {
+          final shareStr = bill.userShare.toStringAsFixed(2).replaceAll('.00', '');
+          buffer.writeln('• ${bill.title} ($dateStr): $currencySymbol $shareStr');
+        }
+      }
+    }
+
+    if (defaultPaymentInfo != null && defaultPaymentInfo.trim().isNotEmpty) {
+      buffer.writeln('');
+      buffer.writeln('💳 Payment Details:');
+      buffer.writeln(defaultPaymentInfo.trim());
+    }
+
+    return buffer.toString().trim();
+  }
+
   static Future<void> shareToWhatsAppOrSystem(
     SplitBillModel bill, {
     String currencySymbol = 'Rs.',

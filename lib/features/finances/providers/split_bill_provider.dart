@@ -240,6 +240,45 @@ class SplitBillProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> unsettleAllForContact(String contactName) async {
+    final normalized = contactName.trim().toLowerCase();
+    for (int i = 0; i < _bills.length; i++) {
+      final b = _bills[i];
+      if (b.isPayerUser) {
+        final updatedParticipants = b.participants.map((p) {
+          if (p.contactName.trim().toLowerCase() == normalized) {
+            return p.copyWith(hasPaid: false, paidAt: null);
+          }
+          return p;
+        }).toList();
+        _bills[i] = b.copyWith(
+          participants: updatedParticipants,
+          status: b.copyWith(participants: updatedParticipants).computeDerivedStatus(),
+        );
+      } else if (b.payerName.trim().toLowerCase() == normalized) {
+        final updatedParticipants = b.participants.map((p) {
+          if (p.contactName.trim().toLowerCase() == 'you') {
+            return p.copyWith(hasPaid: false, paidAt: null);
+          }
+          return p;
+        }).toList();
+        _bills[i] = b.copyWith(
+          participants: updatedParticipants,
+          status: b.copyWith(participants: updatedParticipants).computeDerivedStatus(),
+        );
+      }
+    }
+    _recalculateMetrics();
+    notifyListeners();
+
+    try {
+      await _repository.unsettleAllForContact(contactName);
+      await loadSplitBills(showLoading: false);
+    } catch (e) {
+      await loadSplitBills(showLoading: false);
+    }
+  }
+
   void _recalculateMetrics() {
     double owedToUser = 0.0;
     double userOwes = 0.0;

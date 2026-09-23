@@ -40,6 +40,10 @@ import '../l10n/app_localizations.dart';
 import '../widgets/whats_new_sheet.dart';
 import '../services/update_rating_service.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:note_taking_app/features/finances/presentation/widgets/receipt_scanner_sheet.dart';
+import 'package:note_taking_app/features/sync/presentation/screens/p2p_sync_screen.dart';
+import 'package:note_taking_app/data/transaction_model.dart';
+import 'package:note_taking_app/data/category_constants.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -240,6 +244,52 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         );
       } else if (action == 'search' && mounted) {
         HomeAppBar.searchRequestedNotifier.value = true;
+      } else if (action == 'scan_receipt' && mounted) {
+        final settings = Provider.of<SettingsProvider>(context, listen: false);
+        if (settings.showFinancialManager) {
+          final List<Widget> destinations = _buildDestinations(settings);
+          int financesIndex = -1;
+          for (int i = 0; i < destinations.length; i++) {
+            if (destinations[i] is FinancialManagerScreen) {
+              financesIndex = i;
+              break;
+            }
+          }
+          if (financesIndex != -1) {
+            setState(() {
+              _currentIndex = financesIndex;
+            });
+          }
+        }
+        unawaited(
+          ReceiptScannerSheet.show(context).then((res) {
+            if (res != null && mounted) {
+              final double? total = res['total'] as double?;
+              final String? merchant = res['merchant'] as String?;
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => TransactionEditorScreen(
+                    transaction: TransactionModel(
+                      amount: total ?? 0.0,
+                      description: merchant ?? 'Scanned Receipt',
+                      date: DateTime.now(),
+                      isExpense: true,
+                      category: CategoryConstants.shopping,
+                    ),
+                  ),
+                ),
+              );
+            }
+          }),
+        );
+      } else if (action == 'sync_devices' && mounted) {
+        unawaited(
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const P2pSyncScreen()),
+          ),
+        );
       } else if (action == 'process_text' && mounted) {
         final String? sharedText =
             await widgetChannel.invokeMethod<String>('getPendingSharedText');

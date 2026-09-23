@@ -581,6 +581,68 @@ class _HomeAppBarState extends State<HomeAppBar> {
           },
         ),
         PopupMenuButton<String>(
+          icon: const Icon(Icons.sort_rounded),
+          tooltip: 'Sort notes',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+          elevation: 3,
+          shadowColor: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.15),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppLayout.radiusXL),
+            side: BorderSide(
+              color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.35),
+              width: 1,
+            ),
+          ),
+          color: Theme.of(context).colorScheme.surfaceContainerHigh,
+          onSelected: (sortMode) {
+            HapticFeedback.selectionClick();
+            noteProvider.setSortMode(sortMode);
+          },
+          itemBuilder: (context) {
+            final colorScheme = Theme.of(context).colorScheme;
+            final currentSort = noteProvider.sortMode;
+
+            return [
+              ('modified', 'Sort by Last Modified', Icons.access_time_rounded),
+              ('created', 'Sort by Date Created', Icons.calendar_today_rounded),
+              ('title', 'Sort by Title', Icons.sort_by_alpha_rounded),
+              ('color', 'Sort by Color', Icons.palette_outlined),
+            ].map((item) {
+              final isSelected = currentSort == item.$1;
+              return PopupMenuItem<String>(
+                value: item.$1,
+                height: 48,
+                child: Row(
+                  children: [
+                    Icon(
+                      item.$3,
+                      size: 20,
+                      color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        item.$2,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                              color: isSelected ? colorScheme.primary : colorScheme.onSurface,
+                            ),
+                      ),
+                    ),
+                    if (isSelected)
+                      Icon(
+                        Icons.check_rounded,
+                        size: 18,
+                        color: colorScheme.primary,
+                      ),
+                  ],
+                ),
+              );
+            }).toList();
+          },
+        ),
+        PopupMenuButton<String>(
           icon: const Icon(Icons.more_vert_rounded),
           tooltip: 'Notes Tools',
           padding: EdgeInsets.zero,
@@ -609,13 +671,10 @@ class _HomeAppBarState extends State<HomeAppBar> {
               AppRoute.push(context, const FilteredNotesScreen(filterType: FilterType.archived));
             } else if (action == 'trash') {
               AppRoute.push(context, const FilteredNotesScreen(filterType: FilterType.trash));
-            } else {
-              noteProvider.setSortMode(action);
             }
           },
           itemBuilder: (context) {
             final colorScheme = Theme.of(context).colorScheme;
-            final currentSort = noteProvider.sortMode;
 
             return [
               PopupMenuItem<String>(
@@ -641,43 +700,6 @@ class _HomeAppBarState extends State<HomeAppBar> {
                   ],
                 ),
               ),
-              ...[
-                ('modified', 'Sort by Last Modified', Icons.access_time_rounded),
-                ('created', 'Sort by Date Created', Icons.calendar_today_rounded),
-                ('title', 'Sort by Title', Icons.sort_by_alpha_rounded),
-                ('color', 'Sort by Color', Icons.palette_outlined),
-              ].map((item) {
-                final isSelected = currentSort == item.$1;
-                return PopupMenuItem<String>(
-                  value: item.$1,
-                  height: 48,
-                  child: Row(
-                    children: [
-                      Icon(
-                        item.$3,
-                        size: 20,
-                        color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          item.$2,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                color: isSelected ? colorScheme.primary : colorScheme.onSurface,
-                              ),
-                        ),
-                      ),
-                      if (isSelected)
-                        Icon(
-                          Icons.check_rounded,
-                          size: 18,
-                          color: colorScheme.primary,
-                        ),
-                    ],
-                  ),
-                );
-              }),
               PopupMenuItem<String>(
                 value: 'manage_folders',
                 height: 48,

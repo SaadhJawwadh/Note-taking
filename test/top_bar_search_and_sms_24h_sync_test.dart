@@ -78,6 +78,64 @@ void main() {
       }
       fail('No Container with border found in ancestor tree of chevron');
     });
+
+    testWidgets('HomeAppBar renders dedicated Sort button and opens sort menu', (tester) async {
+      tester.view.physicalSize = const Size(1200, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => SettingsProvider()),
+            ChangeNotifierProvider(create: (_) => NoteProvider()),
+            ChangeNotifierProvider(create: (_) => P2pSyncProvider()),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.createTheme(null, Brightness.light),
+            home: Scaffold(
+              body: CustomScrollView(
+                slivers: [
+                  HomeAppBar(
+                    onClearSelection: () {},
+                    onBulkArchive: () {},
+                    onBulkDelete: () {},
+                    onBulkTag: () {},
+                    onBulkMoveToFolder: () {},
+                    onCycleViewMode: () {},
+                    onRefresh: () async {},
+                  ),
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: 200),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Verify dedicated sort button exists
+      final sortButton = find.byIcon(Icons.sort_rounded);
+      expect(sortButton, findsOneWidget);
+
+      // Verify Notes Tools button exists
+      final toolsButton = find.byIcon(Icons.more_vert_rounded);
+      expect(toolsButton, findsOneWidget);
+
+      // Tap sort button and verify sort options appear
+      await tester.tap(sortButton);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sort by Last Modified'), findsOneWidget);
+      expect(find.text('Sort by Date Created'), findsOneWidget);
+      expect(find.text('Sort by Title'), findsOneWidget);
+      expect(find.text('Sort by Color'), findsOneWidget);
+      // Tools items should NOT be in the sort menu
+      expect(find.text('Manage Folders'), findsNothing);
+      expect(find.text('Trash Bin'), findsNothing);
+    });
   });
 
   group('Finances Top Bar Search Mode Tests', () {

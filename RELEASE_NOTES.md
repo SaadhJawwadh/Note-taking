@@ -1,15 +1,14 @@
 
 ### 🌟 What's New
-- **Long-Press Multi-Selection**: Long press to select multiple items across Notes, Financial Ledger, Trash, and Split Bills to perform quick bulk operations.
-- **Contextual Floating Action Toolbars**: Convenient floating bottom action toolbar dynamically appears during selection mode, letting you batch assign categories, archive, or delete selected records with one tap.
-- **Material 3 Expressive Surfaces**: Unified dividerless surface architecture with smooth tonal container layering, cleaner layouts, and enhanced contrast.
+- **App Launcher Shortcuts**: Long-press the app icon on your home screen to instantly create a new note, log an expense, scan a physical receipt, or open device sync.
+- **Dedicated Note Sorting**: Quick one-tap sort button on the Notes header to seamlessly reorder notes by date modified, date created, title, or color.
+- **Itemized Split Bills & Undo**: Share clear WhatsApp statements itemizing all open balances for a contact; one-tap undo for bill settlements with automatic ledger sync.
 
 ### 🚀 Improvements
-- **Tactile Haptic Feedback**: Refined micro-vibrations when engaging multi-selection, toggling items, and confirming batch actions.
-- **Polished Dialogs & Sheets**: Streamlined padding and clean surface backgrounds across Calculator, SMS Import, and Note Details sheets.
-- **Sub-Pixel Layout Alignment**: Enhanced edge-to-edge content presentation with perfect vertical headroom across all module headers.
+- **Streamlined Tools Menus**: Refined Notes and Finance action menus, reducing clutter while keeping essential utilities easily accessible.
+- **Auto-Purge & Diagnostic Notifications**: Automatic notification summaries when old trash items are cleaned up, plus a one-tap notification test in Settings.
 
 ### 🐛 Fixes
-- **Multi-Selection State Consistency**: Smooth transition when entering and exiting selection mode without visual flickering or sticky states.
-- **Table Dialog & Action Layout**: Resolved divider overlap and improved action button spacing in editor dialogs.
+- **Split Settlement Balance Parity**: Undoing a settlement automatically reverses the ledger transaction to maintain exact cash flow accuracy.
+- **Background SMS Stability**: Smoother background SMS parsing with improved duplicate prevention.
 

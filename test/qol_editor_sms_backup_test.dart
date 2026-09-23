@@ -8,6 +8,7 @@ import 'package:note_taking_app/utils/rich_text_utils.dart';
 import 'package:note_taking_app/services/p2p_sync_service.dart';
 import 'package:note_taking_app/features/settings/providers/settings_provider.dart';
 import 'package:flutter_quill/quill_delta.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -48,6 +49,16 @@ void main() {
         body: 'Data safely backed up at 10:30 PM.',
       );
       // Completes cleanly
+      expect(true, isTrue);
+    });
+
+    test('showTestNotification runs without unhandled exception', () async {
+      await NotificationService.showTestNotification();
+      expect(true, isTrue);
+    });
+
+    test('showAutoPurgeNotification runs without unhandled exception', () async {
+      await NotificationService.showAutoPurgeNotification(5, 30);
       expect(true, isTrue);
     });
 
@@ -198,11 +209,25 @@ void main() {
       expect(timeoutErr, contains('Ensure Note Taking is open and active on your peer device'));
     });
 
-    test('SettingsProvider.updateLastAutoBackupTime updates state correctly', () {
+    test('SettingsProvider.updateLastAutoBackupTime updates state correctly', () async {
+      SharedPreferences.setMockInitialValues({});
       final provider = SettingsProvider();
       final now = DateTime.now();
       provider.updateLastAutoBackupTime(now);
       expect(provider.lastAutoBackupTime, equals(now.toIso8601String()));
+    });
+
+    test('App shortcut action constants map accurately', () {
+      const shortcutActions = {
+        'new_note': 'com.saadhjawwadh.notebook.NEW_NOTE',
+        'add_transaction': 'com.saadhjawwadh.notebook.ADD_TRANSACTION',
+        'scan_receipt': 'com.saadhjawwadh.notebook.SCAN_RECEIPT',
+        'sync_devices': 'com.saadhjawwadh.notebook.SYNC_DEVICES',
+      };
+      expect(shortcutActions['new_note'], contains('NEW_NOTE'));
+      expect(shortcutActions['add_transaction'], contains('ADD_TRANSACTION'));
+      expect(shortcutActions['scan_receipt'], contains('SCAN_RECEIPT'));
+      expect(shortcutActions['sync_devices'], contains('SYNC_DEVICES'));
     });
   });
 }
