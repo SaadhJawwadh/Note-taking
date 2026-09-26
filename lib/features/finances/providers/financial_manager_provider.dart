@@ -186,9 +186,11 @@ class FinancialManagerProvider extends ChangeNotifier {
 
   // ── Multi-Selection & Batch Operations ──────────────────────────────────
   bool _isSelectionMode = false;
+  bool _isBulkAiRefining = false;
   final Set<int> _selectedTransactionIds = <int>{};
 
   bool get isSelectionMode => _isSelectionMode;
+  bool get isBulkAiRefining => _isBulkAiRefining;
   Set<int> get selectedTransactionIds => Set.unmodifiable(_selectedTransactionIds);
   int get selectedCount => _selectedTransactionIds.length;
 
@@ -262,21 +264,28 @@ class FinancialManagerProvider extends ChangeNotifier {
   Future<int> bulkAiRefineSelected() async {
     final ids = _selectedTransactionIds.toSet();
     if (ids.isEmpty) return 0;
-    clearSelection();
 
-    final selectedTxns = _allTransactions.where((t) => t.id != null && ids.contains(t.id)).toList();
+    _isBulkAiRefining = true;
+    notifyListeners();
+
     int refinedCount = 0;
-    for (final t in selectedTxns) {
-      final refined = await SmsService.refineSingleTransactionWithAi(t);
-      if (refined != null) {
-        final updated = refined.copy(isAiRefined: true);
-        await _repository.updateTransaction(updated);
-        refinedCount++;
-      } else {
-        await _repository.updateTransaction(t.copy(isAiRefined: true));
+    try {
+      final selectedTxns = _allTransactions.where((t) => t.id != null && ids.contains(t.id)).toList();
+      for (final t in selectedTxns) {
+        final refined = await SmsService.refineSingleTransactionWithAi(t);
+        if (refined != null) {
+          final updated = refined.copy(isAiRefined: true);
+          await _repository.updateTransaction(updated);
+          refinedCount++;
+        }
       }
+      await loadTransactions();
+    } catch (e) {
+      debugPrint('Error in bulkAiRefineSelected: $e');
+    } finally {
+      _isBulkAiRefining = false;
+      clearSelection();
     }
-    await loadTransactions();
     return refinedCount;
   }
 }

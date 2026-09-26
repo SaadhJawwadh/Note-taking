@@ -141,6 +141,7 @@ class NoteApp extends StatelessWidget {
           darkTheme: AppTheme.createTheme(
               settings.useDynamicColor ? darkDynamic : null, Brightness.dark),
           themeMode: settings.themeMode,
+          locale: settings.currentLocale,
           home: const HomeScreen(),
           builder: (context, child) {
             final mediaQueryData = MediaQuery.of(context);

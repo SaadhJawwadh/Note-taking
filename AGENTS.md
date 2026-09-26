@@ -127,7 +127,8 @@ lib/
   - When the user pays for a group bill, the master expense reflects the full receipt total (matching bank SMS debits).
   - Debt repayments from participants settled in `SettleUpSheet` MUST record as `Income` in the Daily Operating account.
   - When a friend pays for a bill, the user's ledger records personal liability *only* upon the user settling their own share with that friend (recorded as `Expense`). Other participants settling with the payer are purely informational in the Split Tab and MUST NEVER create ledger entries in the user's personal accounts. Once the user pays their share, the split is completed (`Settled for You`) from the user's perspective.
-* **Offline OCR & Sharing**: Receipt scanning (`ReceiptScannerService`) operates 100% locally on-device via ML Kit. WhatsApp payment reminder templates (`SplitShareService`) format genuine breakdown summaries and include user-configured default payment info without third-party cloud SDKs.
+  - Reversing a settlement (`unsettleAllForContact`) MUST delete the matching ledger transaction in `transactions` (`TransactionRepository.deleteTransaction`), ensuring cash flow balances remain identical to settled states.
+* **Offline OCR & Sharing**: Receipt scanning (`ReceiptScannerService`) operates 100% locally on-device via ML Kit. WhatsApp payment reminder templates (`SplitShareService.formatPersonPendingStatement`) format genuine multi-bill itemized breakdown summaries with running totals and user-configured default payment info without third-party cloud SDKs.
 * **Full Backup & P2P Sync Invariant**: Split bills tables (`split_bills`, `split_participants`, `split_contacts`) MUST be serialized in `BackupService.generateBackupJson()`, restored in `BackupService.restoreFromBackupData()`, and merged via `SyncMergeService.mergeRemoteData()`.
 * **Resume Lock Bypass**: Any screen invoking external file pickers or system share sheets (JSON backups, CSV imports, Receipt Camera/Gallery, WhatsApp sharing) MUST call `AppLockScreen.ignoreNextResumeLock()` immediately before launch.
 
@@ -144,10 +145,11 @@ lib/
   - **Finances**: `Finances` + `[ 📅 Date Range ▾ ]` (opens preset date range sheet).
   - **Health Tracker**: `Period Tracker` + `[ 🌸 Day X • Phase ]` (indicates active cycle status).
 * **Tonal Scope Pill Contrast Standard**: Scope pills MUST use M3 Tonal Container styling (`colorScheme.primaryContainer.withValues(alpha: isDark ? 0.35 : 0.45)`) with a subtle `1.0px` primary accent border (`colorScheme.primary.withValues(alpha: 0.28)`), `colorScheme.onSurface` label, and `colorScheme.primary` leading icon & dropdown chevron, guaranteeing 100% legibility across dynamic Material You wallpaper palettes.
+* **High-Frequency vs Administrative Action Rule**: High-frequency layout and view manipulations (such as note sorting) must NOT be buried inside the 3-dot overflow menu (`⋮`). Provide a dedicated top-bar action button (`Icons.sort_rounded`) with an instant popup menu. Reserve the 3-dot tools menu strictly for secondary administrative utilities (view toggle, folders, tags, archive, trash).
 * **Top Action Bar Canonical Order (Muscle Memory)**:
-  - **Primary Contextual Actions**: `[ 🔍 Search ]` (Notes & Finances), `[ 🔄 Sync ]` (P2P Sync in Notes when paired, SMS Sync in Finances), `[ 📅 Today ]` (Health Tracker).
-  - **Penultimate Slot**: `[ ⋮ Tools ]` (Notes Tools, Finances Tools, Health Tools) containing secondary workflows, sorting, and tag management.
-  - **Terminal Anchor**: `[ ⚙️ Settings ]` present consistently as the rightmost anchor across all module tabs.
+  - **Notes**: `[ 🔍 Search ]` $\rightarrow$ `[ 🔃 Sort ]` $\rightarrow$ `[ 🔄 Sync (when paired) ]` $\rightarrow$ `[ ⋮ Notes Tools ]` $\rightarrow$ `[ ⚙️ Settings ]`.
+  - **Finances**: `[ 🔍 Search ]` $\rightarrow$ `[ 🔄 SMS Sync ]` $\rightarrow$ `[ ⋮ Finances Tools ]` $\rightarrow$ `[ ⚙️ Settings ]`.
+  - **Health Tracker**: `[ 📅 Today ]` $\rightarrow$ `[ ⋮ Health Tools ]` $\rightarrow$ `[ ⚙️ Settings ]`.
 * **Top Bar Transaction Search Integration**: Tapping `[ 🔍 Search ]` in Finances transforms the top app bar into full-width search mode (`_isSearching`) with back button, real-time debounced query input, and clear button (matching Notes), auto-switches to the `Ledger` tab, and completely eliminates redundant inline `TextField` search boxes from scroll views.
 * **Edge Margin Symmetry & Compact Hit Constraints**:
   - Outer horizontal padding MUST be strictly `16dp` left and `16dp` right with ZERO inner edge spacers.
@@ -159,6 +161,11 @@ lib/
 * **Keep Bookmark Annotations Invariant**: In Google Keep, web bookmarks shared from browsers set `textContent: ""` and place the URL, title, and description inside `data['annotations']`. Importers MUST extract `annotations` into formatted markdown links, preventing notes from importing as blank bodies with only labels.
 * **Companion Image Resolution**: When importing from extracted folders or ZIPs, companion image attachments (e.g. `1961dd5...jpg`) must be resolved relative to the note's source directory (`file.parent` or ZIP entry path) and copied to protected sandboxed storage (`getApplicationDocumentsDirectory()`).
 * **Archived Notes Parity & Discoverability**: Google Keep notes with `"isArchived": true` MUST be saved with `isArchived = 1` and remain immediately discoverable via the top Folder Scope Pill (`[ 📁 Notes ▾ ] -> Archived Notes`) and Tools menu (`⋮ -> Archived Notes`).
+
+### 📱 Invariant 16: Android App Shortcuts & Deep Intent Routing Protocol
+* **Static App Shortcuts (`app_shortcuts.xml`)**: Support high-priority launcher shortcuts: `NEW_NOTE` (`app://open/new_note`), `ADD_TRANSACTION` (`app://open/new_transaction`), `SCAN_RECEIPT` (`app://open/scan_receipt`), and `SYNC_DEVICES` (`app://open/sync_devices`).
+* **Dual-Phase Intent Ingestion**: `MainActivity.kt` handles intents across cold launches (`onCreate`) and warm resume (`onNewIntent`), passing the URI via Flutter method channel `pendingWidgetAction`. `HomeScreen._checkAndProcessPendingIntents()` dispatches the action immediately to the target view.
+
 
 ---
 

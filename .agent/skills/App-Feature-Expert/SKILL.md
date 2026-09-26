@@ -163,6 +163,12 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
   - **Friend Paid (`PayerType.friendPaid`)**: Initial bill creation produces NO ledger entry in personal accounts. Personal liability is recorded as an `Expense` ONLY when the user settles their share with the friend via `SettleUpSheet`.
 - **Swipe-to-Delete with Undo**:
   - Split bills support swipe-to-delete with `AppDialog.showConfirm` guard and instant floating SnackBar `UNDO`.
+- **Multi-Bill Itemized Statements (`SplitShareService.formatPersonPendingStatement`)**:
+  - When sharing debt summaries for a contact, generate a comprehensive itemized breakdown detailing each unpaid bill title, date, individual participant share, and cumulative outstanding total.
+  - Never truncate statements to just the most recent single bill. Include user payment instructions (e.g. Bank details or UPI) cleanly at the bottom.
+- **Settlement Undo Ledger Parity (`unsettleAllForContact`)**:
+  - Reversing a settlement must delete the matching ledger transaction in `transactions` (`TransactionRepository.deleteTransaction`) that was created during the initial settle-up.
+  - Guarantees that personal operating account balances and ledger entries stay perfectly synchronized with split bill settlement states.
 - **100% Offline Receipt OCR (`ReceiptScannerService`)**:
   - On-device text recognition using Google ML Kit.
   - Regex parser extracts grand total (`TOTAL`, `GRAND TOTAL`, `AMOUNT PAID`), subtotal, taxes, and merchant name.
@@ -263,13 +269,16 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 
 ---
 
-## 12. Canonical Module Tools (3-Dot Menu), Top Header Symmetry & SMS 24h Sync
+## 12. Canonical Module Tools (3-Dot Menu), Dedicated Sort Action & Top Header Symmetry
 
 - **Top App Bar Canonical Action Architecture**: Every primary module header pairs a bold module title (`titleLarge` 18pt bold) and interactive Tonal Scope Pill on the left with a muscle-memory action bar on the right:
   - **Action Row Sequence (Left to Right)**:
-    - **Notes**: `[ 🔍 Search ]` $\rightarrow$ `[ 🔄 P2P Sync (when paired) ]` $\rightarrow$ `[ ⋮ Notes Tools ]` $\rightarrow$ `[ ⚙️ Settings ]`
+    - **Notes**: `[ 🔍 Search ]` $\rightarrow$ `[ 🔃 Sort ]` $\rightarrow$ `[ 🔄 P2P Sync (when paired) ]` $\rightarrow$ `[ ⋮ Notes Tools ]` $\rightarrow$ `[ ⚙️ Settings ]`
     - **Finances**: `[ 🔍 Search ]` $\rightarrow$ `[ 🔄 SMS Sync ]` $\rightarrow$ `[ ⋮ Finances Tools ]` $\rightarrow$ `[ ⚙️ Settings ]`
     - **Health Tracker**: `[ 📅 Today ]` $\rightarrow$ `[ ⋮ Health Tools ]` $\rightarrow$ `[ ⚙️ Settings ]`
+- **Dedicated Note Sorting Action (`Icons.sort_rounded`)**:
+  - High-frequency view changes must NOT be buried in 3-dot overflow menus. A dedicated Sort action button is placed directly in `HomeAppBar`.
+  - Tapping opens an M3 popup menu with checkmarks on active sort criteria: *Last Modified*, *Date Created*, *Title*, *Color*.
 - **Scope Pill Dynamic Theming Standard**:
   - Scope pills MUST use M3 Tonal Container styling (`colorScheme.primaryContainer.withValues(alpha: isDark ? 0.35 : 0.45)`) with a `1.0px` primary outline border (`colorScheme.primary.withValues(alpha: 0.28)`), `colorScheme.onSurface` label, and `colorScheme.primary` icons and dropdown chevrons for 100% contrast in dynamic themes.
 - **Top Bar Transaction Search Integration**:
@@ -280,10 +289,9 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
 - **Canonical 3-Dot Overflow Menu Items**:
   - **Notes Tools (`HomeAppBar`)**:
     1. `Switch to list/grid view` (dynamic icon + text reflecting current mode).
-    2. `Sort by Last Modified / Date Created / Title / Color` (displays checkmark on active sort).
-    3. `Manage Folders` (`_showFolderPicker`).
-    4. `Manage Tags` (`ManageTagsScreen`).
-    5. `Trash Bin` (`FilteredNotesScreen(filterType: FilterType.trash)`).
+    2. `Manage Folders` (`_showFolderPicker`).
+    3. `Manage Tags` (`ManageTagsScreen`).
+    4. `Trash Bin` (`FilteredNotesScreen(filterType: FilterType.trash)`).
   - **Finances Tools (`FinancialManagerScreen`)**:
     1. `SMS & Bank Automation` (`SmsRulesScreen`).
     2. `Recurring Subscriptions` (`RecurringRulesSheet`).
@@ -298,6 +306,30 @@ Specialist skill governing domain modules, feature-driven architecture (`lib/fea
   - All action bar icons in the top bar MUST use `constraints: const BoxConstraints(minWidth: 40, minHeight: 40)` and `visualDensity: VisualDensity.compact` with `padding: EdgeInsets.zero` to eliminate overlapping hitboxes and guarantee uniform inter-button gaps.
   - Outer horizontal padding MUST be strictly `16dp` left and `16dp` right with ZERO inner edge spacers.
   - Headers hosting title + scope pill stacks MUST specify `toolbarHeight: MediaQuery.of(context).padding.top + 72.0` and child container `height: 60.0` (with `top: padding.top + 6.0, bottom: 6.0`) to avoid sub-pixel layout clipping across high-density mobile displays.
+
+---
+
+## 13. Android App Shortcuts & Deep Intent Routing Protocol
+
+- **Static App Shortcuts (`app_shortcuts.xml`)**:
+  - `NEW_NOTE`: Deep link `app://open/new_note` $\rightarrow$ launches `NoteEditorScreen` immediately.
+  - `ADD_TRANSACTION`: Deep link `app://open/new_transaction` $\rightarrow$ launches `TransactionEditorScreen`.
+  - `SCAN_RECEIPT`: Deep link `app://open/scan_receipt` $\rightarrow$ launches `ReceiptScannerSheet`.
+  - `SYNC_DEVICES`: Deep link `app://open/sync_devices` $\rightarrow$ launches `P2pSyncScreen`.
+- **Dual-Phase Intent Ingestion**:
+  - `MainActivity.kt` handles intents in both `onCreate` (cold launch) and `onNewIntent` (warm resume), passing the target URI to Flutter via `pendingWidgetAction` method channel.
+  - `HomeScreen._checkAndProcessPendingIntents()` receives the action string, clears native intent state, and pushes the appropriate modal or route.
+
+---
+
+## 14. Notification Diagnostics & Unit Test Isolation Guardrail
+
+- **In-App Test Diagnostic Trigger**:
+  - Provide a direct "Test Notifications" action button in `SettingsScreen` (`NotificationService.showInstantTestNotification()`) that delivers a sample notification 3 seconds out, enabling instant validation without scheduling alarms.
+- **Unit Test Native Isolation Guardrail**:
+  - Native notification platform plugins require initialized engine bindings that are absent in headless unit/widget tests.
+  - In `NotificationService`, guard notification dispatch routines with `if (!kIsWeb && Platform.environment.containsKey('FLUTTER_TEST')) return;` to completely prevent `LateInitializationError` from aborting unit tests.
+
 
 
 

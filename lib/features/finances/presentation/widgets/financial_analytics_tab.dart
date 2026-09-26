@@ -131,17 +131,32 @@ class _FinancialAnalyticsTabState extends State<FinancialAnalyticsTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header with Pill Toggle
+                // Header with Full-Width Segmented Pill Toggle
+                _buildPillToggle(colorScheme, textTheme),
+                const SizedBox(height: 10),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildPillToggle(colorScheme, textTheme),
+                    Text(
+                      _activeDeckIndex == 0
+                          ? 'EXPENSE DISTRIBUTION'
+                          : _activeDeckIndex == 1
+                              ? 'MONTHLY BUDGET LIMITS'
+                              : 'SAVINGS GOALS & VAULT',
+                      style: textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
                     Text(
                       _activeDeckIndex == 0
                           ? '${categoryExpenses.length} Categories'
-                          : 'Target Limits',
+                          : _activeDeckIndex == 1
+                              ? 'Target Limits'
+                              : 'Goal Pockets',
                       style: textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
+                        color: colorScheme.primary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -160,12 +175,17 @@ class _FinancialAnalyticsTabState extends State<FinancialAnalyticsTab> {
                           colorScheme,
                           textTheme,
                         )
-                      : _buildBudgetsSection(
-                          forecast,
-                          categoryExpenses,
-                          colorScheme,
-                          textTheme,
-                        ),
+                      : _activeDeckIndex == 1
+                          ? _buildBudgetsSection(
+                              forecast,
+                              categoryExpenses,
+                              colorScheme,
+                              textTheme,
+                            )
+                          : _buildSavingsSection(
+                              colorScheme,
+                              textTheme,
+                            ),
                 ),
               ],
             ),
@@ -177,6 +197,7 @@ class _FinancialAnalyticsTabState extends State<FinancialAnalyticsTab> {
 
   Widget _buildPillToggle(ColorScheme colorScheme, TextTheme textTheme) {
     return Container(
+      width: double.infinity,
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
@@ -187,33 +208,51 @@ class _FinancialAnalyticsTabState extends State<FinancialAnalyticsTab> {
       ),
       padding: const EdgeInsets.all(3),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          _pillOption(
-            title: 'Breakdown',
-            icon: Icons.donut_large_rounded,
-            isSelected: _activeDeckIndex == 0,
-            onTap: () {
-              if (_activeDeckIndex != 0) {
-                HapticFeedback.selectionClick();
-                setState(() => _activeDeckIndex = 0);
-              }
-            },
-            colorScheme: colorScheme,
-            textTheme: textTheme,
+          Expanded(
+            child: _pillOption(
+              title: 'Breakdown',
+              icon: Icons.donut_large_rounded,
+              isSelected: _activeDeckIndex == 0,
+              onTap: () {
+                if (_activeDeckIndex != 0) {
+                  HapticFeedback.selectionClick();
+                  setState(() => _activeDeckIndex = 0);
+                }
+              },
+              colorScheme: colorScheme,
+              textTheme: textTheme,
+            ),
           ),
-          _pillOption(
-            title: 'Budgets',
-            icon: Icons.track_changes_rounded,
-            isSelected: _activeDeckIndex == 1,
-            onTap: () {
-              if (_activeDeckIndex != 1) {
-                HapticFeedback.selectionClick();
-                setState(() => _activeDeckIndex = 1);
-              }
-            },
-            colorScheme: colorScheme,
-            textTheme: textTheme,
+          Expanded(
+            child: _pillOption(
+              title: 'Budgets',
+              icon: Icons.track_changes_rounded,
+              isSelected: _activeDeckIndex == 1,
+              onTap: () {
+                if (_activeDeckIndex != 1) {
+                  HapticFeedback.selectionClick();
+                  setState(() => _activeDeckIndex = 1);
+                }
+              },
+              colorScheme: colorScheme,
+              textTheme: textTheme,
+            ),
+          ),
+          Expanded(
+            child: _pillOption(
+              title: 'Savings',
+              icon: Icons.savings_rounded,
+              isSelected: _activeDeckIndex == 2,
+              onTap: () {
+                if (_activeDeckIndex != 2) {
+                  HapticFeedback.selectionClick();
+                  setState(() => _activeDeckIndex = 2);
+                }
+              },
+              colorScheme: colorScheme,
+              textTheme: textTheme,
+            ),
           ),
         ],
       ),
@@ -229,33 +268,40 @@ class _FinancialAnalyticsTabState extends State<FinancialAnalyticsTab> {
     required TextTheme textTheme,
   }) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        padding: const EdgeInsets.symmetric(vertical: 7),
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: isSelected ? colorScheme.secondaryContainer : Colors.transparent,
           borderRadius: BorderRadius.circular(AppLayout.radiusMAX),
         ),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
-              size: 16,
+              size: 15,
               color: isSelected
                   ? colorScheme.onSecondaryContainer
                   : colorScheme.onSurfaceVariant,
             ),
-            const SizedBox(width: 6),
-            Text(
-              title,
-              style: textTheme.labelMedium?.copyWith(
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected
-                    ? colorScheme.onSecondaryContainer
-                    : colorScheme.onSurfaceVariant,
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: textTheme.labelMedium?.copyWith(
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isSelected
+                      ? colorScheme.onSecondaryContainer
+                      : colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           ],
@@ -340,10 +386,14 @@ class _FinancialAnalyticsTabState extends State<FinancialAnalyticsTab> {
           currency: widget.currency,
           onBudgetChanged: widget.onRefresh,
         ),
-        const SizedBox(height: 16),
-        // Goal-Oriented Savings Pockets
-        const SavingsGoalsCard(),
       ],
+    );
+  }
+
+  Widget _buildSavingsSection(ColorScheme colorScheme, TextTheme textTheme) {
+    return SavingsGoalsCard(
+      currency: widget.currency,
+      isEmbeddedInCard: true,
     );
   }
 

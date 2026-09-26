@@ -57,6 +57,7 @@ Refer to [design.md](file:///Users/saadhjawwadh/Documents/Code/Note%20taking/.ag
   - Scope pills use M3 Tonal Container styling (`colorScheme.primaryContainer.withValues(alpha: isDark ? 0.35 : 0.45)`) with a `1.0px` primary outline border (`colorScheme.primary.withValues(alpha: 0.28)`) for 100% dynamic wallpaper contrast.
 * **Authentic Currency Badges & Pickers**: Currency selection dialogs and settings tiles MUST render authentic tonal circular avatars displaying the genuine currency symbol (e.g. `Rs.`, `₹`, `$`, `€`, `£`, `¥`, `د.إ`, `﷼`, `C$`, `A$`, `S$`, `RM`, `NZ$`, `CHF`), bold code, and full name rather than generic dollar icons.
 * **Hardware-Aware AI UI Gating**: Never render AI sparkle icons, refine menu items, or assist floating buttons unless `settings.isAiActive` is true. This prevents dead interactive elements on emulators and non-NPU devices.
+* **AI Selection Action Pill vs Dropdown Redundancy**: When text selection floating toolbars provide context-aware AI refine pills, avoid repeating "Refine with AI" inside general dropdown menus. AI actions must remain strictly gated on `settings.isAiActive`.
 * **AI Action Iconography & Phrasing Standards**:
   - Always use canonical Material 3 `Icons.auto_fix_high_rounded` (for AI title/text refinement and formatting actions) or `Icons.auto_awesome_rounded` (for generative creation).
 * **Contextual Morphing Action Buttons in Sub-Tab Views**:
@@ -102,19 +103,21 @@ When styling UI screens and custom widgets, strictly enforce the M3 Style system
 * **Zero Jitter on User Actions**: Interactive operations (Delete, Undo, Pin, Archive, Symptom/Flow toggling) MUST update in-memory UI models immediately in 0ms. Never unmount active lists or display modal loading spinners while writing local SQLite updates in the background.
 * **Preserve Mounted State**: When deleting or restoring items, mutate local data structures synchronously (`removeWhere`, `add`, `sort`) and trigger targeted re-renders without triggering full-screen or list-level loading indicators.
 
-## 7. Top App Bar 3-Slot Rhythm & Compact Action Row Standards
+## 7. Top App Bar Rhythm, Action Order & High-Frequency Action Rule
+* **High-Frequency vs Administrative Action Rule**: High-frequency layout and view manipulations (such as note sorting) must NOT be buried inside the 3-dot overflow menu (`⋮`). Provide a dedicated top-bar action button with an instant popup menu. Reserve the 3-dot tools menu strictly for secondary administrative utilities.
 * **3-Module Scope Hierarchy**:
   - **Notes**: `Notes` title + `[ 📁 Folder • Count ▾ ]` tonal pill (triggers `_showFolderPicker`).
   - **Finances**: `Finances` title + `[ 📅 Date Range ▾ ]` tonal pill (triggers `_selectDateRange`).
   - **Health Tracker**: `Period Tracker` title + `[ 🌸 Day X • Phase ]` tonal badge (shows active cycle phase).
-* **Right Action Bar (3-Slot Symmetry)**:
-  - **Slot 1 (Module Primary Action)**: `[ 🔍 Search ]` (Notes), `[ 🔄 SMS Quick Sync ]` (Finances), `[ 📅 Today ]` (Health Tracker).
-  - **Slot 2 (Module Tools 3-Dot Menu)**: `[ ⋮ Notes Tools ]`, `[ ⋮ Finances Tools ]`, `[ ⋮ Health Tools ]`. Consolidates secondary tools, view modes, sort options, tag management, rules, and educational dialogs.
-  - **Slot 3 (Universal Settings Anchor)**: `[ ⚙️ Settings ]` present universally across all tabs.
+* **Right Action Bar (Symmetric Action Flow)**:
+  - **Notes**: `[ 🔍 Search ]` $\rightarrow$ `[ 🔃 Sort ]` $\rightarrow$ `[ 🔄 P2P Sync (when paired) ]` $\rightarrow$ `[ ⋮ Notes Tools ]` $\rightarrow$ `[ ⚙️ Settings ]`.
+  - **Finances**: `[ 🔍 Search ]` $\rightarrow$ `[ 🔄 SMS Quick Sync ]` $\rightarrow$ `[ ⋮ Finances Tools ]` $\rightarrow$ `[ ⚙️ Settings ]`.
+  - **Health Tracker**: `[ 📅 Today ]` $\rightarrow$ `[ ⋮ Health Tools ]` $\rightarrow$ `[ ⚙️ Settings ]`.
 * **Compact Hit Constraints**: Action bar icon buttons MUST use `constraints: const BoxConstraints(minWidth: 40, minHeight: 40)` and `visualDensity: VisualDensity.compact` to eliminate overlapping hitboxes and prevent misdirected touch gestures.
 * **Sub-Pixel Headroom Invariant**: Top bars hosting title + scope pill stacks MUST specify `toolbarHeight: MediaQuery.of(context).padding.top + 72.0` and child container `height: 60.0` (with `top: padding.top + 6.0, bottom: 6.0`) to avoid sub-pixel layout clipping across high-density mobile screens.
 * **M3 Chevron Token**: Always use `Icons.keyboard_arrow_down_rounded` across all dropdown chips, form fields, and selector pills (deprecating legacy `Icons.arrow_drop_down`).
 * **Selection Control Modernization (`showSelectedIcon: false`)**: All `SegmentedButton<T>` instances displaying contextual icons or custom labels MUST set `showSelectedIcon: false` to prevent Flutter from swapping genuine button icons with default checkmark glyphs upon selection. Active states must rely on tonal container fills and primary icon/label tints.
 * **Tactile Canvas Haptics**: Interactive charts (`LineChart`, `PieChart`) and calendar widgets (`TableCalendar`) must provide tactile micro-feedback via `HapticFeedback.selectionClick()` whenever the user scrubs through data points, donut slices, or flips dates/pages.
 * **Social Story Card Studio Standard**: When exporting note text or quotes to social media formats (9:16 Story, 1:1 Square, 4:5 Portrait), cards must support local font switching (e.g. Noto Sans & Serif Tamil), Instagram/WhatsApp safe-margin heatmaps, word-limit constraints, and a centered micro-pill watermark featuring the monochrome app emblem.
+
 

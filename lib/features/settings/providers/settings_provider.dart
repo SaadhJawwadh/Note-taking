@@ -132,6 +132,17 @@ class SettingsProvider extends ChangeNotifier {
   /// True ONLY when the device hardware supports AI (Gemini Nano / AICore) AND the user has enabled it in settings.
   bool get isAiActive => _useOnDeviceAi && _isDeviceAiSupported;
 
+  String? _selectedLanguageCode;
+  String get selectedLanguageCode => _selectedLanguageCode ?? 'system';
+  Locale? get currentLocale {
+    if (_selectedLanguageCode == null ||
+        _selectedLanguageCode!.isEmpty ||
+        _selectedLanguageCode == 'system') {
+      return null;
+    }
+    return Locale(_selectedLanguageCode!);
+  }
+
   bool _hasSeenOnboarding = false;
   bool get hasSeenOnboarding => _hasSeenOnboarding;
 
@@ -213,6 +224,7 @@ class SettingsProvider extends ChangeNotifier {
     }
     _defaultPaymentInfo = prefs.getString('defaultPaymentInfo') ?? '';
     _currency = prefs.getString('currency') ?? 'LKR';
+    _selectedLanguageCode = prefs.getString('selectedLanguageCode');
 
     _autoBackupEnabled = prefs.getBool('autoBackupEnabled') ?? false;
     _autoBackupFrequency = prefs.getString('autoBackupFrequency') ?? 'daily';
@@ -329,6 +341,22 @@ class SettingsProvider extends ChangeNotifier {
     _currency = curr;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('currency', curr);
+    notifyListeners();
+  }
+
+  Future<void> setSelectedLanguage(String code) async {
+    final clean = code.trim();
+    if (clean.isEmpty || clean == 'system') {
+      _selectedLanguageCode = null;
+    } else {
+      _selectedLanguageCode = clean;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    if (_selectedLanguageCode == null) {
+      await prefs.remove('selectedLanguageCode');
+    } else {
+      await prefs.setString('selectedLanguageCode', _selectedLanguageCode!);
+    }
     notifyListeners();
   }
 
@@ -709,6 +737,7 @@ class SettingsProvider extends ChangeNotifier {
         'defaultPaymentInfo': _defaultPaymentInfo,
         'trashAutoPurgeDays': _trashAutoPurgeDays,
         'currency': _currency,
+        'selectedLanguageCode': _selectedLanguageCode,
         'isPeriodTrackerEnabled': _isPeriodTrackerEnabled,
         'appLockEnabled': _appLockEnabled,
         'useBiometrics': _useBiometrics,
@@ -795,6 +824,10 @@ class SettingsProvider extends ChangeNotifier {
       if (map.containsKey('currency')) {
         final curr = map['currency'];
         if (curr is String && curr.isNotEmpty) await setCurrency(curr);
+      }
+      if (map.containsKey('selectedLanguageCode')) {
+        final lang = map['selectedLanguageCode'];
+        if (lang is String && lang.isNotEmpty) await setSelectedLanguage(lang);
       }
       if (map.containsKey('isPeriodTrackerEnabled')) {
         final ptEnabled = map['isPeriodTrackerEnabled'];

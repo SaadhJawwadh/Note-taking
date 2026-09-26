@@ -1,14 +1,12 @@
-
 ### 🌟 What's New
-- **App Launcher Shortcuts**: Long-press the app icon on your home screen to instantly create a new note, log an expense, scan a physical receipt, or open device sync.
-- **Dedicated Note Sorting**: Quick one-tap sort button on the Notes header to seamlessly reorder notes by date modified, date created, title, or color.
-- **Itemized Split Bills & Undo**: Share clear WhatsApp statements itemizing all open balances for a contact; one-tap undo for bill settlements with automatic ledger sync.
+- **Expanded Global Multilingual Support**: In-app language picker supporting 7 languages: English, தமிழ் (Tamil), 中文 (Simplified Chinese), Português (Portuguese), Español (Spanish), Français (French), and Deutsch (German) with live dynamic switching.
+- **Dedicated Savings Goals Sub-Tab in Budgets**: Integrated `[Breakdown] ⇄ [Budgets] ⇄ [Savings]` navigation inside the Budgets view with zero whitespace issues, vibrant goal-tinted cards, progress tracking, and instant deposit logging.
+- **Dual-State Note Editor Controls**: Left formatting pill remains cleanly anchored (`T_T`) for the formatting deck, while the right keyboard button functions as a true dual-state toggle.
 
 ### 🚀 Improvements
-- **Streamlined Tools Menus**: Refined Notes and Finance action menus, reducing clutter while keeping essential utilities easily accessible.
-- **Auto-Purge & Diagnostic Notifications**: Automatic notification summaries when old trash items are cleaned up, plus a one-tap notification test in Settings.
+- **Contextual Selection AI Trigger**: Tap AI Transaction on any selected text to immediately open and pre-populate the transaction composer.
+- **Privacy & Lightweight Footprint**: Deprecated voice typing and removed unused recording permissions for improved security and smaller app size.
 
 ### 🐛 Fixes
-- **Split Settlement Balance Parity**: Undoing a settlement automatically reverses the ledger transaction to maintain exact cash flow accuracy.
-- **Background SMS Stability**: Smoother background SMS parsing with improved duplicate prevention.
-
+- **Savings Management Parity**: Fixed savings goals sheet launching from the financial manager menu and guaranteed full SQLite v24 table support.
+- **Settings Search Indexing**: Full search indexing for all supported languages and keywords in Settings.

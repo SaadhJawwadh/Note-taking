@@ -22,7 +22,6 @@ import '../../../../utils/quill_checklist_helper.dart';
 import 'dart:io';
 import 'package:any_link_preview/any_link_preview.dart';
 import 'package:local_auth/local_auth.dart';
-import 'package:speech_to_text/speech_to_text.dart';
 import 'package:intl/intl.dart';
 import '../../../../services/local_ai_service.dart';
 import '../../../../services/offline_ai_fallback_service.dart';
@@ -101,11 +100,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       _folder != 'Notes' &&
       _folder != 'notes';
 
-  // Voice dictation
-  final SpeechToText _speech = SpeechToText();
-  bool _isListening = false;
-  int _dictationBaseOffset = 0;
-  String _lastDictation = '';
 
   /// True once the user has authenticated to view a locked note this session.
   bool _lockAuthPassed = false;
@@ -746,7 +740,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     _titleController.removeListener(_onContentChanged);
     _quillController.removeListener(_onContentChanged);
     _quillController.removeListener(_onSelectionChanged);
-    _speech.cancel();
     _docSubscription?.cancel();
     _debounce?.cancel();
     _scrollToCursorDebounce?.cancel();
@@ -1294,63 +1287,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
     }
   }
 
-  /// Starts/stops on-device speech dictation, streaming recognized words
-  /// into the note at the cursor position.
-  Future<void> _toggleDictation() async {
-    await HapticFeedback.selectionClick();
-    if (_isListening) {
-      await _speech.stop();
-      if (mounted) setState(() => _isListening = false);
-      return;
-    }
-
-    // Mic permission dialog backgrounds the app briefly.
-    AppLockScreen.ignoreNextResumeLock();
-    final available = await _speech.initialize(
-      onStatus: (status) {
-        if ((status == 'done' || status == 'notListening') && mounted) {
-          setState(() => _isListening = false);
-        }
-      },
-      onError: (e) {
-        if (mounted) setState(() => _isListening = false);
-      },
-    );
-    if (!available) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                'Speech recognition is unavailable — check the microphone permission.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-      return;
-    }
-
-    final sel = _quillController.selection;
-    final docLength = _quillController.document.length;
-    _dictationBaseOffset =
-        sel.isValid ? sel.end.clamp(0, docLength - 1) : docLength - 1;
-    _lastDictation = '';
-    if (mounted) setState(() => _isListening = true);
-
-    await _speech.listen(
-      onResult: (result) {
-        final words = result.recognizedWords;
-        if (words.isEmpty) return;
-        // Replace the previous partial with the newer, fuller transcript.
-        _quillController.replaceText(
-          _dictationBaseOffset,
-          _lastDictation.length,
-          words,
-          TextSelection.collapsed(offset: _dictationBaseOffset + words.length),
-        );
-        _lastDictation = words;
-      },
-    );
-  }
 
 
 
@@ -2911,9 +2847,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                           case 'table':
                                             _showTableInsertionDialog();
                                             break;
-                                          case 'dictate':
-                                            _toggleDictation();
-                                            break;
                                           case 'ai':
                                             _showAiOptionsSheet();
                                             break;
@@ -2951,17 +2884,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                                   Icon(Icons.table_chart_outlined, size: 20, color: colorScheme.onSurfaceVariant),
                                                   const SizedBox(width: 12),
                                                   Text('Insert Table', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                                                ],
-                                              ),
-                                            ),
-                                            PopupMenuItem(
-                                              value: 'dictate',
-                                              height: 48,
-                                              child: Row(
-                                                children: [
-                                                  Icon(_isListening ? Icons.mic : Icons.mic_none, size: 20, color: _isListening ? theme.colorScheme.error : colorScheme.onSurfaceVariant),
-                                                  const SizedBox(width: 12),
-                                                  Text(_isListening ? 'Stop Dictation' : 'Voice Dictation', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
                                                 ],
                                               ),
                                             ),
@@ -4148,17 +4070,19 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                             isScrollable: true,
                             children: [
                               IconButton(
-                                icon: Icon(_showFormattingBar
-                                    ? Icons.keyboard_hide_outlined
-                                    : Icons.text_fields),
-                                tooltip: 'Formatting',
+                                icon: const Icon(Icons.text_fields_rounded),
+                                tooltip: _showFormattingBar ? 'Hide formatting' : 'Show formatting',
                                 onPressed: () {
+                                  HapticFeedback.selectionClick();
                                   setState(() {
                                     _isFormattingBarPinnedManually = !_isFormattingBarPinnedManually;
                                     _showFormattingBar = _isFormattingBarPinnedManually;
                                   });
                                 },
                                 style: IconButton.styleFrom(
+                                  backgroundColor: _showFormattingBar
+                                      ? theme.colorScheme.primaryContainer.withValues(alpha: 0.6)
+                                      : Colors.transparent,
                                   foregroundColor: _showFormattingBar
                                       ? theme.colorScheme.primary
                                       : textColor,
@@ -4210,32 +4134,25 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                   foregroundColor: textColor,
                                 ),
                               ),
-                              if (!settings.minimalEditorMode)
-                                IconButton(
-                                  icon: Icon(_isListening
-                                      ? Icons.mic
-                                      : Icons.mic_none),
-                                  tooltip: _isListening
-                                      ? 'Stop dictation'
-                                      : 'Dictate',
-                                  onPressed: _toggleDictation,
-                                  style: IconButton.styleFrom(
-                                    foregroundColor: _isListening
-                                        ? theme.colorScheme.error
-                                        : textColor,
-                                  ),
-                                ),
-                              if (isKeyboardOpen)
-                                IconButton(
-                                  icon: const Icon(Icons.keyboard_hide_rounded),
-                                  tooltip: 'Hide Keyboard',
-                                  onPressed: () {
+                              IconButton(
+                                icon: Icon(isKeyboardOpen
+                                    ? Icons.keyboard_hide_rounded
+                                    : Icons.keyboard_rounded),
+                                tooltip: isKeyboardOpen ? 'Hide keyboard' : 'Show keyboard',
+                                onPressed: () {
+                                  HapticFeedback.lightImpact();
+                                  if (isKeyboardOpen) {
                                     FocusScope.of(context).unfocus();
-                                  },
-                                  style: IconButton.styleFrom(
-                                    foregroundColor: textColor,
-                                  ),
+                                  } else {
+                                    if (!_focusNode.hasFocus) {
+                                      _focusNode.requestFocus();
+                                    }
+                                  }
+                                },
+                                style: IconButton.styleFrom(
+                                  foregroundColor: textColor,
                                 ),
+                              ),
                             ],
                           ),
                         ),

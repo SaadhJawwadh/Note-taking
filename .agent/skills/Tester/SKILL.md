@@ -93,3 +93,19 @@ Use this skill to execute QA verifications, unit/widget tests, security audits, 
 * **0ms In-Memory State Consistency**: When testing deletion, undo, and toggle interactions, verify that in-memory models update synchronously and notify listeners immediately before background database futures resolve.
 * **Soft-Delete Undo Contract**: Verify that undoing a soft-deleted item invokes `restoreTransaction(id)` / `restoreNote(id)`, keeping the primary key intact without triggering unique constraint violations or colliding with tombstone safety checks.
 * **SMS Timestamp Normalization**: Verify that unit tests for `SmsParser.resolveMessageDate` validate 10-digit second epochs, 13-digit millisecond epochs, boundary years, and null fallbacks without date drift.
+
+## 12. App Shortcuts & Deep Linking QA
+* **Android Intent Simulation**: Test native app shortcut navigation using ADB command lines:
+  ```bash
+  adb shell am start -a android.intent.action.VIEW -d "app://open/new_note"
+  adb shell am start -a android.intent.action.VIEW -d "app://open/new_transaction"
+  adb shell am start -a android.intent.action.VIEW -d "app://open/scan_receipt"
+  adb shell am start -a android.intent.action.VIEW -d "app://open/sync_devices"
+  ```
+  Verify both cold-start (app killed) and warm-resume (app in background) push the appropriate target screen.
+
+## 13. Split Bills Statement & Settlement Reversal QA
+* **Multi-Bill Statement Verification**: Verify that sharing a contact's pending statement generates an itemized list of all open bills and exact amounts rather than just the latest transaction.
+* **Settlement Undo Ledger Parity**: Verify that undoing a settlement removes the corresponding expense from the personal ledger and updates the daily operating account balance.
+* **Test Notification Diagnostics & Unit Isolation**: Verify the "Test Notifications" trigger in Settings schedules delivery in 3 seconds. Ensure `NotificationService` calls are guarded by `Platform.environment.containsKey('FLUTTER_TEST')` so tests execute without `LateInitializationError`.
+

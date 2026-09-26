@@ -533,6 +533,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       selectedValue: settings.textSize,
                                       onSelectionChanged: settings.setTextSize,
                                     ),
+                                    const _Divider(),
+                                    SettingsTile(
+                                      icon: Icons.translate_rounded,
+                                      iconColor: colorScheme.primary,
+                                      title: 'Language',
+                                      subtitle: _getLanguageDisplayName(settings.selectedLanguageCode),
+                                      valueBadge: _getLanguageBadge(settings.selectedLanguageCode),
+                                      showArrow: true,
+                                      onTap: () => _showLanguagePicker(context, settings),
+                                    ),
                                   ],
                                 ),
 
@@ -1152,6 +1162,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
       'Show Pro-Tips',
       'Rotate actionable powerup tips every 3 days',
     );
+    addTile(
+      SettingsTile(
+        icon: Icons.translate_rounded,
+        title: 'Language',
+        subtitle: _getLanguageDisplayName(settings.selectedLanguageCode),
+        valueBadge: _getLanguageBadge(settings.selectedLanguageCode),
+        showArrow: true,
+        onTap: () => _showLanguagePicker(context, settings),
+      ),
+      'Appearance',
+      'Language',
+      'English, தமிழ், Tamil, 中文, Chinese, Português, Portuguese, Español, Spanish, Français, French, Deutsch, German, System Default, Localize',
+    );
 
     // 2. Features & Modules
     addTile(
@@ -1564,6 +1587,165 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case ThemeMode.system:
         return 'System Default';
     }
+  }
+
+  String _getLanguageDisplayName(String code) {
+    switch (code) {
+      case 'ta':
+        return 'தமிழ் (Tamil)';
+      case 'zh':
+        return '中文 (Chinese)';
+      case 'pt':
+        return 'Português (Portuguese)';
+      case 'es':
+        return 'Español (Spanish)';
+      case 'fr':
+        return 'Français (French)';
+      case 'de':
+        return 'Deutsch (German)';
+      case 'en':
+        return 'English';
+      case 'system':
+      default:
+        return 'System Default';
+    }
+  }
+
+  String _getLanguageBadge(String code) {
+    switch (code) {
+      case 'ta':
+        return 'தமிழ்';
+      case 'zh':
+        return '中文';
+      case 'pt':
+        return 'PT';
+      case 'es':
+        return 'ES';
+      case 'fr':
+        return 'FR';
+      case 'de':
+        return 'DE';
+      case 'en':
+        return 'EN';
+      case 'system':
+      default:
+        return 'Auto';
+    }
+  }
+
+  void _showLanguagePicker(BuildContext context, SettingsProvider settings) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final languages = [
+      {
+        'code': 'system',
+        'name': 'System Default',
+        'native': 'Follow Device Language',
+        'icon': Icons.brightness_auto_rounded,
+      },
+      {
+        'code': 'en',
+        'name': 'English',
+        'native': 'English (United States)',
+        'icon': Icons.language_rounded,
+      },
+      {
+        'code': 'zh',
+        'name': '中文',
+        'native': 'Chinese (Simplified)',
+        'icon': Icons.translate_rounded,
+      },
+      {
+        'code': 'pt',
+        'name': 'Português',
+        'native': 'Portuguese (Portugal / Brazil)',
+        'icon': Icons.public_rounded,
+      },
+      {
+        'code': 'es',
+        'name': 'Español',
+        'native': 'Spanish (Latin America / Spain)',
+        'icon': Icons.travel_explore_rounded,
+      },
+      {
+        'code': 'fr',
+        'name': 'Français',
+        'native': 'French (France / Canada)',
+        'icon': Icons.language_rounded,
+      },
+      {
+        'code': 'de',
+        'name': 'Deutsch',
+        'native': 'German (Germany / Austria)',
+        'icon': Icons.translate_rounded,
+      },
+      {
+        'code': 'ta',
+        'name': 'தமிழ்',
+        'native': 'Tamil (Sri Lanka / India)',
+        'icon': Icons.translate_rounded,
+      },
+    ];
+
+    AppBottomSheet.show(
+      context: context,
+      title: 'Select Language',
+      child: Container(
+        constraints: const BoxConstraints(maxHeight: 460),
+        child: ListView.separated(
+          shrinkWrap: true,
+          itemCount: languages.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 4.0),
+          itemBuilder: (context, index) {
+            final lang = languages[index];
+            final code = lang['code'] as String;
+            final isSelected = settings.selectedLanguageCode == code;
+
+            return ListTile(
+              leading: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? colorScheme.primaryContainer
+                      : colorScheme.surfaceContainerHighest,
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  lang['icon'] as IconData,
+                  size: 20,
+                  color: isSelected
+                      ? colorScheme.onPrimaryContainer
+                      : colorScheme.onSurfaceVariant,
+                ),
+              ),
+              title: Text(
+                lang['name'] as String,
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isSelected ? colorScheme.primary : colorScheme.onSurface,
+                ),
+              ),
+              subtitle: Text(
+                lang['native'] as String,
+                style: TextStyle(
+                  color: colorScheme.onSurfaceVariant,
+                  fontSize: 12,
+                ),
+              ),
+              trailing: isSelected
+                  ? Icon(Icons.check_circle_rounded, color: colorScheme.primary)
+                  : null,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                settings.setSelectedLanguage(code);
+                Navigator.pop(context);
+              },
+            );
+          },
+        ),
+      ),
+    );
   }
 
   void _showCurrencyPicker(BuildContext context, SettingsProvider settings) {

@@ -15,6 +15,7 @@ import '../../core/ui/app_chip.dart';
 import '../../core/ui/app_dialog.dart';
 import '../../utils/app_route.dart';
 import '../bouncing_widget.dart';
+import 'package:note_taking_app/l10n/app_localizations.dart';
 
 class HomeAppBar extends StatefulWidget implements PreferredSizeWidget {
   final VoidCallback onClearSelection;
@@ -217,7 +218,7 @@ class _HomeAppBarState extends State<HomeAppBar> {
             textCapitalization: TextCapitalization.sentences,
             autocorrect: true,
             decoration: InputDecoration(
-              hintText: 'Search notes, settings, tags...',
+              hintText: AppLocalizations.of(context)?.searchNotes ?? 'Search notes, settings, tags...',
               hintStyle: theme.textTheme.titleMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
               ),
@@ -447,7 +448,7 @@ class _HomeAppBarState extends State<HomeAppBar> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Notes',
+                AppLocalizations.of(context)?.navNotes ?? 'Notes',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.titleLarge?.copyWith(
@@ -508,7 +509,7 @@ class _HomeAppBarState extends State<HomeAppBar> {
         ),
         IconButton(
           icon: const Icon(Icons.search),
-          tooltip: 'Search notes',
+          tooltip: AppLocalizations.of(context)?.searchNotes ?? 'Search notes',
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
           visualDensity: VisualDensity.compact,

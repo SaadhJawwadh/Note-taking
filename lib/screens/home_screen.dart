@@ -1030,25 +1030,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       valueListenable: FinancialManagerScreen.activeTabNotifier,
       builder: (context, activeTab, _) {
         final isSplitTab = activeTab == 'Split Bills';
+        final l10n = AppLocalizations.of(context);
         return AppMorphingFab(
           isExpanded: _isFabExpanded,
           icon: isSplitTab ? Icons.pie_chart_outline_rounded : Icons.add,
-          label: isSplitTab ? 'New Split Bill' : 'New Transaction',
-          onPressed: () {
+          label: isSplitTab
+              ? (l10n?.splitBillsTitle ?? 'New Split Bill')
+              : (l10n?.newTransaction ?? 'New Transaction'),
+          onPressed: () async {
             if (isSplitTab) {
-              Navigator.of(context).push(
+              await Navigator.of(context).push(
                 MaterialPageRoute(builder: (context) => const SplitBillEditorScreen()),
               );
             } else {
-              Navigator.of(context).push(
+              await Navigator.of(context).push(
                 MaterialPageRoute(builder: (context) => const TransactionEditorScreen()),
               );
+              if (context.mounted) {
+                await context.read<FinancialManagerProvider>().loadTransactions();
+              }
             }
           },
           secondaryAction: isSplitTab
               ? null
               : IconButton(
-                  tooltip: 'Categories',
+                  tooltip: l10n?.categories ?? 'Categories',
                   icon: Icon(Icons.category_outlined, color: colorScheme.onPrimaryContainer, size: 20),
                   onPressed: () {
                     HapticFeedback.lightImpact();
@@ -1062,10 +1068,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildTrackerFAB(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     return AppMorphingFab(
       isExpanded: _isFabExpanded,
       icon: Icons.add,
-      label: 'Log Period',
+      label: l10n?.periodLog ?? 'Log Period',
       backgroundColor: colorScheme.tertiaryContainer,
       foregroundColor: colorScheme.onTertiaryContainer,
       onPressed: () {
@@ -1085,10 +1092,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Widget _buildFAB(BuildContext context) {
     final noteProvider = Provider.of<NoteProvider>(context, listen: false);
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     return AppMorphingFab(
       isExpanded: _isFabExpanded,
       icon: Icons.add,
-      label: 'New Note',
+      label: l10n?.newNote ?? 'New Note',
       onPressed: () async {
         final returned = await Navigator.of(context).push<bool>(
           MaterialPageRoute(

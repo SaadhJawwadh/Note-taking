@@ -151,56 +151,73 @@ class LedgerFloatingToolbar extends StatelessWidget {
           ExpressiveFloatingToolbar.actionButton(
             icon: Icons.category_outlined,
             tooltip: 'Assign category',
-            onPressed: () {
-              HapticFeedback.selectionClick();
-              _showCategoryPicker(context, provider);
-            },
+            onPressed: provider.isBulkAiRefining
+                ? null
+                : () {
+                    HapticFeedback.selectionClick();
+                    _showCategoryPicker(context, provider);
+                  },
           ),
 
           // 2. Move Account
           ExpressiveFloatingToolbar.actionButton(
             icon: Icons.account_balance_outlined,
             tooltip: 'Move account',
-            onPressed: () {
-              HapticFeedback.selectionClick();
-              _showAccountPicker(context, provider);
-            },
+            onPressed: provider.isBulkAiRefining
+                ? null
+                : () {
+                    HapticFeedback.selectionClick();
+                    _showAccountPicker(context, provider);
+                  },
           ),
 
           // 3. Targeted AI Refine
           if (isAiSupported) ...[
             ExpressiveFloatingToolbar.actionButton(
               icon: Icons.auto_awesome_rounded,
-              tooltip: 'Refine selected with AI',
+              tooltip: provider.isBulkAiRefining ? 'Refining transactions...' : 'Refine selected with AI',
               color: colorScheme.primary,
-              onPressed: () async {
-                await HapticFeedback.mediumImpact();
-                if (!context.mounted) return;
-                final messenger = ScaffoldMessenger.of(context);
-                final selectedCount = provider.selectedCount;
-                messenger.clearSnackBars();
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text('Refining $selectedCount transaction${selectedCount == 1 ? "" : "s"} with on-device AI...'),
-                    behavior: SnackBarBehavior.floating,
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
+              customIcon: provider.isBulkAiRefining
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.2,
+                        color: colorScheme.primary,
+                      ),
+                    )
+                  : null,
+              onPressed: provider.isBulkAiRefining
+                  ? null
+                  : () async {
+                      await HapticFeedback.mediumImpact();
+                      if (!context.mounted) return;
+                      final messenger = ScaffoldMessenger.of(context);
+                      final selectedCount = provider.selectedCount;
+                      messenger.clearSnackBars();
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text('Refining $selectedCount transaction${selectedCount == 1 ? "" : "s"} with on-device AI...'),
+                          behavior: SnackBarBehavior.floating,
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
 
-                final count = await provider.bulkAiRefineSelected();
-                onActionCompleted?.call();
-                messenger.clearSnackBars();
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      count == 0
-                          ? 'Selected transactions are already refined!'
-                          : 'Successfully refined $count transaction${count == 1 ? "" : "s"} with AI!',
-                    ),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
+                      final count = await provider.bulkAiRefineSelected();
+                      onActionCompleted?.call();
+                      if (!context.mounted) return;
+                      messenger.clearSnackBars();
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            count == 0
+                                ? 'AI could not refine: description already concise or AI unavailable.'
+                                : 'Successfully refined $count transaction${count == 1 ? "" : "s"} with on-device AI!',
+                          ),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
             ),
           ],
 
@@ -211,29 +228,31 @@ class LedgerFloatingToolbar extends StatelessWidget {
             icon: Icons.delete_outline_rounded,
             tooltip: 'Delete selected',
             color: colorScheme.error,
-            onPressed: () async {
-              final messenger = ScaffoldMessenger.of(context);
-              await HapticFeedback.mediumImpact();
-              final deletedIds = await provider.bulkDeleteSelected();
-              if (deletedIds.isEmpty) return;
-              onActionCompleted?.call();
+            onPressed: provider.isBulkAiRefining
+                ? null
+                : () async {
+                    final messenger = ScaffoldMessenger.of(context);
+                    await HapticFeedback.mediumImpact();
+                    final deletedIds = await provider.bulkDeleteSelected();
+                    if (deletedIds.isEmpty) return;
+                    onActionCompleted?.call();
 
-              messenger.clearSnackBars();
-              messenger.showSnackBar(
-                SnackBar(
-                  content: Text('Deleted ${deletedIds.length} transaction${deletedIds.length == 1 ? "" : "s"}'),
-                  behavior: SnackBarBehavior.floating,
-                  duration: const Duration(seconds: 5),
-                  action: SnackBarAction(
-                    label: 'UNDO',
-                    onPressed: () async {
-                      await provider.bulkRestore(deletedIds);
-                      onActionCompleted?.call();
-                    },
-                  ),
-                ),
-              );
-            },
+                    messenger.clearSnackBars();
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text('Deleted ${deletedIds.length} transaction${deletedIds.length == 1 ? "" : "s"}'),
+                        behavior: SnackBarBehavior.floating,
+                        duration: const Duration(seconds: 5),
+                        action: SnackBarAction(
+                          label: 'UNDO',
+                          onPressed: () async {
+                            await provider.bulkRestore(deletedIds);
+                            onActionCompleted?.call();
+                          },
+                        ),
+                      ),
+                    );
+                  },
           ),
         ],
       ),

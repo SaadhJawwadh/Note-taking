@@ -6,6 +6,7 @@ import 'package:note_taking_app/features/finances/services/spending_forecast_ser
 import 'package:note_taking_app/features/finances/presentation/widgets/burn_rate_forecast_card.dart';
 import 'package:note_taking_app/features/finances/presentation/widgets/financial_analytics_tab.dart';
 import 'package:note_taking_app/features/finances/presentation/widgets/minimal_chart_deck.dart';
+import 'package:note_taking_app/features/finances/presentation/widgets/savings_goals_card.dart';
 
 void main() {
   group('SpendingForecastService Math & Logic Tests', () {
@@ -307,6 +308,13 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Set Monthly Budgets'), findsOneWidget);
+
+      // Tap Savings pill
+      expect(find.text('Savings'), findsWidgets);
+      await tester.tap(find.text('Savings'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SavingsGoalsCard), findsOneWidget);
     });
   });
 }

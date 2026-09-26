@@ -811,15 +811,17 @@ class SmsService {
       try {
         final aiParsed = await aiService.parseSmsTransaction(fullSmsBody, activeCategories);
         if (aiParsed != null) {
-          final description = aiParsed['description'] ?? aiParsed['merchant'] ?? transaction.description;
+          final description = (aiParsed['description'] ?? aiParsed['merchant'] ?? transaction.description).toString().trim();
           String category = aiParsed['category'] ?? transaction.category;
-          if (category == 'Other' || !activeCategories.contains(category)) {
+          if (category == 'Other' || !activeCategories.contains(category) || category.isEmpty) {
             category = TransactionCategory.fromDescriptionCached('$description $fullSmsBody');
           }
-          return transaction.copy(
-            description: description,
-            category: category,
-          );
+          if (description.isNotEmpty && (description != transaction.description.trim() || category != transaction.category)) {
+            return transaction.copy(
+              description: description,
+              category: category,
+            );
+          }
         }
       } catch (e) {
         debugPrint('AI re-parsing failed: $e');
@@ -832,8 +834,20 @@ class SmsService {
         transaction.description,
         fullSmsBody ?? transaction.description,
       );
-      if (refinedDesc != null && refinedDesc.isNotEmpty) {
-        return transaction.copy(description: refinedDesc);
+      final finalDesc = (refinedDesc != null && refinedDesc.trim().isNotEmpty)
+          ? refinedDesc.trim()
+          : transaction.description.trim();
+
+      String finalCategory = transaction.category;
+      if (finalCategory == 'Other' || !activeCategories.contains(finalCategory) || finalCategory.isEmpty) {
+        finalCategory = TransactionCategory.fromDescriptionCached('$finalDesc ${fullSmsBody ?? ""}');
+      }
+
+      if (finalDesc != transaction.description.trim() || finalCategory != transaction.category) {
+        return transaction.copy(
+          description: finalDesc,
+          category: finalCategory,
+        );
       }
     } catch (e) {
       debugPrint('AI description refinement failed: $e');

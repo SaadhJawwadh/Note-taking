@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.43.0 - 2026-09-26
+
+### 🌟 What's New
+- **Expanded Global Multilingual Support**: Comprehensive localization architecture with an in-app language picker under *Settings > Appearance & UI*. Choose between **System Default** or explicitly select **English**, **தமிழ் (Tamil)**, **中文 (Simplified Chinese)**, **Português (Portuguese)**, **Español (Spanish)**, **Français (French)**, and **Deutsch (German)**. All labels, navigation tabs, bottom bars, and domain actions translate instantly without requiring an app restart.
+- **Dedicated Savings Goals Sub-Tab in Budgets**: Integrated a dedicated `[Breakdown] ⇄ [Budgets] ⇄ [Savings]` segmented control inside the Budgets view. Eliminates nested whitespace issues while showcasing vibrant goal-tinted cards, glowing avatar icons, dynamic target currency formatting (`LKR`), and instant deposit logging.
+- **Dual-State Note Editor Keyboard Controls**: Polished the editor bottom action pill bar. The left formatting toggle button remains consistently anchored to the formatting deck (`T_T`), while the right keyboard button functions as a true dual-state toggle (`keyboard_hide_rounded` when open, `keyboard_rounded` when closed).
+
+### 🚀 Improvements
+- **Contextual Selection AI Trigger**: Selecting text and tapping the AI Transaction action on the contextual selection toolbar directly opens and pre-fills the transaction composer without dismissing focus.
+- **Streamlined APK Footprint & Permissions**: Removed obsolete voice typing dependencies (`record`, `audioplayers`) and eliminated unnecessary recording permissions from `AndroidManifest.xml` for maximum privacy and lighter binary size.
+
+### 🐛 Fixes
+- **Savings Goal Repository Schema & Menu Action**: Added proper handler in financial manager popup menu to directly summon the Savings Goal editor sheet, with full SQLite v24 table support.
+- **Search Index Multilingual Coverage**: Indexed all newly supported languages and aliases in the Settings search index for quick discovery.
+
 ## 2.42.0 - 2026-09-23
 
 ### 🌟 What's New
