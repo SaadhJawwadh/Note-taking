@@ -5,6 +5,7 @@ import '../data/transaction_repository.dart';
 import '../../../data/repositories/recurring_rule_repository.dart';
 import '../../../services/p2p_sync_service.dart';
 import '../../../services/sms_service.dart';
+import '../presentation/screens/financial_manager_screen.dart';
 
 /// ChangeNotifier managing state and financial metrics for Financial Manager.
 class FinancialManagerProvider extends ChangeNotifier {
@@ -236,6 +237,7 @@ class FinancialManagerProvider extends ChangeNotifier {
     clearSelection();
     await _repository.bulkDeleteTransactions(idsToDelete);
     await loadTransactions();
+    FinancialManagerScreen.refreshNotifier.value++;
     return idsToDelete;
   }
 
@@ -243,6 +245,7 @@ class FinancialManagerProvider extends ChangeNotifier {
     if (ids.isEmpty) return;
     await _repository.bulkRestoreTransactions(ids);
     await loadTransactions();
+    FinancialManagerScreen.refreshNotifier.value++;
   }
 
   Future<void> bulkUpdateCategory(String category) async {
@@ -251,6 +254,7 @@ class FinancialManagerProvider extends ChangeNotifier {
     clearSelection();
     await _repository.bulkUpdateCategory(ids, category);
     await loadTransactions();
+    FinancialManagerScreen.refreshNotifier.value++;
   }
 
   Future<void> bulkUpdateAccount(String account) async {
@@ -259,10 +263,11 @@ class FinancialManagerProvider extends ChangeNotifier {
     clearSelection();
     await _repository.bulkUpdateAccount(ids, account);
     await loadTransactions();
+    FinancialManagerScreen.refreshNotifier.value++;
   }
 
   Future<int> bulkAiRefineSelected() async {
-    final ids = _selectedTransactionIds.toSet();
+    final ids = _selectedTransactionIds.toList();
     if (ids.isEmpty) return 0;
 
     _isBulkAiRefining = true;
@@ -270,16 +275,20 @@ class FinancialManagerProvider extends ChangeNotifier {
 
     int refinedCount = 0;
     try {
-      final selectedTxns = _allTransactions.where((t) => t.id != null && ids.contains(t.id)).toList();
-      for (final t in selectedTxns) {
+      for (final id in ids) {
+        final t = await _repository.readTransaction(id);
+        if (t == null) continue;
         final refined = await SmsService.refineSingleTransactionWithAi(t);
         if (refined != null) {
           final updated = refined.copy(isAiRefined: true);
           await _repository.updateTransaction(updated);
           refinedCount++;
+        } else {
+          await _repository.updateTransaction(t.copy(isAiRefined: true));
         }
       }
       await loadTransactions();
+      FinancialManagerScreen.refreshNotifier.value++;
     } catch (e) {
       debugPrint('Error in bulkAiRefineSelected: $e');
     } finally {

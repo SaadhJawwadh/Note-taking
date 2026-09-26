@@ -50,17 +50,29 @@ class _SavingsGoalEditorSheetState extends State<SavingsGoalEditorSheet> {
 
   static const List<int> _colorPalette = [
     0xFF00796B, // Teal Vault
+    0xFF009688, // Mint Sea
     0xFF4CAF50, // Emerald Green
+    0xFF8BC34A, // Cyber Lime
+    0xFFCDDC39, // Electric Lime
     0xFF2196F3, // Sky Blue
+    0xFF03A9F4, // Vivid Azure
+    0xFF00BCD4, // Cyan Glow
     0xFF3F51B5, // Royal Indigo
     0xFF673AB7, // Deep Purple
+    0xFF9C27B0, // Vivid Orchid
     0xFFE91E63, // Vibrant Pink
+    0xFFFF4081, // Flamingo Rose
+    0xFFF44336, // Ruby Crimson
     0xFFFF5722, // Flame Coral
     0xFFFF9800, // Golden Amber
+    0xFFFFB300, // Sun Gold
+    0xFFFFC107, // Tuscan Yellow
     0xFF795548, // Warm Earth
+    0xFF8D6E63, // Roasted Bronze
     0xFF607D8B, // Slate Blue
-    0xFF00BCD4, // Vivid Cyan
-    0xFF8BC34A, // Lime Green
+    0xFF455A64, // Midnight Slate
+    0xFF37474F, // Dark Graphite
+    0xFF546E7A, // Steel Blue
   ];
 
   static const List<String> _goalCategories = [

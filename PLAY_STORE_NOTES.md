@@ -1,18 +1,20 @@
 <en-US>
 🌟 What's New
-• Quick Shortcuts: Long press the app icon to create notes, add expenses, scan receipts, or sync.
-• Dedicated Note Sorting: Easily sort notes by modified date, created date, title, or color.
-• Itemized Split Bills: Share itemized statements and undo settlements with 1 tap.
+• Expanded Languages: Added Chinese, Portuguese, Spanish, German, and French alongside English and Tamil.
+• Savings Goals Tab: Dedicated savings tab in Budgets with 24 colors and instant progress tracking.
+• Cleaner Note Editor: Streamlined menus, down-arrow toolbar toggle, and simplified typing.
 
 🚀 Improvements
-• Streamlined menus and new trash auto-purge notifications.
+• Instant language switching without app restarts.
+• Smarter AI transaction tools.
 </en-US>
 <ta-IN>
 🌟 புதிய அம்சங்கள்
-• விரைவு குறுக்குவழிகள்: செயலியை அழுத்திப் பிடித்து குறிப்பு எடுக்கலாம், செலவைச் சேர்க்கலாம் அல்லது ரசீதை ஸ்கேன் செய்யலாம்.
-• குறிப்பு வரிசைப்படுத்துதல்: தேதி, தலைப்பு அல்லது வண்ணத்தின்படி எளிதாக வரிசைப்படுத்தலாம்.
-• கணக்கு பகிர்வு: நிலுவைத் தொகையை எளிதாகப் பகிரலாம் மற்றும் தீர்வை மீட்டமைக்கலாம்.
+• புதிய மொழிகள்: சீனம், போர்த்துகீசியம், ஸ்பானிஷ், ஜெர்மன் மற்றும் பிரெஞ்சு மொழிகள் சேர்க்கப்பட்டன.
+• சேமிப்பு இலக்குகள்: 24 வண்ணங்களுடன் கூடிய புதிய சேமிப்புப் பிரிவு.
+• எளிய குறிப்பு திருத்தி: சீரான விசைப்பலகை மற்றும் மெனு கட்டுப்பாடுகள்.
 
 🚀 மேம்பாடுகள்
-• எளிமையான மெனுக்கள் மற்றும் தானியங்கி அறிவிப்புகள்.
+• செயலி மறுதொடக்கமின்றி உடனடி மொழி மாற்றம்.
+• மேம்பட்ட AI பரிவர்த்தனை கருவிகள்.
 </ta-IN>

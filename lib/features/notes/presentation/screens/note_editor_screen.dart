@@ -100,7 +100,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       _folder != 'Notes' &&
       _folder != 'notes';
 
-
   /// True once the user has authenticated to view a locked note this session.
   bool _lockAuthPassed = false;
 
@@ -1286,6 +1285,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
       );
     }
   }
+
 
 
 
@@ -2847,9 +2847,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                           case 'table':
                                             _showTableInsertionDialog();
                                             break;
-                                          case 'ai':
-                                            _showAiOptionsSheet();
-                                            break;
                                           case 'delete':
                                             _deleteNote();
                                             break;
@@ -2875,7 +2872,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                               ],
                                             ),
                                           ),
-                                          if (settings.minimalEditorMode) ...[
+                                          if (settings.minimalEditorMode)
                                             PopupMenuItem(
                                               value: 'table',
                                               height: 48,
@@ -2887,19 +2884,6 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                                 ],
                                               ),
                                             ),
-                                            if (settings.isAiActive)
-                                              PopupMenuItem(
-                                                value: 'ai',
-                                                height: 48,
-                                                child: Row(
-                                                  children: [
-                                                    Icon(Icons.auto_awesome_rounded, size: 20, color: colorScheme.primary),
-                                                    const SizedBox(width: 12),
-                                                    Text('Gemini AI Assist', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w500)),
-                                                  ],
-                                                ),
-                                              ),
-                                          ],
                                           PopupMenuItem(
                                             value: 'reminder',
                                             height: 48,
@@ -4070,19 +4054,17 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                             isScrollable: true,
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.text_fields_rounded),
-                                tooltip: _showFormattingBar ? 'Hide formatting' : 'Show formatting',
+                                icon: Icon(_showFormattingBar
+                                    ? Icons.keyboard_arrow_down_rounded
+                                    : Icons.text_format_rounded),
+                                tooltip: _showFormattingBar ? 'Hide formatting' : 'Formatting',
                                 onPressed: () {
-                                  HapticFeedback.selectionClick();
                                   setState(() {
                                     _isFormattingBarPinnedManually = !_isFormattingBarPinnedManually;
                                     _showFormattingBar = _isFormattingBarPinnedManually;
                                   });
                                 },
                                 style: IconButton.styleFrom(
-                                  backgroundColor: _showFormattingBar
-                                      ? theme.colorScheme.primaryContainer.withValues(alpha: 0.6)
-                                      : Colors.transparent,
                                   foregroundColor: _showFormattingBar
                                       ? theme.colorScheme.primary
                                       : textColor,
@@ -4134,25 +4116,18 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
                                   foregroundColor: textColor,
                                 ),
                               ),
-                              IconButton(
-                                icon: Icon(isKeyboardOpen
-                                    ? Icons.keyboard_hide_rounded
-                                    : Icons.keyboard_rounded),
-                                tooltip: isKeyboardOpen ? 'Hide keyboard' : 'Show keyboard',
-                                onPressed: () {
-                                  HapticFeedback.lightImpact();
-                                  if (isKeyboardOpen) {
+
+                              if (isKeyboardOpen)
+                                IconButton(
+                                  icon: const Icon(Icons.keyboard_hide_rounded),
+                                  tooltip: 'Hide Keyboard',
+                                  onPressed: () {
                                     FocusScope.of(context).unfocus();
-                                  } else {
-                                    if (!_focusNode.hasFocus) {
-                                      _focusNode.requestFocus();
-                                    }
-                                  }
-                                },
-                                style: IconButton.styleFrom(
-                                  foregroundColor: textColor,
+                                  },
+                                  style: IconButton.styleFrom(
+                                    foregroundColor: textColor,
+                                  ),
                                 ),
-                              ),
                             ],
                           ),
                         ),

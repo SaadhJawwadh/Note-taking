@@ -739,7 +739,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (isNotesSelection) {
         activeToolbar = _buildSelectionToolbar(context, noteProvider);
       } else if (isFinancesSelection) {
-        activeToolbar = const LedgerFloatingToolbar();
+        activeToolbar = LedgerFloatingToolbar(
+          onActionCompleted: () => FinancialManagerScreen.refreshNotifier.value++,
+        );
       }
 
       final bool hasExtraFeatures = settings.showFinancialManager || settings.isPeriodTrackerEnabled;

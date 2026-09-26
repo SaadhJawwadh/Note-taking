@@ -28,9 +28,39 @@ class ChangelogScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 _buildVersionSection(
                   context,
+                  version: 'v2.43.0',
+                  date: 'September 26, 2026',
+                  isLatest: true,
+                  changes: [
+                    _ChangelogGroup(
+                      title: "What's New",
+                      items: [
+                        'Expanded Global Multilingual Support: Full in-app language picker supporting English, Tamil, Chinese, Portuguese, Spanish, French, and German with instant reactive switching.',
+                        'Dedicated Savings Goals Tab: Clean sub-tab inside Budgets featuring 24 Material 3 colors, aggregate vault analytics, and zero nested whitespace.',
+                        'Dual-State Editor Keyboard Controls: Cleanly disambiguated formatting dismissal arrow from the keyboard hide button, with streamlined menus.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: 'Improvements',
+                      items: [
+                        'Contextual Selection & Toolbar AI Refine: Select transaction text or use the ledger toolbar to directly refine entries from storage with instant UI refresh.',
+                        'Streamlined App Footprint: Removed obsolete audio recording dependencies and permissions for a smaller, faster app.',
+                      ],
+                    ),
+                    _ChangelogGroup(
+                      title: 'Fixes',
+                      items: [
+                        'MaterialApp Locale Resolution: Corrected supportedLocales registration so all app modules respond immediately to language selection.',
+                        'Savings Goal Database & Schema: Complete SQLite table and menu integration for effortless goal creation and deposits.',
+                      ],
+                    ),
+                  ],
+                ),
+                _buildVersionSection(
+                  context,
                   version: 'v2.42.0',
                   date: 'September 23, 2026',
-                  isLatest: true,
+                  isLatest: false,
                   changes: [
                     _ChangelogGroup(
                       title: "What's New",

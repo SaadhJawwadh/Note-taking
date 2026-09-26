@@ -37,19 +37,19 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.primaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.touch_app_rounded,
-            title: "App Launcher Shortcuts",
-            desc: "Long-press the app icon on your home screen to quickly create a note, add an expense, scan a receipt, or sync.",
+            icon: Icons.language_rounded,
+            title: "Expanded Languages",
+            desc: "Full in-app support for English, Tamil, Chinese, Portuguese, Spanish, German, and French under Settings.",
           ),
           _WhatsNewItem(
-            icon: Icons.sort_rounded,
-            title: "Dedicated Note Sorting",
-            desc: "One-tap sort button on the Notes header to quickly reorder by date, title, or color.",
+            icon: Icons.savings_outlined,
+            title: "Dedicated Savings Tab",
+            desc: "Manage savings goals in a dedicated tab under Budgets with 24 colors, aggregate vault analytics, and zero whitespace.",
           ),
           _WhatsNewItem(
-            icon: Icons.receipt_long_rounded,
-            title: "Itemized Split Bills & Undo",
-            desc: "Share detailed itemized statements of all pending bills and undo bill settlements in one tap.",
+            icon: Icons.keyboard_arrow_down_rounded,
+            title: "Dual-State Editor Keyboard",
+            desc: "Disambiguated formatting dismiss arrow from keyboard toggle with streamlined menu controls.",
           ),
         ],
       ),
@@ -60,14 +60,14 @@ class WhatsNewSheet extends StatelessWidget {
         bgColor: theme.colorScheme.tertiaryContainer.withValues(alpha: isDark ? 0.3 : 0.4),
         items: [
           _WhatsNewItem(
-            icon: Icons.menu_rounded,
-            title: "Streamlined Tools Menus",
-            desc: "Clutter-free action menus with faster access to your most important tools.",
+            icon: Icons.translate_rounded,
+            title: "Reactive Language Switching",
+            desc: "Instant app-wide localization updates across all tabs and menus without restarting.",
           ),
           _WhatsNewItem(
-            icon: Icons.notifications_active_outlined,
-            title: "Auto-Purge Notifications",
-            desc: "Helpful notifications when trash items are cleaned up, plus diagnostic testing in Settings.",
+            icon: Icons.auto_awesome_rounded,
+            title: "Toolbar AI Refine",
+            desc: "Refine selected transactions directly from SQLite with instant UI refresh notifications.",
           ),
         ],
       ),
@@ -79,13 +79,13 @@ class WhatsNewSheet extends StatelessWidget {
         items: [
           _WhatsNewItem(
             icon: Icons.account_balance_wallet_outlined,
-            title: "Split Settlement Cash Flow",
-            desc: "Undoing settlements automatically updates personal ledger accounts accurately.",
+            title: "Savings Goal Schema",
+            desc: "Complete SQLite database persistence and direct menu integration for goal creation and deposits.",
           ),
           _WhatsNewItem(
-            icon: Icons.sync_rounded,
-            title: "Background SMS Stability",
-            desc: "Enhanced deduplication and smoother background sync performance.",
+            icon: Icons.cleaning_services_outlined,
+            title: "Streamlined App Binary",
+            desc: "Removed unused audio dependencies and recording permissions for lighter app storage.",
           ),
         ],
       ),

@@ -160,10 +160,7 @@ class NoteApp extends StatelessWidget {
             GlobalCupertinoLocalizations.delegate,
             FlutterQuillLocalizations.delegate,
           ],
-          supportedLocales: const [
-            Locale('en'),
-            Locale('ta'),
-          ],
+          supportedLocales: AppLocalizations.supportedLocales,
         );
       },
     );
